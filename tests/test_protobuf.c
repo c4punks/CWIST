@@ -59,6 +59,15 @@ static void test_varint_errors(void) {
     cwist_pb_reader_init(&r, overlong, sizeof(overlong));
     assert(cwist_pb_read_varint(&r, &v) == -1);
 
+    const uint8_t overflow[] = {0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02};
+    cwist_pb_reader_init(&r, overflow, sizeof(overflow));
+    assert(cwist_pb_read_varint(&r, &v) == -1);
+
+    const uint8_t overflowing_continuation[] = {0x80, 0x80, 0x80, 0x80, 0x80,
+                                                0x80, 0x80, 0x80, 0x80, 0x81};
+    cwist_pb_reader_init(&r, overflowing_continuation, sizeof(overflowing_continuation));
+    assert(cwist_pb_read_varint(&r, &v) == -1);
+
     cwist_pb_reader_init(&r, truncated, 0);
     assert(cwist_pb_read_varint(&r, &v) == -1);
     assert(cwist_pb_read_varint(NULL, &v) == -1);
