@@ -218,13 +218,17 @@ static bool match_parametric_route(const char *route_tmpl, const char *req_path,
             t++;
             const char *t_next = strchr(t, '/');
             size_t t_len = t_next ? (size_t)(t_next - t) : strlen(t);
-            char param_name[256] = {0};
-            if (t_len < sizeof(param_name)) memcpy(param_name, t, t_len);
-
             const char *p_next = strchr(p, '/');
             size_t p_len = p_next ? (size_t)(p_next - p) : strlen(p);
+            if (t_len >= 256 || p_len >= 256) {
+                if (params) cwist_query_map_destroy(params);
+                return false;
+            }
+            char param_name[256] = {0};
+            memcpy(param_name, t, t_len);
+
             char param_value[256] = {0};
-            if (p_len < sizeof(param_value)) memcpy(param_value, p, p_len);
+            memcpy(param_value, p, p_len);
 
             if (!params) params = cwist_query_map_create();
             cwist_query_map_set(params, param_name, param_value);
