@@ -24,6 +24,21 @@ int main(void) {
     assert(rendered != NULL && strcmp(rendered->data, "Hello world") == 0);
     cwist_sstring_destroy(rendered);
 
+    assert(cwist_template_render("Hello {{ name", context) == NULL);
+    assert(cwist_template_render("Hello {% if name", context) == NULL);
+
+    rendered = cwist_template_render("{{ }}", context);
+    assert(rendered != NULL && (!rendered->data || strcmp(rendered->data, "") == 0));
+    cwist_sstring_destroy(rendered);
+
+    rendered = cwist_template_render("{{ name| }}", context);
+    assert(rendered != NULL && strcmp(rendered->data, "world") == 0);
+    cwist_sstring_destroy(rendered);
+
+    rendered = cwist_template_render("{{ |upper }}", context);
+    assert(rendered != NULL && (!rendered->data || strcmp(rendered->data, "") == 0));
+    cwist_sstring_destroy(rendered);
+
     char directory[] = "/tmp/cwist-template-XXXXXX";
     assert(mkdtemp(directory) != NULL);
     char partial[PATH_MAX];
