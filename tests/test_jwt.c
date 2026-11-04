@@ -264,7 +264,21 @@ static void test_corrupt_chunk_feed(void) {
     printf("  Passed corrupt chunk feed rejection.\n");
 }
 
+static void test_malformed_time_claim_types(void) {
+    printf("Testing JWT malformed exp and nbf types...\n");
+    const char *payloads[] = {"{\"sub\":\"bad\",\"exp\":\"0\"}", "{\"sub\":\"bad\",\"nbf\":null}"};
+    for (size_t i = 0; i < 2; i++) {
+        char *token = cwist_jwt_sign(payloads[i], "secret", 0);
+        assert(token != NULL);
+        cwist_jwt_claims *claims = cwist_jwt_verify(token, "secret");
+        assert(claims == NULL);
+        cwist_free(token);
+    }
+    printf("  Passed malformed time claim rejection.\n");
+}
+
 int main(void) {
+    test_malformed_time_claim_types();
     test_sign_and_verify();
     test_wrong_secret();
     test_tampered_payload();
