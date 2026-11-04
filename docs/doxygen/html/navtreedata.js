@@ -659,16 +659,16 @@ var NAVTREEINDEX =
 "d7/d95/https_8h.html#a251baaa81315b64e15308af9287d9a10",
 "d8/d83/md_docs_2api_2html.html#autotoc_md102",
 "d9/dab/net_2http_2http_8h.html#a78d2fac32fab956b90bd32cc034aafe0",
-"d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md399",
-"da/dc2/bind_8h.html#a52ad8ad07ea09774858867d4270634cd",
-"db/d6e/waf_8c.html",
-"dc/d85/reactor_8h.html",
-"dd/d34/h3__hdr__out_8h_source.html",
-"dd/d68/structcwist__http__request.html#a1a2b6c7dc52c6069b30267b562a3e45f",
-"de/d52/structcwist__grpc__decoder.html#a0831993b3bdbf0e2defacde0caf7abe2",
-"df/d51/structcwist__reactor__timer.html",
-"df/dad/http3__client_8h.html#a28c4dd00a14d72470fd8a43f6b7eb1fc",
-"globals_d.html"
+"d9/dd6/structcwist__grpc__retry__policy.html#a6ee5ca85c84e38c8f875062ded29cce3",
+"da/dc2/bind_8h.html#a34845e585a850cd9de48950c821a1995",
+"db/d64/websocket_8h.html#a84b014c343b059d06c899fd2b9285966",
+"dc/d80/md_docs_2api_2cookie.html#autotoc_md84",
+"dd/d2e/kqueue_8c.html#ae98b56f01551c8b2a116ede7c918aa99",
+"dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md410",
+"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md275",
+"df/d4c/compress_8h.html#a61f0495c65b6e9a71ddbc224699d06f2",
+"df/dac/siphash_8h_source.html",
+"functions_vars_l.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

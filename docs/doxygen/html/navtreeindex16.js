@@ -1,5 +1,9 @@
 var NAVTREEINDEX16 =
 {
+"dd/d2e/kqueue_8c.html#ae98b56f01551c8b2a116ede7c918aa99":[57,0,2,4,3,3,2],
+"dd/d2e/kqueue_8c.html#af8273eb32d71938b4faca82ed325b9aa":[57,0,2,4,3,3,6],
+"dd/d2e/kqueue_8c_source.html":[57,0,2,4,3,3],
+"dd/d34/h3__hdr__out_8h.html":[57,0,2,2,3,9],
 "dd/d34/h3__hdr__out_8h_source.html":[57,0,2,2,3,9],
 "dd/d3b/webrtc_8h.html":[57,0,1,0,2,8],
 "dd/d3b/webrtc_8h.html#a1ebc38dcb3ff4fc59ed6a8f06451e7c2":[57,0,1,0,2,8,7],
@@ -245,9 +249,5 @@ var NAVTREEINDEX16 =
 "dd/d56/http_8h_source.html":[57,0,1,0,9],
 "dd/d56/md_docs_2reactor-wakeup-regression.html":[41],
 "dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md408":[41,0],
-"dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md409":[41,1],
-"dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md410":[41,2],
-"dd/d68/structcwist__http__request.html":[56,0,46],
-"dd/d68/structcwist__http__request.html#a004b3d61d997aa7847cb3c5e9fc64e20":[56,0,46,20],
-"dd/d68/structcwist__http__request.html#a10266ac748fd6062f8f9c4f07d785b92":[56,0,46,24]
+"dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md409":[41,1]
 };

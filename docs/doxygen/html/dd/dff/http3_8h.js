@@ -7,6 +7,7 @@ var http3_8h =
     [ "cwist_http3_destroy_context", "dd/dff/http3_8h.html#a3b8be16f94dac189c5f2a8b360dea4f0", null ],
     [ "cwist_http3_init_context", "dd/dff/http3_8h.html#a450069a1e05bc23a8e61e420c0bfd3e4", null ],
     [ "cwist_http3_init_context_ephemeral", "dd/dff/http3_8h.html#afec2cffad5a60cfc7c08f73eb268ec3c", null ],
+    [ "cwist_http3_last_close_error", "dd/dff/http3_8h.html#a511f4890034c06ca4e324385ce0c6613", null ],
     [ "cwist_http3_push_resource", "dd/dff/http3_8h.html#afe2dc023265c7f47f7f311b79e48973a", null ],
     [ "cwist_http3_reload_context", "dd/dff/http3_8h.html#a7bb102c8e1d282026b8103570713420e", null ],
     [ "cwist_http3_send_datagram", "dd/dff/http3_8h.html#a99860db5e8d04b8134684ce9ae5ebbc1", null ],

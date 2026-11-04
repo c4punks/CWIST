@@ -1,5 +1,11 @@
 var NAVTREEINDEX19 =
 {
+"df/d4c/compress_8h.html#a61f0495c65b6e9a71ddbc224699d06f2":[57,0,1,0,4,0,3,2],
+"df/d4c/compress_8h.html#aa1b3515b51073e8b429cfa5f442ae56f":[57,0,1,0,4,0,3,1],
+"df/d4c/compress_8h.html#abf34e6f515162b89d169d928fd34327c":[57,0,1,0,4,0,3,8],
+"df/d4c/compress_8h.html#ac4d46953471ce216fe2ab53d6ad2fb3a":[57,0,1,0,4,0,3,7],
+"df/d4c/compress_8h.html#af0fe70fc60745ce6e5a640b044a53f5d":[57,0,1,0,4,0,3,4],
+"df/d4c/compress_8h_source.html":[57,0,1,0,4,0,3],
 "df/d51/structcwist__reactor__timer.html":[56,0,82],
 "df/d51/structcwist__reactor__timer.html#a362927cc573f8ebfadc058edb39d2c3b":[56,0,82,2],
 "df/d51/structcwist__reactor__timer.html#a8f9837734a5883126b90d88720b5dd53":[56,0,82,1],
@@ -243,11 +249,5 @@ var NAVTREEINDEX19 =
 "df/d7f/app_8c_source.html":[57,0,2,4,0,0],
 "df/dac/siphash_8h.html":[57,0,1,0,19],
 "df/dac/siphash_8h.html#ac197ccec3b022b078a62dc878ce336e0":[57,0,1,0,19,1],
-"df/dac/siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0":[57,0,1,0,19,0],
-"df/dac/siphash_8h_source.html":[57,0,1,0,19],
-"df/dad/http3__client_8h.html":[57,0,1,0,2,3,8],
-"df/dad/http3__client_8h.html#a03516b78e233ff5f770ea7f78d16f12d":[57,0,1,0,2,3,8,5],
-"df/dad/http3__client_8h.html#a051ca5d9ea16c24867801ccde546cd42":[57,0,1,0,2,3,8,9],
-"df/dad/http3__client_8h.html#a1a558af1f6551d6c6d42e83575c90c6a":[57,0,1,0,2,3,8,7],
-"df/dad/http3__client_8h.html#a1cebceb867dbe446f274df968cb30cdd":[57,0,1,0,2,3,8,6]
+"df/dac/siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0":[57,0,1,0,19,0]
 };
