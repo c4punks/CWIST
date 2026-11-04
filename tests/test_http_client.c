@@ -10,7 +10,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/shutdown.h>
-#include <cwist/net/http/http_client.h>
+#include "../src/net/http/http_client.c"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -315,8 +315,21 @@ static void test_closed_port(cwist_http_client *client) {
     }
 }
 
+static void test_status_line_is_length_delimited(void) {
+    int before = g_failures;
+    char status[12];
+    memcpy(status, "HTTP/1.1 200", sizeof(status));
+    response_headers_t headers = {0};
+    CHECK(header_callback(status, 1, sizeof(status), &headers) == sizeof(status),
+          "status line: callback did not consume the complete buffer");
+    CHECK(headers.status_code == 200, "status line: status %ld, want 200", headers.status_code);
+    CHECK(headers.headers == NULL, "status line: unexpected response headers");
+    report(before, "length-delimited status line");
+}
+
 int main(void) {
     printf("Testing cwist_http_client against a loopback CWIST server...\n");
+    test_status_line_is_length_delimited();
 
     int port = pick_free_port();
     if (port <= 0) {
