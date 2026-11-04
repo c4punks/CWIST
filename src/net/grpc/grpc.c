@@ -7,6 +7,7 @@
 #include <cwist/net/grpc/grpc.h>
 #include <cwist/sys/app/app.h>
 #include <cwist/core/mem/alloc.h>
+#include "../../sys/app/app_route_internal.h"
 #include <ctype.h>
 #include <limits.h>
 #include <pthread.h>
@@ -1348,11 +1349,14 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
 
     cwist_grpc_route *existing = grpc_find_route(app, path);
     if (existing) {
+        if (!cwist_app_post_checked(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary)) {
+            cwist_free(path);
+            return -1;
+        }
         existing->streaming = streaming;
         existing->handler = unary_handler;
         existing->stream_handler = stream_handler;
         existing->user_ctx = user_ctx;
-        cwist_app_post(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary);
         cwist_free(path);
         return 0;
     }
@@ -1367,10 +1371,13 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
     route->handler = unary_handler;
     route->stream_handler = stream_handler;
     route->user_ctx = user_ctx;
+    if (!cwist_app_post_checked(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary)) {
+        cwist_free(route->path);
+        cwist_free(route);
+        return -1;
+    }
     route->next = (cwist_grpc_route *)app->grpc_routes;
     app->grpc_routes = route;
-
-    cwist_app_post(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary);
     return 0;
 }
 
