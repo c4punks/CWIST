@@ -1,5 +1,6 @@
 var NAVTREEINDEX10 =
 {
+"d7/dba/structcwist__fix__server__mem.html":[93,0,25],
 "d7/dba/structcwist__fix__server__mem.html#a113ff4343f4d9e628b0d2871cc13f7c5":[93,0,25,6],
 "d7/dba/structcwist__fix__server__mem.html#a20f68233be797b56aa1f92d13f72be17":[93,0,25,0],
 "d7/dba/structcwist__fix__server__mem.html#a400b5c7499bb14fc1e0cef0a142ea332":[93,0,25,5],
@@ -248,6 +249,5 @@ var NAVTREEINDEX10 =
 "d8/dad/sockopts_8h.html":[94,0,2,2,3,25],
 "d8/dad/sockopts_8h.html#a546e727db4f5d4420f59f7cc41c0e382":[94,0,2,2,3,25,0],
 "d8/dad/sockopts_8h_source.html":[94,0,2,2,3,25],
-"d8/dca/struct____prim__cwist__error__t.html":[93,0,0],
-"d8/dca/struct____prim__cwist__error__t.html#a28bfdaaec9dcf6682e1b8e0eee96d664":[93,0,0,4]
+"d8/dca/struct____prim__cwist__error__t.html":[93,0,0]
 };

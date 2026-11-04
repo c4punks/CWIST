@@ -20,6 +20,7 @@ var structcwist__webrtc__conn =
     [ "last_rx_ns", "d9/daa/structcwist__webrtc__conn.html#a48721285bf0b230f8fb1dece7d4be28d", null ],
     [ "notified_open", "d9/daa/structcwist__webrtc__conn.html#ad7c988463c237b3edf6301ff3d13a436", null ],
     [ "parked", "d9/daa/structcwist__webrtc__conn.html#a05c8a7b2a1e855ad359b5f8c886ad4f9", null ],
+    [ "peer_fingerprint", "d9/daa/structcwist__webrtc__conn.html#afcb2ad399bab5a3612e07f68a9b5258e", null ],
     [ "peer_pwd", "d9/daa/structcwist__webrtc__conn.html#a1ae9d0bdc4ba25b1933d79a30f8f37d6", null ],
     [ "peer_ufrag", "d9/daa/structcwist__webrtc__conn.html#a5822293bbb95cf572b82a799447d5e2c", null ],
     [ "pending_head", "d9/daa/structcwist__webrtc__conn.html#a965cc07a012e16a878bf019bc7f0af03", null ],
