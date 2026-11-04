@@ -1778,6 +1778,60 @@ static void test_http2_padded_data(const unsigned char *data, size_t data_len, u
     }
 }
 
+static void test_http2_malformed_headers_padding(void) {
+    static const unsigned char oversized_pad[] = {0, 0, 3, 1, 0x08, 0, 0, 0, 1, 4, 'h', 'i'};
+    static const unsigned char short_priority[] = {0, 0, 2, 1, 0x20, 0, 0, 0, 1, 'h', 'i'};
+    const unsigned char *frames[] = {oversized_pad, short_priority};
+    const size_t frame_lens[] = {sizeof(oversized_pad), sizeof(short_priority)};
+
+    for (size_t test = 0; test < 2; test++) {
+        int sv[2];
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        test_http2_server_ctx server_ctx = {
+            .fd = sv[0], .result = make_error(CWIST_ERR_INT16), .handler = http2_test_handler};
+        pthread_t tid;
+        assert(pthread_create(&tid, NULL, http2_handler_server_thread, &server_ctx) == 0);
+
+        SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+        assert(client_ctx != NULL);
+        SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+        SSL *client = SSL_new(client_ctx);
+        assert(client != NULL);
+        assert(SSL_set_fd(client, sv[1]) == 1);
+        assert(SSL_connect(client) == 1);
+
+        static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+        static const unsigned char settings[] = {0, 0, 0, 4, 0, 0, 0, 0, 0};
+        assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+        assert(ssl_write_all(client, settings, sizeof(settings)) == 0);
+        assert(ssl_write_all(client, frames[test], frame_lens[test]) == 0);
+
+        bool saw_goaway = false;
+        for (int i = 0; i < 16 && !saw_goaway; ++i) {
+            unsigned char hdr[9];
+            if (ssl_read_exact(client, hdr, sizeof(hdr)) != 0) break;
+            uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+            unsigned char payload[4096];
+            assert(len < sizeof(payload));
+            if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
+            if (hdr[3] == 0x07) {
+                assert(len >= 8);
+                uint32_t err = ((uint32_t)payload[4] << 24) | ((uint32_t)payload[5] << 16) |
+                               ((uint32_t)payload[6] << 8) | payload[7];
+                assert(err == 0x1);
+                saw_goaway = true;
+            }
+        }
+        assert(saw_goaway);
+        SSL_shutdown(client);
+        SSL_free(client);
+        SSL_CTX_free(client_ctx);
+        close(sv[1]);
+        pthread_join(tid, NULL);
+    }
+    printf("Passed HTTP/2 malformed HEADERS padding and priority rejection.\n");
+}
+
 static void http2_pacing_handler(void *user_ctx, cwist_http_request *req,
                                  cwist_http_response *res) {
     (void)user_ctx;
@@ -2086,6 +2140,7 @@ int main(void) {
     test_http2_async_defer();
     test_http2_async_defer_rst_drops();
     test_http2_missing_pseudo_header();
+    test_http2_malformed_headers_padding();
     test_http2_max_concurrent_streams();
     test_http2_rapid_reset();
     test_http2_idle_stream_rst();
@@ -2110,7 +2165,7 @@ int main(void) {
     test_http2_padded_data(padded_hi, sizeof(padded_hi), 0x08, true, false,
                            (const unsigned char *)"hi", 2);
     test_http2_padded_data(NULL, 0, 0x01, false, false, (const unsigned char *)"", 0);
-    test_http2_padded_data(padded_empty, sizeof(padded_empty), 0x09, false, true, NULL, 0);
+    test_http2_padded_data(padded_empty, sizeof(padded_empty), 0x09, false, false, NULL, 0);
     test_http2_padded_data(invalid_padding, sizeof(invalid_padding), 0x09, false, true, NULL, 0);
     test_http2_padded_data(NULL, 0, 0x09, false, true, NULL, 0);
     test_http2_data_frame_size(16384, false);
