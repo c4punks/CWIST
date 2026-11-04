@@ -148,9 +148,7 @@ int main(int argc, char **argv) {
     cwist_webrtc_ctx_set_message_handler(client, &client_on_message, &c);
 
     char offer[1024], answer[2048];
-    assert(cwist_sdp_write_offer(offer, sizeof(offer),
-                                 "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:"
-                                 "44:55:66:77:88:99:AA:BB:CC:DD:EE:FF",
+    assert(cwist_sdp_write_offer(offer, sizeof(offer), cwist_webrtc_ctx_fingerprint(client),
                                  "benchfrag", "benchpassword0123456789012", "0") == 0);
     assert(cwist_webrtc_handle_offer(server, offer, answer, sizeof(answer)) == 0);
     cwist_sdp_info ans;
@@ -161,7 +159,8 @@ int main(int argc, char **argv) {
     remote.sin_family = AF_INET;
     remote.sin_port = htons(cwist_webrtc_ctx_port(server));
     remote.sin_addr.s_addr = htonl(0x7F000001);
-    cwist_webrtc_conn *conn = cwist_webrtc_connect(client, &remote, ans.ice_ufrag, ans.ice_pwd);
+    cwist_webrtc_conn *conn =
+        cwist_webrtc_connect(client, &remote, ans.ice_ufrag, ans.ice_pwd, ans.fingerprint);
     assert(conn);
 
     /* Warm-up: open the channel and wait for the first message to land. */
