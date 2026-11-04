@@ -27,6 +27,16 @@ static _Atomic int g_handler_called = 0; /* set on the server thread */
 static char g_large_response[CWIST_HTTP_MAX_BODY_SIZE + 1];
 static unsigned char g_oversized_dgram[65536];
 static _Atomic int g_server_oversized_dgram_result = -2;
+static _Atomic int g_server_datagram_result = -2;
+static _Atomic size_t g_server_datagram_len;
+static unsigned char g_server_datagram[8];
+
+static void http3_test_datagram(const void *data, size_t len, void *user_ctx) {
+    (void)user_ctx;
+    assert(len <= sizeof(g_server_datagram));
+    memcpy(g_server_datagram, data, len);
+    atomic_store(&g_server_datagram_len, len);
+}
 
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     if (user_ctx) atomic_fetch_add((_Atomic int *)user_ctx, 1);
@@ -38,6 +48,10 @@ static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_ht
         lsquic_conn_t *conn = lsquic_stream_conn((lsquic_stream_t *)req->private_data);
         g_server_oversized_dgram_result =
             cwist_http3_send_datagram(conn, g_oversized_dgram, sizeof(g_oversized_dgram));
+    }
+    if (req->path && req->private_data && strcmp(req->path->data, "/datagram-reply") == 0) {
+        lsquic_conn_t *conn = lsquic_stream_conn((lsquic_stream_t *)req->private_data);
+        g_server_datagram_result = cwist_http3_send_datagram(conn, "pong", 4);
     }
     /* Issue #521 regressions: abort the response stream before any headers,
      * or after headers but before end-of-stream. */
@@ -343,6 +357,8 @@ int main(void) {
     socklen_t addr_len = sizeof(addr);
     assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
 
+    cwist_http3_set_datagram_enabled(ctx, 1);
+    cwist_http3_set_datagram_callback(ctx, http3_test_datagram, NULL);
     server_thread_args_t args10 = {.udp_fd = udp_fd, .ctx = ctx};
     rc = pthread_create(&tid, NULL, http3_server_thread, &args10);
     assert(rc == 0);
@@ -350,6 +366,7 @@ int main(void) {
 
     cwist_http3_client *client = cwist_http3_client_create();
     assert(client != NULL);
+    cwist_http3_client_enable_datagrams(client, 1);
     assert(cwist_http3_client_set_server(client, "127.0.0.1", ntohs(addr.sin_port)) == 0);
     cwist_http3_client_set_timeout_ms(client, 10000);
     cwist_http3_client_set_conn_timeout_ms(client, 10000);
@@ -378,6 +395,37 @@ int main(void) {
     assert(res->status_code == 200);
     cwist_http_response_destroy(res);
     printf("[PASS] HTTP/3 well-formed request is dispatched (200).\n");
+
+    atomic_store(&g_server_datagram_len, 0);
+    assert(cwist_http3_client_send_datagram(client, "ping", 4) == 0);
+    for (int i = 0; i < 20 && atomic_load(&g_server_datagram_len) == 0; i++) {
+        res = NULL;
+        err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+        assert(err.error.err_i16 == 0 && res != NULL);
+        cwist_http_response_destroy(res);
+    }
+    assert(atomic_load(&g_server_datagram_len) == 4);
+    assert(memcmp(g_server_datagram, "ping", 4) == 0);
+
+    res = NULL;
+    err = cwist_http3_client_request(client, "/datagram-reply", CWIST_HTTP_GET, NULL, NULL, 0,
+                                     &res);
+    assert(err.error.err_i16 == 0 && res != NULL);
+    cwist_http_response_destroy(res);
+    assert(g_server_datagram_result == 0);
+    char pong[4];
+    ssize_t pong_len = -1;
+    for (int i = 0; i < 20 && pong_len != 4; i++) {
+        pong_len = cwist_http3_client_recv_datagram(client, pong, sizeof(pong));
+        if (pong_len == 4) break;
+        assert(pong_len == -1 && errno == EAGAIN);
+        res = NULL;
+        err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+        assert(err.error.err_i16 == 0 && res != NULL);
+        cwist_http_response_destroy(res);
+    }
+    assert(pong_len == 4 && memcmp(pong, "pong", 4) == 0);
+    printf("[PASS] HTTP/3 datagrams negotiated and exchanged in both directions.\n");
 
     cwist_http3_client_enable_datagrams(client, 1);
     assert(cwist_http3_client_send_datagram(client, g_oversized_dgram,
