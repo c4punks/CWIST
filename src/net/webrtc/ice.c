@@ -13,6 +13,7 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+#include <pthread.h>
 #include <string.h>
 
 /** @name STUN wire-format constants (RFC 5389)
@@ -30,25 +31,18 @@
 #define ATTR_ICE_CONTROLLING 0x802A    /**< ICE-CONTROLLING attribute type (we always send it). */
 /** @} */
 
-/** Byte-at-a-time CRC-32 (IEEE, poly 0xEDB88320) lookup table, built lazily by crc32_init(). */
+/** Byte-at-a-time CRC-32 (IEEE, poly 0xEDB88320) lookup table. */
 static uint32_t crc32_table[256];
-/** Set once crc32_table has been initialized. */
-static bool crc32_ready = false;
+static pthread_once_t crc32_once = PTHREAD_ONCE_INIT;
 
-/** @brief Build the CRC-32 lookup table on first use.
- *
- * Idempotent; subsequent calls return immediately.
- */
+/** @brief Build the CRC-32 lookup table on first use. */
 static void crc32_init(void) {
-    if (crc32_ready)
-        return;
     for (uint32_t i = 0; i < 256; i++) {
         uint32_t c = i;
         for (int k = 0; k < 8; k++)
             c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
         crc32_table[i] = c;
     }
-    crc32_ready = true;
 }
 
 /** @brief Incremental CRC-32 (IEEE) over possibly several consecutive calls.
@@ -59,7 +53,7 @@ static void crc32_init(void) {
  * @return Updated running CRC.
  */
 static uint32_t crc32_update(uint32_t c, const uint8_t *data, size_t len) {
-    crc32_init();
+    pthread_once(&crc32_once, crc32_init);
     for (size_t i = 0; i < len; i++)
         c = crc32_table[(c ^ data[i]) & 0xFF] ^ (c >> 8);
     return c;
