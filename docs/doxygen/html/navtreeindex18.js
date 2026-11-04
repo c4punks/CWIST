@@ -1,5 +1,13 @@
 var NAVTREEINDEX18 =
 {
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md827":[84,6],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md828":[84,7],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md829":[84,7,0],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md830":[84,8],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md831":[84,9],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md832":[84,10],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md833":[84,10,0],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md834":[84,10,1],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md835":[84,10,2],
 "dd/d55/structcwist__db.html":[93,0,20],
 "dd/d55/structcwist__db.html#a1ba9825f5e23bc68f8ebbbf259bf0fa0":[93,0,20,0],
@@ -241,13 +249,5 @@ var NAVTREEINDEX18 =
 "dd/dff/http3_8h.html#a3b8be16f94dac189c5f2a8b360dea4f0":[94,0,1,0,2,3,7,4],
 "dd/dff/http3_8h.html#a450069a1e05bc23a8e61e420c0bfd3e4":[94,0,1,0,2,3,7,5],
 "dd/dff/http3_8h.html#a48b148a623a57a569bbf3b6601e4407a":[94,0,1,0,2,3,7,12],
-"dd/dff/http3_8h.html#a5040add8f92575bc4a0bdafacc824bf9":[94,0,1,0,2,3,7,17],
-"dd/dff/http3_8h.html#a511f4890034c06ca4e324385ce0c6613":[94,0,1,0,2,3,7,7],
-"dd/dff/http3_8h.html#a535445b5d0dc3d199ee6e738e4e34cd2":[94,0,1,0,2,3,7,26],
-"dd/dff/http3_8h.html#a63a59193af0cda3446e0e5d4805300a2":[94,0,1,0,2,3,7,16],
-"dd/dff/http3_8h.html#a670f4019afc7ea341715fb04bd7e4031":[94,0,1,0,2,3,7,30],
-"dd/dff/http3_8h.html#a698c07295ab057e148fe6744f21c2adf":[94,0,1,0,2,3,7,23],
-"dd/dff/http3_8h.html#a7578186c59139d081e252829586a2c10":[94,0,1,0,2,3,7,1],
-"dd/dff/http3_8h.html#a7903979d1019695b9bc5e4c4c8032103":[94,0,1,0,2,3,7,28],
-"dd/dff/http3_8h.html#a7bb102c8e1d282026b8103570713420e":[94,0,1,0,2,3,7,9]
+"dd/dff/http3_8h.html#a5040add8f92575bc4a0bdafacc824bf9":[94,0,1,0,2,3,7,17]
 };

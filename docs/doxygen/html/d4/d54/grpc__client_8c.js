@@ -11,6 +11,7 @@ var grpc__client_8c =
     [ "H2_FLAG_END_HEADERS", "d4/d54/grpc__client_8c.html#aa5e782679e665ec8241b1a797538b242", null ],
     [ "H2_FLAG_END_STREAM", "d4/d54/grpc__client_8c.html#a625409b73ae559c1b0fc369e96aa31ee", null ],
     [ "H2_FLAG_PADDED", "d4/d54/grpc__client_8c.html#a4f7f02c9675cdcd2fc1264364f6bc19c", null ],
+    [ "H2_FLAG_PRIORITY", "d4/d54/grpc__client_8c.html#a0d97f8840021aac0328be920e4f1893e", null ],
     [ "H2_FRAME_CONTINUATION", "d4/d54/grpc__client_8c.html#acc3275ede6828445a3f50fcb652e6a3f", null ],
     [ "H2_FRAME_DATA", "d4/d54/grpc__client_8c.html#ad684e83a72ea7c5ec5e86ba367f3d618", null ],
     [ "H2_FRAME_GOAWAY", "d4/d54/grpc__client_8c.html#a85a624e3f44cd4b0b8ed7813ce22bf85", null ],
