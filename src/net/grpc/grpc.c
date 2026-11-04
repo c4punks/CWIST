@@ -1352,6 +1352,7 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
         existing->handler = unary_handler;
         existing->stream_handler = stream_handler;
         existing->user_ctx = user_ctx;
+        cwist_app_post(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary);
         cwist_free(path);
         return 0;
     }
