@@ -45,12 +45,13 @@ int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
     char line[512];
     size_t pos = 0;
     while (pos < len) {
-        size_t n = strcspn(sdp + pos, "\r\n");
-        if (n >= sizeof(line))
-            n = sizeof(line) - 1;
+        size_t line_len = 0;
+        while (pos + line_len < len && sdp[pos + line_len] != '\r' && sdp[pos + line_len] != '\n')
+            line_len++;
+        size_t n = line_len < sizeof(line) ? line_len : sizeof(line) - 1;
         memcpy(line, sdp + pos, n);
         line[n] = '\0';
-        pos += n;
+        pos += line_len;
         while (pos < len && (sdp[pos] == '\r' || sdp[pos] == '\n'))
             pos++;
 
