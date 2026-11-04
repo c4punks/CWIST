@@ -7,6 +7,7 @@
 #define _DARWIN_C_SOURCE
 #endif
 #include <stdatomic.h>
+#include <stdint.h>
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/macros.h>
 #include <cwist/core/mem/alloc.h>
@@ -169,9 +170,21 @@ static bool nuke_integrity_ok(sqlite3 *db) {
  */
 static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
     if (!dest || !source) return -1;
+    sqlite3_mutex *first = sqlite3_db_mutex(dest);
+    sqlite3_mutex *second = sqlite3_db_mutex(source);
+    if ((uintptr_t)first > (uintptr_t)second) {
+        sqlite3_mutex *swap = first;
+        first = second;
+        second = swap;
+    }
+    sqlite3_mutex_enter(first);
+    sqlite3_mutex_enter(second);
+
     sqlite3_backup *backup = sqlite3_backup_init(dest, "main", source, "main");
     if (!backup) {
         fprintf(stderr, "[NukeDB] sqlite3_backup_init failed: %s\n", sqlite3_errmsg(dest));
+        sqlite3_mutex_leave(second);
+        sqlite3_mutex_leave(first);
         return -1;
     }
 
@@ -181,6 +194,8 @@ static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
     }
 
     sqlite3_backup_finish(backup);
+    sqlite3_mutex_leave(second);
+    sqlite3_mutex_leave(first);
     return (rc == SQLITE_DONE) ? 0 : -1;
 }
 
