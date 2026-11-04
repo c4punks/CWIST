@@ -35,6 +35,10 @@ int main(void) {
     assert(rendered != NULL && strcmp(rendered->data, "world") == 0);
     cwist_sstring_destroy(rendered);
 
+    rendered = cwist_template_render("{{ |upper }}", context);
+    assert(rendered != NULL && (!rendered->data || strcmp(rendered->data, "") == 0));
+    cwist_sstring_destroy(rendered);
+
     char directory[] = "/tmp/cwist-template-XXXXXX";
     assert(mkdtemp(directory) != NULL);
     char partial[PATH_MAX];
