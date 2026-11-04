@@ -1399,6 +1399,7 @@ TEST_TARGETS = test_worker_affinity \
                test_idle_reaper \
                test_linux_writer_fast \
                test_orm_socket \
+               test_orm_socket_sigpipe \
                test_webtransport \
                test_webtransport_client_api \
                test_http \
@@ -2728,9 +2729,13 @@ ifeq ($(CWIST_DB),1)
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
 	$(CC) $(CFLAGS) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
+
+test_orm_socket_sigpipe: $(LIB_NAME) tests/test_orm_socket_sigpipe.c
+	$(CC) $(CFLAGS) -o $@ tests/test_orm_socket_sigpipe.c $(LIB_NAME) $(LIBS)
+	./$@
 else
-# CWIST_DB=0: the module and its test are compiled out.
-test_orm_socket:
+# CWIST_DB=0: the module and its tests are compiled out.
+test_orm_socket test_orm_socket_sigpipe:
 	@echo "CWIST_DB=0: skipping $@"
 endif
 
