@@ -1234,7 +1234,12 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
         pthread_mutex_unlock(&client->dgram_mtx);
         return -1;
     }
-    size_t to_copy = client->in_dgram.len < len ? client->in_dgram.len : len;
+    if (len < client->in_dgram.len) {
+        pthread_mutex_unlock(&client->dgram_mtx);
+        errno = EMSGSIZE;
+        return -1;
+    }
+    size_t to_copy = client->in_dgram.len;
     memcpy(buf, client->in_dgram.data, to_copy);
     free(client->in_dgram.data);
     client->in_dgram.data = NULL;
