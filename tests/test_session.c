@@ -37,6 +37,8 @@ static void test_session_create_and_commit(void) {
     assert(header_contains(res->headers, "Set-Cookie", "HttpOnly"));
     assert(!header_contains(res->headers, "Set-Cookie", "Secure"));
 
+    cwist_session_destroy(session);
+    req->session = NULL;
     app->use_ssl = true;
     cwist_http_response *secure_res = cwist_http_response_create();
     cwist_session_t *secure_session = cwist_session_start(app, req, secure_res);
