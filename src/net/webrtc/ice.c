@@ -600,11 +600,16 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
  * @param ufrag_cap Capacity of @p ufrag; up to 8 characters plus NUL are written.
  * @param pwd       Output buffer for the password.
  * @param pwd_cap   Capacity of @p pwd; up to 32 characters plus NUL are written.
- * @warning Behavior is undefined if either capacity is 0 (cap - 1 underflows).
+ * @note On random generation failure, outputs with nonzero capacity are empty.
  */
 void cwist_ice_random_creds(char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd_cap) {
     uint8_t raw[24];
-    RAND_bytes(raw, sizeof(raw));
+    if (ufrag && ufrag_cap > 0) ufrag[0] = '\0';
+    if (pwd && pwd_cap > 0) pwd[0] = '\0';
+    if (!ufrag || !pwd || ufrag_cap == 0 || pwd_cap == 0 ||
+        RAND_bytes(raw, sizeof(raw)) != 1)
+        return;
+
     size_t n = ufrag_cap - 1 < 8 ? ufrag_cap - 1 : 8;
     for (size_t i = 0; i < n; i++)
         ufrag[i] = b64url_chars[raw[i] & 63];
