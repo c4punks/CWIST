@@ -51,6 +51,7 @@
 #define H2_FRAME_CONTINUATION 0x09
 #define H2_FLAG_END_STREAM 0x01
 #define H2_FLAG_PADDED 0x08
+#define H2_FLAG_PRIORITY 0x20
 #define H2_FLAG_END_HEADERS 0x04
 #define H2_FLAG_ACK 0x01
 
@@ -824,11 +825,22 @@ static int grpc_client_read_header_block(cwist_grpc_client *c, cwist_grpc_call *
                                          grpc_client_frame *first, uint8_t **out, size_t *out_len,
                                          int *end_stream, uint64_t deadline_ms) {
     if (first->len > GRPC_CLIENT_MAX_HEADER_BLOCK) return -1;
-    size_t cap = first->len ? first->len : 1;
-    uint8_t *block = cwist_alloc(cap);
+    size_t offset = 0;
+    size_t padding = 0;
+    if (first->flags & H2_FLAG_PADDED) {
+        if (first->len == 0) return -1;
+        padding = first->payload[0];
+        offset = 1;
+    }
+    if (first->flags & H2_FLAG_PRIORITY) {
+        if (first->len - offset < 5) return -1;
+        offset += 5;
+    }
+    if (padding > first->len - offset) return -1;
+    size_t len = first->len - offset - padding;
+    uint8_t *block = cwist_alloc(len ? len : 1);
     if (!block) return -1;
-    size_t len = first->len;
-    if (len) memcpy(block, first->payload, len);
+    if (len) memcpy(block, first->payload + offset, len);
     *end_stream = !!(first->flags & H2_FLAG_END_STREAM);
     unsigned int continuation_count = 0;
     while (!(first->flags & H2_FLAG_END_HEADERS)) {
