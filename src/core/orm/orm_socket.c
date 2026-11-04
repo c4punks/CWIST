@@ -83,12 +83,15 @@ static int recv_all(int fd, void *buf, size_t n)
  * @brief Send exactly @p n bytes from @p buf to @p fd.
  * @return 0 on success, -1 on error.
  */
-static int send_all(int fd, const void *buf, size_t n)
-{
+static int send_all(int fd, const void *buf, size_t n) {
     size_t total = 0;
     const char *p = (const char *)buf;
     while (total < n) {
+#ifdef MSG_NOSIGNAL
+        ssize_t w = send(fd, p + total, n - total, MSG_NOSIGNAL);
+#else
         ssize_t w = send(fd, p + total, n - total, 0);
+#endif
         if (w <= 0) return -1;
         total += (size_t)w;
     }
@@ -98,8 +101,7 @@ static int send_all(int fd, const void *buf, size_t n)
 /**
  * @brief Free a heap-allocated worker context.
  */
-static void free_worker_ctx(cwist_orm_worker_ctx_t *ctx)
-{
+static void free_worker_ctx(cwist_orm_worker_ctx_t *ctx) {
     /* The context is allocated by the caller's thread and freed by the
      * detached worker, so it stays on the raw allocator: a cwist_alloc
      * scope sweep on the caller side must not reclaim it. */
@@ -466,12 +468,17 @@ int cwist_orm_socketpair_cloexec(int domain, int type, int protocol, int sv[2]) 
         set_cloexec(sv[0]);
         set_cloexec(sv[1]);
     }
+#ifdef SO_NOSIGPIPE
+    if (res == 0) {
+        int one = 1;
+        setsockopt(sv[0], SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+        setsockopt(sv[1], SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+    }
+#endif
     return res;
 }
 
-
-int cwist_db_transfer_sqlite_to_socket(const char *db_path)
-{
+int cwist_db_transfer_sqlite_to_socket(const char *db_path) {
     if (!db_path) {
         errno = EINVAL;
         return -1;
