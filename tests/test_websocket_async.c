@@ -372,16 +372,18 @@ int main(void) {
     cwist_reactor_t *reactor = cwist_reactor_create();
     assert(reactor);
 
-    int conn_a[2], conn_b[2], conn_c[2], conn_d[2];
+    int conn_a[2], conn_b[2], conn_c[2], conn_d[2], conn_e[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_a) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_b) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_c) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_d) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_e) == 0);
 
     assert(cwist_websocket_async_attach(conn_a[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_b[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_c[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_d[0], reactor, on_message, NULL, NULL, 0));
+    assert(cwist_websocket_async_attach(conn_e[0], reactor, on_message, NULL, NULL, 0));
 
     pthread_t rt;
     assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
@@ -451,6 +453,14 @@ int main(void) {
     assert(read(conn_d[1], fragment_payload, sizeof(fragment_payload)) == 0);
     assert(g_messages_seen == before_invalid);
     printf("interleaved data opcodes rejected: ok\n");
+
+    write_masked(conn_e[1], 0x83, NULL, 0);
+    invalid_pfd.fd = conn_e[1];
+    assert(poll(&invalid_pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_e[1], fragment_payload, sizeof(fragment_payload)) == 0);
+    assert(g_messages_seen == before_invalid);
+    close(conn_e[1]);
+    printf("reserved opcodes rejected: ok\n");
 
     /* 5. A valid frame split across two TCP writes (partial header) is
      *    delivered after the second write (incremental stash parsing). */

@@ -966,6 +966,10 @@ static int ws_async_feed(cwist_websocket_async *ws) {
         const uint8_t *base = ws->stash + off;
         bool fin = (base[0] & 0x80) != 0;
         cwist_ws_opcode_t opcode = base[0] & 0x0F;
+        if (opcode != CWIST_WS_FRAME_CONTINUATION && opcode != CWIST_WS_FRAME_TEXT &&
+            opcode != CWIST_WS_FRAME_BINARY && opcode != CWIST_WS_FRAME_CLOSE &&
+            opcode != CWIST_WS_FRAME_PING && opcode != CWIST_WS_FRAME_PONG)
+            return -1;
 
         /* RFC 6455 section 5.2: RSV1/RSV2/RSV3 MUST be 0 unless an extension
          * defines their meaning.  CWIST has no such extension. */
