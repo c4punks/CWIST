@@ -54,6 +54,18 @@ int main(void) {
     cwist_http_request_destroy(req3);
     cwist_http_response_destroy(res3);
 
+    char long_path[300];
+    memcpy(long_path, "/users/", 7);
+    memset(long_path + 7, 'A', 256);
+    long_path[7 + 256] = '\0';
+    cwist_http_request *req4 = cwist_http_request_create();
+    req4->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(req4->path, long_path);
+    cwist_http_response *res4 = cwist_http_response_create();
+    assert(cwist_mux_serve(router, req4, res4) == false);
+    cwist_http_request_destroy(req4);
+    cwist_http_response_destroy(res4);
+
     cwist_mux_router_destroy(router);
     printf("All Mux tests passed!\n");
 
