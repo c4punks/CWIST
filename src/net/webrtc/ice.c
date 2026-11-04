@@ -240,10 +240,7 @@ static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
  * @param len Number of bytes at @p buf.
  * @param pwd Short-term credential password used as the HMAC-SHA1 key.
  * @return 1 if the HMAC matches, 0 if the message is malformed, the HMAC does
- *         not match, or OpenSSL allocation fails.
- * @retval 1 Also when no MESSAGE-INTEGRITY attribute is present: accepted for
- *            MVP interoperability (RFC 8445 requires MI, but the agent stays
- *            permissive here).
+ *         not match, MESSAGE-INTEGRITY is missing, or OpenSSL allocation fails.
  * @note The HMAC covers the message up to and including the MI attribute
  *       header, with the header's length field adjusted to end at the MI
  *       attribute, per RFC 5389.
@@ -253,10 +250,8 @@ int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *
     uint8_t hmac[EVP_MAX_MD_SIZE];
     unsigned int hmac_len = 0;
     size_t mi_off;
-    if (!cwist_ice_stun_is_message(buf, len))
-        return 0;
-    if (!find_mi(buf, len, &mi_off))
-        return 1; /* no MI: accept (RFC 8445 requires it, but stay permissive at MVP) */
+    if (!cwist_ice_stun_is_message(buf, len)) return 0;
+    if (!find_mi(buf, len, &mi_off)) return 0;
     /* MI covers the message up to and including the MI attribute header, with
      * the message length field set to end at the MI attribute. */
     uint8_t hdr[STUN_HDR_LEN];
