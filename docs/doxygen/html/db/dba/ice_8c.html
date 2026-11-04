@@ -522,7 +522,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>On random generation failure, outputs with nonzero capacity are empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00586">586</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00587">587</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
@@ -580,7 +580,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total request length in bytes, or -1 if <code>cap</code> is too small. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00356">356</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00357">357</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00031">ATTR_ICE_CONTROLLING</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_PRIORITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00027">ATTR_USE_CANDIDATE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00024">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00196">CWIST_STUN_BINDING_REQUEST</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00021">STUN_MAGIC</a>.</p>
 
@@ -644,13 +644,13 @@ Functions</h2></td></tr>
     <tr><td class="paramname">out</td><td>Destination buffer. </td></tr>
     <tr><td class="paramname">cap</td><td>Capacity of <code>out</code> in bytes. </td></tr>
     <tr><td class="paramname">req</td><td>The received binding request (used for its transaction ID). </td></tr>
-    <tr><td class="paramname">req_len</td><td>Bytes at <code>req</code>; currently unused. </td></tr>
+    <tr><td class="paramname">req_len</td><td>Bytes at <code>req</code>. </td></tr>
     <tr><td class="paramname">mapped</td><td>Address/port to report back (XOR-encoded with the magic cookie). </td></tr>
     <tr><td class="paramname">pwd</td><td>Short-term credential password for the MI HMAC. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Total response length in bytes, or -1 if <code>cap</code> is too small or OpenSSL allocation fails. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Total response length in bytes, or -1 if the request is truncated, <code>cap</code> is too small, or OpenSSL allocation fails. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00284">284</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
@@ -716,7 +716,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00550">550</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00551">551</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00024">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>.</p>
 
@@ -849,7 +849,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00021">STUN_MAGIC</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00550">cwist_ice_stun_get_remote_ufrag()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00113">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00512">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00255">cwist_ice_stun_validate_request()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00551">cwist_ice_stun_get_remote_ufrag()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00113">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00513">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00255">cwist_ice_stun_validate_request()</a>.</p>
 
 </div>
 </div>
@@ -918,7 +918,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00512">512</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00513">513</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00255">cwist_ice_stun_validate_request()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00197">CWIST_STUN_BINDING_RESPONSE</a>.</p>
 
@@ -975,7 +975,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New total length, or -1 on failure (see stun_sign()). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00468">468</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00469">469</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -1030,7 +1030,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00023">EVP_MAX_MD_SIZE</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00512">cwist_ice_stun_parse_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00513">cwist_ice_stun_parse_response()</a>.</p>
 
 </div>
 </div>
