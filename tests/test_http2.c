@@ -2056,7 +2056,8 @@ int main(void) {
     test_http2_padded_data(padded_hi, sizeof(padded_hi), 0x08, true, false,
                            (const unsigned char *)"hi", 2);
     test_http2_padded_data(NULL, 0, 0x01, false, false, (const unsigned char *)"", 0);
-    test_http2_padded_data(padded_empty, sizeof(padded_empty), 0x09, false, false, NULL, 0);
+    test_http2_padded_data(padded_empty, sizeof(padded_empty), 0x09, false, false,
+                           (const unsigned char *)"", 0);
     test_http2_padded_data(invalid_padding, sizeof(invalid_padding), 0x09, false, true, NULL, 0);
     test_http2_padded_data(NULL, 0, 0x09, false, true, NULL, 0);
     test_http2_data_frame_size(16384, false);
