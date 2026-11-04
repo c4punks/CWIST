@@ -1090,7 +1090,10 @@ cwist_webrtc_conn *cwist_webrtc_connect(cwist_webrtc_ctx *ctx, const struct sock
     snprintf(conn->peer_pwd, sizeof(conn->peer_pwd), "%s", peer_pwd);
     snprintf(conn->peer_fingerprint, sizeof(conn->peer_fingerprint), "%s",
              peer_fingerprint ? peer_fingerprint : "");
-    RAND_bytes(conn->stun_txid, sizeof(conn->stun_txid));
+    if (RAND_bytes(conn->stun_txid, sizeof(conn->stun_txid)) != 1) {
+        cwist_webrtc_conn_release(conn);
+        return NULL;
+    }
     cwist_webrtc_conn_retain(conn); /* returned to the caller */
     conn->reg_post.cb = connect_post_cb;
     conn->reg_post.ctx = conn;
