@@ -17,6 +17,8 @@ var http3_8c =
     [ "h3_conn_ctx_t", "de/daf/http3_8c.html#af1072d996dd32f47b4a474b6c05042d8", null ],
     [ "h3_dgram_node_t", "de/daf/http3_8c.html#a43cd7e151039d7cbeff633d82fcaf65e", null ],
     [ "h3_stream_ctx_t", "de/daf/http3_8c.html#a94cd8f1a05f5199c046203cb7ad17042", null ],
+    [ "cwist_h3_global_acquire", "de/daf/http3_8c.html#a6882a9c01e73c43dbd0f7cb18ae0920c", null ],
+    [ "cwist_h3_global_release", "de/daf/http3_8c.html#ae1e711ddec03b52d6caea1af75b8a7f8", null ],
     [ "cwist_http3_destroy_context", "de/daf/http3_8c.html#a3b8be16f94dac189c5f2a8b360dea4f0", null ],
     [ "cwist_http3_init_context", "de/daf/http3_8c.html#a450069a1e05bc23a8e61e420c0bfd3e4", null ],
     [ "cwist_http3_init_context_ephemeral", "de/daf/http3_8c.html#afec2cffad5a60cfc7c08f73eb268ec3c", null ],
