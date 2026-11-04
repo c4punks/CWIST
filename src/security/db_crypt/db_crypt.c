@@ -1,6 +1,8 @@
 #include <cwist/security/db_crypt/db_crypt.h>
 
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
+#include <openssl/hmac.h>
 #include <openssl/mem.h>
 #include <openssl/rand.h>
 
@@ -13,7 +15,9 @@
  * ---------------------------------------------------------------------- */
 
 static const unsigned char MAGIC[4] = {0x43, 0x57, 0x44, 0x42}; /* "CWDB" */
-static const unsigned char VERSION = 0x01;
+static const unsigned char LEGACY_VERSION = 0x01;
+static const unsigned char VERSION = 0x02;
+#define CWIST_DB_CRYPT_AUTH_TAG_LEN 32
 
 /**
  * AES-256-CBC encryption.
@@ -116,15 +120,12 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
         return NULL;
     }
 
-    /* 4. Assemble blob:
-     *    magic(4) + ver(1) + kek_iv(16) + enc_dek(enc_dek_len)
-     *    + dek_iv(16) + ptlen(8) + ct(ct_len)
-     */
+    /* 4. Assemble the authenticated v2 blob. */
     size_t hdr_fixed =
         4 + 1 + CWIST_DB_CRYPT_IV_LEN + (size_t)enc_dek_len + CWIST_DB_CRYPT_IV_LEN + 8;
     size_t total = hdr_fixed + (size_t)ct_len;
 
-    unsigned char *blob = (unsigned char *)malloc(total);
+    unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
     if (!blob) {
         free(ct);
         return NULL;
@@ -150,39 +151,37 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
     off += 8;
 
     memcpy(blob + off, ct, (size_t)ct_len);
-
     free(ct);
 
-    *out_len = total;
+    unsigned int tag_len = 0;
+    if (!HMAC(EVP_sha256(), ctx->kek, CWIST_DB_CRYPT_KEY_LEN, blob, total, blob + total,
+              &tag_len) ||
+        tag_len != CWIST_DB_CRYPT_AUTH_TAG_LEN) {
+        free(blob);
+        return NULL;
+    }
+
+    *out_len = total + CWIST_DB_CRYPT_AUTH_TAG_LEN;
     return blob;
 }
 
-unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsigned char *blob,
-                                   size_t blob_len, size_t *out_len) {
+static unsigned char *db_crypt_open_decrypted(const cwist_db_crypt_ctx_t *ctx,
+                                              const unsigned char *blob, size_t blob_len,
+                                              size_t *out_len) {
     if (!ctx || !blob || !out_len) return NULL;
 
     /* Minimum header: 4+1+16+64+16+8 = 109 bytes. */
     if (blob_len < CWIST_DB_CRYPT_HDR_LEN) return NULL;
 
     size_t off = 0;
-
-    /* 1. Verify magic and version. */
     if (memcmp(blob + off, MAGIC, 4) != 0) return NULL;
     off += 4;
-    if (blob[off] != VERSION) return NULL;
+    if (blob[off] != LEGACY_VERSION && blob[off] != VERSION) return NULL;
     off += 1;
 
-    /* 2. Read KEK IV. */
     const unsigned char *kek_iv = blob + off;
     off += CWIST_DB_CRYPT_IV_LEN;
 
-    /* 3. Decrypt DEK blob (48 bytes padded to 64 during seal).
-     *    The encrypted DEK blob occupies:
-     *    enc_dek_len = blob_len - fixed_parts_after_enc_dek
-     *    fixed_parts_after: dek_iv(16) + ptlen(8) + at_least_one_block(16)
-     *    We know enc_dek_len = (blob_len - off - 16 - 8 - ct_len)
-     *    but we stored enc_dek_len as 48+16=64 bytes always.
-     *    Recalculate: plain was 48 bytes → padded = 64. */
     const size_t enc_dek_len = 64;
     if (blob_len < off + enc_dek_len + CWIST_DB_CRYPT_IV_LEN + 8) return NULL;
 
@@ -194,20 +193,17 @@ unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsign
     const unsigned char *dek_iv = dek_plain;
     const unsigned char *dek = dek_plain + CWIST_DB_CRYPT_IV_LEN;
 
-    /* 4. Read stored DEK IV (should match what was unwrapped). */
-    off += CWIST_DB_CRYPT_IV_LEN; /* skip dek_iv in header (redundant; we use the unwrapped one) */
+    off += CWIST_DB_CRYPT_IV_LEN;
 
-    /* 5. Read plaintext length (little-endian uint64). */
     uint64_t ptlen_le = 0;
     for (int i = 0; i < 8; i++) ptlen_le |= ((uint64_t)blob[off + i]) << (8 * i);
     off += 8;
     size_t expected_pt_len = (size_t)ptlen_le;
 
-    /* 6. Decrypt SQLite bytes. */
     size_t ct_len = blob_len - off;
     if (ct_len == 0) return NULL;
 
-    unsigned char *pt = (unsigned char *)malloc(ct_len + 1); /* extra for safety */
+    unsigned char *pt = (unsigned char *)malloc(ct_len + 1);
     if (!pt) return NULL;
 
     int pt_len = aes256_decrypt(dek, dek_iv, blob + off, ct_len, pt);
@@ -217,7 +213,33 @@ unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsign
         return NULL;
     }
 
-    pt[expected_pt_len] = '\0'; /* null-terminate for safety (sqlite doesn't need it) */
+    pt[expected_pt_len] = '\0';
     *out_len = expected_pt_len;
     return pt;
+}
+
+unsigned char *cwist_db_crypt_open_legacy(const cwist_db_crypt_ctx_t *ctx,
+                                          const unsigned char *blob, size_t blob_len,
+                                          size_t *out_len) {
+    if (!ctx || !blob || !out_len || blob_len < CWIST_DB_CRYPT_HDR_LEN || blob[4] != LEGACY_VERSION)
+        return NULL;
+    return db_crypt_open_decrypted(ctx, blob, blob_len, out_len);
+}
+
+unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsigned char *blob,
+                                   size_t blob_len, size_t *out_len) {
+    if (!ctx || !blob || !out_len ||
+        blob_len < CWIST_DB_CRYPT_HDR_LEN + CWIST_DB_CRYPT_AUTH_TAG_LEN || blob[4] != VERSION)
+        return NULL;
+
+    size_t authenticated_len = blob_len - CWIST_DB_CRYPT_AUTH_TAG_LEN;
+    unsigned char expected[CWIST_DB_CRYPT_AUTH_TAG_LEN];
+    unsigned int expected_len = 0;
+    if (!HMAC(EVP_sha256(), ctx->kek, CWIST_DB_CRYPT_KEY_LEN, blob, authenticated_len, expected,
+              &expected_len) ||
+        expected_len != CWIST_DB_CRYPT_AUTH_TAG_LEN ||
+        CRYPTO_memcmp(expected, blob + authenticated_len, CWIST_DB_CRYPT_AUTH_TAG_LEN) != 0)
+        return NULL;
+
+    return db_crypt_open_decrypted(ctx, blob, authenticated_len, out_len);
 }
