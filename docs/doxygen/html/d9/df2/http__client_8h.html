@@ -299,7 +299,7 @@ Functions</h2></td></tr>
 <p>Acquires the shared curl global state, then initializes an easy handle with defaults: redirect following (max 10 hops), 30 s timeout, TCP keepalive, automatic content decoding, and a CWIST user agent.</p>
 <dl class="section return"><dt>Returns</dt><dd>new client handle, or NULL on allocation/curl init failure (the curl global reference is released in that case). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00185">185</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00188">188</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00019">cwist_curl_global_acquire()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -331,7 +331,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00226">226</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00229">229</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -382,7 +382,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00287">287</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00290">290</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -475,7 +475,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> with err_i16 set to 0 on success, -1 on failure (invalid arguments, curl transfer error, or allocation failure). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00336">336</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00339">339</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00029">CWIST_HTTP_CREATED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00033">CWIST_HTTP_FORBIDDEN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02017">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01554">cwist_http_method_to_string()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00030">CWIST_HTTP_NO_CONTENT</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00034">CWIST_HTTP_NOT_FOUND</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00036">CWIST_HTTP_NOT_IMPLEMENTED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02302">cwist_http_response_create()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00111">CWIST_HTTP_SERVICE_UNAVAILABLE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00032">CWIST_HTTP_UNAUTHORIZED</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00504">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00088">cwist_sstring_assign_len()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00060">cwist_http_header_node::key</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00062">cwist_http_header_node::next</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00061">cwist_http_header_node::value</a>.</p>
 
@@ -526,7 +526,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00302">302</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00305">305</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -576,7 +576,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00270">270</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00273">273</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -619,7 +619,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00243">243</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00246">246</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -668,7 +668,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00255">255</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00258">258</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
