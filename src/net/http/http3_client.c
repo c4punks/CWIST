@@ -835,6 +835,43 @@ static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
 /* Client API                                                         */
 /* ------------------------------------------------------------------ */
 
+static lsquic_engine_t *h3c_engine_new(cwist_http3_client *client) {
+    struct lsquic_engine_settings settings;
+    lsquic_engine_init_settings(&settings, LSENG_HTTP);
+    settings.es_versions = (1 << LSQVER_I001) | (1 << LSQVER_I002);
+    settings.es_ping_period = 15;
+    settings.es_noprogress_timeout = 30;
+    settings.es_ecn = 1;
+    settings.es_pace_packets = 1;
+    settings.es_optimistic_nat = 1;
+    settings.es_datagrams = client->datagram_enabled ? 1 : 0;
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    settings.es_webtransport = client->datagram_enabled ? 0 : 1;
+    settings.es_max_webtransport_sessions = 1;
+    settings.es_http_datagrams = client->datagram_enabled ? 0 : 1;
+    settings.es_reset_stream_at = 1;
+#endif
+
+    char err_buf[256];
+    if (lsquic_engine_check_settings(&settings, LSENG_HTTP, err_buf, sizeof(err_buf)) != 0) {
+        fprintf(stderr, "[HTTP/3-CLIENT] Invalid engine settings: %s\n", err_buf);
+        return NULL;
+    }
+
+    struct lsquic_engine_api api = {
+        .ea_stream_if = &h3c_stream_if,
+        .ea_stream_if_ctx = client,
+        .ea_packets_out = h3c_packets_out,
+        .ea_packets_out_ctx = client,
+        .ea_get_ssl_ctx = h3c_get_ssl_ctx,
+        .ea_hsi_if = &h3c_hset_if,
+        .ea_hsi_ctx = NULL,
+        .ea_settings = &settings,
+        .ea_alpn = "h3",
+    };
+    return lsquic_engine_new(LSENG_HTTP, &api);
+}
+
 cwist_http3_client *cwist_http3_client_create(void) {
     h3c_global_init();
 
@@ -869,53 +906,12 @@ cwist_http3_client *cwist_http3_client_create(void) {
     SSL_CTX_set_verify(client->ssl_ctx, SSL_VERIFY_PEER, NULL);
     SSL_CTX_set_default_verify_paths(client->ssl_ctx);
 
-    struct lsquic_engine_settings settings;
-    lsquic_engine_init_settings(&settings, LSENG_HTTP);
-    settings.es_versions = (1 << LSQVER_I001) | (1 << LSQVER_I002);
-    settings.es_ping_period = 15;
-    settings.es_noprogress_timeout = 30;
-    settings.es_ecn = 1;
-    settings.es_pace_packets = 1;
-    settings.es_optimistic_nat = 1;
-    settings.es_datagrams = client->datagram_enabled ? 1 : 0;
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-    settings.es_webtransport = 1;
-    /* lsquic_engine.c rejects anything above 1: the WebTransport
-     * implementation on litespeedtech/lsquic#629 carries one session per
-     * connection. The server side (http3.c) already sets 1. */
-    settings.es_max_webtransport_sessions = 1;
-    settings.es_http_datagrams = 1;
-    settings.es_reset_stream_at = 1;
-#endif
-
-    char err_buf[256];
-    if (lsquic_engine_check_settings(&settings, LSENG_HTTP, err_buf, sizeof(err_buf)) != 0) {
-        fprintf(stderr, "[HTTP/3-CLIENT] Invalid engine settings: %s\n", err_buf);
-        SSL_CTX_free(client->ssl_ctx);
-        pthread_mutex_destroy(&client->mtx);
-        pthread_cond_destroy(&client->cond);
-        free(client);
-        h3c_global_cleanup();
-        return NULL;
-    }
-
-    struct lsquic_engine_api api = {
-        .ea_stream_if = &h3c_stream_if,
-        .ea_stream_if_ctx = client,
-        .ea_packets_out = h3c_packets_out,
-        .ea_packets_out_ctx = client,
-        .ea_get_ssl_ctx = h3c_get_ssl_ctx,
-        .ea_hsi_if = &h3c_hset_if,
-        .ea_hsi_ctx = NULL,
-        .ea_settings = &settings,
-        .ea_alpn = "h3",
-    };
-
-    client->engine = lsquic_engine_new(LSENG_HTTP, &api);
+    client->engine = h3c_engine_new(client);
     if (!client->engine) {
         SSL_CTX_free(client->ssl_ctx);
         pthread_mutex_destroy(&client->mtx);
         pthread_cond_destroy(&client->cond);
+        pthread_mutex_destroy(&client->dgram_mtx);
         free(client);
         h3c_global_cleanup();
         return NULL;
@@ -1015,7 +1011,17 @@ void cwist_http3_client_enable_0rtt(cwist_http3_client *client, int enabled) {
 }
 
 void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled) {
-    if (client) client->datagram_enabled = enabled;
+    if (!client || client->conn || client->datagram_enabled == !!enabled) return;
+
+    int previous = client->datagram_enabled;
+    client->datagram_enabled = !!enabled;
+    lsquic_engine_t *engine = h3c_engine_new(client);
+    if (!engine) {
+        client->datagram_enabled = previous;
+        return;
+    }
+    lsquic_engine_destroy(client->engine);
+    client->engine = engine;
 }
 
 /* ------------------------------------------------------------------ */
