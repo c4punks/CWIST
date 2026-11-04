@@ -510,7 +510,7 @@ Functions</h2></td></tr>
 
 <p>Bytes accepted by <a class="el" href="../../dd/d3b/webrtc_8h.html#aeb291e2d3233e9cde4e59f0a1149cecd" title="Send a message on a DataChannel.">cwist_webrtc_conn_send()</a> and not yet handed to SCTP (like RTCDataChannel.bufferedAmount, summed over channels). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01024">1024</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01025">1025</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00083">cwist_webrtc_conn::buffered</a>, and <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -534,7 +534,7 @@ Functions</h2></td></tr>
 
 <p>Close a connection (SCTP abort, DTLS teardown). Safe from any thread; the close handler runs on the reactor thread. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01236">1236</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01240">1240</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00128">cwist_webrtc_conn::close_post</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00082">cwist_webrtc_conn::close_posted</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00090">cwist_webrtc_conn::close_requested</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00100">cwist_webrtc_on_owner()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00081">cwist_webrtc_conn::detached</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>.</p>
 
@@ -694,6 +694,8 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00114">cwist_webrtc_conn::ch_bits</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00080">cwist_webrtc_conn::refs</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00116">cwist_webrtc_conn::rx_partial</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00107">cwist_webrtc_conn::ssl</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00167">SSL_free</a>.</p>
 
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01085">cwist_webrtc_connect()</a>.</p>
+
 </div>
 </div>
 <a id="adf92cd13a87dc0e778ffa48ff02549d1" name="adf92cd13a87dc0e778ffa48ff02549d1"></a>
@@ -718,7 +720,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00080">cwist_webrtc_conn::refs</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01236">cwist_webrtc_conn_close()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00582">cwist_webrtc_conn_sctp_out()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01167">cwist_webrtc_conn_send()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01084">cwist_webrtc_connect()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01240">cwist_webrtc_conn_close()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00582">cwist_webrtc_conn_sctp_out()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01171">cwist_webrtc_conn_send()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01085">cwist_webrtc_connect()</a>.</p>
 
 </div>
 </div>
@@ -809,7 +811,7 @@ Functions</h2></td></tr>
 <p>Send a message on a DataChannel. </p>
 <p>Safe from any thread. The message is queued if SCTP is not ready or its send buffer is full; queued bytes are reported by <a class="el" href="../../dd/d3b/webrtc_8h.html#a3e8eeec3ceae262b6993fe77f585c277" title="Bytes accepted by cwist_webrtc_conn_send() and not yet handed to SCTP (like RTCDataChannel....">cwist_webrtc_conn_buffered_amount()</a>. </p><dl class="section return"><dt>Returns</dt><dd>0 when sent or queued; -1 if the conn is closed, <code>len</code> exceeds 262144 bytes (the advertised max-message-size), or the queue already holds 4 MiB. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01167">1167</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01171">1171</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00083">cwist_webrtc_conn::buffered</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00410">cwist_sctp_send()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../dd/d3b/webrtc_8h_source.html#l00041">CWIST_WEBRTC_DATA_STRING</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00043">CWIST_WEBRTC_MAX_MESSAGE</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00100">cwist_webrtc_on_owner()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00081">cwist_webrtc_conn::detached</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00057">head</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00129">cwist_webrtc_conn::kick_post</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00119">cwist_webrtc_conn::pending_head</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00089">cwist_webrtc_conn::sctp_ready</a>.</p>
 
@@ -862,9 +864,9 @@ Functions</h2></td></tr>
 <p>Offering-side dialer used by the loopback tests: registers a client conn to <code>remote</code> and starts ICE. </p>
 <dl class="section return"><dt>Returns</dt><dd>A conn reference owned by the caller (<a class="el" href="../../dd/d3b/webrtc_8h.html#aa37449f92a112ca3fd972baf1f77ec41" title="Drop a reference taken with cwist_webrtc_conn_retain().">cwist_webrtc_conn_release()</a>), or NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01084">1084</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01085">1085</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00101">cwist_webrtc_conn::peer_fingerprint</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00100">cwist_webrtc_conn::peer_pwd</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00099">cwist_webrtc_conn::peer_ufrag</a>, <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00127">cwist_webrtc_conn::reg_post</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00094">cwist_webrtc_conn::remote</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00102">cwist_webrtc_conn::stun_txid</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00086">cwist_webrtc_conn_release()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00101">cwist_webrtc_conn::peer_fingerprint</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00100">cwist_webrtc_conn::peer_pwd</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00099">cwist_webrtc_conn::peer_ufrag</a>, <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00127">cwist_webrtc_conn::reg_post</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00094">cwist_webrtc_conn::remote</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00102">cwist_webrtc_conn::stun_txid</a>.</p>
 
 </div>
 </div>
@@ -886,7 +888,7 @@ Functions</h2></td></tr>
 
 <p>Number of connections whose SCTP association is up. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01020">1020</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01021">1021</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00169">cwist_webrtc_ctx::ready_count</a>.</p>
 
@@ -910,7 +912,7 @@ Functions</h2></td></tr>
 
 <p>Local certificate fingerprint (SHA-256, colon-separated hex). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00998">998</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00999">999</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00151">cwist_webrtc_ctx::fingerprint</a>.</p>
 
@@ -935,11 +937,11 @@ Functions</h2></td></tr>
 <p>Close every connection and free the context. </p>
 <p>Safe from any thread. For a ctx made with <a class="el" href="../../dd/d3b/webrtc_8h.html#a64bce6673e53f8e3378669ffb3184a14" title="Create a WebRTC context on a reactor the caller runs.">cwist_webrtc_ctx_new_on()</a> and called off the reactor thread, this waits for the reactor to finish the teardown, so the reactor must still be running. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00949">949</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00950">950</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01116">cwist_reactor_destroy()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00191">cwist_webrtc_ctx::fd_closed</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00190">cwist_webrtc_ctx::free_cv</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00189">cwist_webrtc_ctx::free_mu</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00188">cwist_webrtc_ctx::free_post</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00136">cwist_webrtc_ctx::owner_pid</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00135">cwist_webrtc_ctx::owns_reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00137">cwist_webrtc_ctx::thread</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00138">cwist_webrtc_ctx::thread_running</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00141">cwist_webrtc_ctx::udp_fd</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00884">cwist_webrtc_ctx_new()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00885">cwist_webrtc_ctx_new()</a>.</p>
 
 </div>
 </div>
@@ -962,9 +964,9 @@ Functions</h2></td></tr>
 <p>Create a WebRTC context bound to a UDP port (0 picks an ephemeral port), running on its own reactor thread. </p>
 <dl class="section return"><dt>Returns</dt><dd>NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00884">884</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00885">885</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01006">cwist_reactor_create()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01116">cwist_reactor_destroy()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00949">cwist_webrtc_ctx_free()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00137">cwist_webrtc_ctx::thread</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00138">cwist_webrtc_ctx::thread_running</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01006">cwist_reactor_create()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01116">cwist_reactor_destroy()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00950">cwist_webrtc_ctx_free()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00137">cwist_webrtc_ctx::thread</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00138">cwist_webrtc_ctx::thread_running</a>.</p>
 
 </div>
 </div>
@@ -997,7 +999,7 @@ Functions</h2></td></tr>
 <p>Create a WebRTC context on a reactor the caller runs. </p>
 <p>The ctx registers its UDP socket and timers with <code>reactor</code> and does all of its work inside that reactor's callbacks; no thread is created. The reactor must keep running until <a class="el" href="../../dd/d3b/webrtc_8h.html#a976f4b94d6289461c8869cce55aacc7f" title="Close every connection and free the context.">cwist_webrtc_ctx_free()</a> returns. </p><dl class="section return"><dt>Returns</dt><dd>NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00900">900</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00901">901</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00141">cwist_webrtc_ctx::udp_fd</a>.</p>
 
@@ -1021,7 +1023,7 @@ Functions</h2></td></tr>
 
 <p>UDP port the context is bound to. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00994">994</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00995">995</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00142">cwist_webrtc_ctx::port</a>.</p>
 
@@ -1061,7 +1063,7 @@ Functions</h2></td></tr>
 
 <p>Set the callback for incoming DataChannel open (DCEP) events. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01008">1008</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01009">1009</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00158">cwist_webrtc_ctx::ch_cb</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00159">cwist_webrtc_ctx::ch_user</a>.</p>
 
@@ -1101,7 +1103,7 @@ Functions</h2></td></tr>
 
 <p>Set the callback for closed connections. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01014">1014</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01015">1015</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00160">cwist_webrtc_ctx::close_cb</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00161">cwist_webrtc_ctx::close_user</a>.</p>
 
@@ -1141,7 +1143,7 @@ Functions</h2></td></tr>
 
 <p>Set the callback for incoming DataChannel messages. Set handlers before answering the first offer. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01002">1002</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01003">1003</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00156">cwist_webrtc_ctx::msg_cb</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00157">cwist_webrtc_ctx::msg_user</a>.</p>
 
@@ -1197,7 +1199,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on error.</dd></dl>
 <p>Safe from any thread. The connection completes asynchronously (ICE nomination, DTLS, SCTP) on the ctx's reactor thread. An answered offer whose peer never shows up is dropped after 30 seconds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01047">1047</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01048">1048</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00043">cwist_sdp_parse()</a>, <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00130">cwist_sdp_write_answer()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00151">cwist_webrtc_ctx::fingerprint</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00154">cwist_webrtc_ctx::host_ip</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00145">cwist_webrtc_ctx::ice_lite_server</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00153">cwist_webrtc_ctx::ice_pwd</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00152">cwist_webrtc_ctx::ice_ufrag</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00253">cwist_sdp_info::mid</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00136">cwist_webrtc_ctx::owner_pid</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00101">cwist_webrtc_conn::peer_fingerprint</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00100">cwist_webrtc_conn::peer_pwd</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00099">cwist_webrtc_conn::peer_ufrag</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00142">cwist_webrtc_ctx::port</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00127">cwist_webrtc_conn::reg_post</a>.</p>
 
@@ -1223,7 +1225,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00100">100</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01236">cwist_webrtc_conn_close()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00582">cwist_webrtc_conn_sctp_out()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01167">cwist_webrtc_conn_send()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01240">cwist_webrtc_conn_close()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00582">cwist_webrtc_conn_sctp_out()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01171">cwist_webrtc_conn_send()</a>.</p>
 
 </div>
 </div>

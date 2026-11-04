@@ -2,8 +2,10 @@ var http3__client_8c =
 [
     [ "_POSIX_C_SOURCE", "d1/d88/http3__client_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
     [ "H3C_DECODE_BUF_SIZE", "d1/d88/http3__client_8c.html#a8ea871fd705b062c103809ee494f21f6", null ],
+    [ "H3C_DGRAM_QUEUE_LIMIT", "d1/d88/http3__client_8c.html#ac9eaf0d2911f7fa289423f39166b3d3a", null ],
     [ "H3C_MAX_HEADERS", "d1/d88/http3__client_8c.html#a208ac5a7c624b5a693c19340fe7dcbf9", null ],
     [ "MSG_DONTWAIT", "d1/d88/http3__client_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376", null ],
+    [ "h3c_dgram_node", "d1/d88/http3__client_8c.html#ac3feccc129ea2c567256759c2a1025e5", null ],
     [ "h3c_hset_t", "d1/d88/http3__client_8c.html#a9e70aa40b49dbe2711f30381c94b424f", null ],
     [ "h3c_stream_ctx_t", "d1/d88/http3__client_8c.html#a3931c7046d8358bdeed239f9a1ab3bc9", null ],
     [ "cwist_http3_client_create", "d1/d88/http3__client_8c.html#abe7533eacceb1cc102b6a080895f42c5", null ],
