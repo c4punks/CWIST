@@ -98,6 +98,7 @@ struct cwist_webrtc_conn {
     /* ICE */
     char peer_ufrag[64];     /**< Remote ICE ufrag. */
     char peer_pwd[128];      /**< Remote ICE password (client role signs with it). */
+    char peer_fingerprint[128]; /**< Expected DTLS certificate fingerprint from SDP. */
     uint8_t stun_txid[12];   /**< Outstanding Binding request (client role). */
     int stun_attempts;       /**< Binding requests sent so far (client role). */
     uint32_t stun_rto_ms;    /**< Current retransmit timeout (client role). */
@@ -283,6 +284,8 @@ int cwist_dtls_generate_cert(X509 **cert, EVP_PKEY **pkey);
 int cwist_dtls_fingerprint(X509 *cert, char *out, size_t cap);
 /** @brief DTLS 1.2 SSL_CTX for the server (with cert) or client role. */
 SSL_CTX *cwist_dtls_ctx_new(int is_server, X509 *cert, EVP_PKEY *pkey);
+/** @brief Require the peer certificate to match an SDP SHA-256 fingerprint. */
+int cwist_dtls_verify_fingerprint(SSL *ssl, const char *expected);
 /**
  * @brief Datagram BIO for @p conn: reads return conn->dtls_in once, writes go
  *        to cwist_webrtc_conn_dtls_out() one datagram per call.
@@ -342,7 +345,8 @@ void cwist_webrtc_conn_on_channel_open(struct cwist_webrtc_conn *conn, uint16_t 
  *         or NULL.
  */
 cwist_webrtc_conn *cwist_webrtc_connect(cwist_webrtc_ctx *ctx, const struct sockaddr_in *remote,
-                                        const char *peer_ufrag, const char *peer_pwd);
+                                        const char *peer_ufrag, const char *peer_pwd,
+                                        const char *peer_fingerprint);
 /**@}*/
 
 #endif
