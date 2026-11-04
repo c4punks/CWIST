@@ -8,6 +8,7 @@
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -363,7 +364,11 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
 #define CWIST_JWT_TIME_LEEWAY 300
     time_t now = time(NULL);
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
-    if (exp_item && cJSON_IsNumber(exp_item)) {
+    if (exp_item && (!cJSON_IsNumber(exp_item) || !isfinite(exp_item->valuedouble))) {
+        cJSON_Delete(json);
+        return NULL;
+    }
+    if (exp_item) {
         time_t exp_time = (time_t)exp_item->valuedouble;
         if (now > CWIST_JWT_TIME_LEEWAY && exp_time < now - CWIST_JWT_TIME_LEEWAY) {
             cJSON_Delete(json);
@@ -371,7 +376,11 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
         }
     }
     cJSON *nbf_item = cJSON_GetObjectItemCaseSensitive(json, "nbf");
-    if (nbf_item && cJSON_IsNumber(nbf_item)) {
+    if (nbf_item && (!cJSON_IsNumber(nbf_item) || !isfinite(nbf_item->valuedouble))) {
+        cJSON_Delete(json);
+        return NULL;
+    }
+    if (nbf_item) {
         time_t nbf_time = (time_t)nbf_item->valuedouble;
         if (nbf_time > now && (nbf_time - now) > CWIST_JWT_TIME_LEEWAY) {
             cJSON_Delete(json);
