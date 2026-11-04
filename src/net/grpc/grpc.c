@@ -1037,14 +1037,18 @@ static int grpc_health_status_locked(const cwist_grpc_health_registry *reg, cons
  * @param message Decoded HealthCheckRequest protobuf message.
  * @return Newly allocated NUL-terminated copy of field 1, or NULL when the
  *         field is absent or allocation fails.  Caller frees with cwist_free(). */
-static char *grpc_health_service_copy(const cwist_grpc_message *message) {
+static char *grpc_health_service_copy(const cwist_grpc_message *message, int *allocation_failed) {
+    if (allocation_failed) *allocation_failed = 0;
     cwist_pb_reader reader;
     cwist_pb_reader_init(&reader, message->data, message->len);
     cwist_pb_field field;
     while (cwist_pb_read_field(&reader, &field) > 0)
         if (field.number == 1 && field.wire_type == CWIST_PB_LEN) {
             char *owned = cwist_alloc(field.len + 1);
-            if (!owned) return NULL;
+            if (!owned) {
+                if (allocation_failed) *allocation_failed = 1;
+                return NULL;
+            }
             memcpy(owned, field.bytes, field.len);
             owned[field.len] = '\0';
             return owned;
@@ -1060,7 +1064,12 @@ static char *grpc_health_service_copy(const cwist_grpc_message *message) {
  *        entry to report on. */
 static void grpc_health_reply(cwist_http_response *res, cwist_grpc_health_registry *reg,
                               const cwist_grpc_message *message) {
-    char *service = grpc_health_service_copy(message);
+    int allocation_failed = 0;
+    char *service = grpc_health_service_copy(message, &allocation_failed);
+    if (allocation_failed) {
+        cwist_grpc_set_error(res, CWIST_GRPC_INTERNAL, "health request allocation failed");
+        return;
+    }
     pthread_mutex_lock(&reg->mu);
     int status = grpc_health_status_locked(reg, service);
     pthread_mutex_unlock(&reg->mu);
@@ -1130,11 +1139,11 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
         cwist_grpc_message msg;
         int rc = cwist_grpc_stream_recv(stream, &msg);
         if (rc < 0) return; /* cancelled before the request arrived */
-        if (rc > 0) service = grpc_health_service_copy(&msg);
+        if (rc > 0) service = grpc_health_service_copy(&msg, NULL);
     } else {
         cwist_grpc_message empty = {0, NULL, 0};
         const cwist_grpc_message *message = stream->message_count ? &stream->messages[0] : &empty;
-        service = grpc_health_service_copy(message);
+        service = grpc_health_service_copy(message, NULL);
     }
 
     /* Send the current status immediately, as the protocol requires. */
