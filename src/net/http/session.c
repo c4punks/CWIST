@@ -516,6 +516,7 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     opts.path = "/";
     opts.max_age_seconds = session->app->session_max_age;
     opts.http_only = true;
+    opts.secure = session->app->use_ssl;
     opts.same_site = "Lax";
 
     int rc = cwist_cookie_set(res, session->app->session_name, cookie_value, &opts);
