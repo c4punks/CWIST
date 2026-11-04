@@ -132,7 +132,24 @@ typedef struct gql_sub_field {
 struct cwist_graphql_ws {
     cwist_graphql_schema_t *schema; /* not owned */
     gql_sub_field_t *subs;
+    atomic_int refs;
 };
+
+static void gql_ws_endpoint_ref(cwist_graphql_ws_t *gws) {
+    atomic_fetch_add_explicit(&gws->refs, 1, memory_order_relaxed);
+}
+
+static void gql_ws_endpoint_unref(cwist_graphql_ws_t *gws) {
+    if (atomic_fetch_sub_explicit(&gws->refs, 1, memory_order_acq_rel) != 1) return;
+    gql_sub_field_t *f = gws->subs;
+    while (f) {
+        gql_sub_field_t *next = f->next;
+        cwist_free(f->name);
+        cwist_free(f);
+        f = next;
+    }
+    cwist_free(gws);
+}
 
 /**
  * @brief Create a graphql-ws endpoint holding a subscription field registry.
@@ -147,28 +164,20 @@ cwist_graphql_ws_t *cwist_graphql_ws_create(cwist_graphql_schema_t *schema) {
     if (gws) {
         gws->schema = schema;
         gws->subs = NULL;
+        atomic_init(&gws->refs, 1);
     }
     return gws;
 }
 
 /**
- * @brief Destroy an endpoint and its subscription field registry.
+ * @brief Drop the caller's endpoint reference.
  *
- * Does not touch active connections or broker operations still referencing
- * the endpoint's resolvers.
+ * The resolver registry remains alive until every attached connection closes.
  *
- * @param gws Endpoint to free; NULL is a no-op.
+ * @param gws Endpoint to release; NULL is a no-op.
  */
 void cwist_graphql_ws_destroy(cwist_graphql_ws_t *gws) {
-    if (!gws) return;
-    gql_sub_field_t *f = gws->subs;
-    while (f) {
-        gql_sub_field_t *next = f->next;
-        cwist_free(f->name);
-        cwist_free(f);
-        f = next;
-    }
-    cwist_free(gws);
+    if (gws) gql_ws_endpoint_unref(gws);
 }
 
 /**
@@ -264,6 +273,7 @@ static void gql_ws_conn_ref(gql_ws_conn_t *conn) {
 static void gql_ws_conn_free(gql_ws_conn_t *conn) {
     for (size_t i = 0; i < conn->pending_count; i++) cwist_free(conn->pending[i]);
     cwist_free(conn->pending);
+    gql_ws_endpoint_unref(conn->gws);
     cwist_free(conn);
 }
 
@@ -679,6 +689,7 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
 static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_t *reactor) {
     gql_ws_conn_t *conn = (gql_ws_conn_t *)cwist_alloc(sizeof(*conn));
     if (!conn) return NULL;
+    gql_ws_endpoint_ref(gws);
     conn->gws = gws;
     conn->ws = NULL;
     conn->reactor = reactor;

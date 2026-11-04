@@ -365,6 +365,33 @@ int main(void) {
     }
     printf("12. socket close purges the subscription: ok\n");
 
+    /* 13. Dropping the caller's endpoint reference keeps its resolvers alive
+     * until the attached connection closes. */
+    int fd_lifetime = attach_conn(reactor);
+    cwist_graphql_ws_destroy(g_gws);
+    g_gws = NULL;
+    write_text(fd_lifetime, "{\"type\":\"connection_init\"}");
+    {
+        cJSON *ack = read_json_message(fd_lifetime);
+        cJSON_Delete(ack);
+    }
+    write_text(fd_lifetime,
+               "{\"id\":\"life\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter }\"}}");
+    expect_silence(fd_lifetime, 200);
+    publish_and_expect_next(fd_lifetime, "default", "life", 4);
+    {
+        uint8_t code[2] = {0x03, 0xE8};
+        write_masked(fd_lifetime, 0x88, code, 2);
+        uint8_t opcode, payload[8];
+        size_t len;
+        read_server_frame(fd_lifetime, &opcode, payload, &len, sizeof(payload));
+        assert(opcode == CWIST_WS_FRAME_CLOSE);
+        expect_eof(fd_lifetime);
+        close(fd_lifetime);
+    }
+    printf("13. endpoint lifetime follows active connections: ok\n");
+
     /* Clean shutdown: nothing may outlive the reactor (ASan leak gate). */
     cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};
     assert(cwist_reactor_post(reactor, &stop_node));
