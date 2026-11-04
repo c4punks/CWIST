@@ -198,6 +198,23 @@ bool cwist_ice_stun_has_use_candidate(const uint8_t *buf, size_t len) {
     return attr_present(buf, len, ATTR_USE_CANDIDATE);
 }
 
+typedef struct {
+    const uint8_t *msg;
+    size_t off;
+    bool found;
+    bool valid;
+} mi_find_arg;
+
+static bool find_mi_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg) {
+    if (type != ATTR_MESSAGE_INTEGRITY)
+        return true;
+    mi_find_arg *a = arg;
+    a->off = (size_t)(val - a->msg) - 4;
+    a->found = true;
+    a->valid = val_len == 20;
+    return false;
+}
+
 /** @brief Locate the MESSAGE-INTEGRITY attribute in a STUN message.
  * @param msg    STUN message buffer.
  * @param len    Bytes available at @p msg.
@@ -210,19 +227,12 @@ bool cwist_ice_stun_has_use_candidate(const uint8_t *buf, size_t len) {
 static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
     if (!cwist_ice_stun_is_message(msg, len))
         return false;
-    uint16_t msg_len = rd16(msg + 2);
-    size_t end = STUN_HDR_LEN + msg_len;
-    size_t off = STUN_HDR_LEN;
-    while (off + 4 <= end) {
-        uint16_t type = rd16(msg + off);
-        uint16_t alen = rd16(msg + off + 2);
-        if (type == ATTR_MESSAGE_INTEGRITY) {
-            *mi_off = off;
-            return alen == 20;
-        }
-        off += 4 + ((alen + 3) & ~3u);
-    }
-    return false;
+    mi_find_arg a = { .msg = msg };
+    walk_attrs(msg, len, find_mi_cb, &a);
+    if (!a.found || !a.valid)
+        return false;
+    *mi_off = a.off;
+    return true;
 }
 
 /** @brief Validate the MESSAGE-INTEGRITY of a STUN message against a password.
