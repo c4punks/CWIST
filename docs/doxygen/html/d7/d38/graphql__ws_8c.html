@@ -290,7 +290,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:a7cfa54fa39ba52785ec9cef66c74edcf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a graphql-ws endpoint holding a subscription field registry.  <br /></td></tr>
 <tr class="separator:a7cfa54fa39ba52785ec9cef66c74edcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc" id="r_ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d38/graphql__ws_8c.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc">cwist_graphql_ws_destroy</a> (<a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7">cwist_graphql_ws_t</a> *gws)</td></tr>
-<tr class="memdesc:ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy an endpoint and its subscription field registry.  <br /></td></tr>
+<tr class="memdesc:ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Drop the caller's endpoint reference.  <br /></td></tr>
 <tr class="separator:ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7170a006e65284f9115c6e32e8280fc6" id="r_a7170a006e65284f9115c6e32e8280fc6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d38/graphql__ws_8c.html#a7170a006e65284f9115c6e32e8280fc6">cwist_graphql_ws_add_subscription</a> (<a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7">cwist_graphql_ws_t</a> *gws, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *field, <a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a30dcfcc30e864dcd038d6d237995f91b">cwist_graphql_subscribe_fn</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">subscribe_fn</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *ctx)</td></tr>
 <tr class="memdesc:a7170a006e65284f9115c6e32e8280fc6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register (or replace) the resolver for a subscription root field.  <br /></td></tr>
@@ -561,7 +561,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of <code>next</code> messages queued. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00468">468</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00478">478</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -618,7 +618,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true on success, false on invalid arguments or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00190">190</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00199">199</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
 
@@ -679,7 +679,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when the fd was handed to the reactor path, false on failure (fd closed). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00730">730</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00741">741</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01129">cwist_websocket_async_attach_ex()</a>.</p>
 
@@ -708,9 +708,9 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>New endpoint, or NULL if <code>schema</code> is NULL or allocation fails. Free with <a class="el" href="../../d7/d38/graphql__ws_8c.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc" title="Destroy an endpoint and its subscription field registry.">cwist_graphql_ws_destroy()</a>. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>New endpoint, or NULL if <code>schema</code> is NULL or allocation fails. Free with <a class="el" href="../../d7/d38/graphql__ws_8c.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc" title="Drop the caller&#39;s endpoint reference.">cwist_graphql_ws_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00144">144</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00161">161</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>.</p>
 
@@ -732,18 +732,16 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Destroy an endpoint and its subscription field registry. </p>
-<p>Does not touch active connections or broker operations still referencing the endpoint's resolvers.</p>
+<p>Drop the caller's endpoint reference. </p>
+<p>The resolver registry remains alive until every attached connection closes.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">gws</td><td>Endpoint to free; NULL is a no-op. </td></tr>
+    <tr><td class="paramname">gws</td><td>Endpoint to release; NULL is a no-op. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00162">162</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00179">179</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 </div>
 </div>
