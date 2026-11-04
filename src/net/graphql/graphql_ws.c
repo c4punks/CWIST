@@ -645,8 +645,10 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
         const cJSON *pl = cJSON_GetObjectItemCaseSensitive(msg, "payload");
         if (pl) cJSON_AddItemToObject(pong, "payload", cJSON_Duplicate(pl, true));
         gql_ws_send_json(ws, pong);
-    } else if (strcmp(t, "pong") == 0 || strcmp(t, "connection_init") == 0) {
-        /* Keepalive / duplicate init: nothing to do. */
+    } else if (strcmp(t, "pong") == 0) {
+        /* Keepalive. */
+    } else if (strcmp(t, "connection_init") == 0) {
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_UNAUTHORIZED);
     } else if (strcmp(t, "subscribe") == 0) {
         gql_ws_handle_subscribe(ws, conn, msg);
     } else if (strcmp(t, "complete") == 0) {
