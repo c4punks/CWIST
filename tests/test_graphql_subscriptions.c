@@ -427,9 +427,25 @@ int main(void) {
         cJSON *id = cJSON_GetObjectItemCaseSensitive(next, "id");
         assert(cJSON_IsString(id) && strcmp(id->valuestring, "large") == 0);
         cJSON_Delete(next);
+        cJSON_Delete(read_json_message(limited_sv[1]));
+        cJSON_Delete(read_json_message(limited_sv[1]));
     }
-    close(limited_sv[1]);
-    usleep(200000);
+    {
+        uint8_t code[2] = {0x03, 0xE8};
+        write_masked(limited_sv[1], 0x88, code, 2);
+        uint8_t opcode, payload[2 * 1024 * 1024];
+        size_t len;
+        read_server_frame(limited_sv[1], &opcode, payload, &len, sizeof(payload));
+        assert(opcode == CWIST_WS_FRAME_CLOSE);
+        expect_eof(limited_sv[1]);
+        close(limited_sv[1]);
+    }
+    bool limited_purged = false;
+    for (int i = 0; i < 500 && !limited_purged; i++) {
+        limited_purged = cwist_graphql_publish("default", NULL) == 0;
+        if (!limited_purged) usleep(20000);
+    }
+    assert(limited_purged);
     cwist_reactor_post_t limited_stop = {.cb = stop_cb, .ctx = limited};
     assert(cwist_reactor_post(limited, &limited_stop));
     assert(pthread_join(limited_rt, NULL) == 0);
