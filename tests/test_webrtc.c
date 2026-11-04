@@ -181,7 +181,48 @@ static void probe_table(cwist_webrtc_ctx *ctx, int *parked, uint32_t *nconns) {
     *nconns = p.nconns;
 }
 
+typedef struct {
+    atomic_int *start;
+    int rc;
+} crc_init_probe;
+
+static void *crc_init_worker(void *arg) {
+    crc_init_probe *probe = arg;
+    while (!atomic_load(probe->start)) sched_yield();
+    uint8_t req[128];
+    uint8_t txid[12] = {0};
+    int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "");
+    if (len < 0) {
+        probe->rc = -1;
+        return NULL;
+    }
+    len = cwist_ice_stun_sign_request(req, sizeof(req), (size_t)len, "testpassword0123456789");
+    probe->rc = len > 0 && cwist_ice_stun_validate_request(req, (size_t)len,
+                                                          "testpassword0123456789") == 1
+                    ? 0
+                    : -1;
+    return NULL;
+}
+
+static void test_concurrent_crc_init(void) {
+    enum { THREAD_COUNT = 8 };
+    pthread_t threads[THREAD_COUNT];
+    crc_init_probe probes[THREAD_COUNT];
+    atomic_int start = 0;
+    for (size_t i = 0; i < THREAD_COUNT; i++) {
+        probes[i] = (crc_init_probe){.start = &start, .rc = -1};
+        assert(pthread_create(&threads[i], NULL, crc_init_worker, &probes[i]) == 0);
+    }
+    atomic_store(&start, 1);
+    for (size_t i = 0; i < THREAD_COUNT; i++) {
+        assert(pthread_join(threads[i], NULL) == 0);
+        assert(probes[i].rc == 0);
+    }
+}
+
 static void unit_checks(void) {
+    test_concurrent_crc_init();
+
     /* ICE/STUN: build, sign, validate, respond. */
     {
         uint8_t req[512];
