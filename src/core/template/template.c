@@ -179,6 +179,10 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 p += 2;
                 const char *var_start = p;
                 while (*p && (p[0] != '}' || p[1] != '}')) p++;
+                if (p[0] != '}' || p[1] != '}') {
+                    cwist_sstring_destroy(output);
+                    return NULL;
+                }
 
                 char var_buf[256] = {0};
                 size_t var_len = (size_t)(p - var_start);
@@ -187,8 +191,8 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
 
                 char *trimmed_var = var_buf;
                 while (*trimmed_var == ' ') trimmed_var++;
-                char *end = trimmed_var + strlen(trimmed_var) - 1;
-                while (end > trimmed_var && *end == ' ') *end-- = '\0';
+                char *end = trimmed_var + strlen(trimmed_var);
+                while (end > trimmed_var && end[-1] == ' ') *--end = '\0';
 
                 char *filter = NULL;
                 char *pipe = strstr(trimmed_var, "|");
@@ -198,8 +202,8 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                     *pipe = '\0';
                     filter = pipe + 1;
                     while (*filter == ' ') filter++;
-                    char *fe = filter + strlen(filter) - 1;
-                    while (fe > filter && *fe == ' ') *fe-- = '\0';
+                    char *fe = filter + strlen(filter);
+                    while (fe > filter && fe[-1] == ' ') *--fe = '\0';
                 }
 
                 const cJSON *value = get_value_from_context(context, trimmed_var);
@@ -233,6 +237,10 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 p += 2;
                 const char *tag_start = p;
                 while (*p && (p[0] != '%' || p[1] != '}')) p++;
+                if (p[0] != '%' || p[1] != '}') {
+                    cwist_sstring_destroy(output);
+                    return NULL;
+                }
 
                 char tag[256] = {0};
                 size_t tag_len = (size_t)(p - tag_start);
@@ -387,10 +395,11 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                     char *path = strtok_r(NULL, " \t\n", &tag_saveptr);
                     if (path) {
                         while (*path == ' ' || *path == '\t' || *path == '\n') path++;
-                        char *end = path + strlen(path) - 1;
+                        char *end = path + strlen(path);
                         while (end > path &&
-                               (*end == ' ' || *end == '\t' || *end == '\n' || *end == '"'))
-                            *end-- = '\0';
+                               (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\n' ||
+                                end[-1] == '"'))
+                            *--end = '\0';
                         if (path[0] == '"') path++;
                         if (path[0]) {
                             cwist_sstring *included = render_file_internal(path, context, depth + 1);
