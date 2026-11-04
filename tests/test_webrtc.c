@@ -233,6 +233,22 @@ static void unit_checks(void) {
                                                "testpassword0123456789") == 1);
     }
 
+    /* ICE credentials: normal output and zero-capacity calls. */
+    {
+        char ufrag[9];
+        char pwd[33];
+        cwist_ice_random_creds(ufrag, sizeof(ufrag), pwd, sizeof(pwd));
+        assert(strlen(ufrag) == 8);
+        assert(strlen(pwd) == 32);
+
+        char zero_ufrag = 'u';
+        char zero_pwd = 'p';
+        cwist_ice_random_creds(&zero_ufrag, 0, &zero_pwd, 0);
+        assert(zero_ufrag == 'u');
+        assert(zero_pwd == 'p');
+        cwist_ice_random_creds(NULL, 0, NULL, 0);
+    }
+
     /* SDP. */
     {
         char offer[1024];
