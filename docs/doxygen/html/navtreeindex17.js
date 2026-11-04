@@ -1,5 +1,9 @@
 var NAVTREEINDEX17 =
 {
+"dc/dfe/nuke__db_8h.html#a5d7896139d7b5e0b56e79c4370e4f27c":[94,0,1,0,0,1,1,4],
+"dc/dfe/nuke__db_8h.html#a60078d43b3e9f4f414b2f8508eaab2f3":[94,0,1,0,0,1,1,1],
+"dc/dfe/nuke__db_8h.html#a81bc1cdef22667aa031f8e070a8e013c":[94,0,1,0,0,1,1,7],
+"dc/dfe/nuke__db_8h.html#a82add313e1aabb27f1cc9c64579debb4":[94,0,1,0,0,1,1,5],
 "dc/dfe/nuke__db_8h.html#a90a30663e9eaa7e0d14c37303a70cc40":[94,0,1,0,0,1,1,11],
 "dc/dfe/nuke__db_8h.html#a982b6bdce12a61137756a8620f5592df":[94,0,1,0,0,1,1,8],
 "dc/dfe/nuke__db_8h.html#ab0eb0dba287b8a1f66ca04f2c497c526":[94,0,1,0,0,1,1,10],
@@ -245,9 +249,5 @@ var NAVTREEINDEX17 =
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md835":[84,10,2],
 "dd/d55/structcwist__db.html":[93,0,20],
 "dd/d55/structcwist__db.html#a1ba9825f5e23bc68f8ebbbf259bf0fa0":[93,0,20,0],
-"dd/d55/structcwist__db.html#adb8537da30329a8d0bacc6ee47487b09":[93,0,20,1],
-"dd/d56/http_8h.html":[94,0,1,0,9],
-"dd/d56/http_8h.html#a0d582b995b805e28d989c8a27b9eec2b":[94,0,1,0,9,24],
-"dd/d56/http_8h.html#a0f1bacde122dc416b1761428b66871d5":[94,0,1,0,9,38],
-"dd/d56/http_8h.html#a108c55443dfb32b0de863b98c6c328a5":[94,0,1,0,9,6]
+"dd/d55/structcwist__db.html#adb8537da30329a8d0bacc6ee47487b09":[93,0,20,1]
 };
