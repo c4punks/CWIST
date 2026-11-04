@@ -38,7 +38,7 @@ var searchData=
   ['bench_20server_20and_20workload_20mix_35',['Bench server and workload mix',['../db/d05/md_docs_2soak-testing.html#autotoc_md456',1,'']]],
   ['benchmark_20methodology_36',['Web Server Benchmark Methodology',['../d6/d42/md_docs_2webserver-benchmark.html',1,'']]],
   ['benchmark_20run_37',['Latest benchmark run',['../index.html#autotoc_md18',1,'']]],
-  ['benchmarks_20and_20methodology_38',['5. Benchmarks and methodology',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md416',1,'']]],
+  ['benchmarks_20and_20methodology_38',['5. Benchmarks and methodology',['..//home/yjlee/cwist/.main-v42/docs/README.md#autotoc_md416',1,'']]],
   ['bidirectional_20communication_39',['8. WebSocket Integration (Real-Time Bidirectional Communication)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md470',1,'']]],
   ['big_20dumb_20reply_20bdr_40',['8. Big Dumb Reply (BDR)',['../da/dca/md_docs_2REFERENCE.html#autotoc_md427',1,'']]],
   ['big_5fdumb_5freply_2ec_41',['big_dumb_reply.c',['../dc/da3/big__dumb__reply_8c.html',1,'']]],
@@ -88,6 +88,6 @@ var searchData=
   ['bundle_20size_20impact_20of_20cwist_5fdb_85',['Bundle size impact of cwist_db',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md223',1,'']]],
   ['burst_20starvation_2025_20follow_20up_86',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
   ['by_20chunk_87',['Streaming producer (handlers generate the body chunk-by-chunk)',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md228',1,'']]],
-  ['by_20cwist_5fdb_5fcrypt_5fseal_88',['Wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
+  ['by_20cwist_5fdb_5fcrypt_5fseal_88',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
   ['bytes_89',['bytes',['../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d',1,'cwist_pb_field']]]
 ];

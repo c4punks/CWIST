@@ -48,7 +48,7 @@ var searchData=
   ['for_20streaming_20sse_202026_2009_2023_45',['Landed: native async for streaming/SSE (2026-09-23)',['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md211',1,'']]],
   ['forced_20off_20features_20under_20cwist_5ftls_20mbedtls_46',['Forced-off features under CWIST_TLS=mbedtls',['../d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md400',1,'']]],
   ['forcing_20the_20ring_20to_20grow_3a_201_20worker_202_20pool_20threads_206000_20simultaneous_20connections_47',['3. Forcing the ring to grow: 1 worker, 2 pool threads, 6000 simultaneous connections',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md386',1,'']]],
-  ['format_20produced_20by_20cwist_5fdb_5fcrypt_5fseal_48',['Wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
+  ['format_20produced_20by_20cwist_5fdb_5fcrypt_5fseal_48',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
   ['frag_5fbuf_49',['frag_buf',['../d9/d2c/structcwist__websocket.html#af6d1982e592d67acec229c846352f0cb',1,'cwist_websocket']]],
   ['frag_5fcap_50',['frag_cap',['../d9/d2c/structcwist__websocket.html#ab53da0d06ca9a17e42b83994eb4422c0',1,'cwist_websocket']]],
   ['frag_5flen_51',['frag_len',['../d9/d2c/structcwist__websocket.html#ae4f8b948904fee4df35fecb2f90da70f',1,'cwist_websocket']]],

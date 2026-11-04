@@ -1,5 +1,6 @@
 var lwip_8c =
 [
+    [ "CWIST_LWIP_DIRECT_STREAM_MAX", "d7/d5d/lwip_8c.html#a2467a234935f45133ef0031ed08c807e", null ],
     [ "CWIST_LWIP_POLL_TICKS", "d7/d5d/lwip_8c.html#ab1f0a2100e8d59b12e60cb168caaf9e1", null ],
     [ "cwist_lwip_conn", "d7/d5d/lwip_8c.html#acc671a725408d1c703526063eb1aa9b0", null ],
     [ "frame_result", "d7/d5d/lwip_8c.html#a423549648854d65f0768b43bf69926b3", [

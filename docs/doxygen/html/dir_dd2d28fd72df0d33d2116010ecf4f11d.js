@@ -16,6 +16,7 @@ var dir_dd2d28fd72df0d33d2116010ecf4f11d =
     [ "http2_flow_control.c", "d9/d16/http2__flow__control_8c.html", "d9/d16/http2__flow__control_8c" ],
     [ "http3.c", "de/daf/http3_8c.html", "de/daf/http3_8c" ],
     [ "http3_client.c", "d1/d88/http3__client_8c.html", "d1/d88/http3__client_8c" ],
+    [ "http3_global.h", "d6/d41/http3__global_8h.html", "d6/d41/http3__global_8h" ],
     [ "http_client.c", "d6/d32/http__client_8c.html", "d6/d32/http__client_8c" ],
     [ "http_live.h", "d3/d37/http__live_8h.html", "d3/d37/http__live_8h" ],
     [ "https.c", "d2/db2/https_8c.html", "d2/db2/https_8c" ],
