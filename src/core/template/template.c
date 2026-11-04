@@ -11,8 +11,9 @@
  * @brief Minimal template renderer supporting variable substitution and simple control flow.
  */
 
-/** @brief Forward declaration for recursive block rendering. */
+/** @brief Forward declarations for recursive block and file rendering. */
 static cwist_sstring *render_internal(const char **template_str, const cJSON *context, int depth);
+static cwist_sstring *render_file_internal(const char *file_path, const cJSON *context, int depth);
 
 /** @brief Maximum nesting depth for includes/control structures. */
 #define CWIST_TEMPLATE_MAX_DEPTH 32
@@ -383,8 +384,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                     start = p;
 
                 } else if (strcmp(cmd, "include") == 0) {
-                    char *inc_cmd = strstr(tag, "include");
-                    char *path = inc_cmd ? inc_cmd + strlen("include") : NULL;
+                    char *path = strtok_r(NULL, " \t\n", &tag_saveptr);
                     if (path) {
                         while (*path == ' ' || *path == '\t' || *path == '\n') path++;
                         char *end = path + strlen(path) - 1;
@@ -393,11 +393,13 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                             *end-- = '\0';
                         if (path[0] == '"') path++;
                         if (path[0]) {
-                            cwist_sstring *included = cwist_template_render_file(path, context);
-                            if (included) {
-                                cwist_sstring_append(output, included->data);
-                                cwist_sstring_destroy(included);
+                            cwist_sstring *included = render_file_internal(path, context, depth + 1);
+                            if (!included) {
+                                cwist_sstring_destroy(output);
+                                return NULL;
                             }
+                            cwist_sstring_append(output, included->data);
+                            cwist_sstring_destroy(included);
                         }
                     }
                     p += 2;
@@ -439,8 +441,8 @@ cwist_sstring *cwist_template_render(const char *template_str, const cJSON *cont
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL when file IO or rendering fails.
  */
-cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *context) {
-    if (!file_path) return NULL;
+static cwist_sstring *render_file_internal(const char *file_path, const cJSON *context, int depth) {
+    if (!file_path || depth > CWIST_TEMPLATE_MAX_DEPTH) return NULL;
     FILE *f = fopen(file_path, "rb");
     if (!f) {
         perror("Failed to open template file");
@@ -465,5 +467,10 @@ cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *co
     template_str[read_len] = '\0';
     fclose(f);
 
-    return cwist_template_render(template_str, context);
+    const char *p = template_str;
+    return render_internal(&p, context, depth);
+}
+
+cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *context) {
+    return render_file_internal(file_path, context, 0);
 }
