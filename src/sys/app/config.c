@@ -196,16 +196,18 @@ void cwist_config_load_file(cwist_config *cfg, const char *path) {
         char *key = p;
         char *value = eq + 1;
         // trim key
-        char *ke = key + strlen(key) - 1;
-        while (ke > key && isspace((unsigned char)*ke)) *ke-- = '\0';
+        char *ke = key + strlen(key);
+        while (ke > key && isspace((unsigned char)ke[-1])) *--ke = '\0';
+        if (key[0] == '\0') continue;
         // trim value
         while (isspace((unsigned char)*value)) value++;
-        char *ve = value + strlen(value) - 1;
-        while (ve > value && isspace((unsigned char)*ve)) *ve-- = '\0';
+        char *ve = value + strlen(value);
+        while (ve > value && isspace((unsigned char)ve[-1])) *--ve = '\0';
         // unquote value
-        if (value[0] == '"' && ve == value + strlen(value) - 1 && *ve == '"') {
+        size_t value_len = strlen(value);
+        if (value_len >= 2 && value[0] == '"' && value[value_len - 1] == '"') {
             value++;
-            *ve = '\0';
+            value[value_len - 2] = '\0';
         }
         cwist_config_set(cfg, key, value);
     }
