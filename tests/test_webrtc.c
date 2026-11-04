@@ -125,11 +125,10 @@ static void peer_on_close(cwist_webrtc_conn *conn, void *user) {
 /* Answer an offer on @p server and dial it from @p client.  The offer carries
  * the client ctx's real ICE credentials, as a browser's would, so the server
  * adopts the conn it parked for the offer. */
-static cwist_webrtc_conn *dial(cwist_webrtc_ctx *server, cwist_webrtc_ctx *client) {
+static cwist_webrtc_conn *dial_with_fingerprint(cwist_webrtc_ctx *server, cwist_webrtc_ctx *client,
+                                                const char *fingerprint) {
     char offer[1024];
-    assert(cwist_sdp_write_offer(offer, sizeof(offer),
-                                 "00:11:22:33:44:55:66:77:88:99:"
-                                 "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55",
+    assert(cwist_sdp_write_offer(offer, sizeof(offer), cwist_webrtc_ctx_fingerprint(client),
                                  client->ice_ufrag, client->ice_pwd, "0") == 0);
     char answer[2048];
     assert(cwist_webrtc_handle_offer(server, offer, answer, sizeof(answer)) == 0);
@@ -145,9 +144,14 @@ static cwist_webrtc_conn *dial(cwist_webrtc_ctx *server, cwist_webrtc_ctx *clien
     remote.sin_family = AF_INET;
     remote.sin_port = htons(cwist_webrtc_ctx_port(server));
     remote.sin_addr.s_addr = htonl(0x7F000001);
-    cwist_webrtc_conn *conn = cwist_webrtc_connect(client, &remote, ans.ice_ufrag, ans.ice_pwd);
+    cwist_webrtc_conn *conn =
+        cwist_webrtc_connect(client, &remote, ans.ice_ufrag, ans.ice_pwd, fingerprint);
     assert(conn != NULL);
     return conn;
+}
+
+static cwist_webrtc_conn *dial(cwist_webrtc_ctx *server, cwist_webrtc_ctx *client) {
+    return dial_with_fingerprint(server, client, cwist_webrtc_ctx_fingerprint(server));
 }
 
 typedef struct {
@@ -383,6 +387,30 @@ static void test_end_to_end(void) {
     free(cp);
 }
 
+static int wait_detached(cwist_webrtc_conn *conn, int timeout_ms) {
+    uint64_t end = now_ms() + (uint64_t)timeout_ms;
+    while (!atomic_load(&conn->detached)) {
+        if (now_ms() > end) return -1;
+        usleep(1000);
+    }
+    return 0;
+}
+
+static void test_fingerprint_mismatch(void) {
+    cwist_webrtc_ctx *server = cwist_webrtc_ctx_new(0);
+    cwist_webrtc_ctx *client = cwist_webrtc_ctx_new(0);
+    assert(server && client);
+    cwist_webrtc_conn *conn =
+        dial_with_fingerprint(server, client,
+                              "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:"
+                              "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00");
+    assert(wait_detached(conn, 10000) == 0);
+    assert(cwist_webrtc_ctx_connection_count(client) == 0);
+    cwist_webrtc_conn_release(conn);
+    cwist_webrtc_ctx_free(client);
+    cwist_webrtc_ctx_free(server);
+}
+
 /* Sends queue while SCTP is down, up to the 4 MiB cap. */
 static void test_send_queue_cap(void) {
     cwist_webrtc_ctx *server = cwist_webrtc_ctx_new(0);
@@ -395,7 +423,7 @@ static void test_send_queue_cap(void) {
     remote.sin_family = AF_INET;
     remote.sin_port = htons(cwist_webrtc_ctx_port(server));
     remote.sin_addr.s_addr = htonl(0x7F000001);
-    cwist_webrtc_conn *conn = cwist_webrtc_connect(client, &remote, "nouser", "nopassword");
+    cwist_webrtc_conn *conn = cwist_webrtc_connect(client, &remote, "nouser", "nopassword", NULL);
     assert(conn);
 
     static uint8_t chunk[65536];
@@ -460,6 +488,7 @@ static void test_external_reactor(void) {
 int main(void) {
     unit_checks();
     test_end_to_end();
+    test_fingerprint_mismatch();
     test_send_queue_cap();
     test_external_reactor();
     printf("test_webrtc: all assertions passed\n");
