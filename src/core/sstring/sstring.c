@@ -202,6 +202,8 @@ cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t 
     return err;
 }
 
+static bool sstring_aliases(const cwist_sstring *str, const char *p);
+
 /**
  * @brief Append an arbitrary byte range to the end of the string.
  * @param str Target string object.
@@ -218,6 +220,19 @@ cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, siz
     if (!data || len == 0) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_OKAY;
+        return err;
+    }
+    if (sstring_aliases(str, data)) {
+        char *copy = cwist_alloc(len + 1);
+        if (!copy) {
+            cwist_error_t err = make_error(CWIST_ERR_INT8);
+            err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+            return err;
+        }
+        memcpy(copy, data, len);
+        copy[len] = '\0';
+        cwist_error_t err = cwist_sstring_append_len(str, copy, len);
+        cwist_free(copy);
         return err;
     }
 
@@ -474,9 +489,9 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
  * work from a private copy when this returns true.
  */
 static bool sstring_aliases(const cwist_sstring *str, const char *p) {
-    if (!p || !str->data || str->borrows_buffer) return false;
+    if (!p || !str->data) return false;
     uintptr_t lo = (uintptr_t)(str->base ? str->base : str->data);
-    uintptr_t hi = (uintptr_t)str->data + strlen(str->data) + 1;
+    uintptr_t hi = (uintptr_t)str->data + str->size + 1;
     uintptr_t at = (uintptr_t)p;
     return at >= lo && at < hi;
 }
