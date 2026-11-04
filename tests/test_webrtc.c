@@ -192,6 +192,14 @@ static void unit_checks(void) {
         assert(cwist_ice_stun_has_use_candidate(req, (size_t)len));
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "wrongpassword000000000") == 0);
+
+        uint8_t truncated[19] = {0};
+        assert(cwist_ice_stun_sign_request(truncated, sizeof(truncated), 0,
+                                           "testpassword0123456789") == -1);
+        assert(cwist_ice_stun_sign_request(truncated, sizeof(truncated), sizeof(truncated),
+                                           "testpassword0123456789") == -1);
+        assert(cwist_ice_stun_sign_request(req, 19, (size_t)len, "testpassword0123456789") == -1);
+
         char rfrag[64];
         /* USERNAME is "<recipient>:<sender>"; the sender's ufrag comes back. */
         assert(cwist_ice_stun_get_remote_ufrag(req, (size_t)len, rfrag, sizeof(rfrag)) == 0);

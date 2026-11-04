@@ -431,6 +431,8 @@ int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12
  *         allocation fails.
  */
 static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) {
+    if (!msg || !pwd || msg_len < STUN_HDR_LEN || msg_len > cap) return -1;
+
     uint8_t body[64];
     size_t blen = 0;
     uint16_t len_for_mi = (uint16_t)(msg_len - STUN_HDR_LEN + 4 + 20);
