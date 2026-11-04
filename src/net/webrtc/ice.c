@@ -371,15 +371,20 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
 int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12],
                                  const char *username) {
     size_t ulen = strlen(username);
-    if (cap < STUN_HDR_LEN)
+    uint8_t body[256];
+    if (ulen > UINT16_MAX) return -1;
+    size_t username_attr_len = ulen ? 4 + ((ulen + 3) & ~3u) : 0;
+    const size_t fixed_attrs_len = 12 + 4 + 8;
+    if (username_attr_len > sizeof(body) - fixed_attrs_len ||
+        cap < STUN_HDR_LEN + username_attr_len + fixed_attrs_len)
         return -1;
+
     memset(out, 0, STUN_HDR_LEN);
     wr16(out, CWIST_STUN_BINDING_REQUEST);
     wr32(out + 4, STUN_MAGIC);
     memcpy(out + 8, txid, 12);
 
     size_t blen = 0;
-    uint8_t body[256];
     /* SOFTWARE-ish placeholder skipped; USERNAME */
     if (ulen > 0) {
         wr16(body + blen, ATTR_USERNAME);
@@ -564,9 +569,9 @@ static const char b64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
  * @retval -1 Not a STUN message, or no USERNAME attribute present.
  */
 int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, size_t cap) {
-    if (!cwist_ice_stun_is_message(buf, len))
-        return -1;
+    if (!out || cap == 0 || !cwist_ice_stun_is_message(buf, len)) return -1;
     uint16_t msg_len = rd16(buf + 2);
+    if (msg_len % 4 != 0 || msg_len > len - STUN_HDR_LEN) return -1;
     size_t end = STUN_HDR_LEN + msg_len;
     size_t off = STUN_HDR_LEN;
     while (off + 4 <= end) {

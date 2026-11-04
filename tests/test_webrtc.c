@@ -218,6 +218,23 @@ static void unit_checks(void) {
         short_msg[3] = 0xFF;
         assert(cwist_ice_stun_validate_request(short_msg, sizeof(short_msg),
                                                "testpassword0123456789") == 1);
+
+        uint8_t bad_ufrag[24] = {0};
+        memcpy(bad_ufrag, req, sizeof(short_msg));
+        bad_ufrag[2] = 0xFF;
+        bad_ufrag[3] = 0xFF;
+        bad_ufrag[20] = 0x00;
+        bad_ufrag[21] = 0x06;
+        bad_ufrag[23] = 0x04;
+        assert(cwist_ice_stun_get_remote_ufrag(bad_ufrag, sizeof(bad_ufrag), rfrag,
+                                               sizeof(rfrag)) == -1);
+        assert(cwist_ice_stun_get_remote_ufrag(req, (size_t)len, rfrag, 0) == -1);
+
+        char long_username[513];
+        memset(long_username, 'u', sizeof(long_username) - 1);
+        long_username[sizeof(long_username) - 1] = '\0';
+        assert(cwist_ice_stun_build_request(req, sizeof(req), txid, long_username) == -1);
+        assert(cwist_ice_stun_build_request(req, sizeof(short_msg), txid, "rfrag:lfrag") == -1);
     }
 
     /* SDP. */
