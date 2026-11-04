@@ -53,7 +53,7 @@ static int seq_auth_memcmp(const uint8_t *a, const uint8_t *b, size_t len) {
 #if defined(__EMSCRIPTEN__)
 EM_JS(int, seq_auth_random_js, (uint8_t *buf, int len), {
     // clang-format off - JS body, not C: keep make format away from it
-    if (typeof crypto == = 'undefined' || !crypto.getRandomValues) return 0;
+    if (typeof crypto === 'undefined' || !crypto.getRandomValues) return 0;
     crypto.getRandomValues(new Uint8Array(Module.HEAPU8.buffer, buf, len));
     return 1;
     // clang-format on
