@@ -6,6 +6,8 @@
 #include "../src/net/websocket/ws_utils.h"
 #include <stdio.h>
 #include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -409,6 +411,44 @@ static void test_websocket_sequenced(void) {
     printf("WebSocket sequenced test passed.\n");
 }
 
+static void test_frame_validation(void) {
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    cwist_http_request *req;
+    cwist_websocket *ws = upgrade_for_frames(sv, &req);
+    uint8_t oversized[126] = {0};
+    const uint8_t controls[] = {CWIST_WS_FRAME_CLOSE, CWIST_WS_FRAME_PING, CWIST_WS_FRAME_PONG};
+    assert(cwist_websocket_send(ws, 0x03, NULL, 0) == -1);
+    assert(cwist_websocket_send(ws, 0x0B, NULL, 0) == -1);
+    for (size_t i = 0; i < sizeof(controls); i++)
+        assert(cwist_websocket_send(ws, controls[i], oversized, sizeof(oversized)) == -1);
+    int flags = fcntl(sv[1], F_GETFL, 0);
+    assert(flags >= 0 && fcntl(sv[1], F_SETFL, flags | O_NONBLOCK) == 0);
+    uint8_t byte;
+    assert(recv(sv[1], &byte, 1, 0) == -1 && errno == EAGAIN);
+    cwist_websocket_destroy(ws);
+    cwist_http_request_destroy(req);
+    close(sv[0]);
+    close(sv[1]);
+
+    const uint8_t bad999[] = {0x03, 0xE7};
+    const uint8_t bad1005[] = {0x03, 0xED};
+    const uint8_t bad_utf8[] = {0x03, 0xE8, 0xC0, 0xAF};
+    const uint8_t *invalid[] = {bad999, bad1005, bad_utf8};
+    const size_t invalid_len[] = {sizeof(bad999), sizeof(bad1005), sizeof(bad_utf8)};
+    for (size_t i = 0; i < 3; i++) {
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        ws = upgrade_for_frames(sv, &req);
+        send_masked_frame(sv[1], 0x88, invalid[i], invalid_len[i]);
+        assert(cwist_websocket_receive(ws) == NULL);
+        cwist_websocket_destroy(ws);
+        cwist_http_request_destroy(req);
+        close(sv[0]);
+        close(sv[1]);
+    }
+    puts("WebSocket frame validation tests passed.");
+}
+
 int main() {
     test_handshake_key_generation();
     test_handshake_rejects_bad_version();
@@ -417,5 +457,6 @@ int main() {
     test_orphan_continuation_rejected();
     test_reserved_opcodes_rejected();
     test_fragmentation_state();
+    test_frame_validation();
     return 0;
 }
