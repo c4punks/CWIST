@@ -233,6 +233,20 @@ static void unit_checks(void) {
         assert(strcmp(info.ice_pwd, "offpassword0123456789012") == 0);
         assert(strcmp(info.setup, "active") == 0);
         assert(info.has_lite == 0);
+
+        static const char no_final_crlf[] = "a=ice-ufrag:ufrag\r\na=ice-pwd:password";
+        char input[sizeof(no_final_crlf) - 1];
+        memcpy(input, no_final_crlf, sizeof(input));
+        assert(cwist_sdp_parse(input, sizeof(input), &info) == 0);
+        assert(strcmp(info.ice_ufrag, "ufrag") == 0);
+        assert(strcmp(info.ice_pwd, "password") == 0);
+
+        static const char ufrag_line[] = "a=ice-ufrag:ufrag\r\n";
+        char long_line[640];
+        memset(long_line, 'x', sizeof(long_line));
+        memcpy(long_line, ufrag_line, sizeof(ufrag_line) - 1);
+        memcpy(long_line + sizeof(ufrag_line) - 1 + 511, "a=ice-pwd:embedded", 18);
+        assert(cwist_sdp_parse(long_line, sizeof(long_line), &info) == -1);
     }
 }
 
