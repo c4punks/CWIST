@@ -277,15 +277,16 @@ int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *
  * @param out    Destination buffer.
  * @param cap    Capacity of @p out in bytes.
  * @param req    The received binding request (used for its transaction ID).
- * @param req_len Bytes at @p req; currently unused.
+ * @param req_len Bytes at @p req.
  * @param mapped Address/port to report back (XOR-encoded with the magic cookie).
  * @param pwd    Short-term credential password for the MI HMAC.
- * @return Total response length in bytes, or -1 if @p cap is too small or
- *         OpenSSL allocation fails.
+ * @return Total response length in bytes, or -1 if the request is truncated,
+ *         @p cap is too small, or OpenSSL allocation fails.
  */
 int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, size_t req_len,
                                   const struct sockaddr_in *mapped, const char *pwd) {
-    (void)req_len;
+    if (!req || req_len < STUN_HDR_LEN) return -1;
+
     uint8_t body[64];
     size_t blen = 0;
 
