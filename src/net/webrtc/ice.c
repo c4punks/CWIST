@@ -235,6 +235,19 @@ static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
     return true;
 }
 
+static int stun_hmac_sha1(const uint8_t *hdr, const uint8_t *body, size_t body_len,
+                          const char *pwd, uint8_t out[20]) {
+    HMAC_CTX *ctx = HMAC_CTX_new();
+    if (!ctx) return -1;
+    unsigned int out_len = 0;
+    int ok = HMAC_Init_ex(ctx, pwd, (int)strlen(pwd), EVP_sha1(), NULL) == 1 &&
+             HMAC_Update(ctx, hdr, STUN_HDR_LEN) == 1 &&
+             HMAC_Update(ctx, body, body_len) == 1 && HMAC_Final(ctx, out, &out_len) == 1 &&
+             out_len == 20;
+    HMAC_CTX_free(ctx);
+    return ok ? 0 : -1;
+}
+
 /** @brief Validate the MESSAGE-INTEGRITY of a STUN message against a password.
  * @param buf Datagram bytes (any STUN message type; also used for responses).
  * @param len Number of bytes at @p buf.
@@ -246,9 +259,7 @@ static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
  *       attribute, per RFC 5389.
  */
 int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *pwd) {
-    size_t pwd_len = strlen(pwd);
     uint8_t hmac[EVP_MAX_MD_SIZE];
-    unsigned int hmac_len = 0;
     size_t mi_off;
     if (!cwist_ice_stun_is_message(buf, len)) return 0;
     if (!find_mi(buf, len, &mi_off)) return 0;
@@ -257,15 +268,8 @@ int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *
     uint8_t hdr[STUN_HDR_LEN];
     memcpy(hdr, buf, STUN_HDR_LEN);
     wr16(hdr + 2, (uint16_t)(mi_off - STUN_HDR_LEN + 4 + 20));
-    HMAC_CTX *ctx = HMAC_CTX_new();
-    if (!ctx)
-        return 0;
-    HMAC_Init_ex(ctx, pwd, (int)pwd_len, EVP_sha1(), NULL);
-    HMAC_Update(ctx, hdr, STUN_HDR_LEN);
-    HMAC_Update(ctx, buf + STUN_HDR_LEN, mi_off - STUN_HDR_LEN);
-    HMAC_Final(ctx, hmac, &hmac_len);
-    HMAC_CTX_free(ctx);
-    return hmac_len == 20 && memcmp(hmac, buf + mi_off + 4, 20) == 0;
+    return stun_hmac_sha1(hdr, buf + STUN_HDR_LEN, mi_off - STUN_HDR_LEN, pwd, hmac) == 0 &&
+           memcmp(hmac, buf + mi_off + 4, 20) == 0;
 }
 
 /** @brief Build a STUN binding response for a received binding request.
@@ -312,15 +316,7 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
     wr32(hdr + 4, STUN_MAGIC);
     memcpy(hdr + 8, req + 8, 12);
     uint8_t mi[20];
-    unsigned int mi_len = 0;
-    HMAC_CTX *hctx = HMAC_CTX_new();
-    if (!hctx)
-        return -1;
-    HMAC_Init_ex(hctx, pwd, (int)strlen(pwd), EVP_sha1(), NULL);
-    HMAC_Update(hctx, hdr, STUN_HDR_LEN);
-    HMAC_Update(hctx, body, blen);
-    HMAC_Final(hctx, mi, &mi_len);
-    HMAC_CTX_free(hctx);
+    if (stun_hmac_sha1(hdr, body, blen, pwd, mi) != 0) return -1;
 
     wr16(body + blen, ATTR_MESSAGE_INTEGRITY);
     wr16(body + blen + 2, 20);
@@ -440,15 +436,7 @@ static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) 
     memcpy(hdr, msg, STUN_HDR_LEN);
     wr16(hdr + 2, len_for_mi);
     uint8_t mi[20];
-    unsigned int mi_len = 0;
-    HMAC_CTX *hctx = HMAC_CTX_new();
-    if (!hctx)
-        return -1;
-    HMAC_Init_ex(hctx, pwd, (int)strlen(pwd), EVP_sha1(), NULL);
-    HMAC_Update(hctx, hdr, STUN_HDR_LEN);
-    HMAC_Update(hctx, msg + STUN_HDR_LEN, msg_len - STUN_HDR_LEN);
-    HMAC_Final(hctx, mi, &mi_len);
-    HMAC_CTX_free(hctx);
+    if (stun_hmac_sha1(hdr, msg + STUN_HDR_LEN, msg_len - STUN_HDR_LEN, pwd, mi) != 0) return -1;
 
     wr16(body + blen, ATTR_MESSAGE_INTEGRITY);
     wr16(body + blen + 2, 20);
