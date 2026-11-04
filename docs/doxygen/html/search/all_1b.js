@@ -87,7 +87,7 @@ var searchData=
   ['private_5fdata_84',['private_data',['../dd/d68/structcwist__http__request.html#a9d8f44e3e022dbeb0fcea418d916b41f',1,'cwist_http_request']]],
   ['process_20exit_20sweeps_85',['3. Thread/process exit sweeps',['../d9/dd1/md_docs_2GC.html#autotoc_md325',1,'']]],
   ['processes_20and_20server_20mode_86',['Processes and server mode',['../d9/dfa/md_docs_2runtime-config.html#autotoc_md805',1,'']]],
-  ['produced_20by_20cwist_5fdb_5fcrypt_5fseal_87',['Wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
+  ['produced_20by_20cwist_5fdb_5fcrypt_5fseal_87',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
   ['producer_20handlers_20generate_20the_20body_20chunk_20by_20chunk_88',['Streaming producer (handlers generate the body chunk-by-chunk)',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md228',1,'']]],
   ['production_89',['Before adapting this for production',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md293',1,'']]],
   ['profile_90',['profile',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md754',1,'Baseline syscall profile'],['../d6/d42/md_docs_2webserver-benchmark.html#autotoc_md879',1,'Load profile']]],

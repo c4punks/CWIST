@@ -1,5 +1,8 @@
 var NAVTREEINDEX19 =
 {
+"dd/dff/http3_8h.html#ab3d036544ab8151674cbf65af2ada7d5":[94,0,1,0,2,3,7,13],
+"dd/dff/http3_8h.html#ac5677399dbfa619d5b8c90cb4e598a78":[94,0,1,0,2,3,7,2],
+"dd/dff/http3_8h.html#ad3ca65b797048ad91a8a62eaf329c6cd":[94,0,1,0,2,3,7,20],
 "dd/dff/http3_8h.html#ad6a970e6369d38510d4ff767ffe10f34":[94,0,1,0,2,3,7,19],
 "dd/dff/http3_8h.html#ae3c2a9d13d58d6f6b1edbfde785b7a9b":[94,0,1,0,2,3,7,18],
 "dd/dff/http3_8h.html#af2f0b7cd7be74f6592ce2e2f99968242":[94,0,1,0,2,3,7,21],
@@ -246,8 +249,5 @@ var NAVTREEINDEX19 =
 "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md717":[71,3],
 "df/d1b/csrf_8h.html":[94,0,1,0,4,0,5],
 "df/d1b/csrf_8h.html#a299c30d0d98b682e43bcbe5b442d1db7":[94,0,1,0,4,0,5,1],
-"df/d1b/csrf_8h.html#ab84a8d55eb5f30626552303a80293fc0":[94,0,1,0,4,0,5,0],
-"df/d1b/csrf_8h_source.html":[94,0,1,0,4,0,5],
-"df/d21/structcwist__bind__field.html":[93,0,8],
-"df/d21/structcwist__bind__field.html#a0a05e69235df384fd8f2cb79e7d25d7a":[93,0,8,5]
+"df/d1b/csrf_8h.html#ab84a8d55eb5f30626552303a80293fc0":[94,0,1,0,4,0,5,0]
 };

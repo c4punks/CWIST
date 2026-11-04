@@ -91,6 +91,6 @@ var searchData=
   ['bundle_20size_20impact_20of_20cwist_5fdb_88',['Bundle size impact of cwist_db',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md223',1,'']]],
   ['burst_20starvation_2025_20follow_20up_89',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
   ['by_20chunk_90',['Streaming producer (handlers generate the body chunk-by-chunk)',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md228',1,'']]],
-  ['by_20cwist_5fdb_5fcrypt_5fseal_91',['Wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
+  ['by_20cwist_5fdb_5fcrypt_5fseal_91',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
   ['bytes_92',['bytes',['../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d',1,'cwist_pb_field']]]
 ];

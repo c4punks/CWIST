@@ -79,7 +79,7 @@ var searchData=
   ['why_20the_20learning_20block_20is_20not_20simply_20moved_76',['Why the learning block is not simply moved',['../d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md318',1,'']]],
   ['wildcard_5froutes_77',['wildcard_routes',['../d0/d0c/structcwist__mux__router.html#a92254b04e4e023a3704cc8c12c08033b',1,'cwist_mux_router']]],
   ['wire_78',['wire',['../d8/d83/md_docs_2api_2html.html#autotoc_md94',1,'HTML over the wire'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md413',1,'HTML over the wire']]],
-  ['wire_20format_20produced_20by_20cwist_5fdb_5fcrypt_5fseal_79',['Wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
+  ['wire_20format_20produced_20by_20cwist_5fdb_5fcrypt_5fseal_79',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
   ['wire_20protocol_20per_20connection_80',['Wire protocol (per-connection)',['../d6/dd4/db__sync_8h.html#autotoc_md0',1,'']]],
   ['wire_20responses_81',['2. Cache representations, not wire responses',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md271',1,'']]],
   ['wire_5ftype_82',['wire_type',['../d0/de5/structcwist__pb__field.html#ac3620674544d73892f2ed633513c9127',1,'cwist_pb_field']]],

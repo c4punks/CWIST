@@ -1072,16 +1072,16 @@ var NAVTREEINDEX =
 "d7/dba/structcwist__fix__server__mem.html#a113ff4343f4d9e628b0d2871cc13f7c5",
 "d8/dca/struct____prim__cwist__error__t.html#a353915bc7ca09777310250478c5afca4",
 "d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4da38ec68d4a519679bb9688ca055ae5484",
-"d9/dfa/md_docs_2runtime-config.html#autotoc_md805",
-"da/dc2/bind_8h.html#ad8bdd35490f25f7e65b0fd145a9bafeb",
-"db/d64/websocket_8h.html",
-"dc/d5f/structcwist__zod__error.html#a7c909d115f0fccc9ef429bd47454bd07",
-"dc/dfe/nuke__db_8h.html#ac17144aee58fd5597d139133eafdc1e5",
-"dd/d56/http_8h.html#a4416bbcd7cb058bcb1a34a5b1bd18fd4",
-"dd/dff/http3_8h.html#ad6a970e6369d38510d4ff767ffe10f34",
-"df/d21/structcwist__bind__field.html#a0b46be239f1e7a5d1ce44e514b7e7957",
-"df/d7f/app_8c.html#a2e05d7cf1fd66d956d6928d465c3aa72",
-"dir_860027c9a6634d88c68c4a80d2fa7e52.html"
+"d9/dfa/md_docs_2runtime-config.html#autotoc_md804",
+"da/dc2/bind_8h.html#ad6cc14ff7aa08ee694ba1e9428bc5475",
+"db/d5b/protobuf_8h_source.html",
+"dc/d5f/structcwist__zod__error.html",
+"dc/dfe/nuke__db_8h.html#a90a30663e9eaa7e0d14c37303a70cc40",
+"dd/d56/http_8h.html#a1d176e6dc8e2f08571683836eef15025",
+"dd/dff/http3_8h.html#ab3d036544ab8151674cbf65af2ada7d5",
+"df/d1b/csrf_8h_source.html",
+"df/d7f/app_8c.html#a24530f3f4a9311eacdd29df8211cc23b",
+"dir_7625c6f9443acdb2be0bff0c9ce77349.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
