@@ -1,5 +1,9 @@
 var NAVTREEINDEX19 =
 {
+"dd/dff/http3_8h.html#a9697f0d33235574c1819abd2f90c5f72":[94,0,1,0,2,3,7,31],
+"dd/dff/http3_8h.html#a99860db5e8d04b8134684ce9ae5ebbc1":[94,0,1,0,2,3,7,10],
+"dd/dff/http3_8h.html#a9a695f75adeebd16dc32da914364a27e":[94,0,1,0,2,3,7,25],
+"dd/dff/http3_8h.html#aaa33ab3d022975e27d5e9e3f22b2b385":[94,0,1,0,2,3,7,32],
 "dd/dff/http3_8h.html#ab3d036544ab8151674cbf65af2ada7d5":[94,0,1,0,2,3,7,13],
 "dd/dff/http3_8h.html#ac5677399dbfa619d5b8c90cb4e598a78":[94,0,1,0,2,3,7,2],
 "dd/dff/http3_8h.html#ad3ca65b797048ad91a8a62eaf329c6cd":[94,0,1,0,2,3,7,20],
@@ -245,9 +249,5 @@ var NAVTREEINDEX19 =
 "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html":[71],
 "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md714":[71,0],
 "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md715":[71,1],
-"df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md716":[71,2],
-"df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md717":[71,3],
-"df/d1b/csrf_8h.html":[94,0,1,0,4,0,5],
-"df/d1b/csrf_8h.html#a299c30d0d98b682e43bcbe5b442d1db7":[94,0,1,0,4,0,5,1],
-"df/d1b/csrf_8h.html#ab84a8d55eb5f30626552303a80293fc0":[94,0,1,0,4,0,5,0]
+"df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md716":[71,2]
 };

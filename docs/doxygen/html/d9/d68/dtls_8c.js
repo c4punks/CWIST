@@ -5,5 +5,6 @@ var dtls_8c =
     [ "cwist_dtls_ctx_new", "d9/d68/dtls_8c.html#aa463341c32e1b6cc887637102739f91d", null ],
     [ "cwist_dtls_fingerprint", "d9/d68/dtls_8c.html#a0d60a73cbeb8877b16726af6280da623", null ],
     [ "cwist_dtls_generate_cert", "d9/d68/dtls_8c.html#a5ddd6e316dd400fcc22cd2d746f0cda2", null ],
-    [ "cwist_dtls_link_mtu", "d9/d68/dtls_8c.html#ab0399f52ba8316a589f281167ab8082e", null ]
+    [ "cwist_dtls_link_mtu", "d9/d68/dtls_8c.html#ab0399f52ba8316a589f281167ab8082e", null ],
+    [ "cwist_dtls_verify_fingerprint", "d9/d68/dtls_8c.html#aa4648b9729c4ff987995efaf07f58c5a", null ]
 ];
