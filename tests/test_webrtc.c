@@ -185,6 +185,7 @@ static void unit_checks(void) {
         memset(txid, 0xAB, sizeof(txid));
         int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "rfrag:lfrag");
         assert(len > 0);
+        assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 0);
         len = cwist_ice_stun_sign_request(req, sizeof(req), (size_t)len, "testpassword0123456789");
         assert(len > 0);
         assert(cwist_ice_stun_is_message(req, (size_t)len));
@@ -217,7 +218,7 @@ static void unit_checks(void) {
         short_msg[2] = 0xFF;
         short_msg[3] = 0xFF;
         assert(cwist_ice_stun_validate_request(short_msg, sizeof(short_msg),
-                                               "testpassword0123456789") == 1);
+                                               "testpassword0123456789") == 0);
 
         uint8_t bad_ufrag[24] = {0};
         memcpy(bad_ufrag, req, sizeof(short_msg));
