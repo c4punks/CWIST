@@ -184,5 +184,4 @@ cwist_test_client_clear_cookies
 cwist_webrtc_conn_retain
 cwist_websocket_async_close
 cwist_websocket_close
-cwist_websocket_send
 cwist_zod_print_errors
