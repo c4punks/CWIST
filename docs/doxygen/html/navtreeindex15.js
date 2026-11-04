@@ -1,5 +1,9 @@
 var NAVTREEINDEX15 =
 {
+"db/d5b/protobuf_8h.html#abd2b2d0a3e4cedd63a84fde37a72d1ff":[94,0,1,0,2,2,3,21],
+"db/d5b/protobuf_8h.html#ac131b57f5384662c55412fe03104cb53":[94,0,1,0,2,2,3,12],
+"db/d5b/protobuf_8h.html#ac18acfc1eb2c625073056ed75c2040ba":[94,0,1,0,2,2,3,14],
+"db/d5b/protobuf_8h.html#ac6fc0372e726a44c65de8b5709f39935":[94,0,1,0,2,2,3,13],
 "db/d5b/protobuf_8h.html#ae76e3894b919ddfcbb5bae290ad9fb50":[94,0,1,0,2,2,3,25],
 "db/d5b/protobuf_8h.html#af3ed980ace3d920a2d109009a6db4956":[94,0,1,0,2,2,3,23],
 "db/d5b/protobuf_8h.html#af4f4e77a913528d1f4bbe07d1532c692":[94,0,1,0,2,2,3,20],
@@ -227,9 +231,9 @@ var NAVTREEINDEX15 =
 "dc/d13/structcwist__bind__error.html":[93,0,7],
 "dc/d13/structcwist__bind__error.html#a62159217efef059794a3b9acf9a510d7":[93,0,7,0],
 "dc/d13/structcwist__bind__error.html#ac081e0ec9d2c652cc5a4869b30ce3c58":[93,0,7,1],
-"dc/d23/https__upgrade__hook_8c.html":[94,0,2,2,3,19],
-"dc/d23/https__upgrade__hook_8c.html#af9aace1b44b73111e15aa39f06f43456":[94,0,2,2,3,19,0],
-"dc/d23/https__upgrade__hook_8c_source.html":[94,0,2,2,3,19],
+"dc/d23/https__upgrade__hook_8c.html":[94,0,2,2,3,20],
+"dc/d23/https__upgrade__hook_8c.html#af9aace1b44b73111e15aa39f06f43456":[94,0,2,2,3,20,0],
+"dc/d23/https__upgrade__hook_8c_source.html":[94,0,2,2,3,20],
 "dc/d2b/structcwist__db__crypt__ctx__t.html":[93,0,21],
 "dc/d2b/structcwist__db__crypt__ctx__t.html#a0b3dc3ba33e220c07834a5a71da6247d":[93,0,21,0],
 "dc/d43/quic__flow__control_8c.html":[94,0,2,2,8],
@@ -245,9 +249,5 @@ var NAVTREEINDEX15 =
 "dc/d43/quic__flow__control_8c.html#adff0e48e75556aa317f00be3e7d1a6b0":[94,0,2,2,8,3],
 "dc/d43/quic__flow__control_8c.html#aeabf5de0b6992ee3d33eeb8b30276ae6":[94,0,2,2,8,2],
 "dc/d43/quic__flow__control_8c.html#afa16a344299600d1bbaf43335cd5b402":[94,0,2,2,8,1],
-"dc/d43/quic__flow__control_8c_source.html":[94,0,2,2,8],
-"dc/d49/md_docs_2api_2query.html":[9],
-"dc/d5b/structcwist__metric.html":[93,0,58],
-"dc/d5b/structcwist__metric.html#a0a8619edd0750d18e26a6ae4cd30e1bf":[93,0,58,3],
-"dc/d5b/structcwist__metric.html#a2a8a8adf099ad40cca05fec6af3688eb":[93,0,58,0]
+"dc/d43/quic__flow__control_8c_source.html":[94,0,2,2,8]
 };

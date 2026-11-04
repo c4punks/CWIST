@@ -1,5 +1,9 @@
 var NAVTREEINDEX16 =
 {
+"dc/d49/md_docs_2api_2query.html":[9],
+"dc/d5b/structcwist__metric.html":[93,0,58],
+"dc/d5b/structcwist__metric.html#a0a8619edd0750d18e26a6ae4cd30e1bf":[93,0,58,3],
+"dc/d5b/structcwist__metric.html#a2a8a8adf099ad40cca05fec6af3688eb":[93,0,58,0],
 "dc/d5b/structcwist__metric.html#a5eb0fd5541685d75fa13505ee3705876":[93,0,58,4],
 "dc/d5b/structcwist__metric.html#a861fd2503d547b1e22d624da0b50333d":[93,0,58,2],
 "dc/d5b/structcwist__metric.html#a9c22145f1a219a0898035fe87b49ac2f":[93,0,58,5],
@@ -132,10 +136,10 @@ var NAVTREEINDEX16 =
 "dc/d91/structcwist__mux__route.html#ab7addefd2f3fd44753eecc866af67801":[93,0,67,0],
 "dc/d91/structcwist__mux__route.html#ad57a97bc5d38daace699711e3efd56b2":[93,0,67,10],
 "dc/d91/structcwist__mux__route.html#aedf4d12d0dad9c8291d8b04863705a89":[93,0,67,5],
-"dc/d94/tls__chain_8h.html":[94,0,2,2,3,28],
-"dc/d94/tls__chain_8h.html#a402fcbdd8e93c407e64d09ff4c405eb1":[94,0,2,2,3,28,0],
-"dc/d94/tls__chain_8h.html#ae95c36416e4d96a4296216a19efb46b9":[94,0,2,2,3,28,1],
-"dc/d94/tls__chain_8h_source.html":[94,0,2,2,3,28],
+"dc/d94/tls__chain_8h.html":[94,0,2,2,3,29],
+"dc/d94/tls__chain_8h.html#a402fcbdd8e93c407e64d09ff4c405eb1":[94,0,2,2,3,29,0],
+"dc/d94/tls__chain_8h.html#ae95c36416e4d96a4296216a19efb46b9":[94,0,2,2,3,29,1],
+"dc/d94/tls__chain_8h_source.html":[94,0,2,2,3,29],
 "dc/d97/rate__limit__redis_8c.html":[94,0,2,4,0,13],
 "dc/d97/rate__limit__redis_8c.html#a3024ccd4a9af5109d24e6c57565d74a1":[94,0,2,4,0,13,0],
 "dc/d97/rate__limit__redis_8c.html#a60f79d5cf2b4889c3d09b4c26b50d218":[94,0,2,4,0,13,4],
@@ -245,9 +249,5 @@ var NAVTREEINDEX16 =
 "dc/df5/structcwist__grpc__stream.html#aa50904a860e0dba9d854aaed839005de":[93,0,33,8],
 "dc/df5/structcwist__grpc__stream.html#ac4a0c9bb97a1d32df9917ad8175eaef5":[93,0,33,14],
 "dc/df5/structcwist__grpc__stream.html#ac7f15d648ba5842e7dc21d1e7090e391":[93,0,33,13],
-"dc/df5/structcwist__grpc__stream.html#ad983b3f1d52fdc9d4061478e46220a23":[93,0,33,4],
-"dc/df5/structcwist__grpc__stream.html#ae84f8a8b11ddd5db05847fb8b933fda2":[93,0,33,5],
-"dc/dfe/nuke__db_8h.html":[94,0,1,0,0,1,1],
-"dc/dfe/nuke__db_8h.html#a0d51fe7c2f1edae3b320ba9fd8601602":[94,0,1,0,0,1,1,6],
-"dc/dfe/nuke__db_8h.html#a4e8861f5fdb6e2c99c0e98ebd7ed1be5":[94,0,1,0,0,1,1,2]
+"dc/df5/structcwist__grpc__stream.html#ad983b3f1d52fdc9d4061478e46220a23":[93,0,33,4]
 };

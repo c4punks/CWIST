@@ -1,5 +1,9 @@
 var NAVTREEINDEX9 =
 {
+"d6/dd4/db__sync_8h.html#a2680f7161260b7721f4175afd94d5a79":[94,0,1,0,2,0,0,5],
+"d6/dd4/db__sync_8h.html#a5dc0e7ed8d56fbfba226b34bd3e25e6a":[94,0,1,0,2,0,0,7],
+"d6/dd4/db__sync_8h.html#a606bd34f61ff9ad29222cf6e5c4dec57":[94,0,1,0,2,0,0,1],
+"d6/dd4/db__sync_8h.html#a640ce410feda9084992a94c2c8e36614":[94,0,1,0,2,0,0,8],
 "d6/dd4/db__sync_8h.html#a822ed1395595eab243ce053b230ffb7b":[94,0,1,0,2,0,0,6],
 "d6/dd4/db__sync_8h.html#a86b2f1006e707b4fe2f1641556a07590":[94,0,1,0,2,0,0,0],
 "d6/dd4/db__sync_8h.html#aa382487f8dabb5d3f73372dea0279508":[94,0,1,0,2,0,0,4],
@@ -245,9 +249,5 @@ var NAVTREEINDEX9 =
 "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md629":[60,0],
 "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md630":[60,1],
 "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md631":[60,2],
-"d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md632":[60,3],
-"d7/db7/structcwist__config__bucket.html":[93,0,16],
-"d7/db7/structcwist__config__bucket.html#a211f44794fa3fb8983c58c8a3bce1723":[93,0,16,0],
-"d7/db7/structcwist__config__bucket.html#a3a693d2501409ac50f610a00405a912d":[93,0,16,1],
-"d7/db7/structcwist__config__bucket.html#ac09c20aa17c05eb4fe54e9f9eb86befe":[93,0,16,2]
+"d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md632":[60,3]
 };
