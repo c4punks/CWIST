@@ -78,6 +78,14 @@ static void test_sstring_self_alias(void) {
     assert(ok(cwist_sstring_assign(s, "<a>")));
     assert(ok(cwist_sstring_append_escaped(s, s->data)));
     assert(strcmp(s->data, "<a>&lt;a&gt;") == 0);
+
+    char *owned = cwist_alloc(4);
+    assert(owned != NULL);
+    memcpy(owned, "abc", 4);
+    assert(ok(cwist_sstring_adopt_len(s, owned, 3)));
+    const char *alias = s->data;
+    assert(ok(cwist_sstring_append_len(s, alias, 3)));
+    assert(strcmp(s->data, "abcabc") == 0);
     cwist_sstring_destroy(s);
 }
 
