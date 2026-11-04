@@ -96,43 +96,50 @@ int cwist_dtls_fingerprint(X509 *cert, char *out, size_t cap) {
     i2d_X509(cert, &p);
     uint8_t digest[EVP_MAX_MD_SIZE];
     unsigned int dlen = 0;
-    if (!EVP_Digest(der, (size_t)der_len, digest, &dlen, EVP_sha256(), NULL))
-        return -1;
+    if (!EVP_Digest(der, (size_t)der_len, digest, &dlen, EVP_sha256(), NULL)) return -1;
     size_t off = 0;
     for (unsigned int i = 0; i < dlen && off + 3 < cap; i++)
         off += (size_t)snprintf(out + off, cap - off, "%s%02X", i ? ":" : "", digest[i]);
     return off > 0 && off < cap ? 0 : -1;
 }
 
+int cwist_dtls_verify_fingerprint(SSL *ssl, const char *expected) {
+    if (!ssl || !expected || !*expected) return 0;
+    X509 *cert = SSL_get_peer_certificate(ssl);
+    if (!cert) return 0;
+    char actual[128];
+    int rc = cwist_dtls_fingerprint(cert, actual, sizeof(actual));
+    X509_free(cert);
+    return rc == 0 && strcmp(actual, expected) == 0;
+}
+
+static int dtls_accept_certificate(int preverify_ok, X509_STORE_CTX *store) {
+    (void)preverify_ok;
+    (void)store;
+    return 1;
+}
+
 /** @brief Create a DTLS SSL_CTX for the client or server role.
  * @param is_server Non-zero to build a DTLS server context, zero for a
  *                  DTLS client context.
- * @param cert      Server certificate; used (with @p pkey) only when
- *                  @p is_server is non-zero. May be NULL for a client.
- * @param pkey      Private key matching @p cert; only used for a server.
+ * @param cert      Certificate presented to the peer, required by WebRTC.
+ * @param pkey      Private key matching @p cert.
  * @return New SSL_CTX on success, NULL on allocation failure or when
- *         certificate/key loading or validation fails on the server side.
- * @note The context is pinned to DTLS 1.2 as the minimum protocol version.
- *       Client contexts use SSL_VERIFY_NONE: peer fingerprint verification
- *       is deferred to the SDP exchange (the test pins the expected
- *       fingerprint out of band).
+ *         certificate/key loading or validation fails.
+ * @note Certificate chains are accepted here so self-signed WebRTC certificates
+ *       can be authenticated by their SDP fingerprint after the handshake.
  */
 SSL_CTX *cwist_dtls_ctx_new(int is_server, X509 *cert, EVP_PKEY *pkey) {
     SSL_CTX *ctx = SSL_CTX_new(is_server ? DTLS_server_method() : DTLS_client_method());
-    if (!ctx)
-        return NULL;
+    if (!ctx) return NULL;
     SSL_CTX_set_min_proto_version(ctx, DTLS1_2_VERSION);
-    if (is_server) {
-        if (SSL_CTX_use_certificate(ctx, cert) != 1 || SSL_CTX_use_PrivateKey(ctx, pkey) != 1 ||
-            SSL_CTX_check_private_key(ctx) != 1) {
-            SSL_CTX_free(ctx);
-            return NULL;
-        }
-    } else {
-        /* Peer fingerprint verification is optional at MVP; the test pins the
-         * expected fingerprint via the SDP exchange. */
-        SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+    if (SSL_CTX_use_certificate(ctx, cert) != 1 || SSL_CTX_use_PrivateKey(ctx, pkey) != 1 ||
+        SSL_CTX_check_private_key(ctx) != 1) {
+        SSL_CTX_free(ctx);
+        return NULL;
     }
+    int mode = SSL_VERIFY_PEER | (is_server ? SSL_VERIFY_FAIL_IF_NO_PEER_CERT : 0);
+    SSL_CTX_set_verify(ctx, mode, dtls_accept_certificate);
     return ctx;
 }
 
