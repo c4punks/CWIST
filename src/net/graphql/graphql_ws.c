@@ -132,7 +132,24 @@ typedef struct gql_sub_field {
 struct cwist_graphql_ws {
     cwist_graphql_schema_t *schema; /* not owned */
     gql_sub_field_t *subs;
+    atomic_int refs;
 };
+
+static void gql_ws_endpoint_ref(cwist_graphql_ws_t *gws) {
+    atomic_fetch_add_explicit(&gws->refs, 1, memory_order_relaxed);
+}
+
+static void gql_ws_endpoint_unref(cwist_graphql_ws_t *gws) {
+    if (atomic_fetch_sub_explicit(&gws->refs, 1, memory_order_acq_rel) != 1) return;
+    gql_sub_field_t *f = gws->subs;
+    while (f) {
+        gql_sub_field_t *next = f->next;
+        cwist_free(f->name);
+        cwist_free(f);
+        f = next;
+    }
+    cwist_free(gws);
+}
 
 /**
  * @brief Create a graphql-ws endpoint holding a subscription field registry.
@@ -147,28 +164,20 @@ cwist_graphql_ws_t *cwist_graphql_ws_create(cwist_graphql_schema_t *schema) {
     if (gws) {
         gws->schema = schema;
         gws->subs = NULL;
+        atomic_init(&gws->refs, 1);
     }
     return gws;
 }
 
 /**
- * @brief Destroy an endpoint and its subscription field registry.
+ * @brief Drop the caller's endpoint reference.
  *
- * Does not touch active connections or broker operations still referencing
- * the endpoint's resolvers.
+ * The resolver registry remains alive until every attached connection closes.
  *
- * @param gws Endpoint to free; NULL is a no-op.
+ * @param gws Endpoint to release; NULL is a no-op.
  */
 void cwist_graphql_ws_destroy(cwist_graphql_ws_t *gws) {
-    if (!gws) return;
-    gql_sub_field_t *f = gws->subs;
-    while (f) {
-        gql_sub_field_t *next = f->next;
-        cwist_free(f->name);
-        cwist_free(f);
-        f = next;
-    }
-    cwist_free(gws);
+    if (gws) gql_ws_endpoint_unref(gws);
 }
 
 /**
@@ -237,6 +246,8 @@ typedef struct gql_ws_conn {
     char **pending;
     size_t pending_count;
     size_t pending_cap;
+    size_t pending_bytes;
+    bool flush_pending;
 } gql_ws_conn_t;
 
 /* Reactor-posted flush node: drains a connection's pending queue on the
@@ -264,6 +275,7 @@ static void gql_ws_conn_ref(gql_ws_conn_t *conn) {
 static void gql_ws_conn_free(gql_ws_conn_t *conn) {
     for (size_t i = 0; i < conn->pending_count; i++) cwist_free(conn->pending[i]);
     cwist_free(conn->pending);
+    gql_ws_endpoint_unref(conn->gws);
     cwist_free(conn);
 }
 
@@ -374,8 +386,14 @@ static void gql_ws_send_error(cwist_websocket_async *ws, const char *id, const c
 /* Pending queue + flush delivery                                      */
 /* ------------------------------------------------------------------ */
 
+#define GQL_WS_MAX_PENDING_BYTES (1024u * 1024u)
+
 /* Append a `next` message to the connection's queue (caller holds g_broker_lock). */
 static bool gql_ws_pending_push(gql_ws_conn_t *conn, char *msg) {
+    size_t msg_len = strlen(msg);
+    if (msg_len > GQL_WS_MAX_PENDING_BYTES ||
+        conn->pending_bytes > GQL_WS_MAX_PENDING_BYTES - msg_len)
+        return false;
     if (conn->pending_count == conn->pending_cap) {
         size_t new_cap = conn->pending_cap ? conn->pending_cap * 2 : 8;
         char **np = (char **)cwist_alloc_array(new_cap, sizeof(char *));
@@ -387,6 +405,7 @@ static bool gql_ws_pending_push(gql_ws_conn_t *conn, char *msg) {
         conn->pending_cap = new_cap;
     }
     conn->pending[conn->pending_count++] = msg;
+    conn->pending_bytes += msg_len;
     return true;
 }
 
@@ -432,10 +451,12 @@ static void gql_ws_flush_cb(void *ctx) {
         if (msgs) {
             memcpy(msgs, conn->pending, count * sizeof(char *));
             conn->pending_count = 0;
+            conn->pending_bytes = 0;
         } else {
             count = 0; /* OOM: leave queued for the next flush */
         }
     }
+    conn->flush_pending = false;
     pthread_mutex_unlock(&g_broker_lock);
 
     for (size_t i = 0; i < count; i++) {
@@ -453,13 +474,29 @@ static void gql_ws_flush_cb(void *ctx) {
 
 /* Queue a flush node for @p conn; takes a reference released by the callback. */
 static void gql_ws_post_flush(gql_ws_conn_t *conn) {
+    pthread_mutex_lock(&g_broker_lock);
+    if (conn->flush_pending) {
+        pthread_mutex_unlock(&g_broker_lock);
+        return;
+    }
+    conn->flush_pending = true;
+    pthread_mutex_unlock(&g_broker_lock);
+
     gql_ws_flush_t *flush = (gql_ws_flush_t *)cwist_alloc(sizeof(*flush));
-    if (!flush) return;
+    if (!flush) {
+        pthread_mutex_lock(&g_broker_lock);
+        conn->flush_pending = false;
+        pthread_mutex_unlock(&g_broker_lock);
+        return;
+    }
     flush->conn = conn;
     flush->node.cb = gql_ws_flush_cb;
     flush->node.ctx = flush;
     gql_ws_conn_ref(conn);
     if (!cwist_reactor_post(conn->reactor, &flush->node)) {
+        pthread_mutex_lock(&g_broker_lock);
+        conn->flush_pending = false;
+        pthread_mutex_unlock(&g_broker_lock);
         gql_ws_conn_unref(conn);
         cwist_free(flush);
     }
@@ -645,8 +682,10 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
         const cJSON *pl = cJSON_GetObjectItemCaseSensitive(msg, "payload");
         if (pl) cJSON_AddItemToObject(pong, "payload", cJSON_Duplicate(pl, true));
         gql_ws_send_json(ws, pong);
-    } else if (strcmp(t, "pong") == 0 || strcmp(t, "connection_init") == 0) {
-        /* Keepalive / duplicate init: nothing to do. */
+    } else if (strcmp(t, "pong") == 0) {
+        /* Keepalive. */
+    } else if (strcmp(t, "connection_init") == 0) {
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_UNAUTHORIZED);
     } else if (strcmp(t, "subscribe") == 0) {
         gql_ws_handle_subscribe(ws, conn, msg);
     } else if (strcmp(t, "complete") == 0) {
@@ -677,6 +716,7 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
 static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_t *reactor) {
     gql_ws_conn_t *conn = (gql_ws_conn_t *)cwist_alloc(sizeof(*conn));
     if (!conn) return NULL;
+    gql_ws_endpoint_ref(gws);
     conn->gws = gws;
     conn->ws = NULL;
     conn->reactor = reactor;
@@ -686,6 +726,8 @@ static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_
     conn->pending = NULL;
     conn->pending_count = 0;
     conn->pending_cap = 0;
+    conn->pending_bytes = 0;
+    conn->flush_pending = false;
     return conn;
 }
 
@@ -699,6 +741,7 @@ static void gql_ws_conn_dispose(gql_ws_conn_t *conn) {
     gql_ws_conn_purge_ops(conn);
     for (size_t i = 0; i < conn->pending_count; i++) cwist_free(conn->pending[i]);
     conn->pending_count = 0;
+    conn->pending_bytes = 0;
     pthread_mutex_unlock(&g_broker_lock);
     gql_ws_conn_unref(conn);
 }

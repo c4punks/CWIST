@@ -125,11 +125,10 @@ static void peer_on_close(cwist_webrtc_conn *conn, void *user) {
 /* Answer an offer on @p server and dial it from @p client.  The offer carries
  * the client ctx's real ICE credentials, as a browser's would, so the server
  * adopts the conn it parked for the offer. */
-static cwist_webrtc_conn *dial(cwist_webrtc_ctx *server, cwist_webrtc_ctx *client) {
+static cwist_webrtc_conn *dial_with_fingerprint(cwist_webrtc_ctx *server, cwist_webrtc_ctx *client,
+                                                const char *fingerprint) {
     char offer[1024];
-    assert(cwist_sdp_write_offer(offer, sizeof(offer),
-                                 "00:11:22:33:44:55:66:77:88:99:"
-                                 "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55",
+    assert(cwist_sdp_write_offer(offer, sizeof(offer), cwist_webrtc_ctx_fingerprint(client),
                                  client->ice_ufrag, client->ice_pwd, "0") == 0);
     char answer[2048];
     assert(cwist_webrtc_handle_offer(server, offer, answer, sizeof(answer)) == 0);
@@ -145,9 +144,14 @@ static cwist_webrtc_conn *dial(cwist_webrtc_ctx *server, cwist_webrtc_ctx *clien
     remote.sin_family = AF_INET;
     remote.sin_port = htons(cwist_webrtc_ctx_port(server));
     remote.sin_addr.s_addr = htonl(0x7F000001);
-    cwist_webrtc_conn *conn = cwist_webrtc_connect(client, &remote, ans.ice_ufrag, ans.ice_pwd);
+    cwist_webrtc_conn *conn =
+        cwist_webrtc_connect(client, &remote, ans.ice_ufrag, ans.ice_pwd, fingerprint);
     assert(conn != NULL);
     return conn;
+}
+
+static cwist_webrtc_conn *dial(cwist_webrtc_ctx *server, cwist_webrtc_ctx *client) {
+    return dial_with_fingerprint(server, client, cwist_webrtc_ctx_fingerprint(server));
 }
 
 typedef struct {
@@ -177,7 +181,48 @@ static void probe_table(cwist_webrtc_ctx *ctx, int *parked, uint32_t *nconns) {
     *nconns = p.nconns;
 }
 
+typedef struct {
+    atomic_int *start;
+    int rc;
+} crc_init_probe;
+
+static void *crc_init_worker(void *arg) {
+    crc_init_probe *probe = arg;
+    while (!atomic_load(probe->start)) sched_yield();
+    uint8_t req[128];
+    uint8_t txid[12] = {0};
+    int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "");
+    if (len < 0) {
+        probe->rc = -1;
+        return NULL;
+    }
+    len = cwist_ice_stun_sign_request(req, sizeof(req), (size_t)len, "testpassword0123456789");
+    probe->rc = len > 0 && cwist_ice_stun_validate_request(req, (size_t)len,
+                                                          "testpassword0123456789") == 1
+                    ? 0
+                    : -1;
+    return NULL;
+}
+
+static void test_concurrent_crc_init(void) {
+    enum { THREAD_COUNT = 8 };
+    pthread_t threads[THREAD_COUNT];
+    crc_init_probe probes[THREAD_COUNT];
+    atomic_int start = 0;
+    for (size_t i = 0; i < THREAD_COUNT; i++) {
+        probes[i] = (crc_init_probe){.start = &start, .rc = -1};
+        assert(pthread_create(&threads[i], NULL, crc_init_worker, &probes[i]) == 0);
+    }
+    atomic_store(&start, 1);
+    for (size_t i = 0; i < THREAD_COUNT; i++) {
+        assert(pthread_join(threads[i], NULL) == 0);
+        assert(probes[i].rc == 0);
+    }
+}
+
 static void unit_checks(void) {
+    test_concurrent_crc_init();
+
     /* ICE/STUN: build, sign, validate, respond. */
     {
         uint8_t req[512];
@@ -185,6 +230,7 @@ static void unit_checks(void) {
         memset(txid, 0xAB, sizeof(txid));
         int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "rfrag:lfrag");
         assert(len > 0);
+        assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 0);
         len = cwist_ice_stun_sign_request(req, sizeof(req), (size_t)len, "testpassword0123456789");
         assert(len > 0);
         assert(cwist_ice_stun_is_message(req, (size_t)len));
@@ -192,6 +238,14 @@ static void unit_checks(void) {
         assert(cwist_ice_stun_has_use_candidate(req, (size_t)len));
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "wrongpassword000000000") == 0);
+
+        uint8_t truncated[19] = {0};
+        assert(cwist_ice_stun_sign_request(truncated, sizeof(truncated), 0,
+                                           "testpassword0123456789") == -1);
+        assert(cwist_ice_stun_sign_request(truncated, sizeof(truncated), sizeof(truncated),
+                                           "testpassword0123456789") == -1);
+        assert(cwist_ice_stun_sign_request(req, 19, (size_t)len, "testpassword0123456789") == -1);
+
         char rfrag[64];
         /* USERNAME is "<recipient>:<sender>"; the sender's ufrag comes back. */
         assert(cwist_ice_stun_get_remote_ufrag(req, (size_t)len, rfrag, sizeof(rfrag)) == 0);
@@ -211,6 +265,51 @@ static void unit_checks(void) {
                                              &parsed) == 1);
         assert(parsed.sin_port == htons(54321));
         assert(parsed.sin_addr.s_addr == htonl(0x7F000001));
+
+        uint8_t truncated_req[19] = {0};
+        assert(cwist_ice_stun_build_response(resp, sizeof(resp), truncated_req,
+                                             sizeof(truncated_req), &mapped,
+                                             "testpassword0123456789") == -1);
+
+        uint8_t short_msg[20];
+        memcpy(short_msg, req, sizeof(short_msg));
+        short_msg[2] = 0xFF;
+        short_msg[3] = 0xFF;
+        assert(cwist_ice_stun_validate_request(short_msg, sizeof(short_msg),
+                                               "testpassword0123456789") == 0);
+
+        uint8_t bad_ufrag[24] = {0};
+        memcpy(bad_ufrag, req, sizeof(short_msg));
+        bad_ufrag[2] = 0xFF;
+        bad_ufrag[3] = 0xFF;
+        bad_ufrag[20] = 0x00;
+        bad_ufrag[21] = 0x06;
+        bad_ufrag[23] = 0x04;
+        assert(cwist_ice_stun_get_remote_ufrag(bad_ufrag, sizeof(bad_ufrag), rfrag,
+                                               sizeof(rfrag)) == -1);
+        assert(cwist_ice_stun_get_remote_ufrag(req, (size_t)len, rfrag, 0) == -1);
+
+        char long_username[513];
+        memset(long_username, 'u', sizeof(long_username) - 1);
+        long_username[sizeof(long_username) - 1] = '\0';
+        assert(cwist_ice_stun_build_request(req, sizeof(req), txid, long_username) == -1);
+        assert(cwist_ice_stun_build_request(req, sizeof(short_msg), txid, "rfrag:lfrag") == -1);
+    }
+
+    /* ICE credentials: normal output and zero-capacity calls. */
+    {
+        char ufrag[9];
+        char pwd[33];
+        cwist_ice_random_creds(ufrag, sizeof(ufrag), pwd, sizeof(pwd));
+        assert(strlen(ufrag) == 8);
+        assert(strlen(pwd) == 32);
+
+        char zero_ufrag = 'u';
+        char zero_pwd = 'p';
+        cwist_ice_random_creds(&zero_ufrag, 0, &zero_pwd, 0);
+        assert(zero_ufrag == 'u');
+        assert(zero_pwd == 'p');
+        cwist_ice_random_creds(NULL, 0, NULL, 0);
     }
 
     /* SDP. */
@@ -226,6 +325,20 @@ static void unit_checks(void) {
         assert(strcmp(info.ice_pwd, "offpassword0123456789012") == 0);
         assert(strcmp(info.setup, "active") == 0);
         assert(info.has_lite == 0);
+
+        static const char no_final_crlf[] = "a=ice-ufrag:ufrag\r\na=ice-pwd:password";
+        char input[sizeof(no_final_crlf) - 1];
+        memcpy(input, no_final_crlf, sizeof(input));
+        assert(cwist_sdp_parse(input, sizeof(input), &info) == 0);
+        assert(strcmp(info.ice_ufrag, "ufrag") == 0);
+        assert(strcmp(info.ice_pwd, "password") == 0);
+
+        static const char ufrag_line[] = "a=ice-ufrag:ufrag\r\n";
+        char long_line[640];
+        memset(long_line, 'x', sizeof(long_line));
+        memcpy(long_line, ufrag_line, sizeof(ufrag_line) - 1);
+        memcpy(long_line + sizeof(ufrag_line) - 1 + 511, "a=ice-pwd:embedded", 18);
+        assert(cwist_sdp_parse(long_line, sizeof(long_line), &info) == -1);
     }
 }
 
@@ -316,6 +429,30 @@ static void test_end_to_end(void) {
     free(cp);
 }
 
+static int wait_detached(cwist_webrtc_conn *conn, int timeout_ms) {
+    uint64_t end = now_ms() + (uint64_t)timeout_ms;
+    while (!atomic_load(&conn->detached)) {
+        if (now_ms() > end) return -1;
+        usleep(1000);
+    }
+    return 0;
+}
+
+static void test_fingerprint_mismatch(void) {
+    cwist_webrtc_ctx *server = cwist_webrtc_ctx_new(0);
+    cwist_webrtc_ctx *client = cwist_webrtc_ctx_new(0);
+    assert(server && client);
+    cwist_webrtc_conn *conn =
+        dial_with_fingerprint(server, client,
+                              "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:"
+                              "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00");
+    assert(wait_detached(conn, 10000) == 0);
+    assert(cwist_webrtc_ctx_connection_count(client) == 0);
+    cwist_webrtc_conn_release(conn);
+    cwist_webrtc_ctx_free(client);
+    cwist_webrtc_ctx_free(server);
+}
+
 /* Sends queue while SCTP is down, up to the 4 MiB cap. */
 static void test_send_queue_cap(void) {
     cwist_webrtc_ctx *server = cwist_webrtc_ctx_new(0);
@@ -328,7 +465,7 @@ static void test_send_queue_cap(void) {
     remote.sin_family = AF_INET;
     remote.sin_port = htons(cwist_webrtc_ctx_port(server));
     remote.sin_addr.s_addr = htonl(0x7F000001);
-    cwist_webrtc_conn *conn = cwist_webrtc_connect(client, &remote, "nouser", "nopassword");
+    cwist_webrtc_conn *conn = cwist_webrtc_connect(client, &remote, "nouser", "nopassword", NULL);
     assert(conn);
 
     static uint8_t chunk[65536];
@@ -393,6 +530,7 @@ static void test_external_reactor(void) {
 int main(void) {
     unit_checks();
     test_end_to_end();
+    test_fingerprint_mismatch();
     test_send_queue_cap();
     test_external_reactor();
     printf("test_webrtc: all assertions passed\n");

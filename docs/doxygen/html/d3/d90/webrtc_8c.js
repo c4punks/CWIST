@@ -20,7 +20,7 @@ var webrtc_8c =
     [ "cwist_webrtc_conn_retain", "d3/d90/webrtc_8c.html#adf92cd13a87dc0e778ffa48ff02549d1", null ],
     [ "cwist_webrtc_conn_sctp_out", "d3/d90/webrtc_8c.html#a2f558b276749f810e6b852a37ac548a7", null ],
     [ "cwist_webrtc_conn_send", "d3/d90/webrtc_8c.html#aeb291e2d3233e9cde4e59f0a1149cecd", null ],
-    [ "cwist_webrtc_connect", "d3/d90/webrtc_8c.html#a93097ec91ded6b2fcfe789ab50677d28", null ],
+    [ "cwist_webrtc_connect", "d3/d90/webrtc_8c.html#a50395e2f81fe876f0d1b726173f62560", null ],
     [ "cwist_webrtc_ctx_connection_count", "d3/d90/webrtc_8c.html#a9215628d6bd75d8a3d0acf581938eb0d", null ],
     [ "cwist_webrtc_ctx_fingerprint", "d3/d90/webrtc_8c.html#a2d398afca3c8bd21b75b5f4275e4138c", null ],
     [ "cwist_webrtc_ctx_free", "d3/d90/webrtc_8c.html#a976f4b94d6289461c8869cce55aacc7f", null ],

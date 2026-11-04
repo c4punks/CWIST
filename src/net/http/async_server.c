@@ -130,8 +130,14 @@ static void async_accept_uring_cb(void *ctx, int fd) {
     async_accept_ctx_t *ac = (async_accept_ctx_t *)ctx;
     if (fd < 0) {
         if (g_reactor && atomic_load(&g_cwist_running)) {
-            cwist_reactor_add(g_reactor, ac->listen_fd, async_accept_cb, &ac->app,
-                              sizeof(ac->app));
+            if (cwist_reactor_add(g_reactor, ac->listen_fd, async_accept_cb, &ac->app,
+                                  sizeof(ac->app))) {
+                return;
+            }
+            /* Same bounded asynchronous backoff as the normal listener
+             * re-arm path: never drop the listener silently on a transient
+             * submission/allocation failure. */
+            async_accept_rearm_schedule(ac->app);
         }
         return;
     }
@@ -265,7 +271,16 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     g_accept_ctx = (async_accept_ctx_t){.app = app, .listen_fd = server_fd};
     if (!cwist_reactor_accept_arm(g_reactor, server_fd, async_accept_uring_cb, &g_accept_ctx))
 #endif
-        cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app));
+        if (!cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app))) {
+            fprintf(stderr, "[async] Failed to register listener\n");
+            cwist_reactor_destroy(g_reactor);
+            g_reactor = NULL;
+            if (use_https)
+                https_pool_destroy();
+            else
+                cwist_http_pool_destroy();
+            return err;
+        }
 #if defined(__linux__)
     cwist_sqpoll_ring_t sq_probe;
     if (cwist_io_uring_init_sqpoll(&sq_probe, 64, 1000) == 0) {

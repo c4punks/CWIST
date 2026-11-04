@@ -7,6 +7,7 @@
 #include <cwist/net/grpc/grpc.h>
 #include <cwist/sys/app/app.h>
 #include <cwist/core/mem/alloc.h>
+#include "../../sys/app/app_route_internal.h"
 #include <ctype.h>
 #include <limits.h>
 #include <pthread.h>
@@ -108,6 +109,21 @@ static cwist_grpc_route *grpc_find_route(cwist_app *app, const char *path) {
         route = route->next;
     }
     return NULL;
+}
+
+static void grpc_remove_route(cwist_app *app, const char *path) {
+    if (!app || !path) return;
+    cwist_grpc_route **link = (cwist_grpc_route **)&app->grpc_routes;
+    while (*link) {
+        cwist_grpc_route *route = *link;
+        if (route->path && strcmp(route->path, path) == 0) {
+            *link = route->next;
+            cwist_free(route->path);
+            cwist_free(route);
+            return;
+        }
+        link = &route->next;
+    }
 }
 
 /** @brief Current monotonic clock in milliseconds.
@@ -1163,7 +1179,9 @@ out:
  * @retval 0 Both routes registered.
  * @retval -1 NULL app, allocation failure, or route registration failure. */
 int cwist_app_grpc_health(cwist_app *app) {
-    if (!app) return -1;
+    if (!app || grpc_find_route(app, "/grpc.health.v1.Health/Check") ||
+        grpc_find_route(app, "/grpc.health.v1.Health/Watch"))
+        return -1;
     cwist_grpc_health_registry *reg = cwist_alloc(sizeof(*reg));
     if (!reg) return -1;
     memset(reg, 0, sizeof(*reg));
@@ -1171,19 +1189,24 @@ int cwist_app_grpc_health(cwist_app *app) {
     pthread_cond_init(&reg->cond, NULL);
     atomic_store(&reg->watchers, 0);
     if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0, grpc_health_check, NULL,
-                            reg) != 0 ||
-        grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1, NULL, grpc_health_watch,
+                            reg) != 0)
+        goto fail;
+    if (grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1, NULL, grpc_health_watch,
                             reg) != 0) {
-        pthread_mutex_destroy(&reg->mu);
-        pthread_cond_destroy(&reg->cond);
-        cwist_free(reg);
-        return -1;
+        grpc_remove_route(app, "/grpc.health.v1.Health/Check");
+        goto fail;
     }
     cwist_grpc_route *route = grpc_find_route(app, "/grpc.health.v1.Health/Check");
     if (route) route->builtin = 1;
     route = grpc_find_route(app, "/grpc.health.v1.Health/Watch");
     if (route) route->builtin = 2;
     return 0;
+
+fail:
+    pthread_mutex_destroy(&reg->mu);
+    pthread_cond_destroy(&reg->cond);
+    cwist_free(reg);
+    return -1;
 }
 
 /** @brief Set or update the serving status of a named service.
@@ -1348,6 +1371,10 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
 
     cwist_grpc_route *existing = grpc_find_route(app, path);
     if (existing) {
+        if (!cwist_app_post_checked(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary)) {
+            cwist_free(path);
+            return -1;
+        }
         existing->streaming = streaming;
         existing->handler = unary_handler;
         existing->stream_handler = stream_handler;
@@ -1366,10 +1393,13 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
     route->handler = unary_handler;
     route->stream_handler = stream_handler;
     route->user_ctx = user_ctx;
+    if (!cwist_app_post_checked(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary)) {
+        cwist_free(route->path);
+        cwist_free(route);
+        return -1;
+    }
     route->next = (cwist_grpc_route *)app->grpc_routes;
     app->grpc_routes = route;
-
-    cwist_app_post(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary);
     return 0;
 }
 

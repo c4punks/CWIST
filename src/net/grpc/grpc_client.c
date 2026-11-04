@@ -31,7 +31,10 @@
 #include <openssl/ssl.h>
 
 #define GRPC_CLIENT_FRAME_HEADER 9
-#define GRPC_CLIENT_MAX_FRAME (16u * 1024u * 1024u)
+/* RFC 9113: the default maximum frame size is 2^14 octets.  The client sends
+ * an empty SETTINGS frame, so it never advertises a larger inbound maximum;
+ * peers must not exceed this regardless of the SETTINGS they send us. */
+#define GRPC_CLIENT_MAX_INBOUND_FRAME 16384u
 #define GRPC_CLIENT_MAX_HEADER_BLOCK (64u * 1024u)
 #define GRPC_CLIENT_MAX_CONTINUATIONS 16u
 #define GRPC_CLIENT_DEFAULT_WINDOW 65535
@@ -48,6 +51,7 @@
 #define H2_FRAME_CONTINUATION 0x09
 #define H2_FLAG_END_STREAM 0x01
 #define H2_FLAG_PADDED 0x08
+#define H2_FLAG_PRIORITY 0x20
 #define H2_FLAG_END_HEADERS 0x04
 #define H2_FLAG_ACK 0x01
 
@@ -288,7 +292,9 @@ typedef struct grpc_client_frame {
  * @param deadline_ms Monotonic deadline in ms; 0 means no timeout.
  * @return 0 on success; on failure -1 and f->payload is NULL.
  * @note f->payload is owned by the caller (cwist_free) when non-NULL.
- *       Frames larger than GRPC_CLIENT_MAX_FRAME are rejected.
+ *       Frames larger than the locally advertised inbound maximum
+ *       (GRPC_CLIENT_MAX_INBOUND_FRAME) are rejected before allocation with
+ *       a FRAME_SIZE_ERROR connection error.
  */
 static int grpc_client_read_frame(cwist_grpc_client *c, grpc_client_frame *f,
                                   uint64_t deadline_ms) {
@@ -299,7 +305,12 @@ static int grpc_client_read_frame(cwist_grpc_client *c, grpc_client_frame *f,
     f->flags = hdr[4];
     f->stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
                    ((uint32_t)hdr[7] << 8) | hdr[8];
-    if (f->len > GRPC_CLIENT_MAX_FRAME) return -1;
+    if (f->len > GRPC_CLIENT_MAX_INBOUND_FRAME) {
+        uint8_t goaway[8] = {0};
+        goaway[7] = 0x06; /* FRAME_SIZE_ERROR */
+        grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway), deadline_ms);
+        return -1;
+    }
     f->payload = NULL;
     if (f->len) {
         f->payload = cwist_alloc(f->len);
@@ -814,11 +825,22 @@ static int grpc_client_read_header_block(cwist_grpc_client *c, cwist_grpc_call *
                                          grpc_client_frame *first, uint8_t **out, size_t *out_len,
                                          int *end_stream, uint64_t deadline_ms) {
     if (first->len > GRPC_CLIENT_MAX_HEADER_BLOCK) return -1;
-    size_t cap = first->len ? first->len : 1;
-    uint8_t *block = cwist_alloc(cap);
+    size_t offset = 0;
+    size_t padding = 0;
+    if (first->flags & H2_FLAG_PADDED) {
+        if (first->len == 0) return -1;
+        padding = first->payload[0];
+        offset = 1;
+    }
+    if (first->flags & H2_FLAG_PRIORITY) {
+        if (first->len - offset < 5) return -1;
+        offset += 5;
+    }
+    if (padding > first->len - offset) return -1;
+    size_t len = first->len - offset - padding;
+    uint8_t *block = cwist_alloc(len ? len : 1);
     if (!block) return -1;
-    size_t len = first->len;
-    if (len) memcpy(block, first->payload, len);
+    if (len) memcpy(block, first->payload + offset, len);
     *end_stream = !!(first->flags & H2_FLAG_END_STREAM);
     unsigned int continuation_count = 0;
     while (!(first->flags & H2_FLAG_END_HEADERS)) {

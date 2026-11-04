@@ -18,11 +18,12 @@ var searchData=
   ['verify_5fpeer_15',['verify_peer',['../da/d65/structcwist__grpc__client__options.html#aebdb7dcd0ef3aa8e1884084089fa3427',1,'cwist_grpc_client_options::verify_peer'],['../d7/d79/structcwist__grpc__channel__options.html#a9299d848b53704f3f0532bd641ebd7dd',1,'cwist_grpc_channel_options::verify_peer']]],
   ['verifying_20a_20deploy_16',['Verifying a deploy',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md299',1,'']]],
   ['version_17',['version',['../d0/db4/md_docs_2versioning.html#autotoc_md517',1,'6. First ascent of a major version'],['../dd/d22/structcwist__http__response.html#a17b6aef7a3abc8194e7e422dca5c2cba',1,'cwist_http_response::version'],['../da/d46/structcwist__migration__t.html#a0c6a71066cbcb8c37e8a7238b397019e',1,'cwist_migration_t::version'],['../d7/dbc/structcwist__openapi__meta__t.html#a217d838651be20dd568900e6a00d29a6',1,'cwist_openapi_meta_t::version'],['../dd/d68/structcwist__http__request.html#a9d21d4ffb5eb56a1e555898e2dd3da38',1,'cwist_http_request::version']]],
-  ['versioning_2emd_18',['versioning.md',['../d8/ddc/versioning_8md.html',1,'(Global Namespace)'],['../d3/d09/ko_2versioning_8md.html',1,'(Global Namespace)']]],
-  ['via_20socket_20handoff_19',['Zero-downtime restart via socket handoff',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html',1,'']]],
-  ['views_20in_20wasm_20',['Rendering the same views in WASM',['../d8/d83/md_docs_2api_2html.html#autotoc_md105',1,'']]],
-  ['views_3a_20cwist_20wasm_20typedarray_20h_21',['Zero-copy views: cwist/wasm/typedarray.h',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md221',1,'']]],
-  ['virgin_22',['virgin',['../db/d8a/structcwist__http__async__conn.html#a9da8ac048454f074c458a85300a857bf',1,'cwist_http_async_conn']]],
-  ['visibility_5ftimeout_5fms_23',['visibility_timeout_ms',['../da/da7/structcwist__job__queue__opts.html#a3b6d6c0cf3f5d9322f34258c2fabb6f5',1,'cwist_job_queue_opts']]],
-  ['vs_20growable_20ring_24',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]]
+  ['version_202_20wire_20format_20produced_20by_20cwist_5fdb_5fcrypt_5fseal_18',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
+  ['versioning_2emd_19',['versioning.md',['../d8/ddc/versioning_8md.html',1,'(Global Namespace)'],['../d3/d09/ko_2versioning_8md.html',1,'(Global Namespace)']]],
+  ['via_20socket_20handoff_20',['Zero-downtime restart via socket handoff',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html',1,'']]],
+  ['views_20in_20wasm_21',['Rendering the same views in WASM',['../d8/d83/md_docs_2api_2html.html#autotoc_md105',1,'']]],
+  ['views_3a_20cwist_20wasm_20typedarray_20h_22',['Zero-copy views: cwist/wasm/typedarray.h',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md221',1,'']]],
+  ['virgin_23',['virgin',['../db/d8a/structcwist__http__async__conn.html#a9da8ac048454f074c458a85300a857bf',1,'cwist_http_async_conn']]],
+  ['visibility_5ftimeout_5fms_24',['visibility_timeout_ms',['../da/da7/structcwist__job__queue__opts.html#a3b6d6c0cf3f5d9322f34258c2fabb6f5',1,'cwist_job_queue_opts']]],
+  ['vs_20growable_20ring_25',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]]
 ];

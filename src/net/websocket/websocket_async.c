@@ -21,6 +21,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/net/http/writer_fast.h>
 #include <cwist/sys/io/reactor.h>
+#include "ws_frame_validation.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -628,6 +629,8 @@ static int ws_async_park_drain(cwist_websocket_async *ws, bool *made_progress) {
  */
 static int ws_async_queue_frame(cwist_websocket_async *ws, cwist_ws_opcode_t opcode,
                                 const uint8_t *data, size_t len) {
+    if (!cwist_ws_internal_send_args_valid(opcode, len)) return -1;
+
     size_t frame_len = 0;
     uint8_t *frame = ws_async_serialize_frame(opcode, data, len, &frame_len);
     if (!frame) return -1;
@@ -916,8 +919,9 @@ static int ws_async_process_frame(cwist_websocket_async *ws, bool fin, cwist_ws_
 
     /* --- Deliver the complete frame ---------------------------------- */
     if (opcode == CWIST_WS_FRAME_CLOSE) {
-        /* RFC 6455 section 5.5.1: a CLOSE body, if present, MUST be >= 2 bytes. */
-        if (payload_len == 1) {
+        int close_error = cwist_ws_internal_close_error(payload, payload_len);
+        if (close_error) {
+            cwist_websocket_async_close_code(ws, (uint16_t)close_error);
             cwist_free(payload);
             return -1;
         }
@@ -966,6 +970,10 @@ static int ws_async_feed(cwist_websocket_async *ws) {
         const uint8_t *base = ws->stash + off;
         bool fin = (base[0] & 0x80) != 0;
         cwist_ws_opcode_t opcode = base[0] & 0x0F;
+        if (opcode != CWIST_WS_FRAME_CONTINUATION && opcode != CWIST_WS_FRAME_TEXT &&
+            opcode != CWIST_WS_FRAME_BINARY && opcode != CWIST_WS_FRAME_CLOSE &&
+            opcode != CWIST_WS_FRAME_PING && opcode != CWIST_WS_FRAME_PONG)
+            return -1;
 
         /* RFC 6455 section 5.2: RSV1/RSV2/RSV3 MUST be 0 unless an extension
          * defines their meaning.  CWIST has no such extension. */

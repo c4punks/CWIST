@@ -54,6 +54,23 @@ static cwist_graphql_event_source_t *counter_subscribe(const cJSON *args, const 
 
 /* ---- masked RFC 6455 client helpers (main thread) ---- */
 
+static void append_masked_frame(uint8_t *frame, size_t *pos, uint8_t head0, const uint8_t *payload,
+                                size_t len) {
+    frame[(*pos)++] = head0;
+    if (len < 126) {
+        frame[(*pos)++] = (uint8_t)(0x80 | len);
+    } else {
+        assert(len < 65536);
+        frame[(*pos)++] = 0x80 | 126;
+        frame[(*pos)++] = (uint8_t)(len >> 8);
+        frame[(*pos)++] = (uint8_t)len;
+    }
+    static const uint8_t mask[4] = {0x12, 0x34, 0x56, 0x78};
+    memcpy(frame + *pos, mask, 4);
+    *pos += 4;
+    for (size_t i = 0; i < len; i++) frame[(*pos)++] = payload[i] ^ mask[i % 4];
+}
+
 static void write_masked(int fd, uint8_t head0, const uint8_t *payload, size_t len) {
     uint8_t frame[1024];
     size_t pos = 0;
@@ -100,6 +117,11 @@ static void read_server_frame(int fd, uint8_t *opcode, uint8_t *payload, size_t 
         uint8_t ext[2];
         assert(read(fd, ext, 2) == 2);
         len = ((uint64_t)ext[0] << 8) | ext[1];
+    } else if (len == 127) {
+        uint8_t ext[8];
+        assert(read(fd, ext, 8) == 8);
+        len = 0;
+        for (size_t i = 0; i < 8; i++) len = (len << 8) | ext[i];
     }
     assert(len < cap);
     size_t got = 0;
@@ -115,7 +137,7 @@ static void read_server_frame(int fd, uint8_t *opcode, uint8_t *payload, size_t 
 /* Read one JSON text message and return its parsed form (caller deletes). */
 static cJSON *read_json_message(int fd) {
     uint8_t opcode;
-    static uint8_t payload[8192];
+    static uint8_t payload[2 * 1024 * 1024];
     size_t len;
     read_server_frame(fd, &opcode, payload, &len, sizeof(payload));
     assert(opcode == CWIST_WS_FRAME_TEXT);
@@ -205,6 +227,7 @@ int main(void) {
     int fd_early = attach_conn(reactor);    /* subscribe-before-init */
     int fd_ping = attach_conn(reactor);     /* ping-before-init */
     int fd_garbage = attach_conn(reactor);  /* malformed JSON */
+    int fd_second_init = attach_conn(reactor); /* duplicate connection_init */
     int fd_dup = attach_conn(reactor);      /* duplicate operation id */
     int fd = attach_conn(reactor);          /* main flow */
 
@@ -234,7 +257,19 @@ int main(void) {
     close(fd_garbage);
     printf("3. malformed JSON -> close 4400: ok\n");
 
-    /* 4. Duplicate subscriber id closes with 4409. */
+    /* 4. A second connection_init closes with 4401. */
+    write_text(fd_second_init, "{\"type\":\"connection_init\"}");
+    {
+        cJSON *ack = read_json_message(fd_second_init);
+        cJSON_Delete(ack);
+    }
+    write_text(fd_second_init, "{\"type\":\"connection_init\"}");
+    expect_close_code(fd_second_init, CLOSE_UNAUTHORIZED);
+    expect_eof(fd_second_init);
+    close(fd_second_init);
+    printf("4. duplicate connection_init -> close 4401: ok\n");
+
+    /* 5. Duplicate subscriber id closes with 4409. */
     write_text(fd_dup, "{\"type\":\"connection_init\"}");
     {
         cJSON *ack = read_json_message(fd_dup);
@@ -351,6 +386,98 @@ int main(void) {
         close(fd);
     }
     printf("12. socket close purges the subscription: ok\n");
+
+    /* 13. Pending payload is bounded before the reactor can drain it. */
+    cwist_reactor_t *limited = cwist_reactor_create();
+    assert(limited);
+    int limited_sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, limited_sv) == 0);
+    uint8_t initial[512];
+    size_t initial_len = 0;
+    append_masked_frame(initial, &initial_len, 0x81,
+                        (const uint8_t *)"{\"type\":\"connection_init\"}",
+                        sizeof("{\"type\":\"connection_init\"}") - 1);
+    static const char subscribe[] =
+        "{\"id\":\"large\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+        "counter }\"}}";
+    append_masked_frame(initial, &initial_len, 0x81, (const uint8_t *)subscribe,
+                        sizeof(subscribe) - 1);
+    assert(cwist_graphql_ws_attach(g_gws, limited_sv[0], limited, initial, initial_len));
+
+    cJSON *large = cJSON_CreateObject();
+    assert(large);
+    char *large_text = malloc(256 * 1024 + 1);
+    assert(large_text);
+    memset(large_text, 'x', 256 * 1024);
+    large_text[256 * 1024] = '\0';
+    assert(cJSON_AddStringToObject(large, "value", large_text));
+    free(large_text);
+    assert(cwist_graphql_publish("default", large) == 1);
+    assert(cwist_graphql_publish("default", large) == 1);
+    assert(cwist_graphql_publish("default", large) == 1);
+    assert(cwist_graphql_publish("default", large) == 0);
+    cJSON_Delete(large);
+
+    pthread_t limited_rt;
+    assert(pthread_create(&limited_rt, NULL, reactor_thread, limited) == 0);
+    {
+        cJSON *ack = read_json_message(limited_sv[1]);
+        cJSON_Delete(ack);
+        cJSON *next = read_json_message(limited_sv[1]);
+        cJSON *id = cJSON_GetObjectItemCaseSensitive(next, "id");
+        assert(cJSON_IsString(id) && strcmp(id->valuestring, "large") == 0);
+        cJSON_Delete(next);
+        cJSON_Delete(read_json_message(limited_sv[1]));
+        cJSON_Delete(read_json_message(limited_sv[1]));
+    }
+    {
+        uint8_t code[2] = {0x03, 0xE8};
+        write_masked(limited_sv[1], 0x88, code, 2);
+        uint8_t opcode, payload[2 * 1024 * 1024];
+        size_t len;
+        read_server_frame(limited_sv[1], &opcode, payload, &len, sizeof(payload));
+        assert(opcode == CWIST_WS_FRAME_CLOSE);
+        expect_eof(limited_sv[1]);
+        close(limited_sv[1]);
+    }
+    bool limited_purged = false;
+    for (int i = 0; i < 500 && !limited_purged; i++) {
+        limited_purged = cwist_graphql_publish("default", NULL) == 0;
+        if (!limited_purged) usleep(20000);
+    }
+    assert(limited_purged);
+    cwist_reactor_post_t limited_stop = {.cb = stop_cb, .ctx = limited};
+    assert(cwist_reactor_post(limited, &limited_stop));
+    assert(pthread_join(limited_rt, NULL) == 0);
+    cwist_reactor_destroy(limited);
+    printf("13. pending payload cap drops overflow: ok\n");
+
+    /* 14. Dropping the caller's endpoint reference keeps its resolvers alive
+     * until the attached connection closes. */
+    int fd_lifetime = attach_conn(reactor);
+    cwist_graphql_ws_destroy(g_gws);
+    g_gws = NULL;
+    write_text(fd_lifetime, "{\"type\":\"connection_init\"}");
+    {
+        cJSON *ack = read_json_message(fd_lifetime);
+        cJSON_Delete(ack);
+    }
+    write_text(fd_lifetime,
+               "{\"id\":\"life\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter }\"}}");
+    expect_silence(fd_lifetime, 200);
+    publish_and_expect_next(fd_lifetime, "default", "life", 4);
+    {
+        uint8_t code[2] = {0x03, 0xE8};
+        write_masked(fd_lifetime, 0x88, code, 2);
+        uint8_t opcode, payload[8];
+        size_t len;
+        read_server_frame(fd_lifetime, &opcode, payload, &len, sizeof(payload));
+        assert(opcode == CWIST_WS_FRAME_CLOSE);
+        expect_eof(fd_lifetime);
+        close(fd_lifetime);
+    }
+    printf("13. endpoint lifetime follows active connections: ok\n");
 
     /* Clean shutdown: nothing may outlive the reactor (ASan leak gate). */
     cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};

@@ -48,6 +48,7 @@ var app_8c =
     [ "cwist_app_patch_named", "df/d7f/app_8c.html#a52652eac12a4ef95812db803cf40b11f", null ],
     [ "cwist_app_patch_opt", "df/d7f/app_8c.html#a7736c3b2c237105f74413390703ff4f8", null ],
     [ "cwist_app_post", "df/d7f/app_8c.html#a556c24cde3276a70fb9772a727f7e66e", null ],
+    [ "cwist_app_post_checked", "df/d7f/app_8c.html#ad52fa69a7ca4205310d08f46a9a158dc", null ],
     [ "cwist_app_post_ex", "df/d7f/app_8c.html#a63a0729903e8ae138d585f042058214c", null ],
     [ "cwist_app_post_named", "df/d7f/app_8c.html#a280d0c2387ed9489534a2c28b63350a7", null ],
     [ "cwist_app_post_opt", "df/d7f/app_8c.html#a70fe558f52eccb087e50cecd4892eea3", null ],

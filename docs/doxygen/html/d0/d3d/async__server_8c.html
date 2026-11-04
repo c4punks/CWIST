@@ -307,6 +307,10 @@ Include dependency graph for async_server.c:</div>
 Macros</h2></td></tr>
 <tr class="memitem:a3024ccd4a9af5109d24e6c57565d74a1" id="r_a3024ccd4a9af5109d24e6c57565d74a1"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3d/async__server_8c.html#a3024ccd4a9af5109d24e6c57565d74a1">_POSIX_C_SOURCE</a>&#160;&#160;&#160;200809<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">L</a></td></tr>
 <tr class="separator:a3024ccd4a9af5109d24e6c57565d74a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4207b4c7c01e6b1a6804cec668b4b9f" id="r_ab4207b4c7c01e6b1a6804cec668b4b9f"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3d/async__server_8c.html#ab4207b4c7c01e6b1a6804cec668b4b9f">ASYNC_ACCEPT_REARM_MAX_ATTEMPTS</a>&#160;&#160;&#160;1000</td></tr>
+<tr class="separator:ab4207b4c7c01e6b1a6804cec668b4b9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7c127977fb6a54929be123c0bbd1ed62" id="r_a7c127977fb6a54929be123c0bbd1ed62"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d3d/async__server_8c.html#a7c127977fb6a54929be123c0bbd1ed62">ASYNC_ACCEPT_REARM_DELAY_US</a>&#160;&#160;&#160;10000</td></tr>
+<tr class="separator:a7c127977fb6a54929be123c0bbd1ed62"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -328,6 +332,38 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00001">1</a> of file <a class="el" href="../../d0/d3d/async__server_8c_source.html">async_server.c</a>.</p>
+
+</div>
+</div>
+<a id="a7c127977fb6a54929be123c0bbd1ed62" name="a7c127977fb6a54929be123c0bbd1ed62"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7c127977fb6a54929be123c0bbd1ed62">&#9670;&#160;</a></span>ASYNC_ACCEPT_REARM_DELAY_US</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> ASYNC_ACCEPT_REARM_DELAY_US&#160;&#160;&#160;10000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00027">27</a> of file <a class="el" href="../../d0/d3d/async__server_8c_source.html">async_server.c</a>.</p>
+
+</div>
+</div>
+<a id="ab4207b4c7c01e6b1a6804cec668b4b9f" name="ab4207b4c7c01e6b1a6804cec668b4b9f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4207b4c7c01e6b1a6804cec668b4b9f">&#9670;&#160;</a></span>ASYNC_ACCEPT_REARM_MAX_ATTEMPTS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> ASYNC_ACCEPT_REARM_MAX_ATTEMPTS&#160;&#160;&#160;1000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00026">26</a> of file <a class="el" href="../../d0/d3d/async__server_8c_source.html">async_server.c</a>.</p>
 
 </div>
 </div>
@@ -369,9 +405,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> with <code>err_i16</code> set to 0 on orderly shutdown, or -1 if setup failed (pool init, fcntl, or reactor creation); on the -1 path any initialized resources are cleaned up first and a message is printed to stderr. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00174">174</a> of file <a class="el" href="../../d0/d3d/async__server_8c_source.html">async_server.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00213">213</a> of file <a class="el" href="../../d0/d3d/async__server_8c_source.html">async_server.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00836">cwist_http_pool_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00696">cwist_http_pool_init_mode()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01357">cwist_reactor_add()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01006">cwist_reactor_create()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01116">cwist_reactor_destroy()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01579">cwist_reactor_run()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05413">cwist_reuseport_enabled()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_listen_fd</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l00371">https_pool_destroy()</a>, and <a class="el" href="../../d2/db2/https_8c_source.html#l00269">https_pool_init()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00836">cwist_http_pool_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00696">cwist_http_pool_init_mode()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01357">cwist_reactor_add()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01006">cwist_reactor_create()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01116">cwist_reactor_destroy()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01579">cwist_reactor_run()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l00929">cwist_reactor_timer_init()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05413">cwist_reuseport_enabled()</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00018">g_cwist_listen_fd</a>, <a class="el" href="../../d2/db2/https_8c_source.html#l00371">https_pool_destroy()</a>, and <a class="el" href="../../d2/db2/https_8c_source.html#l00269">https_pool_init()</a>.</p>
 
 </div>
 </div>

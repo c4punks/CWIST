@@ -26,6 +26,7 @@
 #include <ttak/async/sched.h>
 #include "tls_chain.h"
 #include "h3_hdr_out.h"
+#include "http3_global.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,21 +100,21 @@ static int g_h3_global_ref = 0;
  * Initializes lsquic on the first reference; later calls only bump the
  * reference count.  Thread-safe via @ref g_h3_global_mtx.
  */
-static void h3_global_init(void) {
+void cwist_h3_global_acquire(void) {
     pthread_mutex_lock(&g_h3_global_mtx);
     if (g_h3_global_ref == 0) {
-        lsquic_global_init(LSQUIC_GLOBAL_SERVER);
+        lsquic_global_init(LSQUIC_GLOBAL_CLIENT | LSQUIC_GLOBAL_SERVER);
     }
     g_h3_global_ref++;
     pthread_mutex_unlock(&g_h3_global_mtx);
 }
 
 /**
- * @brief Release a reference taken by h3_global_init().
+ * @brief Release a reference taken by cwist_h3_global_acquire().
  * Runs lsquic_global_cleanup() when the last reference is dropped.
  * Thread-safe; safe to call with no matching init (no-op).
  */
-static void h3_global_cleanup(void) {
+void cwist_h3_global_release(void) {
     pthread_mutex_lock(&g_h3_global_mtx);
     if (g_h3_global_ref > 0) {
         g_h3_global_ref--;
@@ -988,16 +989,10 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     enum LSQUIC_CONN_STATUS status = lsquic_conn_status(conn, errbuf, sizeof(errbuf));
     fprintf(stderr, "[HTTP/3] Conn close status=%d msg=%s\n", (int)status,
             errbuf[0] ? errbuf : "(none)");
-    struct lsquic_conn_info info;
-    if (lsquic_conn_get_info(conn, &info) == 0) {
-        fprintf(stderr,
-                "[HTTP/3] Conn closed rtt=%u rttvar=%u "
-                "pkts_sent=%" PRIu64 " pkts_lost=%" PRIu64 " "
-                "pkts_retx=%" PRIu64 " cwnd=%u\n",
-                info.lci_rtt, info.lci_rttvar, info.lci_pkts_sent, info.lci_pkts_lost,
-                info.lci_pkts_retx, info.lci_cwnd);
-    }
-
+    /* No lsquic_conn_get_info() here: it lazily allocates the bandwidth
+     * sampler (lsquic_send_ctl_get_bw) even while the connection is being
+     * destroyed, leaking it under LSAN.  Stats would have to be collected
+     * while the connection is alive. */
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
     if (cc) {
         pthread_mutex_lock(&cc->dgram_lock);
@@ -1015,6 +1010,45 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
     }
 }
 
+/**
+ * @brief on_conncloseframe_received callback: a CONNECTION_CLOSE frame
+ *        arrived from the peer.
+ *
+ * Record it on the shared context so post-serve diagnostics can see why the
+ * peer went away without scraping the CWIST_H3_DEBUG journal.  Runs on the
+ * engine thread; the last_close_* fields are published to readers that call
+ * cwist_http3_last_close_error() after the serve loop has stopped.
+ */
+static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_error,
+                                                uint64_t error_code, const char *reason,
+                                                int reason_len) {
+    cwist_http3_context *h3_ctx = h3_shared_ctx(conn);
+    if (!h3_ctx) return;
+    h3_ctx->last_close_app_error = app_error;
+    h3_ctx->last_close_code = error_code;
+    if (reason && reason_len > 0) {
+        size_t n = (size_t)reason_len >= sizeof(h3_ctx->last_close_reason)
+                     ? sizeof(h3_ctx->last_close_reason) - 1 : (size_t)reason_len;
+        memcpy(h3_ctx->last_close_reason, reason, n);
+        h3_ctx->last_close_reason[n] = '\0';
+    } else {
+        h3_ctx->last_close_reason[0] = '\0';
+    }
+    /* Publishes the fields above to cwist_http3_last_close_error(). */
+    __atomic_store_n(&h3_ctx->last_close_received, 1, __ATOMIC_RELEASE);
+}
+
+/**
+ * @brief on_new_stream callback: allocate the per-request stream context.
+ * @return New stream ctx with an empty cwist_http_request ("HTTP/3"), or
+ *         NULL on OOM (the stream then fails to open).
+ *
+ * Server-pushed streams (only possible when push is enabled) are processed
+ * the same way as client-initiated ones.  Per RFC 9218 Section 6 a server
+ * MUST NOT send PRIORITY_UPDATE for a request stream, so the default
+ * scheduling priority is kept and lsquic_stream_set_priority() is never
+ * called here.
+ */
 static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_stream_t *stream) {
     cwist_http3_context *h3_ctx = (cwist_http3_context *)stream_if_ctx;
     h3_stream_ctx_t *st = calloc(1, sizeof(*st));
@@ -2231,14 +2265,12 @@ static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 
 /**
  * @brief on_dg_write callback: hand the oldest queued datagram to lsquic.
- * @return Bytes copied into @p buf, or 0 when the connection's queue is
- *         empty or the connection has no wrapper ctx.
+ * @return Bytes copied into @p buf, or 0 when no complete datagram is emitted.
  *
  * Pulls from this connection's own mutex-guarded queue (see h3_conn_ctx_t).
- * Previously this read/freed a single process-wide g_h3_dgram struct with no
- * lock: two connections sending datagrams at the same time could free() the
- * same buffer twice or hand one connection's payload to another.  When the
- * queue drains, want_datagram_write is disarmed so lsquic stops calling back.
+ * An entry that no longer fits the supplied buffer is discarded whole rather
+ * than truncated. When the queue drains, the minimum datagram size is reset
+ * and want_datagram_write is disarmed so lsquic stops calling back.
  */
 static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
@@ -2250,19 +2282,22 @@ static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) 
         pthread_mutex_unlock(&cc->dgram_lock);
         return 0;
     }
-    size_t to_copy = n->len < len ? n->len : len;
-    memcpy(buf, n->data, to_copy);
+    ssize_t written = 0;
+    if (n->len <= len) {
+        memcpy(buf, n->data, n->len);
+        written = (ssize_t)n->len;
+    }
     cc->dgram_head = n->next;
-    if (!cc->dgram_head) cc->dgram_tail = NULL;
-    bool more_queued = cc->dgram_head != NULL;
+    if (!cc->dgram_head) {
+        cc->dgram_tail = NULL;
+        lsquic_conn_set_min_datagram_size(conn, 0);
+        lsquic_conn_want_datagram_write(conn, 0);
+    }
     pthread_mutex_unlock(&cc->dgram_lock);
 
     free(n->data);
     free(n);
-    /* Keep want_datagram_write armed while the queue is non-empty so
-     * lsquic calls back for the next entry. */
-    if (!more_queued) lsquic_conn_want_datagram_write(conn, 0);
-    return (ssize_t)to_copy;
+    return written;
 }
 
 /**
@@ -2329,10 +2364,15 @@ static void cwist_h3_wt_on_session_rejected(void *ctx, const struct lsquic_wt_co
     (void)reason_len;
 }
 
-/* WebTransport application error codes are 32-bit on the wire. The lsquic
- * WebTransport branch declared this callback and wti_on_stream_ss_code with
- * uint64_t when this code was written; the branch head
- * (litespeedtech/lsquic#629) narrows both to uint32_t. */
+/**
+ * @brief wti_on_session_close callback: free the session handle (and its
+ *        child handles).
+ *
+ * WebTransport application error codes are 32-bit on the wire. The lsquic
+ * WebTransport branch declared these two callbacks with uint64_t when this
+ * code was written; the branch head (litespeedtech/lsquic#629) narrows both
+ * to uint32_t.
+ */
 static void cwist_h3_wt_on_session_close(lsquic_wt_session_t *sess,
                                          lsquic_wt_session_ctx_t *sess_ctx, uint32_t code,
                                          const char *reason, size_t reason_len) {
@@ -2422,6 +2462,10 @@ static void cwist_h3_wt_on_stream_close(lsquic_stream_t *stream, lsquic_stream_c
     cwist_wt_handle_free((cwist_wt_handle_t *)st_h);
 }
 
+/**
+ * @brief wti_on_stream_ss_code callback: application error code to send when
+ *        this stream is reset.  Returns 0 (no specific code).
+ */
 static uint32_t cwist_h3_wt_on_stream_ss_code(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     (void)stream;
     (void)st_h;
@@ -2469,6 +2513,7 @@ static const struct lsquic_webtransport_if cwist_h3_wt_if = {
 static const struct lsquic_stream_if cwist_h3_stream_if = {
     .on_new_conn = cwist_h3_on_new_conn,
     .on_conn_closed = cwist_h3_on_conn_closed,
+    .on_conncloseframe_received = cwist_h3_on_conncloseframe_received,
     .on_new_stream = cwist_h3_on_new_stream,
     .on_read = cwist_h3_on_read,
     .on_write = cwist_h3_on_write,
@@ -2678,14 +2723,14 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
         return err;
     }
 
-    h3_global_init();
+    cwist_h3_global_acquire();
 
     cwist_h3_ticket_key *tkey = NULL;
     SSL_CTX *ssl_ctx = NULL;
     err = cwist_h3_build_ssl_ctx(&ssl_ctx, cert_path, key_path, 0, &tkey);
     if (!cwist_error_is_ok(&err)) {
         cwist_h3_free_ticket_key(tkey);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         return err;
     }
 
@@ -2693,7 +2738,7 @@ cwist_error_t cwist_http3_init_context(cwist_http3_context **ctx, const char *ce
     if (!*ctx) {
         SSL_CTX_free(ssl_ctx);
         cwist_h3_free_ticket_key(tkey);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2725,13 +2770,13 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         return err;
     }
 
-    h3_global_init();
+    cwist_h3_global_acquire();
 
     cwist_h3_ticket_key *tkey = NULL;
     const SSL_METHOD *method = TLS_method();
     SSL_CTX *ssl_ctx = SSL_CTX_new(method);
     if (!ssl_ctx) {
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2742,7 +2787,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     if (!pctx) {
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2750,7 +2795,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_CTX_free(pctx);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2759,7 +2804,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_CTX_free(pctx);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2770,7 +2815,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_free(pkey);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2791,7 +2836,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
         EVP_PKEY_free(pkey);
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2803,7 +2848,7 @@ cwist_error_t cwist_http3_init_context_ephemeral(cwist_http3_context **ctx) {
     if (!*ctx) {
         cwist_h3_free_ticket_key(tkey);
         SSL_CTX_free(ssl_ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
         err.error.err_i16 = -1;
         return err;
     }
@@ -2868,7 +2913,7 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
         cwist_h3_free_ticket_key((cwist_h3_ticket_key *)ctx->ticket_key);
         ctx->ticket_key = NULL;
         cwist_free(ctx);
-        h3_global_cleanup();
+        cwist_h3_global_release();
     }
 }
 
@@ -2904,6 +2949,35 @@ cwist_error_t cwist_http3_reload_context(cwist_http3_context *ctx, const char *c
 
     err.error.err_i16 = 0;
     return err;
+}
+
+/**
+ * @brief Return the last CONNECTION_CLOSE received from a peer.
+ * @param app_error_out Receives whether the close carried an application
+ *                      error (may be NULL).
+ * @param code_out Receives the error code (may be NULL).
+ * @param reason_buf Receives the NUL-terminated reason text, truncated to
+ *                   fit (may be NULL).
+ * @param buf_len Capacity of @p reason_buf.
+ * @retval 0 A close frame has been recorded and the outputs were filled.
+ * @retval -1 No CONNECTION_CLOSE has been received (or @p ctx is NULL).
+ *
+ * The engine thread publishes the fields with a release store of
+ * last_close_received, which this reads with acquire. A later close frame
+ * rewrites them, so read them once the serve loop has stopped.
+ */
+int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error_out,
+                                 uint64_t *code_out, char *reason_buf, size_t buf_len) {
+    if (!ctx || !__atomic_load_n(&ctx->last_close_received, __ATOMIC_ACQUIRE)) return -1;
+    if (app_error_out) *app_error_out = ctx->last_close_app_error == 1;
+    if (code_out) *code_out = ctx->last_close_code;
+    if (reason_buf && buf_len > 0) {
+        size_t n = strlen(ctx->last_close_reason);
+        if (n >= buf_len) n = buf_len - 1;
+        memcpy(reason_buf, ctx->last_close_reason, n);
+        reason_buf[n] = '\0';
+    }
+    return 0;
 }
 
 /* ------------------------------------------------------------------ */
@@ -3018,7 +3092,9 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     }
 
     /* Diagnostic hook: CWIST_H3_DEBUG=1 routes lsquic's internal logger to
-     * stderr so CONNECTION_CLOSE error codes become visible in the journal. */
+     * stderr so CONNECTION_CLOSE error codes become visible in the journal.
+     * The last received close frame is also recorded on the context for
+     * programmatic access via cwist_http3_last_close_error(). */
     if (getenv("CWIST_H3_DEBUG")) {
         static const struct lsquic_logger_if h3_log_if = {
             .log_buf = cwist_h3_log_stderr,
@@ -3813,7 +3889,8 @@ void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
  * @param len Payload length.
  * @retval 0 Datagram queued; lsquic is signaled to drain it via the
  *         on_dg_write callback.
- * @retval -1 Bad arguments, no per-connection ctx, or OOM (nothing queued).
+ * @retval -1 Bad arguments, no per-connection ctx, a payload above the peer's
+ *         advertised limit, or OOM (nothing queued).
  *
  * Thread-safe: the payload is copied and appended to the connection's own
  * mutex-guarded queue, so concurrent sends on different connections never
@@ -3827,22 +3904,31 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(c);
     if (!cc) return -1;
 
+    pthread_mutex_lock(&cc->dgram_lock);
+    size_t previous_min = lsquic_conn_get_min_datagram_size(c);
+    bool raise_min = len > previous_min;
+    if (raise_min && lsquic_conn_set_min_datagram_size(c, len) != 0) {
+        pthread_mutex_unlock(&cc->dgram_lock);
+        return -1;
+    }
+
     h3_dgram_node_t *node = (h3_dgram_node_t *)malloc(sizeof(*node));
-    if (!node) return -1;
+    if (!node) {
+        if (raise_min) lsquic_conn_set_min_datagram_size(c, previous_min);
+        pthread_mutex_unlock(&cc->dgram_lock);
+        return -1;
+    }
     node->data = malloc(len);
     if (!node->data) {
         free(node);
+        if (raise_min) lsquic_conn_set_min_datagram_size(c, previous_min);
+        pthread_mutex_unlock(&cc->dgram_lock);
         return -1;
     }
     memcpy(node->data, data, len);
     node->len = len;
     node->next = NULL;
 
-    /* Append to this connection's own queue - concurrent sends on other
-     * connections touch their own h3_conn_ctx_t and never see this lock,
-     * and concurrent sends on *this* connection now queue instead of one
-     * clobbering (free()ing) the other's buffer. */
-    pthread_mutex_lock(&cc->dgram_lock);
     if (cc->dgram_tail) {
         cc->dgram_tail->next = node;
     } else {

@@ -1,6 +1,7 @@
 var dir_e04fe21c322c71eff13b3bcded2b17f6 =
 [
     [ "app.c", "df/d7f/app_8c.html", "df/d7f/app_8c" ],
+    [ "app_route_internal.h", "d5/d34/app__route__internal_8h.html", "d5/d34/app__route__internal_8h" ],
     [ "assets.c", "d3/d05/assets_8c.html", "d3/d05/assets_8c" ],
     [ "assets_internal.h", "d7/d1d/assets__internal_8h.html", "d7/d1d/assets__internal_8h" ],
     [ "big_dumb_reply.c", "dc/da3/big__dumb__reply_8c.html", "dc/da3/big__dumb__reply_8c" ],

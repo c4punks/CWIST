@@ -470,7 +470,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Matching route record, or NULL when no exact or parametric route matches. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Wildcard routes are not considered by this lookup. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00325">325</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00329">329</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00032">cwist_mux_route::bucket_next</a>, <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00039">cwist_mux_router::buckets</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00081">cwist_query_map_destroy()</a>, and <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00041">cwist_mux_router::param_routes</a>.</p>
 
@@ -513,7 +513,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated group, or NULL when an argument is NULL or allocation fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00361">361</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00365">365</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00046">cwist_mux_group::router</a>.</p>
 
@@ -545,7 +545,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Only the group record is freed; routes registered through the group remain owned by the router and are released by <a class="el" href="../../d5/d57/mux_8h.html#ac4a61ffa64bd13a921b1beedbe6e1481" title="Destroy a router.">cwist_mux_router_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00381">381</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00385">385</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -602,7 +602,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Invalid arguments (NULL group, router, path, or handler) are silently ignored, as is an allocation failure while building the full path. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00396">396</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00400">400</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d2/dfe/alloc_8h_source.html#l00101">CWIST_DEFER_FREE</a>, and <a class="el" href="../../dd/d49/mux_8c_source.html#l00160">cwist_mux_handle()</a>.</p>
 
@@ -660,7 +660,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00160">160</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d49/mux_8c_source.html#l00396">cwist_mux_group_handle()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d49/mux_8c_source.html#l00400">cwist_mux_group_handle()</a>.</p>
 
 </div>
 </div>
@@ -701,7 +701,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Middleware runs in most-recently-added-first order because each node is prepended to the head of the list. An allocation failure is silently ignored. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00418">418</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00422">422</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00019">cwist_mux_middleware_node::func</a>, and <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00020">cwist_mux_middleware_node::next</a>.</p>
 
@@ -807,7 +807,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when a route was found and its handler was executed, otherwise false. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00435">435</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00439">439</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 </div>
 </div>

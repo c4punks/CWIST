@@ -13,6 +13,7 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+#include <pthread.h>
 #include <string.h>
 
 /** @name STUN wire-format constants (RFC 5389)
@@ -30,25 +31,18 @@
 #define ATTR_ICE_CONTROLLING 0x802A    /**< ICE-CONTROLLING attribute type (we always send it). */
 /** @} */
 
-/** Byte-at-a-time CRC-32 (IEEE, poly 0xEDB88320) lookup table, built lazily by crc32_init(). */
+/** Byte-at-a-time CRC-32 (IEEE, poly 0xEDB88320) lookup table. */
 static uint32_t crc32_table[256];
-/** Set once crc32_table has been initialized. */
-static bool crc32_ready = false;
+static pthread_once_t crc32_once = PTHREAD_ONCE_INIT;
 
-/** @brief Build the CRC-32 lookup table on first use.
- *
- * Idempotent; subsequent calls return immediately.
- */
+/** @brief Build the CRC-32 lookup table on first use. */
 static void crc32_init(void) {
-    if (crc32_ready)
-        return;
     for (uint32_t i = 0; i < 256; i++) {
         uint32_t c = i;
         for (int k = 0; k < 8; k++)
             c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
         crc32_table[i] = c;
     }
-    crc32_ready = true;
 }
 
 /** @brief Incremental CRC-32 (IEEE) over possibly several consecutive calls.
@@ -59,7 +53,7 @@ static void crc32_init(void) {
  * @return Updated running CRC.
  */
 static uint32_t crc32_update(uint32_t c, const uint8_t *data, size_t len) {
-    crc32_init();
+    pthread_once(&crc32_once, crc32_init);
     for (size_t i = 0; i < len; i++)
         c = crc32_table[(c ^ data[i]) & 0xFF] ^ (c >> 8);
     return c;
@@ -198,6 +192,23 @@ bool cwist_ice_stun_has_use_candidate(const uint8_t *buf, size_t len) {
     return attr_present(buf, len, ATTR_USE_CANDIDATE);
 }
 
+typedef struct {
+    const uint8_t *msg;
+    size_t off;
+    bool found;
+    bool valid;
+} mi_find_arg;
+
+static bool find_mi_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg) {
+    if (type != ATTR_MESSAGE_INTEGRITY)
+        return true;
+    mi_find_arg *a = arg;
+    a->off = (size_t)(val - a->msg) - 4;
+    a->found = true;
+    a->valid = val_len == 20;
+    return false;
+}
+
 /** @brief Locate the MESSAGE-INTEGRITY attribute in a STUN message.
  * @param msg    STUN message buffer.
  * @param len    Bytes available at @p msg.
@@ -210,19 +221,25 @@ bool cwist_ice_stun_has_use_candidate(const uint8_t *buf, size_t len) {
 static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
     if (!cwist_ice_stun_is_message(msg, len))
         return false;
-    uint16_t msg_len = rd16(msg + 2);
-    size_t end = STUN_HDR_LEN + msg_len;
-    size_t off = STUN_HDR_LEN;
-    while (off + 4 <= end) {
-        uint16_t type = rd16(msg + off);
-        uint16_t alen = rd16(msg + off + 2);
-        if (type == ATTR_MESSAGE_INTEGRITY) {
-            *mi_off = off;
-            return alen == 20;
-        }
-        off += 4 + ((alen + 3) & ~3u);
-    }
-    return false;
+    mi_find_arg a = { .msg = msg };
+    walk_attrs(msg, len, find_mi_cb, &a);
+    if (!a.found || !a.valid)
+        return false;
+    *mi_off = a.off;
+    return true;
+}
+
+static int stun_hmac_sha1(const uint8_t *hdr, const uint8_t *body, size_t body_len,
+                          const char *pwd, uint8_t out[20]) {
+    HMAC_CTX *ctx = HMAC_CTX_new();
+    if (!ctx) return -1;
+    unsigned int out_len = 0;
+    int ok = HMAC_Init_ex(ctx, pwd, (int)strlen(pwd), EVP_sha1(), NULL) == 1 &&
+             HMAC_Update(ctx, hdr, STUN_HDR_LEN) == 1 &&
+             HMAC_Update(ctx, body, body_len) == 1 && HMAC_Final(ctx, out, &out_len) == 1 &&
+             out_len == 20;
+    HMAC_CTX_free(ctx);
+    return ok ? 0 : -1;
 }
 
 /** @brief Validate the MESSAGE-INTEGRITY of a STUN message against a password.
@@ -230,37 +247,23 @@ static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
  * @param len Number of bytes at @p buf.
  * @param pwd Short-term credential password used as the HMAC-SHA1 key.
  * @return 1 if the HMAC matches, 0 if the message is malformed, the HMAC does
- *         not match, or OpenSSL allocation fails.
- * @retval 1 Also when no MESSAGE-INTEGRITY attribute is present: accepted for
- *            MVP interoperability (RFC 8445 requires MI, but the agent stays
- *            permissive here).
+ *         not match, MESSAGE-INTEGRITY is missing, or OpenSSL allocation fails.
  * @note The HMAC covers the message up to and including the MI attribute
  *       header, with the header's length field adjusted to end at the MI
  *       attribute, per RFC 5389.
  */
 int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *pwd) {
-    size_t pwd_len = strlen(pwd);
     uint8_t hmac[EVP_MAX_MD_SIZE];
-    unsigned int hmac_len = 0;
     size_t mi_off;
-    if (!cwist_ice_stun_is_message(buf, len))
-        return 0;
-    if (!find_mi(buf, len, &mi_off))
-        return 1; /* no MI: accept (RFC 8445 requires it, but stay permissive at MVP) */
+    if (!cwist_ice_stun_is_message(buf, len)) return 0;
+    if (!find_mi(buf, len, &mi_off)) return 0;
     /* MI covers the message up to and including the MI attribute header, with
      * the message length field set to end at the MI attribute. */
     uint8_t hdr[STUN_HDR_LEN];
     memcpy(hdr, buf, STUN_HDR_LEN);
     wr16(hdr + 2, (uint16_t)(mi_off - STUN_HDR_LEN + 4 + 20));
-    HMAC_CTX *ctx = HMAC_CTX_new();
-    if (!ctx)
-        return 0;
-    HMAC_Init_ex(ctx, pwd, (int)pwd_len, EVP_sha1(), NULL);
-    HMAC_Update(ctx, hdr, STUN_HDR_LEN);
-    HMAC_Update(ctx, buf + STUN_HDR_LEN, mi_off - STUN_HDR_LEN);
-    HMAC_Final(ctx, hmac, &hmac_len);
-    HMAC_CTX_free(ctx);
-    return hmac_len == 20 && memcmp(hmac, buf + mi_off + 4, 20) == 0;
+    return stun_hmac_sha1(hdr, buf + STUN_HDR_LEN, mi_off - STUN_HDR_LEN, pwd, hmac) == 0 &&
+           memcmp(hmac, buf + mi_off + 4, 20) == 0;
 }
 
 /** @brief Build a STUN binding response for a received binding request.
@@ -272,15 +275,16 @@ int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *
  * @param out    Destination buffer.
  * @param cap    Capacity of @p out in bytes.
  * @param req    The received binding request (used for its transaction ID).
- * @param req_len Bytes at @p req; currently unused.
+ * @param req_len Bytes at @p req.
  * @param mapped Address/port to report back (XOR-encoded with the magic cookie).
  * @param pwd    Short-term credential password for the MI HMAC.
- * @return Total response length in bytes, or -1 if @p cap is too small or
- *         OpenSSL allocation fails.
+ * @return Total response length in bytes, or -1 if the request is truncated,
+ *         @p cap is too small, or OpenSSL allocation fails.
  */
 int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, size_t req_len,
                                   const struct sockaddr_in *mapped, const char *pwd) {
-    (void)req_len;
+    if (!req || req_len < STUN_HDR_LEN) return -1;
+
     uint8_t body[64];
     size_t blen = 0;
 
@@ -307,15 +311,7 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
     wr32(hdr + 4, STUN_MAGIC);
     memcpy(hdr + 8, req + 8, 12);
     uint8_t mi[20];
-    unsigned int mi_len = 0;
-    HMAC_CTX *hctx = HMAC_CTX_new();
-    if (!hctx)
-        return -1;
-    HMAC_Init_ex(hctx, pwd, (int)strlen(pwd), EVP_sha1(), NULL);
-    HMAC_Update(hctx, hdr, STUN_HDR_LEN);
-    HMAC_Update(hctx, body, blen);
-    HMAC_Final(hctx, mi, &mi_len);
-    HMAC_CTX_free(hctx);
+    if (stun_hmac_sha1(hdr, body, blen, pwd, mi) != 0) return -1;
 
     wr16(body + blen, ATTR_MESSAGE_INTEGRITY);
     wr16(body + blen + 2, 20);
@@ -361,15 +357,20 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
 int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12],
                                  const char *username) {
     size_t ulen = strlen(username);
-    if (cap < STUN_HDR_LEN)
+    uint8_t body[256];
+    if (ulen > UINT16_MAX) return -1;
+    size_t username_attr_len = ulen ? 4 + ((ulen + 3) & ~3u) : 0;
+    const size_t fixed_attrs_len = 12 + 4 + 8;
+    if (username_attr_len > sizeof(body) - fixed_attrs_len ||
+        cap < STUN_HDR_LEN + username_attr_len + fixed_attrs_len)
         return -1;
+
     memset(out, 0, STUN_HDR_LEN);
     wr16(out, CWIST_STUN_BINDING_REQUEST);
     wr32(out + 4, STUN_MAGIC);
     memcpy(out + 8, txid, 12);
 
     size_t blen = 0;
-    uint8_t body[256];
     /* SOFTWARE-ish placeholder skipped; USERNAME */
     if (ulen > 0) {
         wr16(body + blen, ATTR_USERNAME);
@@ -421,6 +422,8 @@ int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12
  *         allocation fails.
  */
 static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) {
+    if (!msg || !pwd || msg_len < STUN_HDR_LEN || msg_len > cap) return -1;
+
     uint8_t body[64];
     size_t blen = 0;
     uint16_t len_for_mi = (uint16_t)(msg_len - STUN_HDR_LEN + 4 + 20);
@@ -428,15 +431,7 @@ static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) 
     memcpy(hdr, msg, STUN_HDR_LEN);
     wr16(hdr + 2, len_for_mi);
     uint8_t mi[20];
-    unsigned int mi_len = 0;
-    HMAC_CTX *hctx = HMAC_CTX_new();
-    if (!hctx)
-        return -1;
-    HMAC_Init_ex(hctx, pwd, (int)strlen(pwd), EVP_sha1(), NULL);
-    HMAC_Update(hctx, hdr, STUN_HDR_LEN);
-    HMAC_Update(hctx, msg + STUN_HDR_LEN, msg_len - STUN_HDR_LEN);
-    HMAC_Final(hctx, mi, &mi_len);
-    HMAC_CTX_free(hctx);
+    if (stun_hmac_sha1(hdr, msg + STUN_HDR_LEN, msg_len - STUN_HDR_LEN, pwd, mi) != 0) return -1;
 
     wr16(body + blen, ATTR_MESSAGE_INTEGRITY);
     wr16(body + blen + 2, 20);
@@ -554,9 +549,9 @@ static const char b64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
  * @retval -1 Not a STUN message, or no USERNAME attribute present.
  */
 int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, size_t cap) {
-    if (!cwist_ice_stun_is_message(buf, len))
-        return -1;
+    if (!out || cap == 0 || !cwist_ice_stun_is_message(buf, len)) return -1;
     uint16_t msg_len = rd16(buf + 2);
+    if (msg_len % 4 != 0 || msg_len > len - STUN_HDR_LEN) return -1;
     size_t end = STUN_HDR_LEN + msg_len;
     size_t off = STUN_HDR_LEN;
     while (off + 4 <= end) {
@@ -587,11 +582,16 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
  * @param ufrag_cap Capacity of @p ufrag; up to 8 characters plus NUL are written.
  * @param pwd       Output buffer for the password.
  * @param pwd_cap   Capacity of @p pwd; up to 32 characters plus NUL are written.
- * @warning Behavior is undefined if either capacity is 0 (cap - 1 underflows).
+ * @note On random generation failure, outputs with nonzero capacity are empty.
  */
 void cwist_ice_random_creds(char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd_cap) {
     uint8_t raw[24];
-    RAND_bytes(raw, sizeof(raw));
+    if (ufrag && ufrag_cap > 0) ufrag[0] = '\0';
+    if (pwd && pwd_cap > 0) pwd[0] = '\0';
+    if (!ufrag || !pwd || ufrag_cap == 0 || pwd_cap == 0 ||
+        RAND_bytes(raw, sizeof(raw)) != 1)
+        return;
+
     size_t n = ufrag_cap - 1 < 8 ? ufrag_cap - 1 : 8;
     for (size_t i = 0; i < n; i++)
         ufrag[i] = b64url_chars[raw[i] & 63];

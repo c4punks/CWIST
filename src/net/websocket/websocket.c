@@ -6,6 +6,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/seq/seq.h>
 #include "ws_utils.h"
+#include "ws_frame_validation.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -252,6 +253,10 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 
         bool fin = (head[0] & 0x80) != 0;
         cwist_ws_opcode_t opcode = head[0] & 0x0F;
+        if (opcode != CWIST_WS_FRAME_CONTINUATION && opcode != CWIST_WS_FRAME_TEXT &&
+            opcode != CWIST_WS_FRAME_BINARY && opcode != CWIST_WS_FRAME_CLOSE &&
+            opcode != CWIST_WS_FRAME_PING && opcode != CWIST_WS_FRAME_PONG)
+            return NULL;
         bool masked = (head[1] & 0x80) != 0;
         uint64_t payload_len = head[1] & 0x7F;
 
@@ -361,8 +366,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
         /* --- Deliver the complete frame ---------------------------------- */
 
         if (opcode == CWIST_WS_FRAME_CLOSE) {
-            /* RFC 6455 section 5.5.1: a CLOSE body, if present, MUST be >= 2 bytes. */
-            if (payload_len == 1) {
+            int close_error = cwist_ws_internal_close_error(payload, (size_t)payload_len);
+            if (close_error) {
+                uint8_t body[2] = {(uint8_t)(close_error >> 8), (uint8_t)close_error};
+                cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE, body, sizeof(body));
+                ws->is_closed = true;
                 cwist_free(payload);
                 return NULL;
             }
@@ -427,7 +435,9 @@ static int ws_send_all(int fd, const uint8_t *buf, size_t len) {
  */
 int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
                          size_t len) {
-    if (!ws || ws->is_closed || (!data && len > 0)) return -1;
+    if (!ws || ws->is_closed || (!data && len > 0) ||
+        !cwist_ws_internal_send_args_valid(opcode, len))
+        return -1;
 
     uint8_t head[10]; // Max header size (2 + 8)
     size_t head_len = 2;

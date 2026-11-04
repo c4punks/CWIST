@@ -11,6 +11,7 @@
 #endif
 #include "assets_internal.h"
 #include "routes_internal.h"
+#include "app_route_internal.h"
 /* Application headers (external) */
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/config.h>
@@ -2266,6 +2267,13 @@ void cwist_app_get_named(cwist_app *app, const char *path, const char *name,
  */
 void cwist_app_post(cwist_app *app, const char *path, cwist_handler_func handler) {
     add_route(app, path, CWIST_HTTP_POST, handler, CWIST_ENDPOINT_DEFAULT);
+}
+
+bool cwist_app_post_checked(cwist_app *app, const char *path, cwist_handler_func handler) {
+    if (!app || !app->router || !path) return false;
+    const cwist_route_target target = {.handler = handler};
+    return cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_POST, &target,
+                                    CWIST_ENDPOINT_DEFAULT);
 }
 
 void cwist_app_put(cwist_app *app, const char *path, cwist_handler_func handler) {
