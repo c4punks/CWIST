@@ -120,6 +120,12 @@ struct cwist_webtransport_client_session {
 };
 #endif
 
+typedef struct h3c_dgram_node {
+    void *data;
+    size_t len;
+    struct h3c_dgram_node *next;
+} h3c_dgram_node;
+
 struct cwist_http3_client {
     SSL_CTX *ssl_ctx;
     lsquic_engine_t *engine;
@@ -148,9 +154,9 @@ struct cwist_http3_client {
         int pending;
     } out_dgram;
     struct {
-        void *data;
-        size_t len;
-        int ready;
+        h3c_dgram_node *head;
+        h3c_dgram_node *tail;
+        size_t count;
     } in_dgram;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     cwist_webtransport_client_session *wt_connecting;
@@ -730,30 +736,40 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
     return 0;
 }
 
-/**
- * @brief lsquic datagram-received callback: store one incoming datagram.
- *
- * Takes ownership of the datagram payload by copying it into the client's
- * in_dgram slot (protected by dgram_mtx), replacing any previously received
- * datagram that was not yet consumed, and sets the ready flag so the
- * receiving thread can pick it up.
- *
- * @param conn   The lsquic connection the datagram arrived on.
- * @param buf    Pointer to the datagram payload.
- * @param len    Payload length in bytes.
- */
+#define H3C_DGRAM_QUEUE_LIMIT 16
+
+static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_t len) {
+    h3c_dgram_node *node = malloc(sizeof(*node));
+    if (!node) return;
+    node->data = malloc(len);
+    if (!node->data) {
+        free(node);
+        return;
+    }
+    memcpy(node->data, buf, len);
+    node->len = len;
+    node->next = NULL;
+
+    pthread_mutex_lock(&client->dgram_mtx);
+    if (client->in_dgram.count >= H3C_DGRAM_QUEUE_LIMIT) {
+        pthread_mutex_unlock(&client->dgram_mtx);
+        free(node->data);
+        free(node);
+        return;
+    }
+    if (client->in_dgram.tail)
+        client->in_dgram.tail->next = node;
+    else
+        client->in_dgram.head = node;
+    client->in_dgram.tail = node;
+    client->in_dgram.count++;
+    pthread_mutex_unlock(&client->dgram_mtx);
+}
+
 static void h3c_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (!client || !buf || len == 0) return;
-    pthread_mutex_lock(&client->dgram_mtx);
-    if (client->in_dgram.data) free(client->in_dgram.data);
-    client->in_dgram.data = malloc(len);
-    if (client->in_dgram.data) {
-        memcpy(client->in_dgram.data, buf, len);
-        client->in_dgram.len = len;
-        client->in_dgram.ready = 1;
-    }
-    pthread_mutex_unlock(&client->dgram_mtx);
+    h3c_dgram_enqueue(client, buf, len);
 }
 
 static const struct lsquic_stream_if h3c_stream_if = {
@@ -943,7 +959,13 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     }
     free(client->host);
     free(client->out_dgram.data);
-    free(client->in_dgram.data);
+    h3c_dgram_node *node = client->in_dgram.head;
+    while (node) {
+        h3c_dgram_node *next = node->next;
+        free(node->data);
+        free(node);
+        node = next;
+    }
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     free(client->wt_connecting);
 #endif
@@ -1303,23 +1325,25 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
     if (!client || !buf || len == 0) return -1;
 
     pthread_mutex_lock(&client->dgram_mtx);
-    if (!client->in_dgram.ready || !client->in_dgram.data) {
+    h3c_dgram_node *node = client->in_dgram.head;
+    if (!node) {
         pthread_mutex_unlock(&client->dgram_mtx);
         errno = EAGAIN;
         return -1;
     }
-    if (len < client->in_dgram.len) {
+    if (len < node->len) {
         pthread_mutex_unlock(&client->dgram_mtx);
         errno = EMSGSIZE;
         return -1;
     }
-    size_t to_copy = client->in_dgram.len;
-    memcpy(buf, client->in_dgram.data, to_copy);
-    free(client->in_dgram.data);
-    client->in_dgram.data = NULL;
-    client->in_dgram.len = 0;
-    client->in_dgram.ready = 0;
+    size_t to_copy = node->len;
+    memcpy(buf, node->data, to_copy);
+    client->in_dgram.head = node->next;
+    if (!client->in_dgram.head) client->in_dgram.tail = NULL;
+    client->in_dgram.count--;
     pthread_mutex_unlock(&client->dgram_mtx);
+    free(node->data);
+    free(node);
     return (ssize_t)to_copy;
 }
 
