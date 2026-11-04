@@ -258,7 +258,7 @@ endif
 # uses that session API; otherwise it uses the client-bidi-stream support of
 # stock lsquic (LSQUIC_WEBTRANSPORT_SERVER_SUPPORT), which cannot open server
 # streams. The client needs lsquic_wt.h. Object files rebuild on a change.
-CWIST_WEBTRANSPORT ?= $(if $(filter 1,$(CWIST_TINY)),none,server)
+CWIST_WEBTRANSPORT ?= $(if $(filter 1,$(CWIST_TINY)),none,client,server)
 comma := ,
 CWIST_WT_ROLES := $(strip $(subst $(comma), ,$(CWIST_WEBTRANSPORT)))
 ifeq ($(CWIST_WT_ROLES),1)
@@ -465,7 +465,6 @@ WASM_SRCS = src/core/sstring/sstring.c \
        src/core/validation/bind.c \
        src/core/mem/alloc.c \
        src/core/mem/arena.c \
-       src/core/mem/gc.c \
        src/core/db/db.c \
        lib/sqlite3/sqlite3.c \
        lib/cjson/cJSON.c
@@ -591,9 +590,7 @@ BAREMETAL_CFLAGS = -std=c17 -Os -Wall $(BAREMETAL_ARCH) --specs=nano.specs \
 	-D_POSIX_TIMERS=200809L -D_POSIX_MONOTONIC_CLOCK=200809L \
 	-D_POSIX_PRIORITY_SCHEDULING=200809L -D_Thread_local= -D__thread= \
 	$(WASM_INCLUDE_PATHS) $(COMMON_DEFINES) $(BAREMETAL_EXTRA_CFLAGS)
-# gc.c is listed in both WASM_SRCS and WASIP2_EXTRA_SRCS on this branch; take
-# it once, or the single-file bundle (baremetal-dist) defines it twice.
-BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c src/core/mem/gc.c,$(WASM_SRCS)) \
+BAREMETAL_SRCS = $(filter-out lib/sqlite3/sqlite3.c src/core/db/db.c src/sys/app/test_client.c,$(WASM_SRCS)) \
 	$(filter-out src/sys/wasi/compat.c src/net/http/writer_fast.c,$(WASIP2_EXTRA_SRCS)) \
 	src/sys/port/baremetal.c src/sys/port/baremetal_time.c
 BAREMETAL_OBJS = $(BAREMETAL_SRCS:%.c=$(BAREMETAL_BUILD_DIR)/%.o)
@@ -1357,13 +1354,14 @@ TEST_TARGETS = test_worker_affinity \
                test_log_async \
                test_protobuf \
                test_core_utils \
+               test_template \
                test_simd_parser \
                test_orm \
                test_app_resource_limits \
                test_app_named_routes_and_error_handler \
                test_app_route_helpers \
-               test_reactor_wake \
                test_classic_pool_scaling \
+               test_reactor_wake \
                test_reactor_timer \
                test_rx_epoll \
                test_reactor_accept \
@@ -1378,7 +1376,6 @@ TEST_TARGETS = test_worker_affinity \
                test_lwip_adapter \
                test_lwip_tls \
                test_error \
-               test_middleware_jwt \
                test_inline_exports \
                test_arena \
                test_baremetal_arena \
@@ -1387,11 +1384,25 @@ TEST_TARGETS = test_worker_affinity \
                test_healthz \
                test_json_builder \
                test_flash \
+               test_middleware_jwt \
+               test_sse \
+               test_graphql \
                test_graphql_subscriptions \
+               test_core_hardening \
+               test_https_full_gc \
+               test_cwist \
+               test_html_builder \
                test_html_component \
                test_html_response \
                test_assets \
                test_html_parity \
+               test_http2_flow_control \
+               test_idle_reaper \
+               test_linux_writer_fast \
+               test_orm_socket \
+               test_orm_socket_sigpipe \
+               test_webtransport \
+               test_webtransport_client_api \
                test_http \
                test_http_uring_hammer \
                test_http_stringify \
@@ -1417,7 +1428,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http2 \
                test_http2_prebuffer \
                test_http3 \
-               test_webtransport \
+               test_http3_client_datagram \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
@@ -1454,7 +1465,6 @@ TEST_TARGETS = test_worker_affinity \
                test_sqlite_fts5 \
                test_redis \
                test_scheduler \
-               test_gc_job_handoff \
                test_async_defer \
                test_async_after_shutdown \
                test_async_listener_rearm \
@@ -1470,6 +1480,8 @@ TEST_TARGETS = test_worker_affinity \
                test_builtin_mw_chain \
                test_grpc \
                test_grpc_append_error \
+               test_grpc_route_alloc \
+               test_grpc_health_alloc \
                test_grpc_stream \
                test_grpc_client \
                test_grpc_client_headers \
@@ -1482,6 +1494,7 @@ TEST_TARGETS = test_worker_affinity \
                test_gc_ebr_release \
                test_full_gc_toggle_hardening \
                test_conn_registry \
+               test_gc_job_handoff \
                test_full_gc_sweep \
                test_full_gc_tracking \
                test_io_queue_full_gc \
@@ -1491,7 +1504,6 @@ TEST_TARGETS = test_worker_affinity \
                test_malloc_intercept \
                test_proto_gen \
                test_proto_desc \
-               test_html_builder \
                test_css_composer \
                test_multipart
 
@@ -1511,8 +1523,6 @@ api-check:
 # docs/runtime-config.md (and its Korean mirror); see that page for statuses.
 env-check:
 	python3 scripts/ci/check_env_knobs.py
-
-.PHONY: all test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples wasm wasm-smoke clean-wasm wasip2-smoke clean-wasip2 wit-check jco-transpile wit-bindings component-guest component-smoke clean-component
 
 # Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
 # uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
@@ -1588,6 +1598,13 @@ test_app_route_helpers: $(LIB_NAME) tests/test_app_route_helpers.c
 	$(CC) $(CFLAGS) -o $@ tests/test_app_route_helpers.c $(LIB_NAME) $(LIBS)
 	./$@
 
+test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
+	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
+	./$@ burst
+	./$@ multi
+	./$@ cap
+	./$@ failure
+
 # Kernel/queue contract test: use the real reactor with a test-only allocator,
 # without pulling HTTP/TLS or libttak runtime state into the wake-up schedule.
 test_reactor_wake: tests/test_reactor_wake.c src/sys/io/reactor.c
@@ -1601,13 +1618,6 @@ test_reactor_timer: tests/test_reactor_timer.c src/sys/io/reactor.c
 ifeq ($(UNAME_S),Linux)
 	CWIST_REACTOR_BACKEND=epoll ./$@
 endif
-
-test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
-	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
-	./$@ burst
-	./$@ multi
-	./$@ cap
-	./$@ failure
 
 # RX-epoll receive path (reactor_rx.h) on a forced epoll reactor.
 test_rx_epoll: tests/test_rx_epoll.c src/sys/io/reactor.c src/sys/io/reactor_rx.h
@@ -1662,6 +1672,10 @@ endif
 test_core_utils: $(LIB_NAME) tests/test_core_utils.c
 	$(CC) $(CFLAGS) -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
 	./test_core_utils
+
+test_template: $(LIB_NAME) tests/test_template.c
+	$(CC) $(CFLAGS) -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
+	./test_template
 
 test_simd_parser: $(LIB_NAME) tests/test_simd_parser.c
 	$(CC) $(CFLAGS) -o test_simd_parser tests/test_simd_parser.c $(LIB_NAME) $(LIBS)
@@ -1920,9 +1934,13 @@ ifeq ($(CWIST_HTTP3),1)
 test_http3: $(LIB_NAME) tests/test_http3.c
 	$(CC) $(CFLAGS) -o test_http3 tests/test_http3.c $(LIB_NAME) $(LIBS)
 	./test_http3
+
+test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
+	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_datagram.c $(LIB_NAME) $(LIBS)
+	./$@
 else
-# CWIST_HTTP3=0: the module and its test are compiled out.
-test_http3:
+# CWIST_HTTP3=0: the module and its tests are compiled out.
+test_http3 test_http3_client_datagram:
 	@echo "CWIST_HTTP3=0: skipping $@"
 endif
 
@@ -2470,16 +2488,6 @@ test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
 	./test_scheduler
 
-test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
-	$(CC) $(CFLAGS) -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
-	./$@
-	./$@ nogc
-	./$@ runtime
-	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
-	./$@
-	./$@ nogc
-
-
 ifeq ($(CWIST_NATS),1)
 test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
 	$(CC) $(CFLAGS) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
@@ -2561,6 +2569,14 @@ test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c
 	$(CC) $(CFLAGS) -o test_grpc_append_error tests/test_grpc_append_error.c $(LIB_NAME) $(LIBS)
 	./test_grpc_append_error
 
+test_grpc_route_alloc: $(LIB_NAME) tests/test_grpc_route_alloc.c
+	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_route_alloc tests/test_grpc_route_alloc.c $(LIB_NAME) $(LIBS)
+	./test_grpc_route_alloc
+
+test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
+	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
+	./test_grpc_health_alloc
+
 test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
 	$(CC) $(CFLAGS) -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
 	./test_grpc_stream
@@ -2600,6 +2616,15 @@ test_gc_ebr_release: $(LIB_NAME) tests/test_gc_ebr_release.c
 test_full_gc_toggle_hardening: $(LIB_NAME) tests/test_full_gc_toggle_hardening.c
 	$(CC) $(CFLAGS) -o test_full_gc_toggle_hardening tests/test_full_gc_toggle_hardening.c $(LIB_NAME) $(LIBS)
 	./test_full_gc_toggle_hardening
+
+test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
+	$(CC) $(CFLAGS) -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
+	./$@ runtime
+	$(CC) $(CFLAGS) -DNDEBUG -o $@ tests/test_gc_job_handoff.c $(LIB_NAME) $(LIBS)
+	./$@
+	./$@ nogc
 
 test_conn_registry: $(LIB_NAME) tests/test_conn_registry.c
 	$(CC) $(CFLAGS) -o test_conn_registry tests/test_conn_registry.c $(LIB_NAME) $(LIBS)
@@ -2672,13 +2697,21 @@ test_proto_desc: $(LIB_NAME) tests/test_proto_gen.c tests/make_sample_descriptor
 	$(CC) $(CFLAGS) -Itests -DPROTO_GEN_SAMPLE_HEADER='"test_proto_gen_desc_sample.cwist.pb.h"' -o test_proto_desc tests/test_proto_gen.c $(LIB_NAME) $(LIBS)
 	./test_proto_desc
 
+test_css_composer: $(LIB_NAME) tests/test_css_composer.c
+	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
+	./test_css_composer
+
+# The following seven had a tests/test_*.c file with no Makefile rule at
+# all (so no CI coverage, ever) until scripts/ci/check_test_wiring.py
+# caught the gap - all seven build and pass as-is, just never wired in.
+test_cwist: $(LIB_NAME) tests/test_cwist.c
+	$(CC) $(CFLAGS) -o test_cwist tests/test_cwist.c $(LIB_NAME) $(LIBS)
+	./test_cwist
+
 test_html_builder: $(LIB_NAME) tests/test_html_builder.c
 	$(CC) $(CFLAGS) -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
 	./test_html_builder
 
-test_css_composer: $(LIB_NAME) tests/test_css_composer.c
-	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
-	./test_css_composer
 test_html_component: $(LIB_NAME) tests/test_html_component.c
 	$(CC) $(CFLAGS) -o test_html_component tests/test_html_component.c $(LIB_NAME) $(LIBS)
 	./test_html_component
@@ -2711,20 +2744,27 @@ ifeq ($(CWIST_DB),1)
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
 	$(CC) $(CFLAGS) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
+
+test_orm_socket_sigpipe: $(LIB_NAME) tests/test_orm_socket_sigpipe.c
+	$(CC) $(CFLAGS) -o $@ tests/test_orm_socket_sigpipe.c $(LIB_NAME) $(LIBS)
+	./$@
 else
-# CWIST_DB=0: the module and its test are compiled out.
-test_orm_socket:
+# CWIST_DB=0: the module and its tests are compiled out.
+test_orm_socket test_orm_socket_sigpipe:
 	@echo "CWIST_DB=0: skipping $@"
 endif
-
 
 ifeq ($(CWIST_HTTP3),1)
 test_webtransport: $(LIB_NAME) tests/test_webtransport.c
 	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
 	./test_webtransport
+
+test_webtransport_client_api: $(LIB_NAME) tests/test_webtransport_client_api.c
+	$(CC) $(CFLAGS) -o $@ tests/test_webtransport_client_api.c $(LIB_NAME) $(LIBS)
+	./$@
 else
 # CWIST_HTTP3=0: WebTransport rides on HTTP/3, so its tests are compiled out.
-test_webtransport:
+test_webtransport test_webtransport_client_api:
 	@echo "CWIST_HTTP3=0: skipping $@"
 endif
 
@@ -2768,11 +2808,10 @@ endif
 #
 # Scoped to the trees CWIST owns.  lib/ is vendored and carries its own
 # .clang-format with DisableFormat, so it stays untouched either way.
-#
+# ---------------------------------------------------------------------------
 # Tracked files only: `make test` drops generated headers (tests/*.cwist.pb.h)
 # into these trees, and a plain find would format build output and then fail
 # format-check on it.
-# ---------------------------------------------------------------------------
 FORMAT_DIRS := src include tests example benchmarks
 FORMAT_FILES := $(shell git ls-files $(FORMAT_DIRS) 2>/dev/null | grep -E '\.(c|h)$$' \
                   || find $(FORMAT_DIRS) -type f \( -name '*.c' -o -name '*.h' \) | sort)

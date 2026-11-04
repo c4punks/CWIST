@@ -179,7 +179,8 @@ int cwist_http3_client_send_datagram(cwist_http3_client *client, const void *dat
  * @brief Receive an unreliable QUIC datagram.
  *
  * Non-blocking.  If no datagram is available, returns -1 with errno
- * set to EAGAIN.
+ * set to EAGAIN. If the next datagram is larger than @p len, returns -1
+ * with errno set to EMSGSIZE and leaves the datagram queued for a later call.
  *
  * @param client Client handle.
  * @param buf    Buffer to store payload.
