@@ -42,10 +42,11 @@ typedef struct {
 
 static recorded_msg_t g_last;
 static int g_messages_seen;
+static cwist_websocket_async *g_last_ws;
 
 static void on_message(cwist_websocket_async *ws, cwist_ws_frame *frame, void *user_data) {
-    (void)ws;
     (void)user_data;
+    g_last_ws = ws;
     pthread_mutex_lock(&g_mu);
     g_last.opcode = frame->opcode;
     g_last.len = frame->payload_len;
@@ -372,18 +373,22 @@ int main(void) {
     cwist_reactor_t *reactor = cwist_reactor_create();
     assert(reactor);
 
-    int conn_a[2], conn_b[2], conn_c[2], conn_d[2], conn_e[2];
+    int conn_a[2], conn_b[2], conn_c[2], conn_d[2], conn_e[2], conn_f[2], conn_g[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_a) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_b) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_c) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_d) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_e) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_f) == 0);
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_g) == 0);
 
     assert(cwist_websocket_async_attach(conn_a[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_b[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_c[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_d[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_e[0], reactor, on_message, NULL, NULL, 0));
+    assert(cwist_websocket_async_attach(conn_f[0], reactor, on_message, NULL, NULL, 0));
+    assert(cwist_websocket_async_attach(conn_g[0], reactor, on_message, NULL, NULL, 0));
 
     pthread_t rt;
     assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
@@ -397,6 +402,18 @@ int main(void) {
     assert(msg.len == 5);
     assert(memcmp(msg.payload, "hello", 5) == 0);
     printf("1. complete text message: ok\n");
+
+    assert(g_last_ws != NULL);
+    uint8_t oversized_control[126] = {0};
+    assert(cwist_websocket_async_send(g_last_ws, 0x03, NULL, 0) == -1);
+    assert(cwist_websocket_async_send(g_last_ws, 0x0B, NULL, 0) == -1);
+    assert(cwist_websocket_async_send(g_last_ws, CWIST_WS_FRAME_PING, oversized_control,
+                                      sizeof(oversized_control)) == -1);
+    assert(cwist_websocket_async_send(g_last_ws, CWIST_WS_FRAME_PONG, oversized_control,
+                                      sizeof(oversized_control)) == -1);
+    assert(cwist_websocket_async_send(g_last_ws, CWIST_WS_FRAME_CLOSE, oversized_control,
+                                      sizeof(oversized_control)) == -1);
+    puts("outgoing frame validation: ok");
 
     /* 2. A fragmented message (FIN=0 text + FIN=1 continuation) is delivered
      *    as ONE reassembled frame with the original opcode. */
@@ -535,6 +552,25 @@ int main(void) {
     assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
     assert(read(conn_b[1], payload, sizeof(payload)) == 0); /* EOF */
 
+    const uint8_t bad_status[] = {0x03, 0xE7};
+    write_masked(conn_f[1], 0x88, bad_status, sizeof(bad_status));
+    read_server_frame(conn_f[1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE && len == 2);
+    assert(payload[0] == 0x03 && payload[1] == 0xEA); /* 1002 */
+    pfd.fd = conn_f[1];
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_f[1], payload, sizeof(payload)) == 0);
+
+    const uint8_t bad_reason[] = {0x03, 0xE8, 0xC0, 0xAF};
+    write_masked(conn_g[1], 0x88, bad_reason, sizeof(bad_reason));
+    read_server_frame(conn_g[1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE && len == 2);
+    assert(payload[0] == 0x03 && payload[1] == 0xEF); /* 1007 */
+    pfd.fd = conn_g[1];
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_g[1], payload, sizeof(payload)) == 0);
+    puts("invalid close status and UTF-8 rejection: ok");
+
     /* Stop the reactor thread via a posted callback (wakes the poller). */
     cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};
     assert(cwist_reactor_post(reactor, &stop_node));
@@ -545,6 +581,8 @@ int main(void) {
     close(conn_b[1]);
     close(conn_c[1]);
     close(conn_d[1]);
+    close(conn_f[1]);
+    close(conn_g[1]);
     /* Server-side descriptors were owned and closed by the WS async layer. */
 
     printf("websocket async (C1M) test passed\n");
