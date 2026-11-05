@@ -95,6 +95,10 @@ const cwist_compress_backend *cwist_compress_backend_zstd(void);
  */
 cwist_middleware_func cwist_mw_compress(size_t min_body_size);
 
+/** Create compression middleware with an independent threshold per registration. */
+cwist_middleware_func_ex cwist_mw_compress_ex(size_t min_body_size, void **user_ctx,
+                                              cwist_middleware_ctx_destroy_func *destroy);
+
 #ifdef __cplusplus
 }
 #endif
