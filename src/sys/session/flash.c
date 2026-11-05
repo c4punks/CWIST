@@ -62,6 +62,7 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
     while (curr) {
         if (strcmp(curr->key, key) == 0) {
             *prev = curr->next;
+            if (req->flash->count > 0) req->flash->count--;
             cwist_free(curr->key);
             /* ownership of value transfers to the caller, who must free it */
             char *ret_val = curr->value;
@@ -76,8 +77,8 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
 
 /** @brief Serialize all flash entries to a JSON object and clear the map.
  *
- * Builds a JSON object string {"key":"value",...} with '"' and '\' escaped
- * in keys and values, then frees every flash entry and empties the map.
+ * Builds a JSON object string with keys and values escaped by cJSON, then
+ * frees every flash entry and empties the map.
  *
  * @param req Request whose flash map is serialized.
  * @return Newly allocated NUL-terminated JSON string the caller must free
@@ -85,93 +86,25 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
  *         allocation fails (in which case the flash map is left unchanged).
  */
 char *cwist_flash_pop_all_json(cwist_http_request *req) {
-    if (!req || !req->flash || !req->flash->buckets || req->flash->size == 0) return NULL;
-    int count = 0;
+    if (!req || !req->flash || !req->flash->buckets || req->flash->size == 0 ||
+        req->flash->count == 0)
+        return NULL;
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
     for (size_t i = 0; i < req->flash->size; i++) {
-        cwist_query_bucket *b = req->flash->buckets[i];
-        while (b) {
-            count++;
-            b = b->next;
+        for (cwist_query_bucket *b = req->flash->buckets[i]; b; b = b->next) {
+            if (!cJSON_AddStringToObject(root, b->key, b->value)) {
+                cJSON_Delete(root);
+                return NULL;
+            }
         }
     }
-    if (count == 0) return NULL;
-
-    size_t cap = 256;
-    char *buf = (char *)cwist_alloc(cap);
-    if (!buf) return NULL;
-    size_t len = 0;
-    buf[len++] = '{';
-    int first = 1;
-    for (size_t i = 0; i < req->flash->size; i++) {
-        cwist_query_bucket *b = req->flash->buckets[i];
-        while (b) {
-            if (!first) {
-                if (len + 2 >= cap) {
-                    size_t new_cap = cap * 2;
-                    char *new_buf = (char *)cwist_realloc(buf, new_cap);
-                    if (!new_buf) {
-                        cwist_free(buf);
-                        return NULL;
-                    }
-                    buf = new_buf;
-                    cap = new_cap;
-                }
-                buf[len++] = ',';
-            }
-            first = 0;
-            size_t key_escaped_len = strlen(b->key) * 2 + 3;
-            size_t val_escaped_len = strlen(b->value) * 2 + 3;
-            size_t needed = key_escaped_len + val_escaped_len + 4;
-            if (len + needed >= cap) {
-                size_t new_cap = cap;
-                while (len + needed >= new_cap) new_cap *= 2;
-                char *new_buf = (char *)cwist_realloc(buf, new_cap);
-                if (!new_buf) {
-                    cwist_free(buf);
-                    return NULL;
-                }
-                buf = new_buf;
-                cap = new_cap;
-            }
-            buf[len++] = '"';
-            for (char *p = b->key; *p; p++) {
-                if (*p == '"' || *p == '\\') buf[len++] = '\\';
-                buf[len++] = *p;
-            }
-            buf[len++] = '"';
-            buf[len++] = ':';
-            buf[len++] = '"';
-            for (char *p = b->value; *p; p++) {
-                if (*p == '"' || *p == '\\') buf[len++] = '\\';
-                buf[len++] = *p;
-            }
-            buf[len++] = '"';
-            b = b->next;
-        }
-    }
-    if (len + 2 >= cap) {
-        size_t new_cap = cap * 2;
-        char *new_buf = (char *)cwist_realloc(buf, new_cap);
-        if (!new_buf) {
-            cwist_free(buf);
-            return NULL;
-        }
-        buf = new_buf;
-        cap = new_cap;
-    }
-    buf[len++] = '}';
-    buf[len] = '\0';
-    // Clear all flash entries
-    for (size_t i = 0; i < req->flash->size; i++) {
-        cwist_query_bucket *b = req->flash->buckets[i];
-        while (b) {
-            cwist_query_bucket *next = b->next;
-            cwist_free(b->key);
-            cwist_free(b->value);
-            cwist_free(b);
-            b = next;
-        }
-        req->flash->buckets[i] = NULL;
-    }
-    return buf;
+    char *printed = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (!printed) return NULL;
+    char *json = cwist_strdup(printed);
+    cJSON_free(printed);
+    if (!json) return NULL;
+    cwist_query_map_clear(req->flash);
+    return json;
 }
