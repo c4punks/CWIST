@@ -751,6 +751,12 @@ static const struct lsquic_stream_if h3c_stream_if = {
 /* I/O loop helper                                                    */
 /* ------------------------------------------------------------------ */
 
+static int h3c_timeout_to_poll_us(int timeout_ms) {
+    if (timeout_ms <= 0) return 1000;
+    if (timeout_ms >= 1000) return 1000000;
+    return timeout_ms * 1000;
+}
+
 /**
  * @brief Run one iteration of the QUIC I/O loop.
  *
@@ -765,8 +771,7 @@ static const struct lsquic_stream_if h3c_stream_if = {
  */
 static void h3c_process_io(cwist_http3_client *client, int timeout_ms) {
     lsquic_engine_t *engine = client->engine;
-    int diff = timeout_ms * 1000; /* microseconds */
-    if (diff <= 0) diff = 1000;
+    int diff = h3c_timeout_to_poll_us(timeout_ms);
 
     if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
         if (diff <= 0)
