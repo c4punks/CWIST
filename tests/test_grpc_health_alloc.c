@@ -12,12 +12,14 @@ void *__real_cwist_alloc(size_t size);
 
 static int fail_second_route;
 static int route_allocations;
+static int fail_service_copy;
 
 void *__wrap_cwist_alloc(size_t size) {
     if (size == 5 * sizeof(void *) + 2 * sizeof(int)) {
         route_allocations++;
         if (fail_second_route && route_allocations == 2) return NULL;
     }
+    if (fail_service_copy && size == 11) return NULL;
     return __real_cwist_alloc(size);
 }
 
@@ -47,6 +49,26 @@ int main(void) {
         client, CWIST_HTTP_POST, "/grpc.health.v1.Health/Check", &opts);
     assert(res != NULL);
     assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "12") == 0);
+
+    cwist_http_response_destroy(res);
+
+    assert(cwist_app_grpc_health(app) == 0);
+    static const uint8_t service_request[] = {
+        0x0a, 0x0a, 'c', 'w', 'i', 's', 't', '.', 't', 'e', 's', 't'
+    };
+    cwist_free(frame);
+    frame = NULL;
+    frame_len = 0;
+    assert(cwist_grpc_encode_message(service_request, sizeof(service_request), 0,
+                                     &frame, &frame_len) == 0);
+    opts.body = (const char *)frame;
+    opts.body_len = frame_len;
+    fail_service_copy = 1;
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
+                                       "/grpc.health.v1.Health/Check", &opts);
+    fail_service_copy = 0;
+    assert(res != NULL);
+    assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "13") == 0);
 
     cwist_http_response_destroy(res);
     cwist_test_client_destroy(client);
