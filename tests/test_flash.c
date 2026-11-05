@@ -68,6 +68,7 @@ static void test_flash_basic_and_json(void) {
 
     // Flash entries should now be cleared
     assert(cwist_flash_peek(&req, "info") == NULL);
+    assert(req.flash->count == 0);
     assert(cwist_flash_pop_all_json(&req) == NULL);
 
     // Test cwist_flash_get pop
@@ -76,14 +77,36 @@ static void test_flash_basic_and_json(void) {
     assert(val != NULL);
     assert(strcmp(val, "hello") == 0);
     cwist_free((void *)val);
+    assert(req.flash->count == 0);
     assert(cwist_flash_get(&req, "msg") == NULL);
 
+    cwist_query_map_destroy(req.flash);
+}
+
+static void test_flash_json_control_characters(void) {
+    cwist_http_request req;
+    memset(&req, 0, sizeof(req));
+    cwist_flash_set(&req, "line\nkey", "first\nsecond\t\x01");
+    char *json = cwist_flash_pop_all_json(&req);
+    assert(json != NULL);
+    assert(strstr(json, "\\n") != NULL);
+    assert(strstr(json, "\\t") != NULL);
+    assert(strstr(json, "\\u0001") != NULL);
+    cJSON *parsed = cJSON_Parse(json);
+    assert(parsed != NULL);
+    cJSON *value = cJSON_GetObjectItemCaseSensitive(parsed, "line\nkey");
+    assert(cJSON_IsString(value));
+    assert(strcmp(value->valuestring, "first\nsecond\t\x01") == 0);
+    assert(req.flash->count == 0);
+    cJSON_Delete(parsed);
+    cwist_free(json);
     cwist_query_map_destroy(req.flash);
 }
 
 int main(void) {
     test_flash_null_and_zero_guards();
     test_flash_basic_and_json();
+    test_flash_json_control_characters();
     printf("All test_flash tests passed!\n");
     return 0;
 }
