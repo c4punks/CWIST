@@ -4,6 +4,7 @@
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/cookie.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 
@@ -104,6 +105,52 @@ static void test_session_round_trip(void) {
     printf("[session] round trip OK\n");
 }
 
+static void test_session_large_round_trip(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    assert(cwist_app_use_session(app, "large-session-secret") == 0);
+
+    size_t len = 5000;
+    char *large = malloc(len + 1);
+    assert(large != NULL);
+    for (size_t i = 0; i < len; i++) large[i] = (char)('a' + i % 26);
+    large[len] = '\0';
+
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_session_t *session = cwist_session_start(app, req, res);
+    assert(session != NULL);
+    assert(cwist_session_set(session, "large", large) == 0);
+    assert(cwist_session_commit(session, res) == 0);
+
+    const char *set_cookie = cwist_http_header_get(res->headers, "Set-Cookie");
+    assert(set_cookie != NULL);
+    const char *eq = strchr(set_cookie, '=');
+    const char *semi = eq ? strchr(eq, ';') : NULL;
+    assert(eq && semi && (size_t)(semi - eq) > len);
+    size_t cookie_len = (size_t)(semi - eq - 1);
+    char *cookie_header = malloc(cookie_len + 32);
+    assert(cookie_header != NULL);
+    snprintf(cookie_header, cookie_len + 32, "cwist_session=%.*s", (int)cookie_len, eq + 1);
+
+    cwist_http_request *req2 = cwist_http_request_create();
+    cwist_http_response *res2 = cwist_http_response_create();
+    cwist_http_header_add(&req2->headers, "Cookie", cookie_header);
+    cwist_session_t *session2 = cwist_session_start(app, req2, res2);
+    assert(session2 != NULL);
+    const char *loaded = cwist_session_get(session2, "large");
+    assert(loaded != NULL && strlen(loaded) == len && memcmp(loaded, large, len) == 0);
+
+    free(cookie_header);
+    free(large);
+    cwist_http_response_destroy(res2);
+    cwist_http_request_destroy(req2);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    cwist_app_destroy(app);
+    printf("[session] large round trip OK\n");
+}
+
 static void test_session_invalid_signature(void) {
     cwist_app *app = cwist_app_create();
     assert(cwist_app_use_session(app, "secret-a") == 0);
@@ -124,6 +171,7 @@ static void test_session_invalid_signature(void) {
 int main(void) {
     test_session_create_and_commit();
     test_session_round_trip();
+    test_session_large_round_trip();
     test_session_invalid_signature();
     printf("All session tests passed.\n");
     return 0;
