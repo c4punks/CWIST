@@ -1,5 +1,9 @@
 var NAVTREEINDEX18 =
 {
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md823":[84,2],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md824":[84,3],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md825":[84,4],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md826":[84,5],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md827":[84,6],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md828":[84,7],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md829":[84,7,0],
@@ -245,9 +249,5 @@ var NAVTREEINDEX18 =
 "dd/dff/http3_8h.html":[94,0,1,0,2,3,7],
 "dd/dff/http3_8h.html#a0ddd7eeaebe08f0c409fca3b8a3f1a53":[94,0,1,0,2,3,7,3],
 "dd/dff/http3_8h.html#a265f06e9373148103e277107a8984b12":[94,0,1,0,2,3,7,15],
-"dd/dff/http3_8h.html#a31931b2dca829d51ff9112ad76c27ce7":[94,0,1,0,2,3,7,22],
-"dd/dff/http3_8h.html#a3b8be16f94dac189c5f2a8b360dea4f0":[94,0,1,0,2,3,7,4],
-"dd/dff/http3_8h.html#a450069a1e05bc23a8e61e420c0bfd3e4":[94,0,1,0,2,3,7,5],
-"dd/dff/http3_8h.html#a48b148a623a57a569bbf3b6601e4407a":[94,0,1,0,2,3,7,12],
-"dd/dff/http3_8h.html#a5040add8f92575bc4a0bdafacc824bf9":[94,0,1,0,2,3,7,17]
+"dd/dff/http3_8h.html#a31931b2dca829d51ff9112ad76c27ce7":[94,0,1,0,2,3,7,22]
 };
