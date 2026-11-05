@@ -1,11 +1,11 @@
 var searchData=
 [
-  ['검증과_20한계_0',['검증과 한계',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md566',1,'']]],
-  ['검증하고_20http_20의미에_20맞게_20응답하기_1',['3. JSON을 검증하고 HTTP 의미에 맞게 응답하기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md702',1,'']]],
-  ['검증하기_2',['3. 시작하고 검증하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md604',1,'']]],
-  ['검증_3',['검증',['../db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md572',1,'검증'],['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md654',1,'검증'],['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md612',1,'배포 검증'],['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md840',1,'3. JSON 파싱과 Zod 스키마 검증']]],
-  ['검증_20기록_4',['검증 (기록)',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md524',1,'']]],
-  ['검증_20범위_5',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md618',1,'']]],
-  ['검증_20상태_6',['검증 상태',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md576',1,'']]],
-  ['검토한_20대안_7',['검토한 대안',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md592',1,'']]]
+  ['검증과_20한계_0',['검증과 한계',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md569',1,'']]],
+  ['검증하고_20http_20의미에_20맞게_20응답하기_1',['3. JSON을 검증하고 HTTP 의미에 맞게 응답하기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md705',1,'']]],
+  ['검증하기_2',['3. 시작하고 검증하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md607',1,'']]],
+  ['검증_3',['검증',['../db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md575',1,'검증'],['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md657',1,'검증'],['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md615',1,'배포 검증'],['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md843',1,'3. JSON 파싱과 Zod 스키마 검증']]],
+  ['검증_20기록_4',['검증 (기록)',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md527',1,'']]],
+  ['검증_20범위_5',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md621',1,'']]],
+  ['검증_20상태_6',['검증 상태',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md579',1,'']]],
+  ['검토한_20대안_7',['검토한 대안',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md595',1,'']]]
 ];
