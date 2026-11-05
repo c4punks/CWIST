@@ -8,5 +8,6 @@ var compress_8c =
     [ "cwist_compress_backend_zstd", "d0/d6b/compress_8c.html#a013f1603572acfd49aae53b6dc30e062", null ],
     [ "cwist_compress_register_backend", "d0/d6b/compress_8c.html#a57c833698905b401cc5e4914870c4c4c", null ],
     [ "cwist_compress_unregister_all", "d0/d6b/compress_8c.html#ac4d46953471ce216fe2ab53d6ad2fb3a", null ],
-    [ "cwist_mw_compress", "d0/d6b/compress_8c.html#abf34e6f515162b89d169d928fd34327c", null ]
+    [ "cwist_mw_compress", "d0/d6b/compress_8c.html#abf34e6f515162b89d169d928fd34327c", null ],
+    [ "cwist_mw_compress_ex", "d0/d6b/compress_8c.html#ad84e9b022c5051eca665934002c75e8a", null ]
 ];

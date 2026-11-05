@@ -1,5 +1,7 @@
 var NAVTREEINDEX18 =
 {
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md821":[84,0],
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md822":[84,1],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md823":[84,2],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md824":[84,3],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md825":[84,4],
@@ -247,7 +249,5 @@ var NAVTREEINDEX18 =
 "dd/dec/net_2websocket_2websocket_8h.html#adfa3c97f06abeb3ba1a0fe252b8e4eac":[94,0,1,0,2,6,0,6],
 "dd/dec/net_2websocket_2websocket_8h_source.html":[94,0,1,0,2,6,0],
 "dd/dff/http3_8h.html":[94,0,1,0,2,3,7],
-"dd/dff/http3_8h.html#a0ddd7eeaebe08f0c409fca3b8a3f1a53":[94,0,1,0,2,3,7,3],
-"dd/dff/http3_8h.html#a265f06e9373148103e277107a8984b12":[94,0,1,0,2,3,7,15],
-"dd/dff/http3_8h.html#a31931b2dca829d51ff9112ad76c27ce7":[94,0,1,0,2,3,7,22]
+"dd/dff/http3_8h.html#a0ddd7eeaebe08f0c409fca3b8a3f1a53":[94,0,1,0,2,3,7,3]
 };
