@@ -127,11 +127,40 @@ static void test_cookie_set_and_delete(void) {
     printf("  Passed set and delete.\n");
 }
 
+static void test_cookie_large_value_and_attributes(void) {
+    printf("Testing large cookie values and attributes...\n");
+    size_t len = 5000;
+    char *value = malloc(len + 1);
+    char *path = malloc(len + 1);
+    assert(value && path);
+    memset(value, 'v', len);
+    memset(path, 'p', len);
+    value[len] = path[len] = '\0';
+
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    cwist_cookie_options opts = {.path = path, .max_age_seconds = -1};
+    assert(cwist_cookie_set(res, "large", value, &opts) == 0);
+    const char *header = cwist_http_header_get(res->headers, "Set-Cookie");
+    assert(header != NULL);
+    assert(strncmp(header, "large=", 6) == 0);
+    assert(memcmp(header + 6, value, len) == 0);
+    const char *path_attr = strstr(header, "; Path=");
+    assert(path_attr != NULL);
+    assert(memcmp(path_attr + 7, path, len) == 0);
+
+    cwist_http_response_destroy(res);
+    free(value);
+    free(path);
+    printf("  Passed large cookie values and attributes.\n");
+}
+
 int main(void) {
     test_cookie_encode();
     test_cookie_decode();
     test_cookie_parse_and_get();
     test_cookie_set_and_delete();
+    test_cookie_large_value_and_attributes();
     printf("All cookie tests passed!\n");
     return 0;
 }
