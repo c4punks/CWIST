@@ -8,5 +8,6 @@ var compress_8h =
     [ "cwist_compress_backend_zstd", "df/d4c/compress_8h.html#a013f1603572acfd49aae53b6dc30e062", null ],
     [ "cwist_compress_register_backend", "df/d4c/compress_8h.html#a57c833698905b401cc5e4914870c4c4c", null ],
     [ "cwist_compress_unregister_all", "df/d4c/compress_8h.html#ac4d46953471ce216fe2ab53d6ad2fb3a", null ],
-    [ "cwist_mw_compress", "df/d4c/compress_8h.html#abf34e6f515162b89d169d928fd34327c", null ]
+    [ "cwist_mw_compress", "df/d4c/compress_8h.html#abf34e6f515162b89d169d928fd34327c", null ],
+    [ "cwist_mw_compress_ex", "df/d4c/compress_8h.html#ad84e9b022c5051eca665934002c75e8a", null ]
 ];

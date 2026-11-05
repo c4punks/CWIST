@@ -1,5 +1,6 @@
 var NAVTREEINDEX2 =
 {
+"d1/d4f/typedarray_8h.html":[94,0,1,0,5,0],
 "d1/d4f/typedarray_8h_source.html":[94,0,1,0,5,0],
 "d1/d53/structcwist__redis__reply.html":[93,0,83],
 "d1/d53/structcwist__redis__reply.html#a24dbe62d2d794b7d0822f8953ecbd8c9":[93,0,83,1],
@@ -248,6 +249,5 @@ var NAVTREEINDEX2 =
 "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md768":[78,0],
 "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md769":[78,1],
 "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md770":[78,2],
-"d2/d2f/md_docs_2ko_2api_2https.html":[39],
-"d2/d2f/structcwist__seq__auth__metadata.html":[93,0,88]
+"d2/d2f/md_docs_2ko_2api_2https.html":[39]
 };

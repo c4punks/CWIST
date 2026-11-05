@@ -9,6 +9,7 @@ var sys_2app_2middleware_8h =
     ] ],
     [ "cwist_mw_access_log", "d3/d30/sys_2app_2middleware_8h.html#af4504a9f9f2a2395ec721cc6cf0bf46e", null ],
     [ "cwist_mw_compress", "d3/d30/sys_2app_2middleware_8h.html#abf34e6f515162b89d169d928fd34327c", null ],
+    [ "cwist_mw_compress_ex", "d3/d30/sys_2app_2middleware_8h.html#ad84e9b022c5051eca665934002c75e8a", null ],
     [ "cwist_mw_cors", "d3/d30/sys_2app_2middleware_8h.html#a502f7df4b6e4faeb32a3dac05175359d", null ],
     [ "cwist_mw_jwt_auth", "d3/d30/sys_2app_2middleware_8h.html#a49bd9e920c1ec6ff450b7225b544ff40", null ],
     [ "cwist_mw_jwt_get_claims", "d3/d30/sys_2app_2middleware_8h.html#a4e08ffed838908a792a6b7f431cdca4e", null ],
