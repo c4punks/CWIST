@@ -430,7 +430,7 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
     int count = cJSON_GetArraySize((cJSON *)obj);
     if (count <= 0) return NULL;
 
-    /* Worst-case sizes – we'll sqlite3_mprintf each fragment individually. */
+    /* Initial capacities; each fragment grows its buffer to the actual length. */
     char *cols_buf = (char *)sqlite3_malloc(count * 64 + 16);
     char *vals_buf = (char *)sqlite3_malloc(count * 256 + 16);
     if (!cols_buf || !vals_buf) {
@@ -451,9 +451,15 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
             sqlite3_free(vals_buf);
             return NULL;
         }
-        size_t cols_cap = (size_t)(count * 64 + 16);
-        size_t cols_used = strlen(cols_buf);
-        if (cols_used < cols_cap - 1) strncat(cols_buf, col_frag, cols_cap - 1 - cols_used);
+        char *new_cols = sqlite3_mprintf("%s%s", cols_buf, col_frag);
+        if (!new_cols) {
+            sqlite3_free(col_frag);
+            sqlite3_free(cols_buf);
+            sqlite3_free(vals_buf);
+            return NULL;
+        }
+        sqlite3_free(cols_buf);
+        cols_buf = new_cols;
         sqlite3_free(col_frag);
 
         /* Value */
@@ -482,9 +488,15 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
             sqlite3_free(vals_buf);
             return NULL;
         }
-        size_t vals_cap = (size_t)(count * 256 + 16);
-        size_t vals_used = strlen(vals_buf);
-        if (vals_used < vals_cap - 1) strncat(vals_buf, val_frag, vals_cap - 1 - vals_used);
+        char *new_vals = sqlite3_mprintf("%s%s", vals_buf, val_frag);
+        if (!new_vals) {
+            sqlite3_free(val_frag);
+            sqlite3_free(cols_buf);
+            sqlite3_free(vals_buf);
+            return NULL;
+        }
+        sqlite3_free(vals_buf);
+        vals_buf = new_vals;
         sqlite3_free(val_frag);
 
         first = false;
