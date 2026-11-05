@@ -22,6 +22,10 @@ static const cwist_compress_backend *g_backends[CWIST_MAX_BACKENDS];
 static int g_backend_count = 0;
 static size_t g_compress_min_size = 0;
 
+typedef struct {
+    size_t min_body_size;
+} cwist_compress_config_t;
+
 /**
  * @brief Register a compression backend for use by the middleware.
  * @param backend Backend to append to the registry. Ignored if NULL or if the
@@ -627,6 +631,31 @@ static void remove_header(cwist_http_header_node **head, const char *key) {
     }
 }
 
+static bool vary_has_accept_encoding(const cwist_http_header_node *headers) {
+    for (const cwist_http_header_node *node = headers; node; node = node->next) {
+        if (!node->key || !node->value || strcasecmp(node->key->data, "Vary") != 0) continue;
+        const char *p = node->value->data;
+        while (*p) {
+            while (*p == ' ' || *p == '\t' || *p == ',') p++;
+            const char *end = p;
+            while (*end && *end != ',') end++;
+            const char *trim = end;
+            while (trim > p && (trim[-1] == ' ' || trim[-1] == '\t')) trim--;
+            if ((trim - p == 1 && *p == '*') ||
+                (trim - p == 15 && strncasecmp(p, "Accept-Encoding", 15) == 0))
+                return true;
+            p = *end ? end + 1 : end;
+        }
+    }
+    return false;
+}
+
+static void add_vary_accept_encoding(cwist_http_response *res) {
+    if (vary_has_accept_encoding(res->headers)) return;
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Vary", "Accept-Encoding");
+    cwist_error_dispose(&err);
+}
+
 /**
  * @brief Compression middleware handler.
  *
@@ -641,8 +670,8 @@ static void remove_header(cwist_http_header_node **head, const char *key) {
  * @param res Response produced by @p next; modified in place on success.
  * @param next Next handler in the chain.
  */
-static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_response *res,
-                                      cwist_handler_func next) {
+static void cwist_mw_compress_handler_core(cwist_http_request *req, cwist_http_response *res,
+                                           cwist_handler_func next, size_t min_body_size) {
     const char *accept = cwist_http_header_get(req->headers, "Accept-Encoding");
     const cwist_compress_backend *backend = select_backend(accept);
 
@@ -652,11 +681,14 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
      * be writing it on another thread right now (cwist_async_respond(), the
      * timeout job); leave it alone. */
     if (cwist_async_res_deferred(res)) return;
+    if (res->body && res->body->size >= min_body_size && res->body->size > 0 && !res->is_ptr_body &&
+        !res->use_file_stream && res->status_code >= 200 && res->status_code < 300)
+        add_vary_accept_encoding(res);
     if (!backend) return;
     if (!res->body || res->body->size == 0) return;
     if (res->is_ptr_body || res->use_file_stream) return;
     if (res->status_code < 200 || res->status_code >= 300) return;
-    if (res->body->size < g_compress_min_size) return;
+    if (res->body->size < min_body_size) return;
 
     void *state = NULL;
     if (backend->init(&state) != 0) return;
@@ -736,6 +768,17 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
     cwist_free(out_buf);
 }
 
+static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_response *res,
+                                      cwist_handler_func next) {
+    cwist_mw_compress_handler_core(req, res, next, g_compress_min_size);
+}
+
+static void cwist_mw_compress_handler_ex(cwist_http_request *req, cwist_http_response *res,
+                                         cwist_handler_func next, void *user_ctx) {
+    const cwist_compress_config_t *cfg = user_ctx;
+    cwist_mw_compress_handler_core(req, res, next, cfg ? cfg->min_body_size : 0);
+}
+
 /**
  * @brief Create the response compression middleware.
  * @param min_body_size Minimum body size, in bytes, for compression to apply.
@@ -744,4 +787,16 @@ static void cwist_mw_compress_handler(cwist_http_request *req, cwist_http_respon
 cwist_middleware_func cwist_mw_compress(size_t min_body_size) {
     g_compress_min_size = min_body_size;
     return cwist_mw_compress_handler;
+}
+
+/** Create compression middleware with an independent threshold per registration. */
+cwist_middleware_func_ex cwist_mw_compress_ex(size_t min_body_size, void **user_ctx,
+                                              cwist_middleware_ctx_destroy_func *destroy) {
+    if (!user_ctx || !destroy) return NULL;
+    cwist_compress_config_t *cfg = cwist_alloc(sizeof(*cfg));
+    if (!cfg) return NULL;
+    cfg->min_body_size = min_body_size;
+    *user_ctx = cfg;
+    *destroy = cwist_free;
+    return cwist_mw_compress_handler_ex;
 }
