@@ -275,6 +275,15 @@ Homebrew</h3>
 Platform support</h2>
 <p>CWIST builds on Linux, macOS, and BSD. On Linux the reactor uses <code>io_uring</code> (raw syscalls, no liburing) and falls back to epoll if ring setup fails; macOS and BSD use kqueue. The HTTP/3 server and native client use non-blocking UDP sockets on every platform, and ECN metadata is enabled only when the host exposes the required socket options. Reactor internals (one-shot polls vs completion-staged receives, <code>CWIST_RX_URING</code>, latency probes) are described in <a class="el" href="d2/dc2/md_docs_2http-reactor-fairness.html">docs/http-reactor-fairness.md</a> and <a class="el" href="d9/dfa/md_docs_2runtime-config.html">docs/runtime-config.md</a>.</p>
 <h2><a class="anchor" id="autotoc_md14"></a>
+Bare-metal STM32</h2>
+<p>CWIST also provides a socket-free Cortex-M path for firmware that uses <code><a class="el" href="d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> or the raw-lwIP adapter. The same routing, middleware, handlers, JSON helpers, and HTTP/1.1 parser are available without <code><a class="el" href="d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthreads, epoll, or the C1M reactor.</p>
+<ul>
+<li><b>Validated on STM32F769I-DISCO:</b> raw-lwIP HTTP, mbedTLS HTTPS, static connection pools, and streamed responses through bounded TX buffers.</li>
+<li><b>LCD and load demo:</b> <code>example/stm32f769-fortress/</code> exposes 288 real connection-pool slots on the 800x480 LCD and browser dashboard, with selectable responses up to 1 MiB.</li>
+<li><b>Reference integration:</b> NUCLEO-H743ZI2 and Cortex-M7 Thumb-2 builds for <code>arm-none-eabi-gcc</code>, with QEMU semihosting checks kept separate from physical-board validation.</li>
+</ul>
+<p>Build inputs and the lwIP/TLS integration are documented in <a class="el" href="de/d87/md_docs_2embedded_2stm32.html">docs/embedded/stm32.md</a>. Board-specific wiring, cache constraints, and flashing instructions live in the example READMEs.</p>
+<h2><a class="anchor" id="autotoc_md15"></a>
 The cwist CLI and hot reload</h2>
 <p><code>make install</code> also installs the <code>cwist</code> command line tool into <code>$(PREFIX)/bin</code>.</p>
 <div class="fragment"><div class="line"># Scaffold a project: src/main.c, Makefile, and a demo.cwpro manifest</div>
@@ -293,7 +302,7 @@ The cwist CLI and hot reload</h2>
 <div class="line"># Inspect the project manifest and detected routes</div>
 <div class="line">cwist describe</div>
 </div><!-- fragment --><p>The watcher rebuilds only the affected translation units and restarts the app only after a successful build, so the previous process keeps serving if a build fails. It wakes on <code>inotify</code> (Linux) or <code>kqueue</code> (BSD/macOS) with a polling fallback; <code>--no-run</code> rebuilds without running and <code>--poll</code> forces polling. The <code>.cwpro</code> manifest (<code>cwist-project/v1</code>) holds the entry point, include paths, debounce/stop timeouts and route discovery scope for the watcher and generators.</p>
-<h2><a class="anchor" id="autotoc_md15"></a>
+<h2><a class="anchor" id="autotoc_md16"></a>
 Linking</h2>
 <p><code>libcwist.a</code> is a <b>thin static archive</b>: it contains only CWIST objects. <code>make install</code> installs the vendored libraries under <code>$(PREFIX)/lib/cwist</code> and their headers under <code>$(PREFIX)/include/cwist/vendor</code>. pkg-config resolves all of it:</p>
 <div class="fragment"><div class="line">gcc -o server main.c $(pkg-config --cflags --libs cwist)</div>
@@ -305,7 +314,7 @@ Linking</h2>
 <div class="line">    -llsquic -lssl -lcrypto -lnats_static -lttak -lcjson -luriparser \</div>
 <div class="line">    -lz -lzstd -lbrotlienc -lbrotlicommon -ldl -lpthread -lm -lstdc++</div>
 </div><!-- fragment --><p><code>-lnghttp2</code> (HTTP/2) and <code>-lcurl</code> (RDBMS auto-mount probing) are optional. Brotli ships as <code>libbrotli-dev</code> on Debian/Ubuntu and <code>brotli-devel</code> on Fedora/RHEL; zstd as <code>libzstd-dev</code> / <code>libzstd-devel</code>. <code>DESTDIR</code> is supported for staged packages.</p>
-<h2><a class="anchor" id="autotoc_md16"></a>
+<h2><a class="anchor" id="autotoc_md17"></a>
 Configuration</h2>
 <p>CWIST reads <code>.env</code> files and prefixed environment variables:</p>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="db/dcb/structcwist__config.html">cwist_config</a> *cfg = <a class="code hl_function" href="db/d16/config_8h.html#a697a68cef7e438402320a481f0a2f59b">cwist_config_create</a>();</div>
@@ -342,14 +351,14 @@ Configuration</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_ASYNC_STRICT</code>   </td><td class="markdownTableBodyNone">unset   </td><td class="markdownTableBodyNone"><code>1</code> aborts on deferred-response misuse instead of warning once.   </td></tr>
 </table>
-<h2><a class="anchor" id="autotoc_md17"></a>
+<h2><a class="anchor" id="autotoc_md18"></a>
 Feature notes</h2>
 <p><b>PQC TLS.</b> <code>cwist_app_use_pqc_layer(app, true)</code> forces <code>X25519MLKEM768:X25519:P-256</code>, sets TLS 1.3 as the minimum and strips legacy ciphers. Application code never touches OpenSSL directly.</p>
 <p><b>WebTransport.</b> <code>cwist_app_use_webtransport(app, handler)</code> handles the CONNECT negotiation over HTTP/3 and exposes <code>cwist_webtransport_read/write/flush/close/open_bidi/open_uni</code>.</p>
 <p><b>Nuke DB.</b> <code>cwist_nuke_init("data.db", 5000)</code> loads an on-disk SQLite file into memory with <code>sqlite3_deserialize</code>, runs <code>PRAGMA integrity_check</code>, serves every query from RAM and syncs to disk on COMMIT. If bootstrap fails, it falls back to read-only disk protection mode.</p>
 <p><b>RDBMS auto-mount.</b> <code>cwist_app_auto_rdbms(app, 5432)</code> classifies the server by wire protocol (a PostgreSQL StartupMessage or a MySQL handshake packet) instead of guessing from the port number.</p>
 <p><b>libttak.</b> The in-tree allocator/reactor toolkit provides generational arenas, epoch-based reclamation, signal-safe detachable arenas for TLS and WebSocket buffers, and a lock-free job queue.</p>
-<h2><a class="anchor" id="autotoc_md18"></a>
+<h2><a class="anchor" id="autotoc_md19"></a>
 Latest benchmark run</h2>
 <p>CI regenerates this block from each benchmark run.</p>
 <p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
@@ -393,13 +402,13 @@ Latest benchmark run</h2>
 <p>Latency distribution (density curve reconstructed from each server's percentiles - shows the shape of the tail, not just its P99.999 number):</p>
 <p><img src="docs/webserver-latency-distribution.svg" alt="Web Server Latency Distribution" style="pointer-events: none;" class="inline"/></p>
 <p><em>Methodology, JVM options, and fairness settings: <a class="el" href="d6/d42/md_docs_2webserver-benchmark.html">docs/webserver-benchmark.md</a></em></p>
-<h2><a class="anchor" id="autotoc_md19"></a>
+<h2><a class="anchor" id="autotoc_md20"></a>
 Stability and conformance</h2>
 <ul>
 <li><b>Versioning</b>: v4 is the first LTS line. Draft-level features cycle through <code>dev</code> and may appear or disappear between tags; pin an exact tag in production. See <a class="el" href="d0/db4/md_docs_2versioning.html">docs/versioning.md</a>.</li>
 <li><b>Conformance gates</b>: ASan/UBSan with <code>-Werror</code> on every push, and an h2spec HTTP/2 diff against a pinned baseline; known gaps are tracked in <code>scripts/ci/h2spec-baseline.txt</code>.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md20"></a>
+<h2><a class="anchor" id="autotoc_md21"></a>
 Documentation</h2>
 <p>The full map is <a class="el" href="/home/runner/work/CWIST/CWIST/docs/README.md#md_docs_2README">docs/README.md</a>. In suggested reading order:</p>
 <ul>
@@ -408,14 +417,14 @@ Documentation</h2>
 <li><b><a class="el" href="d7/d15/md_docs_2API.html">API reference</a></b>: per-module docs under <code>docs/api/</code>, the <a class="el" href="d1/d7e/md_docs_2api-quickref.html">flat quick reference</a> and generated <a href="https://c4punks.github.io/CWIST/">Doxygen HTML</a>.</li>
 <li><b><a class="el" href="/home/runner/work/CWIST/CWIST/docs/decisions/README.md#md_docs_2decisions_2README">Decision records</a></b> and <b>ROADMAP.md</b>.</li>
 </ul>
-<h2><a class="anchor" id="autotoc_md21"></a>
+<h2><a class="anchor" id="autotoc_md22"></a>
 Examples</h2>
 <p>Runnable demos under <a href="example/">example/</a>: a <a href="example/simple-server">minimal server</a>, <a href="example/http">step-by-step HTTP</a>, <a href="example/db">SQLite</a> and <a href="example/db-crypt">encrypted-column DB</a>, <a href="example/jwt">JWT auth</a>, a <a href="example/othello-web">WebSocket Othello game</a>, <a href="example/webrtc">WebRTC</a>, <a href="example/webtransport">WebTransport</a>, the WASM hosts (<a href="example/wasm-service-worker">Service Worker</a>, <a href="example/wasip2-kv">wasip2</a>), <a href="example/rust-hello">Rust</a> and <a href="example/zig-hello">Zig</a> hello-worlds, and the <a href="example/rps-showcase">rps-showcase</a> throughput demo. The <a href="docs/README.md#4-runnable-examples">examples table</a> lists them all.</p>
 <p>Production deployments built on CWIST: <a href="https://oborona.zip">oborona.zip</a> (live daily engineering blog) and <a href="https://github.com/gg582/fly.board">fly.board</a>.</p>
-<h2><a class="anchor" id="autotoc_md22"></a>
+<h2><a class="anchor" id="autotoc_md23"></a>
 Community</h2>
 <p>The official CWIST Discord: <b><a href="https://discord.gg/6F8HDmNAPg">https://discord.gg/6F8HDmNAPg</a></b>. Questions, design discussion and contribution coordination happen there; see CONTRIBUTING.md to send a patch.</p>
-<h2><a class="anchor" id="autotoc_md23"></a>
+<h2><a class="anchor" id="autotoc_md24"></a>
 Third-party licenses</h2>
 <p>CWIST vendors its dependencies under <code>lib/</code>; each keeps its own license (summary in NOTICE.md, authoritative text in each submodule's license file):</p>
 <table class="markdownTable">
