@@ -1,5 +1,7 @@
 var NAVTREEINDEX6 =
 {
+"d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md686":[66,4],
+"d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md687":[66,5],
 "d4/d9a/lwip_8h.html":[94,0,1,0,4,6,0],
 "d4/d9a/lwip_8h.html#a0584908b78383b6bb11efbbc59c7aaa3":[94,0,1,0,4,6,0,17],
 "d4/d9a/lwip_8h.html#a0b1d8defd56ccefc4b1caf415abd4009":[94,0,1,0,4,6,0,6],
@@ -247,7 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d41/structcwist__lwip__config.html#a4965ed1bc498f6f1bfd2c983320a3de9":[93,0,55,0],
 "d5/d41/structcwist__lwip__config.html#a7e7897d93ac2dfac8a922d1e1ea93e9b":[93,0,55,8],
 "d5/d41/structcwist__lwip__config.html#aa818073aaeb05b89df4302abe2f9fadd":[93,0,55,6],
-"d5/d41/structcwist__lwip__config.html#ab098bfb40ee7c3abe6687e5f7ffdd13e":[93,0,55,2],
-"d5/d41/structcwist__lwip__config.html#ac941910eea6b66fe454bd5610297295b":[93,0,55,3],
-"d5/d41/structcwist__lwip__config.html#af67150cd1a35fb892c499674a261efc0":[93,0,55,4]
+"d5/d41/structcwist__lwip__config.html#ab098bfb40ee7c3abe6687e5f7ffdd13e":[93,0,55,2]
 };
