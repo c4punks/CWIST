@@ -21,6 +21,23 @@ for `v4`, `4.1` for `v4.1`).
 The source tarball is not built by this workflow; the maintainer uploads it
 and the Homebrew formula pins its checksum.
 
+## Release branch policy
+
+Stable version tags and GitHub releases are created only from `main`. `dev` is
+the integration branch and must never be the target of a stable release tag.
+Cherry-pick the intended fixes into `main`, wait for every required check to
+pass, and create the tag, release, and source tarball from the same `main`
+commit. Do not publish a stable release from `dev` or from an unmerged fix
+branch.
+
+## Platform coverage in release notes
+
+Release notes must describe relevant hosted and embedded platform support. For
+bare-metal coverage, link to `docs/embedded/stm32.md` and identify the validated
+STM32F769I-DISCO target, raw-lwIP HTTP, mbedTLS HTTPS, static connection pools,
+and streamed responses. Distinguish physical-board validation from QEMU and
+cross-build checks.
+
 ## Using a fat bundle
 
 A bundle unpacks to `cwist-<version>-fat-<target>/` with `lib/libcwist.a`
