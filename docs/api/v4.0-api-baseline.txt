@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (797) ==
+== functions (798) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -544,6 +544,7 @@ cwist_mux_router_destroy
 cwist_mux_serve
 cwist_mw_access_log
 cwist_mw_compress
+cwist_mw_compress_ex
 cwist_mw_cors
 cwist_mw_csrf
 cwist_mw_jwt_auth
@@ -803,7 +804,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (798) ==
+== function signatures (799) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1344,6 +1345,7 @@ cwist_mux_router_destroy: void (cwist_mux_router *)
 cwist_mux_serve: bool (cwist_mux_router *, cwist_http_request *, cwist_http_response *)
 cwist_mw_access_log: cwist_middleware_func (cwist_log_format_t)
 cwist_mw_compress: cwist_middleware_func (size_t)
+cwist_mw_compress_ex: cwist_middleware_func_ex (size_t, void **, cwist_middleware_ctx_destroy_func *)
 cwist_mw_cors: cwist_middleware_func (void)
 cwist_mw_csrf: cwist_middleware_func (cwist_app *)
 cwist_mw_jwt_auth: cwist_middleware_func (const char *)
