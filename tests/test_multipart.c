@@ -143,6 +143,38 @@ static void test_malformed_input_returns_null(void) {
     printf("  Passed.\n");
 }
 
+static void test_oversized_metadata_rejected(void) {
+    printf("Testing oversized metadata rejection...\n");
+    char name[257];
+    memset(name, 'n', 256);
+    name[256] = '\0';
+    char body[2048];
+    snprintf(body, sizeof(body),
+             "--" B "\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\nvalue\r\n--" B
+             "--\r\n",
+             name);
+    assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
+
+    snprintf(body, sizeof(body),
+             "--" B "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n\r\n"
+             "value\r\n--" B "--\r\n",
+             name);
+    assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
+
+    char value[1025];
+    memset(value, 'v', 1024);
+    value[1024] = '\0';
+    snprintf(body, sizeof(body),
+             "--" B "\r\nX-Long: %s\r\nContent-Disposition: form-data; name=\"ok\"\r\n\r\n"
+             "value\r\n--" B "--\r\n",
+             value);
+    assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
+
+    snprintf(body, sizeof(body), "--" B "\r\n%s: value\r\n\r\nvalue\r\n--" B "--\r\n", name);
+    assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
+    printf("  Passed.\n");
+}
+
 static void test_extract_boundary(void) {
     printf("Testing boundary extraction...\n");
     char *b = cwist_multipart_extract_boundary("multipart/form-data; boundary=" B);
@@ -160,6 +192,7 @@ int main(void) {
     test_empty_header_value_does_not_swallow_next_header();
     test_truncated_body_drops_partial_part();
     test_malformed_input_returns_null();
+    test_oversized_metadata_rejected();
     test_extract_boundary();
     printf("All multipart tests passed.\n");
     return 0;

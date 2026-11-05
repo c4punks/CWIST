@@ -93,6 +93,10 @@ cwist_middleware_func cwist_mw_jwt_auth(const char *secret);
  */
 cwist_middleware_func cwist_mw_compress(size_t min_body_size);
 
+/** Create compression middleware with an independent threshold per registration. */
+cwist_middleware_func_ex cwist_mw_compress_ex(size_t min_body_size, void **user_ctx,
+                                              cwist_middleware_ctx_destroy_func *destroy);
+
 /**
  * @brief Retrieve JWT claims stored by cwist_mw_jwt_auth from a request.
  *

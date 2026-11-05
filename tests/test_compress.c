@@ -120,9 +120,107 @@ static void test_brotli(void) {
     printf("Passed Brotli compression test.\n");
 }
 
+static void check_encoding(const char *accept, const char *expected) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    cwist_app_use(app, cwist_mw_compress(64));
+    cwist_app_get(app, "/", large_handler);
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(req->path, "/");
+    cwist_http_header_add(&req->headers, "Accept-Encoding", accept);
+    cwist_app_dispatch(app, req, res);
+    const char *encoding = cwist_http_header_get(res->headers, "Content-Encoding");
+    if (expected)
+        assert(encoding && strcmp(encoding, expected) == 0);
+    else
+        assert(encoding == NULL);
+    cwist_http_request_destroy(req);
+    cwist_http_response_destroy(res);
+    cwist_app_destroy(app);
+}
+
+static void test_accept_encoding_negotiation(void) {
+    printf("Testing Accept-Encoding negotiation...\n");
+    cwist_compress_register_backend(cwist_compress_backend_brotli());
+    cwist_compress_register_backend(cwist_compress_backend_gzip());
+    check_encoding("gzip;q=0", NULL);
+    check_encoding("xgzip", NULL);
+    check_encoding("*;q=0.5", "br");
+    check_encoding("br;q=0, *;q=1", "gzip");
+    check_encoding("br;q=0.1, gzip;q=0.9", "gzip");
+    check_encoding("gzip;q=0.9, br;q=0.1", "gzip");
+    check_encoding("gzip;q=0, br", "br");
+    cwist_compress_unregister_all();
+    printf("Passed Accept-Encoding negotiation tests.\n");
+}
+
+static cwist_http_response *dispatch_with_threshold(size_t threshold, const char *accept) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    void *ctx = NULL;
+    cwist_middleware_ctx_destroy_func destroy = NULL;
+    cwist_middleware_func_ex mw = cwist_mw_compress_ex(threshold, &ctx, &destroy);
+    assert(mw != NULL);
+    cwist_error_t err = cwist_app_use_ex(app, NULL, mw, ctx, destroy);
+    assert(cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+    cwist_app_get(app, "/", large_handler);
+
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(req->path, "/");
+    cwist_http_header_add(&req->headers, "Accept-Encoding", accept);
+    cwist_http_header_add(&res->headers, "Vary", "Origin");
+    cwist_app_dispatch(app, req, res);
+    cwist_http_request_destroy(req);
+    cwist_app_destroy(app);
+    return res;
+}
+
+static bool header_has_value(const cwist_http_header_node *headers, const char *key,
+                             const char *value) {
+    for (const cwist_http_header_node *node = headers; node; node = node->next) {
+        if (node->key && node->value && strcasecmp(node->key->data, key) == 0 &&
+            strstr(node->value->data, value))
+            return true;
+    }
+    return false;
+}
+
+static void test_vary_and_independent_thresholds(void) {
+    printf("Testing Vary and independent compression thresholds...\n");
+    assert(cwist_mw_compress_ex(0, NULL, NULL) == NULL);
+    cwist_compress_register_backend(cwist_compress_backend_gzip());
+
+    cwist_http_response *compressed = dispatch_with_threshold(64, "gzip");
+    const char *encoding = cwist_http_header_get(compressed->headers, "Content-Encoding");
+    assert(encoding && strcmp(encoding, "gzip") == 0);
+    assert(header_has_value(compressed->headers, "Vary", "Origin"));
+    assert(header_has_value(compressed->headers, "Vary", "Accept-Encoding"));
+    cwist_http_response_destroy(compressed);
+
+    cwist_http_response *identity = dispatch_with_threshold(4096, "gzip");
+    assert(cwist_http_header_get(identity->headers, "Content-Encoding") == NULL);
+    cwist_http_response_destroy(identity);
+
+    cwist_http_response *identity_variant = dispatch_with_threshold(64, "gzip;q=0");
+    assert(cwist_http_header_get(identity_variant->headers, "Content-Encoding") == NULL);
+    assert(header_has_value(identity_variant->headers, "Vary", "Origin"));
+    assert(header_has_value(identity_variant->headers, "Vary", "Accept-Encoding"));
+    cwist_http_response_destroy(identity_variant);
+
+    cwist_compress_unregister_all();
+    printf("Passed Vary and independent threshold tests.\n");
+}
+
 int main(void) {
     test_gzip();
     test_brotli();
+    test_accept_encoding_negotiation();
+    test_vary_and_independent_thresholds();
     printf("Passed compression middleware tests.\n");
     return 0;
 }

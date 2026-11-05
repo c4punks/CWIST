@@ -106,6 +106,10 @@ static int redis_open_socket(const char *host, int port) {
         freeaddrinfo(res);
         return -1;
     }
+#ifdef SO_NOSIGPIPE
+    int one = 1;
+    (void)setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+#endif
     if (connect(fd, res->ai_addr, res->ai_addrlen) != 0) {
         close(fd);
         freeaddrinfo(res);
@@ -115,25 +119,11 @@ static int redis_open_socket(const char *host, int port) {
     return fd;
 }
 
-// codeql[cpp/cleartext-transmission]
-/** Send a buffer fully over the socket, retrying on EINTR.
- * @return 0 if all bytes were sent, -1 on send error or disconnect. */
+static int redis_send_deadline(int fd, const char *buf, size_t len, uint64_t deadline);
+
+/** Send a complete frame through the shared SIGPIPE-safe writer. */
 static int redis_send_all(int fd, const char *buf, size_t len) {
-    size_t sent = 0;
-    while (sent < len) {
-        /* RESP speaks plaintext TCP by design (same as redis-cli without
-         * --tls). Credentials must be protected at the deployment layer:
-         * loopback/Unix sockets, private network, or a TLS-terminating proxy
-         * such as stunnel/spiped in front of Redis. */
-        ssize_t n = send(fd, buf + sent, len - sent, 0); // codeql[cpp/cleartext-transmission]
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            return -1;
-        }
-        if (n == 0) return -1;
-        sent += (size_t)n;
-    }
-    return 0;
+    return redis_send_deadline(fd, buf, len, UINT64_MAX);
 }
 
 /** Read one CRLF-terminated RESP line from the connection's buffered stream,
@@ -210,6 +200,7 @@ static uint64_t redis_now_ns(void) {
 /** Milliseconds left before @p deadline, rounded up and clamped to INT_MAX;
  * 0 once the deadline has passed. */
 static int redis_remaining_ms(uint64_t deadline) {
+    if (deadline == UINT64_MAX) return INT_MAX;
     uint64_t now = redis_now_ns();
     if (now >= deadline) return 0;
     uint64_t ms = (deadline - now + 999999u) / 1000000u;

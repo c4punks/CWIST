@@ -234,6 +234,26 @@ completion-staged receives, `CWIST_RX_URING`, latency probes) are described in
 [docs/http-reactor-fairness.md](docs/http-reactor-fairness.md) and
 [docs/runtime-config.md](docs/runtime-config.md).
 
+## Bare-metal STM32
+
+CWIST also provides a socket-free Cortex-M path for firmware that uses
+`cwist_app_dispatch_memory()` or the raw-lwIP adapter. The same routing,
+middleware, handlers, JSON helpers, and HTTP/1.1 parser are available without
+`cwist_app_listen()`, pthreads, epoll, or the C1M reactor.
+
+- **Validated on STM32F769I-DISCO:** raw-lwIP HTTP, mbedTLS HTTPS, static
+  connection pools, and streamed responses through bounded TX buffers.
+- **LCD and load demo:** `example/stm32f769-fortress/` exposes 288 real
+  connection-pool slots on the 800x480 LCD and browser dashboard, with
+  selectable responses up to 1 MiB.
+- **Reference integration:** NUCLEO-H743ZI2 and Cortex-M7 Thumb-2 builds for
+  `arm-none-eabi-gcc`, with QEMU semihosting checks kept separate from
+  physical-board validation.
+
+Build inputs and the lwIP/TLS integration are documented in
+[docs/embedded/stm32.md](docs/embedded/stm32.md). Board-specific wiring,
+cache constraints, and flashing instructions live in the example READMEs.
+
 ## The cwist CLI and hot reload
 
 `make install` also installs the `cwist` command line tool into `$(PREFIX)/bin`.

@@ -751,6 +751,21 @@ static const struct lsquic_stream_if h3c_stream_if = {
 /* I/O loop helper                                                    */
 /* ------------------------------------------------------------------ */
 
+static int h3c_timeout_to_poll_us(int timeout_ms) {
+    if (timeout_ms <= 0) return 1000;
+    if (timeout_ms >= 1000) return 1000000;
+    return timeout_ms * 1000;
+}
+
+static int h3c_retry_backoff_ms(int base_ms, unsigned int attempt) {
+    if (base_ms <= 0) return 0;
+    unsigned int shift = attempt - 1;
+    if (base_ms >= 30000 || shift >= 15) return 30000;
+    unsigned int factor = 1u << shift;
+    if ((unsigned int)base_ms > 30000u / factor) return 30000;
+    return (int)((unsigned int)base_ms * factor);
+}
+
 /**
  * @brief Run one iteration of the QUIC I/O loop.
  *
@@ -765,8 +780,7 @@ static const struct lsquic_stream_if h3c_stream_if = {
  */
 static void h3c_process_io(cwist_http3_client *client, int timeout_ms) {
     lsquic_engine_t *engine = client->engine;
-    int diff = timeout_ms * 1000; /* microseconds */
-    if (diff <= 0) diff = 1000;
+    int diff = h3c_timeout_to_poll_us(timeout_ms);
 
     if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
         if (diff <= 0)
@@ -1074,8 +1088,8 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
     /* ---------------------------------------------------------------- */
     /* Retry loop with exponential backoff                               */
     /* ---------------------------------------------------------------- */
-    int attempt = 0;
-    int max_attempts = 1 + client->max_retries;
+    unsigned int attempt = 0;
+    unsigned int max_attempts = (unsigned int)client->max_retries + 1u;
     while (attempt < max_attempts) {
         /* Ensure connection is healthy */
         if (client->conn) {
@@ -1243,8 +1257,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
     retry_backoff:
         attempt++;
         if (attempt < max_attempts && client->retry_delay_ms > 0) {
-            int backoff = client->retry_delay_ms * (1 << (attempt - 1));
-            if (backoff > 30000) backoff = 30000; /* cap at 30s */
+            int backoff = h3c_retry_backoff_ms(client->retry_delay_ms, attempt);
             usleep((useconds_t)backoff * 1000);
         }
     }

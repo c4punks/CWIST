@@ -92,7 +92,7 @@
 1	src/core/orm/orm_socket.c:if (rc != SQLITE_OK && errmsg) *errmsg = strdup(sqlite3_errmsg(db));
 1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
-9	src/net/db_sync/db_sync.c:free(blob);
+10	src/net/db_sync/db_sync.c:free(blob);
 1	src/net/db_sync/db_sync.c:unsigned char *blob = (unsigned char *)malloc(blob_len);
 2	src/net/graphql/graphql.c:free(printed);
 1	src/net/http/http3.c:char *tmp = realloc(st->body, new_cap);
@@ -196,6 +196,7 @@
 1	src/sys/app/compress.c:merged = (uint8_t *)malloc(total_in_len);
 1	src/sys/app/compress.c:uint8_t *encoded = (uint8_t *)malloc(encoded_size);
 2	src/sys/app/compress.c:z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
+1	src/sys/app/config.c:free(line);
 1	src/sys/metrics/metrics.c:char *buf = malloc(cap);
 1	src/sys/metrics/metrics.c:char *nb = realloc(buf, new_cap);
 3	src/sys/metrics/metrics.c:free(buf);

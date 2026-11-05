@@ -494,6 +494,10 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     char *payload_b64 = session_base64_encode((const uint8_t *)raw, strlen(raw));
     free(raw);
     if (!payload_b64) return -1;
+    if (strlen(payload_b64) > 8192) {
+        cwist_free(payload_b64);
+        return -1;
+    }
 
     uint8_t sig[32];
     if (!session_hmac_sha256(session->app->session_secret, strlen(session->app->session_secret),
@@ -507,8 +511,14 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
         return -1;
     }
 
-    char cookie_value[16384];
-    snprintf(cookie_value, sizeof(cookie_value), "%s.%s", payload_b64, sig_b64);
+    size_t cookie_len = strlen(payload_b64) + strlen(sig_b64) + 1;
+    char *cookie_value = cwist_alloc(cookie_len + 1);
+    if (!cookie_value) {
+        cwist_free(payload_b64);
+        cwist_free(sig_b64);
+        return -1;
+    }
+    snprintf(cookie_value, cookie_len + 1, "%s.%s", payload_b64, sig_b64);
     cwist_free(payload_b64);
     cwist_free(sig_b64);
 
@@ -520,6 +530,7 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     opts.same_site = "Lax";
 
     int rc = cwist_cookie_set(res, session->app->session_name, cookie_value, &opts);
+    cwist_free(cookie_value);
     return rc;
 }
 

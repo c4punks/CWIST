@@ -1355,6 +1355,7 @@ TEST_TARGETS = test_worker_affinity \
                test_protobuf \
                test_core_utils \
                test_template \
+               test_config \
                test_simd_parser \
                test_orm \
                test_app_resource_limits \
@@ -1462,6 +1463,7 @@ TEST_TARGETS = test_worker_affinity \
                test_waf \
                test_db_pool \
                test_db_memory \
+               test_db_sync \
                test_sqlite_fts5 \
                test_redis \
                test_scheduler \
@@ -1676,6 +1678,10 @@ test_core_utils: $(LIB_NAME) tests/test_core_utils.c
 test_template: $(LIB_NAME) tests/test_template.c
 	$(CC) $(CFLAGS) -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
 	./test_template
+
+test_config: $(LIB_NAME) tests/test_config.c
+	$(CC) $(CFLAGS) -o test_config tests/test_config.c $(LIB_NAME) $(LIBS)
+	./test_config
 
 test_simd_parser: $(LIB_NAME) tests/test_simd_parser.c
 	$(CC) $(CFLAGS) -o test_simd_parser tests/test_simd_parser.c $(LIB_NAME) $(LIBS)
@@ -2439,9 +2445,13 @@ test_db_pool: $(LIB_NAME) tests/test_db_pool.c
 test_db_memory: $(LIB_NAME) tests/test_db_memory.c
 	$(CC) $(CFLAGS) -o test_db_memory tests/test_db_memory.c $(LIB_NAME) $(LIBS)
 	./test_db_memory
+
+test_db_sync: $(LIB_NAME) tests/test_db_sync.c
+	$(CC) $(CFLAGS) -o test_db_sync tests/test_db_sync.c $(LIB_NAME) $(LIBS)
+	./test_db_sync
 else
 # CWIST_DB=0: the module and its tests are compiled out.
-test_db_pool test_db_memory:
+test_db_pool test_db_memory test_db_sync:
 	@echo "CWIST_DB=0: skipping $@"
 endif
 
@@ -2573,12 +2583,13 @@ test_grpc_route_alloc: $(LIB_NAME) tests/test_grpc_route_alloc.c
 	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_route_alloc tests/test_grpc_route_alloc.c $(LIB_NAME) $(LIBS)
 	./test_grpc_route_alloc
 
+test_grpc_health_alloc: CFLAGS += -fno-lto
 test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
-	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
 	./test_grpc_health_alloc
 
 test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
-	$(CC) $(CFLAGS) -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
 	./test_grpc_stream
 
 test_grpc_client: $(LIB_NAME) tests/test_grpc_client.c

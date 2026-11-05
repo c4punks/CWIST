@@ -3103,7 +3103,8 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                                                    cwist_http_request *req,
                                                    uint32_t priority_weight) {
     // --- Big Dumb Reply (Read) ---
-    if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
+    if (app->bdr_ctx && req->method == CWIST_HTTP_GET &&
+        (!req->query || req->query->size == 0)) {
         size_t cached_len = 0;
         bdr_blob_t *bdr_pin = NULL;
         const void *cached_blob;
@@ -3248,7 +3249,8 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
              * path-keyed cache cannot see (e.g. fragment vs full page), so
              * replaying it for another request would be wrong. */
             bool varies = cwist_http_header_get(res->headers, "Vary") != NULL;
-            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies) {
+            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies &&
+                (!req->query || req->query->size == 0)) {
                 if (endpoint_fixed) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
@@ -3574,7 +3576,7 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
                     if (path_end) {
                         char path_tmp[256];
                         size_t plen = (size_t)(path_end - path_start);
-                        if (plen < sizeof(path_tmp)) {
+                        if (plen < sizeof(path_tmp) && !memchr(path_start, '?', plen)) {
                             memcpy(path_tmp, path_start, plen);
                             path_tmp[plen] = '\0';
                             size_t cached_len = 0;

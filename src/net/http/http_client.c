@@ -397,12 +397,22 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
     cwist_http_header_node *node = headers;
     while (node) {
         if (node->key && node->key->data && node->value && node->value->data) {
-            char header_line[4096];
-            int n = snprintf(header_line, sizeof(header_line), "%s: %s", node->key->data,
-                             node->value->data);
-            if (n > 0 && (size_t)n < sizeof(header_line)) {
-                curl_headers = curl_slist_append(curl_headers, header_line);
+            int needed = snprintf(NULL, 0, "%s: %s", node->key->data, node->value->data);
+            char *header_line = needed >= 0 ? cwist_alloc((size_t)needed + 1) : NULL;
+            if (!header_line) {
+                curl_slist_free_all(curl_headers);
+                err.error.err_i16 = -1;
+                return err;
             }
+            snprintf(header_line, (size_t)needed + 1, "%s: %s", node->key->data, node->value->data);
+            struct curl_slist *appended = curl_slist_append(curl_headers, header_line);
+            cwist_free(header_line);
+            if (!appended) {
+                curl_slist_free_all(curl_headers);
+                err.error.err_i16 = -1;
+                return err;
+            }
+            curl_headers = appended;
         }
         node = node->next;
     }
