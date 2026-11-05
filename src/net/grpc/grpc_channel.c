@@ -737,6 +737,26 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char 
 
 /* --- name resolution (doc/naming.md) --- */
 
+/** @brief Parse a complete decimal port substring.
+ *
+ * Rejects empty strings, non-digits, arithmetic overflow, and values outside
+ * the TCP port range, so "8080junk" is not accepted as 8080.
+ *
+ * @retval 0 valid port stored in @p port
+ * @retval -1 malformed or out-of-range
+ */
+static int channel_parse_port(const char *s, size_t len, uint16_t *port) {
+    if (!len || len > 5) return -1;
+    unsigned long value = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (s[i] < '0' || s[i] > '9') return -1;
+        value = value * 10 + (unsigned long)(s[i] - '0');
+    }
+    if (value == 0 || value > 65535) return -1;
+    *port = (uint16_t)value;
+    return 0;
+}
+
 /** @brief Split "host[:port]" or "[v6][:port]" into host and port.
  *
  * A bare multi-colon name is an IPv6 literal without a port.  The default
@@ -761,9 +781,7 @@ static int channel_split_host_port(const char *s, size_t len, char *host, size_t
         size_t used = (size_t)(close - s) + 1;
         if (used < len) {
             if (close[1] != ':' || used + 1 == len) return -1;
-            long p = strtol(close + 2, NULL, 10);
-            if (p <= 0 || p > 65535) return -1;
-            *port = (uint16_t)p;
+            if (channel_parse_port(close + 2, len - used - 1, port) != 0) return -1;
         }
         return 0;
     }
@@ -781,11 +799,9 @@ static int channel_split_host_port(const char *s, size_t len, char *host, size_t
     if (last_colon) {
         size_t hlen = (size_t)(last_colon - s);
         if (!hlen || hlen >= host_cap) return -1;
-        long p = strtol(last_colon + 1, NULL, 10);
-        if (p <= 0 || p > 65535) return -1;
+        if (channel_parse_port(last_colon + 1, len - hlen - 1, port) != 0) return -1;
         memcpy(host, s, hlen);
         host[hlen] = '\0';
-        *port = (uint16_t)p;
         return 0;
     }
     if (len >= host_cap) return -1;
