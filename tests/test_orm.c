@@ -11,10 +11,14 @@
 #include <cjson/cJSON.h>
 #include <assert.h>
 #include <math.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 static int rc(cwist_error_t e) {
     return e.error.err_i16;
@@ -371,6 +375,27 @@ static void test_query_typed(void) {
     cwist_orm_close_socket(orm);
 }
 
+static void test_closed_peer_does_not_raise_sigpipe(void) {
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    close(fds[1]);
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        signal(SIGPIPE, SIG_DFL);
+        cwist_orm_t *orm = cwist_orm_open_socket(fds[0]);
+        if (!orm) _exit(2);
+        cwist_error_t err = cwist_orm_exec(orm, "SELECT 1;");
+        int failed = rc(err) != 0;
+        cwist_orm_close_socket(orm);
+        _exit(failed ? 0 : 1);
+    }
+    close(fds[0]);
+    int status = 0;
+    assert(waitpid(pid, &status, 0) == pid);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+}
+
 int main(void) {
     test_query_and_transactions();
     test_insert_returning();
@@ -379,6 +404,7 @@ int main(void) {
     test_exact_i64();
     test_query_typed();
     test_dialects();
+    test_closed_peer_does_not_raise_sigpipe();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");
     return 0;

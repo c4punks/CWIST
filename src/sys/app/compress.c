@@ -526,48 +526,79 @@ const cwist_compress_backend *cwist_compress_backend_zstd(void) {
 }
 /* --- Middleware helpers --- */
 
-/**
- * @brief Case-insensitive substring search.
- * @param haystack String to search in.
- * @param needle Substring to find.
- * @return Non-zero if @p needle occurs in @p haystack, ignoring ASCII case;
- *         an empty needle matches. Returns 0 if either argument is NULL.
- */
-static int str_contains_ci(const char *haystack, const char *needle) {
-    if (!haystack || !needle) return 0;
-    size_t hlen = strlen(haystack);
-    size_t nlen = strlen(needle);
-    if (nlen == 0) return 1;
-    if (hlen < nlen) return 0;
-    for (size_t i = 0; i <= hlen - nlen; ++i) {
-        size_t j = 0;
-        for (; j < nlen; ++j) {
-            char a = haystack[i + j];
-            char b = needle[j];
-            if (a >= 'A' && a <= 'Z') a = a - 'A' + 'a';
-            if (b >= 'A' && b <= 'Z') b = b - 'A' + 'a';
-            if (a != b) break;
-        }
-        if (j == nlen) return 1;
+static int coding_equal(const char *a, const char *b, size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        char ca = a[i], cb = b[i];
+        if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+        if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+        if (ca != cb) return 0;
     }
-    return 0;
+    return 1;
 }
 
-/**
- * @brief Select the first registered backend whose encoding name appears in
- * the Accept-Encoding header value (case-insensitive).
- * @param accept_encoding Value of the Accept-Encoding header (may be NULL).
- * @return Matching backend, or NULL if none matches or the header is absent.
+static double parse_encoding_quality(const char *params, const char *end) {
+    const char *p = params;
+    while (p < end) {
+        while (p < end && (*p == ';' || *p == ' ' || *p == '\t')) p++;
+        const char *param_end = p;
+        while (param_end < end && *param_end != ';') param_end++;
+        const char *eq = memchr(p, '=', (size_t)(param_end - p));
+        if (eq && eq - p == 1 && (p[0] == 'q' || p[0] == 'Q')) {
+            const char *value = eq + 1;
+            while (value < param_end && (*value == ' ' || *value == '\t')) value++;
+            while (param_end > value && (param_end[-1] == ' ' || param_end[-1] == '\t'))
+                param_end--;
+            char buf[16];
+            size_t len = (size_t)(param_end - value);
+            if (len == 0 || len >= sizeof(buf)) return 0.0;
+            memcpy(buf, value, len);
+            buf[len] = '\0';
+            char *parsed = NULL;
+            double quality = strtod(buf, &parsed);
+            return parsed != buf && parsed && *parsed == '\0' && quality >= 0.0 && quality <= 1.0
+                       ? quality
+                       : 0.0;
+        }
+        p = param_end;
+    }
+    return 1.0;
+}
+
+static double encoding_quality(const char *accept, const char *coding) {
+    size_t coding_len = strlen(coding);
+    double wildcard_quality = -1.0;
+    const char *p = accept;
+    while (*p) {
+        const char *end = strchr(p, ',');
+        if (!end) end = p + strlen(p);
+        while (p < end && (*p == ' ' || *p == '\t')) p++;
+        const char *token_end = p;
+        while (token_end < end && *token_end != ';' && *token_end != ' ' && *token_end != '\t')
+            token_end++;
+        size_t token_len = (size_t)(token_end - p);
+        if (token_len == coding_len && coding_equal(p, coding, coding_len))
+            return parse_encoding_quality(token_end, end);
+        if (token_len == 1 && *p == '*' && wildcard_quality < 0.0)
+            wildcard_quality = parse_encoding_quality(token_end, end);
+        p = *end ? end + 1 : end;
+    }
+    return wildcard_quality > 0.0 ? wildcard_quality : 0.0;
+}
+
+/** Select the acceptable backend with the highest quality, preserving registration order on ties.
  */
 static const cwist_compress_backend *select_backend(const char *accept_encoding) {
     if (!accept_encoding) return NULL;
-    /* Prefer gzip, then deflate */
+    const cwist_compress_backend *best = NULL;
+    double best_quality = 0.0;
     for (int i = 0; i < g_backend_count; ++i) {
-        if (str_contains_ci(accept_encoding, g_backends[i]->encoding_name)) {
-            return g_backends[i];
+        double quality = encoding_quality(accept_encoding, g_backends[i]->encoding_name);
+        if (quality > best_quality) {
+            best = g_backends[i];
+            best_quality = quality;
         }
     }
-    return NULL;
+    return best;
 }
 
 /**

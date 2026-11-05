@@ -1463,6 +1463,7 @@ TEST_TARGETS = test_worker_affinity \
                test_waf \
                test_db_pool \
                test_db_memory \
+               test_db_sync \
                test_sqlite_fts5 \
                test_redis \
                test_scheduler \
@@ -2444,9 +2445,13 @@ test_db_pool: $(LIB_NAME) tests/test_db_pool.c
 test_db_memory: $(LIB_NAME) tests/test_db_memory.c
 	$(CC) $(CFLAGS) -o test_db_memory tests/test_db_memory.c $(LIB_NAME) $(LIBS)
 	./test_db_memory
+
+test_db_sync: $(LIB_NAME) tests/test_db_sync.c
+	$(CC) $(CFLAGS) -o test_db_sync tests/test_db_sync.c $(LIB_NAME) $(LIBS)
+	./test_db_sync
 else
 # CWIST_DB=0: the module and its tests are compiled out.
-test_db_pool test_db_memory:
+test_db_pool test_db_memory test_db_sync:
 	@echo "CWIST_DB=0: skipping $@"
 endif
 

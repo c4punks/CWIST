@@ -30,14 +30,17 @@ static int migrate_ensure_table(sqlite3 *db) {
 }
 
 /**
- * @brief Execute a migration SQL blob inside an explicit transaction.
+ * @brief Execute a migration and its history update inside one transaction.
  * @param db SQLite connection to mutate.
  * @param sql SQL text for the up/down migration step.
  * @param version Migration version being applied.
+ * @param name Migration name recorded for up migrations.
+ * @param up Non-zero inserts history; zero deletes it.
  * @param direction Human-readable direction label used in logs.
  * @return CWIST_MIGRATE_OK on success, or a migration SQL error code on failure.
  */
-static int migrate_exec_sql(sqlite3 *db, const char *sql, int version, const char *direction) {
+static int migrate_exec_sql(sqlite3 *db, const char *sql, int version, const char *name, int up,
+                            const char *direction) {
     char *errmsg = NULL;
     int rc = sqlite3_exec(db, "BEGIN;", NULL, NULL, &errmsg);
     if (rc != SQLITE_OK) {
@@ -52,6 +55,22 @@ static int migrate_exec_sql(sqlite3 *db, const char *sql, int version, const cha
         fprintf(stderr, "[migrate] SQL failed (v%d %s): %s\n", version, direction,
                 errmsg ? errmsg : "?");
         sqlite3_free(errmsg);
+        sqlite3_exec(db, "ROLLBACK;", NULL, NULL, NULL);
+        return CWIST_MIGRATE_ERR_SQL;
+    }
+
+    const char *history_sql = up ? "INSERT INTO _cwist_migrations (version, name) VALUES (?, ?);"
+                                 : "DELETE FROM _cwist_migrations WHERE version = ?;";
+    sqlite3_stmt *history = NULL;
+    rc = sqlite3_prepare_v2(db, history_sql, -1, &history, NULL);
+    if (rc == SQLITE_OK) rc = sqlite3_bind_int(history, 1, version);
+    if (rc == SQLITE_OK && up)
+        rc = sqlite3_bind_text(history, 2, name ? name : "", -1, SQLITE_STATIC);
+    if (rc == SQLITE_OK && sqlite3_step(history) != SQLITE_DONE) rc = sqlite3_errcode(db);
+    sqlite3_finalize(history);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "[migrate] history update failed (v%d %s): %s\n", version, direction,
+                sqlite3_errmsg(db));
         sqlite3_exec(db, "ROLLBACK;", NULL, NULL, NULL);
         return CWIST_MIGRATE_ERR_SQL;
     }
@@ -139,23 +158,10 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
         if (sorted[i].version <= current) continue;
         if (!sorted[i].up_sql) continue;
 
-        int rc = migrate_exec_sql(db, sorted[i].up_sql, sorted[i].version, "up");
+        int rc = migrate_exec_sql(db, sorted[i].up_sql, sorted[i].version, sorted[i].name, 1, "up");
         if (rc != CWIST_MIGRATE_OK) {
             free(sorted);
             return rc;
-        }
-
-        /* Record in history. */
-        {
-            sqlite3_stmt *ins = NULL;
-            if (sqlite3_prepare_v2(db,
-                                   "INSERT INTO _cwist_migrations (version, name) VALUES (?, ?);",
-                                   -1, &ins, NULL) == SQLITE_OK) {
-                sqlite3_bind_int(ins, 1, sorted[i].version);
-                sqlite3_bind_text(ins, 2, sorted[i].name ? sorted[i].name : "", -1, SQLITE_STATIC);
-                sqlite3_step(ins);
-                sqlite3_finalize(ins);
-            }
         }
     }
 
@@ -207,21 +213,10 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
          * not re-apply up_sql against a database that already carries it. */
         if (!sorted[i].down_sql) continue;
 
-        int rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, "down");
+        int rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, NULL, 0, "down");
         if (rc != CWIST_MIGRATE_OK) {
             free(sorted);
             return rc;
-        }
-
-        /* Remove from history. */
-        {
-            sqlite3_stmt *del = NULL;
-            if (sqlite3_prepare_v2(db, "DELETE FROM _cwist_migrations WHERE version = ?;", -1, &del,
-                                   NULL) == SQLITE_OK) {
-                sqlite3_bind_int(del, 1, sorted[i].version);
-                sqlite3_step(del);
-                sqlite3_finalize(del);
-            }
         }
 
         rolled++;

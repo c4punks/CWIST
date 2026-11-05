@@ -177,6 +177,62 @@ static int run_suite(cwist_job_queue_t *(*create)(void *ctx, const char *name,
     return 0;
 }
 
+static long long redis_pending_count(cwist_redis_t *conn, const char *name) {
+    char stream[128];
+    snprintf(stream, sizeof(stream), "cwist:jq:%s:s", name);
+    const void *argv[] = {"XPENDING", stream, "cwist-jq"};
+    size_t lens[] = {8, strlen(stream), 8};
+    cwist_redis_reply_t *reply = NULL;
+    cwist_error_t err = cwist_redis_command_argv_reply(conn, 3, argv, lens, &reply);
+    long long count = -1;
+    if (cwist_error_is_ok(&err) && reply && reply->type == '*' && reply->elements > 0 &&
+        reply->element[0] && reply->element[0]->type == ':')
+        count = reply->element[0]->integer;
+    cwist_redis_reply_free(reply);
+    return count;
+}
+
+static int t_redis_dead_letter_publish_failure(cwist_redis_t *conn) {
+    char name[96];
+    make_name(name, sizeof(name), "redis-dl-error");
+    cwist_job_queue_t *q = cwist_job_queue_create_redis(
+        conn,
+        &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = 100, .max_retries = 1});
+    CHECK(q != NULL, "queue for dead-letter failure test was not created");
+
+    char dead_key[128];
+    snprintf(dead_key, sizeof(dead_key), "cwist:jq:%s:dead", name);
+    cwist_error_t err = cwist_redis_set(conn, dead_key, "not-a-list");
+    CHECK(err.error.err_i16 == 0, "failed to prepare invalid dead-letter key");
+    err = cwist_job_queue_enqueue(q, "recoverable", 11, "poison");
+    CHECK(err.error.err_i16 == 0, "enqueue for dead-letter failure test failed");
+    cwist_job_t *job = NULL;
+    err = cwist_job_queue_claim(q, 5000, &job);
+    CHECK(err.error.err_i16 == 0 && job, "initial claim for dead-letter failure test failed");
+    cwist_job_destroy(job);
+    sleep_ms(200);
+
+    err = cwist_job_queue_claim(q, 300, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "failed dead-letter write unexpectedly returned a job");
+    long long pending = redis_pending_count(conn, name);
+    fprintf(stderr, "[durable_queue] pending after failed dead-letter write: %lld\n", pending);
+    CHECK(pending == 1, "failed dead-letter write acknowledged the original job");
+
+    err = cwist_redis_del(conn, dead_key);
+    CHECK(err.error.err_i16 == 0, "failed to restore dead-letter key");
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "restored dead-letter write did not retire the job");
+    CHECK(redis_pending_count(conn, name) == 0,
+          "successful dead-letter write left the original pending");
+    uint64_t dead = 0;
+    err = cwist_job_queue_dead_count(q, &dead);
+    CHECK(err.error.err_i16 == 0 && dead == 1, "successful dead-letter write was not stored");
+    cwist_job_queue_destroy(q);
+    return 0;
+}
+
 /* --- Backend factories -------------------------------------------------- */
 
 typedef struct {
@@ -240,6 +296,10 @@ int main(void) {
         } else {
             printf("[durable_queue] Redis backend tests passed.\n");
             redis_ran = 1;
+            if (t_redis_dead_letter_publish_failure(conn) != 0) {
+                fprintf(stderr, "[durable_queue] Redis dead-letter failure test failed.\n");
+                rc = 1;
+            }
         }
         cwist_redis_close(conn);
     }
