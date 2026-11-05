@@ -100,9 +100,12 @@ void cwist_cookie_parse(cwist_query_map *map, const char *header) {
             }
 
             if (nlen > 0) {
-                char decoded[4096];
-                if (cwist_cookie_decode(value, decoded, sizeof(decoded)) >= 0) {
-                    cwist_query_map_set(map, name, decoded);
+                char *decoded = cwist_alloc(strlen(value) + 1);
+                if (decoded) {
+                    if (cwist_cookie_decode(value, decoded, strlen(value) + 1) >= 0) {
+                        cwist_query_map_set(map, name, decoded);
+                    }
+                    cwist_free(decoded);
                 }
             }
         }
@@ -114,6 +117,17 @@ void cwist_cookie_parse(cwist_query_map *map, const char *header) {
 const char *cwist_cookie_get(cwist_query_map *map, const char *name) {
     if (!map || !name) return NULL;
     return cwist_query_map_get(map, name);
+}
+
+static int cookie_append(cwist_sstring *cookie, const char *text) {
+    cwist_error_t err = cwist_sstring_append(cookie, text);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok ? 0 : -1;
+}
+
+static int cookie_append_attr(cwist_sstring *cookie, const char *prefix, const char *value) {
+    return cookie_append(cookie, prefix) == 0 ? cookie_append(cookie, value) : -1;
 }
 
 int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value,
@@ -129,37 +143,24 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
         return -1;
     }
 
-    char buf[4096];
-    snprintf(buf, sizeof(buf), "%s=%s", name, encoded);
-    cwist_sstring_append(cookie, buf);
+    bool ok = cookie_append(cookie, name) == 0 && cookie_append(cookie, "=") == 0 &&
+              cookie_append(cookie, encoded) == 0;
     cwist_free(encoded);
 
-    if (opts) {
-        if (opts->path) {
-            snprintf(buf, sizeof(buf), "; Path=%s", opts->path);
-            cwist_sstring_append(cookie, buf);
-        }
-        if (opts->domain) {
-            snprintf(buf, sizeof(buf), "; Domain=%s", opts->domain);
-            cwist_sstring_append(cookie, buf);
-        }
-        if (opts->max_age_seconds >= 0) {
+    if (ok && opts) {
+        if (opts->path) ok = cookie_append_attr(cookie, "; Path=", opts->path) == 0;
+        if (ok && opts->domain) ok = cookie_append_attr(cookie, "; Domain=", opts->domain) == 0;
+        if (ok && opts->max_age_seconds >= 0) {
+            char buf[64];
             snprintf(buf, sizeof(buf), "; Max-Age=%d", opts->max_age_seconds);
-            cwist_sstring_append(cookie, buf);
+            ok = cookie_append(cookie, buf) == 0;
         }
-        if (opts->http_only) {
-            cwist_sstring_append(cookie, "; HttpOnly");
-        }
-        if (opts->secure) {
-            cwist_sstring_append(cookie, "; Secure");
-        }
-        if (opts->same_site) {
-            snprintf(buf, sizeof(buf), "; SameSite=%s", opts->same_site);
-            cwist_sstring_append(cookie, buf);
-        }
+        if (ok && opts->http_only) ok = cookie_append(cookie, "; HttpOnly") == 0;
+        if (ok && opts->secure) ok = cookie_append(cookie, "; Secure") == 0;
+        if (ok && opts->same_site) ok = cookie_append_attr(cookie, "; SameSite=", opts->same_site) == 0;
     }
 
-    int rc = add_set_cookie(res, cookie->data);
+    int rc = ok ? add_set_cookie(res, cookie->data) : -1;
     cwist_sstring_destroy(cookie);
     return rc;
 }
@@ -170,10 +171,8 @@ int cwist_cookie_delete(cwist_http_response *res, const char *name) {
     cwist_sstring *cookie = cwist_sstring_create();
     if (!cookie) return -1;
 
-    char buf[256];
-    snprintf(buf, sizeof(buf), "%s=; Path=/; Max-Age=0", name);
-    cwist_sstring_append(cookie, buf);
-    int rc = add_set_cookie(res, cookie->data);
+    bool ok = cookie_append(cookie, name) == 0 && cookie_append(cookie, "=; Path=/; Max-Age=0") == 0;
+    int rc = ok ? add_set_cookie(res, cookie->data) : -1;
     cwist_sstring_destroy(cookie);
     return rc;
 }
