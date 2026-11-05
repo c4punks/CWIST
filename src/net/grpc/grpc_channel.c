@@ -747,6 +747,14 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char 
  * @retval 0 parsed
  * @retval -1 malformed name or host buffer too small
  */
+static int channel_parse_port(const char *s, uint16_t *port) {
+    char *end = NULL;
+    long value = strtol(s, &end, 10);
+    if (end == s || *end != '\0' || value <= 0 || value > 65535) return -1;
+    *port = (uint16_t)value;
+    return 0;
+}
+
 static int channel_split_host_port(const char *s, size_t len, char *host, size_t host_cap,
                                    uint16_t *port) {
     *port = 443;
@@ -761,9 +769,7 @@ static int channel_split_host_port(const char *s, size_t len, char *host, size_t
         size_t used = (size_t)(close - s) + 1;
         if (used < len) {
             if (close[1] != ':' || used + 1 == len) return -1;
-            long p = strtol(close + 2, NULL, 10);
-            if (p <= 0 || p > 65535) return -1;
-            *port = (uint16_t)p;
+            if (channel_parse_port(close + 2, port) != 0) return -1;
         }
         return 0;
     }
@@ -781,11 +787,9 @@ static int channel_split_host_port(const char *s, size_t len, char *host, size_t
     if (last_colon) {
         size_t hlen = (size_t)(last_colon - s);
         if (!hlen || hlen >= host_cap) return -1;
-        long p = strtol(last_colon + 1, NULL, 10);
-        if (p <= 0 || p > 65535) return -1;
+        if (channel_parse_port(last_colon + 1, port) != 0) return -1;
         memcpy(host, s, hlen);
         host[hlen] = '\0';
-        *port = (uint16_t)p;
         return 0;
     }
     if (len >= host_cap) return -1;
