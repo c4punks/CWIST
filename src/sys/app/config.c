@@ -4,6 +4,8 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/config.h>
 #include <cwist/core/mem/alloc.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -123,8 +125,10 @@ int cwist_config_get_int(cwist_config *cfg, const char *key, int default_val) {
     const char *val = cwist_config_get(cfg, key);
     if (!val) return default_val;
     char *endptr;
+    errno = 0;
     long l = strtol(val, &endptr, 10);
-    if (endptr == val || *endptr != '\0') return default_val;
+    if (endptr == val || *endptr != '\0' || errno == ERANGE) return default_val;
+    if (l < INT_MIN || l > INT_MAX) return default_val;
     return (int)l;
 }
 
