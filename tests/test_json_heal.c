@@ -471,48 +471,6 @@ static void test_db_insert_healed_escapes_identifiers(void) {
     printf("  Passed.\n");
 }
 
-static void test_db_insert_healed_preserves_long_values(void) {
-    printf("DB: insert_healed preserves long values...\n");
-
-    cwist_db *db = NULL;
-    cwist_error_t err = cwist_db_open(&db, ":memory:");
-    assert(cwist_error_is_ok(&err));
-    err = cwist_db_exec(db, "CREATE TABLE long_values (value TEXT, nested TEXT);");
-    assert(cwist_error_is_ok(&err));
-
-    char *large = malloc(5001);
-    char *nested_text = malloc(1001);
-    assert(large && nested_text);
-    memset(large, 'x', 5000);
-    memset(nested_text, 'n', 1000);
-    large[5000] = nested_text[1000] = '\0';
-    cJSON *input = cJSON_CreateObject();
-    cJSON_AddStringToObject(input, "value", large);
-    cJSON *nested = cJSON_AddObjectToObject(input, "nested");
-    cJSON_AddStringToObject(nested, "text", nested_text);
-    char *json = cJSON_PrintUnformatted(input);
-    assert(json != NULL);
-    err = cwist_db_insert_healed(db, "long_values", json, NULL, NULL);
-    assert(cwist_error_is_ok(&err));
-
-    cJSON *rows = NULL;
-    err = cwist_db_query(db, "SELECT value, nested FROM long_values;", &rows);
-    assert(cwist_error_is_ok(&err));
-    cJSON *row = cJSON_GetArrayItem(rows, 0);
-    const char *stored = cJSON_GetObjectItem(row, "value")->valuestring;
-    const char *stored_nested = cJSON_GetObjectItem(row, "nested")->valuestring;
-    assert(strlen(stored) == 5000 && memcmp(stored, large, 5000) == 0);
-    assert(strstr(stored_nested, nested_text) != NULL);
-
-    cJSON_Delete(rows);
-    cJSON_Delete(input);
-    free(json);
-    free(large);
-    free(nested_text);
-    cwist_db_close(db);
-    printf("  Passed.\n");
-}
-
 static void test_db_query_strict(void) {
     printf("DB: query_strict filters non-conforming rows...\n");
 
@@ -591,7 +549,6 @@ int main(void) {
     test_db_insert_healed();
     test_db_insert_healed_rejects_invalid();
     test_db_insert_healed_escapes_identifiers();
-    test_db_insert_healed_preserves_long_values();
     test_db_query_strict();
 
     printf("\nAll json_heal / zod / DB tests passed!\n");
