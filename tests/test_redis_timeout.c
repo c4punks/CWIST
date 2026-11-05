@@ -746,6 +746,29 @@ static void test_sigpipe_contained(void) {
     server_stop(s);
 }
 
+static void test_legacy_sigpipe_contained(void) {
+    fake_server *s = server_start();
+    cwist_redis_t *legacy = cwist_redis_connect("127.0.0.1", s->port);
+    CHECK(legacy != NULL);
+    size_t big_len = (size_t)16 * 1024 * 1024;
+    char *big = malloc(big_len);
+    memset(big, 'p', big_len);
+    const void *argv[] = {"ECHO", big};
+    size_t lens[] = {4, big_len};
+    char *out = NULL;
+    size_t out_len = 0;
+
+    atomic_store(&s->mode, MODE_RST_ON_READ);
+    (void)cwist_redis_command_argv(legacy, 2, argv, lens, &out, &out_len);
+    atomic_store(&s->mode, MODE_NORMAL);
+    CHECK(out == NULL);
+    fprintf(stderr, "  legacy reset mid-write: process alive\n");
+    cwist_free(out);
+    free(big);
+    cwist_redis_close(legacy);
+    server_stop(s);
+}
+
 static void test_pool_saturation(void) {
     fake_server *s = server_start();
     cwist_redis_pool_t *p = cwist_redis_pool_create("127.0.0.1", s->port, 1);
@@ -1080,6 +1103,7 @@ int main(int argc, char **argv) {
     RUN(test_trickle_deadline);
     RUN(test_write_deadline);
     RUN(test_sigpipe_contained);
+    RUN(test_legacy_sigpipe_contained);
     RUN(test_pool_saturation);
     RUN(test_no_wake_pipe_deadline);
     RUN(test_reconnect_cached_peer);

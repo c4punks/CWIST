@@ -437,6 +437,40 @@ static void test_db_insert_healed_rejects_invalid(void) {
     printf("  Passed.\n");
 }
 
+static void test_db_insert_healed_escapes_identifiers(void) {
+    printf("DB: insert_healed escapes quoted identifiers...\n");
+
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+    err = cwist_db_exec(db, "CREATE TABLE users (x TEXT); CREATE TABLE audit (msg TEXT);");
+    assert(cwist_error_is_ok(&err));
+
+    const char *malicious =
+        "{\"x\\\") VALUES ('pwned'); INSERT INTO audit VALUES ('injected'); --\":\"ignored\"}";
+    err = cwist_db_insert_healed(db, "users", malicious, NULL, NULL);
+    assert(!cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+    err = cwist_db_insert_healed(db, "users\"); INSERT INTO audit VALUES ('table-injected'); --",
+                                 "{\"x\":\"safe\"}", NULL, NULL);
+    assert(!cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+
+    cJSON *rows = NULL;
+    err = cwist_db_query(db, "SELECT count(*) AS n FROM audit;", &rows);
+    assert(cwist_error_is_ok(&err));
+    assert(strcmp(cJSON_GetObjectItem(cJSON_GetArrayItem(rows, 0), "n")->valuestring, "0") == 0);
+    cJSON_Delete(rows);
+
+    err = cwist_db_exec(db, "CREATE TABLE quoted (\"odd\"\"name\" TEXT);");
+    assert(cwist_error_is_ok(&err));
+    err = cwist_db_insert_healed(db, "quoted", "{\"odd\\\"name\":\"ok\"}", NULL, NULL);
+    assert(cwist_error_is_ok(&err));
+
+    cwist_db_close(db);
+    printf("  Passed.\n");
+}
+
 static void test_db_query_strict(void) {
     printf("DB: query_strict filters non-conforming rows...\n");
 
@@ -514,6 +548,7 @@ int main(void) {
     printf("\n=== DB Integration ===\n");
     test_db_insert_healed();
     test_db_insert_healed_rejects_invalid();
+    test_db_insert_healed_escapes_identifiers();
     test_db_query_strict();
 
     printf("\nAll json_heal / zod / DB tests passed!\n");

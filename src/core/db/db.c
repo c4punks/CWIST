@@ -445,11 +445,16 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
     bool first = true;
     while (child) {
         /* Column name – double-quoted for safety */
-        char col_frag[128];
-        snprintf(col_frag, sizeof(col_frag), first ? "\"%s\"" : ",\"%s\"", child->string);
+        char *col_frag = sqlite3_mprintf(first ? "\"%w\"" : ",\"%w\"", child->string);
+        if (!col_frag) {
+            sqlite3_free(cols_buf);
+            sqlite3_free(vals_buf);
+            return NULL;
+        }
         size_t cols_cap = (size_t)(count * 64 + 16);
         size_t cols_used = strlen(cols_buf);
         if (cols_used < cols_cap - 1) strncat(cols_buf, col_frag, cols_cap - 1 - cols_used);
+        sqlite3_free(col_frag);
 
         /* Value */
         char *val_frag = NULL;
@@ -486,7 +491,7 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
         child = child->next;
     }
 
-    char *sql = sqlite3_mprintf("INSERT INTO \"%s\" (%s) VALUES (%s);", table, cols_buf, vals_buf);
+    char *sql = sqlite3_mprintf("INSERT INTO \"%w\" (%s) VALUES (%s);", table, cols_buf, vals_buf);
     sqlite3_free(cols_buf);
     sqlite3_free(vals_buf);
     return sql;

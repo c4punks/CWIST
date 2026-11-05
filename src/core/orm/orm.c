@@ -23,6 +23,10 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
 /* ------------------------------------------------------------------------- */
 /* Internal ORM handle                                                       */
 /* ------------------------------------------------------------------------- */
@@ -66,7 +70,8 @@ static int orm_send_all(int fd, const void *buf, size_t n) {
     size_t total = 0;
     const char *p = (const char *)buf;
     while (total < n) {
-        ssize_t w = send(fd, p + total, n - total, 0);
+        ssize_t w = send(fd, p + total, n - total, MSG_NOSIGNAL);
+        if (w < 0 && errno == EINTR) continue;
         if (w <= 0) return -1;
         total += (size_t)w;
     }
@@ -144,6 +149,10 @@ static int orm_parse_status(const char *payload) {
  */
 cwist_orm_t *cwist_orm_open_socket(int socket_fd) {
     if (socket_fd < 0) return NULL;
+#ifdef SO_NOSIGPIPE
+    int one = 1;
+    (void)setsockopt(socket_fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+#endif
     cwist_orm_t *orm = (cwist_orm_t *)calloc(1, sizeof(*orm));
     if (!orm) return NULL;
     orm->sock_fd = socket_fd;

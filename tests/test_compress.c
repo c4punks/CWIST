@@ -120,9 +120,46 @@ static void test_brotli(void) {
     printf("Passed Brotli compression test.\n");
 }
 
+static void check_encoding(const char *accept, const char *expected) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    cwist_app_use(app, cwist_mw_compress(64));
+    cwist_app_get(app, "/", large_handler);
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(req->path, "/");
+    cwist_http_header_add(&req->headers, "Accept-Encoding", accept);
+    cwist_app_dispatch(app, req, res);
+    const char *encoding = cwist_http_header_get(res->headers, "Content-Encoding");
+    if (expected)
+        assert(encoding && strcmp(encoding, expected) == 0);
+    else
+        assert(encoding == NULL);
+    cwist_http_request_destroy(req);
+    cwist_http_response_destroy(res);
+    cwist_app_destroy(app);
+}
+
+static void test_accept_encoding_negotiation(void) {
+    printf("Testing Accept-Encoding negotiation...\n");
+    cwist_compress_register_backend(cwist_compress_backend_brotli());
+    cwist_compress_register_backend(cwist_compress_backend_gzip());
+    check_encoding("gzip;q=0", NULL);
+    check_encoding("xgzip", NULL);
+    check_encoding("*;q=0.5", "br");
+    check_encoding("br;q=0, *;q=1", "gzip");
+    check_encoding("br;q=0.1, gzip;q=0.9", "gzip");
+    check_encoding("gzip;q=0.9, br;q=0.1", "gzip");
+    check_encoding("gzip;q=0, br", "br");
+    cwist_compress_unregister_all();
+    printf("Passed Accept-Encoding negotiation tests.\n");
+}
+
 int main(void) {
     test_gzip();
     test_brotli();
+    test_accept_encoding_negotiation();
     printf("Passed compression middleware tests.\n");
     return 0;
 }

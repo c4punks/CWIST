@@ -75,6 +75,19 @@ static void redirect_handler(cwist_http_request *req, cwist_http_response *res) 
     cwist_sstring_assign(res->body, REDIRECT_BODY);
 }
 
+static void query_handler(cwist_http_request *req, cwist_http_response *res) {
+    struct timespec delay = {0, 15000000L};
+    nanosleep(&delay, NULL);
+    res->status_code = CWIST_HTTP_OK;
+    cwist_sstring_assign(res->body, req->query && req->query->data ? req->query->data : "");
+}
+
+static void large_header_handler(cwist_http_request *req, cwist_http_response *res) {
+    const char *value = cwist_http_header_get(req->headers, "X-Large-Header");
+    res->status_code = CWIST_HTTP_OK;
+    cwist_sstring_assign(res->body, value ? value : "missing");
+}
+
 static void run_server(int port) {
 #if defined(__linux__)
     /* Never outlive the test process, even if it aborts before cleanup. */
@@ -87,6 +100,8 @@ static void run_server(int port) {
     cwist_app_get(app, "/hello", hello_handler);
     cwist_app_post(app, "/echo", echo_handler);
     cwist_app_get(app, "/redirect", redirect_handler);
+    cwist_app_get(app, "/query", query_handler);
+    cwist_app_get(app, "/large-header", large_header_handler);
     g_cwist_drain_timeout_sec = 1;
     int rc = cwist_app_listen(app, port);
     cwist_app_destroy(app);
@@ -288,6 +303,58 @@ static void test_redirect_not_followed(cwist_http_client *client, const char *ba
     report(before, "redirect following disabled");
 }
 
+static void test_bdr_query_isolation(cwist_http_client *client, const char *base) {
+    int before = g_failures;
+    char url[128];
+    for (int i = 0; i < 2; i++) {
+        snprintf(url, sizeof(url), "%s/query?user=alice", base);
+        cwist_http_response *res = request(client, url, CWIST_HTTP_GET, NULL, 0);
+        if (res) {
+            CHECK(body_equals(res, "user=alice", strlen("user=alice")),
+                  "BDR query: first response was not cached correctly");
+            cwist_http_response_destroy(res);
+        }
+    }
+    snprintf(url, sizeof(url), "%s/query?user=bob", base);
+    cwist_http_response *res = request(client, url, CWIST_HTTP_GET, NULL, 0);
+    if (res) {
+        CHECK(body_equals(res, "user=bob", strlen("user=bob")),
+              "BDR query: response for alice leaked into bob's request");
+        cwist_http_response_destroy(res);
+    }
+    report(before, "BDR isolates query-string responses");
+}
+
+static void test_large_request_header(cwist_http_client *client, const char *base) {
+    int before = g_failures;
+    char url[128];
+    snprintf(url, sizeof(url), "%s/large-header", base);
+    size_t len = 5000;
+    char *value = malloc(len + 1);
+    CHECK(value != NULL, "large header allocation failed");
+    if (!value) return;
+    for (size_t i = 0; i < len; i++) value[i] = (char)('a' + i % 26);
+    value[len] = '\0';
+    cwist_http_header_node *headers = NULL;
+    cwist_error_t header_err = cwist_http_header_add(&headers, "X-Large-Header", value);
+    CHECK(cwist_error_is_ok(&header_err), "large header could not be created");
+    cwist_error_dispose(&header_err);
+
+    cwist_http_response *res = NULL;
+    cwist_error_t err =
+        cwist_http_client_request(client, url, CWIST_HTTP_GET, headers, NULL, 0, &res);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    CHECK(ok, "large request header failed the transfer");
+    if (res) {
+        CHECK(body_equals(res, value, len), "large request header was truncated or dropped");
+        cwist_http_response_destroy(res);
+    }
+    cwist_http_header_free_all(headers);
+    free(value);
+    report(before, "large request header arrives intact");
+}
+
 static void test_closed_port(cwist_http_client *client) {
     int before = g_failures;
     int port = pick_free_port();
@@ -360,6 +427,8 @@ int main(void) {
         test_post(client, base);
         test_redirect_followed(client, base);
         test_redirect_not_followed(client, base);
+        test_bdr_query_isolation(client, base);
+        test_large_request_header(client, base);
     }
 
     g_failures += stop_server(pid);
