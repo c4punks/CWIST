@@ -1,5 +1,9 @@
 var NAVTREEINDEX17 =
 {
+"dc/df5/structcwist__grpc__stream.html#a1ab1ae970309d49c816761ecf3ff8348":[93,0,33,3],
+"dc/df5/structcwist__grpc__stream.html#a2ec2a7d307538e2e7f89f17d4ba8c2e1":[93,0,33,10],
+"dc/df5/structcwist__grpc__stream.html#a3637b576d5d6a56e5eac90b944ffeccf":[93,0,33,0],
+"dc/df5/structcwist__grpc__stream.html#a58f1cce0ad2a9061b679e711b917cf6c":[93,0,33,6],
 "dc/df5/structcwist__grpc__stream.html#a6c135867501af98b2a4af10b67a19909":[93,0,33,11],
 "dc/df5/structcwist__grpc__stream.html#a6c596915aeab39ed2a99f9253673be26":[93,0,33,2],
 "dc/df5/structcwist__grpc__stream.html#a7283ee6376ed92db6b77eba349bb89ee":[93,0,33,9],
@@ -245,9 +249,5 @@ var NAVTREEINDEX17 =
 "dd/d49/mux_8c_source.html":[94,0,2,2,3,22],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html":[84],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md821":[84,0],
-"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md822":[84,1],
-"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md823":[84,2],
-"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md824":[84,3],
-"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md825":[84,4],
-"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md826":[84,5]
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md822":[84,1]
 };

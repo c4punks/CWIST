@@ -463,53 +463,6 @@ Version 2 wire format produced by cwist_db_crypt_seal()</h1>
 
 </div>
 </div>
-<a id="abd48d57a1d6b66cf87f0a080d1409e3b" name="abd48d57a1d6b66cf87f0a080d1409e3b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abd48d57a1d6b66cf87f0a080d1409e3b">&#9670;&#160;</a></span>cwist_db_crypt_open_legacy()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">unsigned</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> * cwist_db_crypt_open_legacy </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dc/d2b/structcwist__db__crypt__ctx__t.html">cwist_db_crypt_ctx_t</a> *&#160;</td>
-          <td class="paramname"><em>ctx</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">unsigned</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
-          <td class="paramname"><em>blob</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
-          <td class="paramname"><em>blob_len</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> *&#160;</td>
-          <td class="paramname"><em>out_len</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Explicitly decrypt an unauthenticated legacy v1 blob for migration. </p>
-<p>This compatibility path provides no ciphertext integrity. Validate the result and reseal it with <a class="el" href="../../d9/df9/db__crypt_8h.html#a143dd0293baa2219458fd4f1092763c8" title="Encrypt an SQLite database blob.">cwist_db_crypt_seal()</a> before further use. </p>
-
-<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00221">221</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00046">CWIST_DB_CRYPT_HDR_LEN</a>.</p>
-
-</div>
-</div>
 <a id="a143dd0293baa2219458fd4f1092763c8" name="a143dd0293baa2219458fd4f1092763c8"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a143dd0293baa2219458fd4f1092763c8">&#9670;&#160;</a></span>cwist_db_crypt_seal()</h2>
 
