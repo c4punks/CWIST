@@ -155,7 +155,7 @@ Integration with cwist_app</h1>
 <div class="line"> </div>
 <div class="line"><a class="code hl_function" href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef">cwist_app_ws</a>(app, <span class="stringliteral">&quot;/chat&quot;</span>, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">my_ws_handler</a>);</div>
 <div class="ttc" id="asys_2app_2app_8h_html_ae4d097319d239ddd750eebffd027ccef"><div class="ttname"><a href="../../d0/d77/sys_2app_2app_8h.html#ae4d097319d239ddd750eebffd027ccef">cwist_app_ws</a></div><div class="ttdeci">void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handler)</div><div class="ttdoc">Register a WebSocket upgrade endpoint with default options.</div><div class="ttdef"><b>Definition</b> <a href="../../df/d7f/app_8c_source.html#l02317">app.c:2317</a></div></div>
-</div><!-- fragment --><h1><a class="anchor" id="autotoc_md236"></a>
+</div><!-- fragment --><h1><a class="anchor" id="autotoc_md237"></a>
 Async (C1M) WebSocket API</h1>
 <p><em>Header:</em> <code>&lt;<a class="el" href="../../d6/dad/websocket__async_8h.html" title="Reactor-driven, callback-shaped non-blocking WebSocket API (C1M mode).">cwist/net/websocket/websocket_async.h</a>&gt;</code></p>
 <p>In C1M mode (<code>CWIST_C1M_MODE=1</code>) the reactor watches sockets and delivers each complete message through a callback instead of blocking in <code>cwist_websocket_receive</code>. Use <code>cwist_app_ws_async</code> to register a route on this path.</p>
