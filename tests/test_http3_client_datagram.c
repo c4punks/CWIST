@@ -1,9 +1,17 @@
 #include "../src/net/http/http3_client.c"
 
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 
 int main(void) {
+    assert(h3c_timeout_to_poll_us(-1) == 1000);
+    assert(h3c_timeout_to_poll_us(0) == 1000);
+    assert(h3c_timeout_to_poll_us(1) == 1000);
+    assert(h3c_timeout_to_poll_us(999) == 999000);
+    assert(h3c_timeout_to_poll_us(1000) == 1000000);
+    assert(h3c_timeout_to_poll_us(INT_MAX) == 1000000);
+
     cwist_http3_client client;
     memset(&client, 0, sizeof(client));
     pthread_mutex_init(&client.dgram_mtx, NULL);
