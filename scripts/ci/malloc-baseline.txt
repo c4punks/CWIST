@@ -92,7 +92,7 @@
 1	src/core/orm/orm_socket.c:if (rc != SQLITE_OK && errmsg) *errmsg = strdup(sqlite3_errmsg(db));
 1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
-9	src/net/db_sync/db_sync.c:free(blob);
+10	src/net/db_sync/db_sync.c:free(blob);
 1	src/net/db_sync/db_sync.c:unsigned char *blob = (unsigned char *)malloc(blob_len);
 2	src/net/graphql/graphql.c:free(printed);
 1	src/net/http/http3.c:char *tmp = realloc(st->body, new_cap);

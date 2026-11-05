@@ -26,8 +26,6 @@ cwist_bdr_put_revalidatable
 cwist_calloc_shim
 cwist_create_owner
 cwist_db_pool_destroy
-cwist_db_sync_pull
-cwist_db_sync_serve
 cwist_free_shim
 cwist_gc
 cwist_gc_auto_rotate
@@ -128,7 +126,6 @@ cwist_reactor_mod
 cwist_realloc_shim
 cwist_redis_auth
 cwist_redis_command
-cwist_redis_command_argv_reply
 cwist_redis_expire
 cwist_redis_pool_publish
 cwist_redis_pool_setex
