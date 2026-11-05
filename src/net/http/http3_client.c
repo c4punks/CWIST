@@ -757,15 +757,6 @@ static int h3c_timeout_to_poll_us(int timeout_ms) {
     return timeout_ms * 1000;
 }
 
-static int h3c_retry_backoff_ms(int base_ms, unsigned int attempt) {
-    if (base_ms <= 0) return 0;
-    unsigned int shift = attempt - 1;
-    if (base_ms >= 30000 || shift >= 15) return 30000;
-    unsigned int factor = 1u << shift;
-    if ((unsigned int)base_ms > 30000u / factor) return 30000;
-    return (int)((unsigned int)base_ms * factor);
-}
-
 /**
  * @brief Run one iteration of the QUIC I/O loop.
  *

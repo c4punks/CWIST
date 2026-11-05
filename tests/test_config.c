@@ -60,8 +60,30 @@ int main(void) {
     cwist_config_set(cfg, "int.empty", "");
     assert(cwist_config_get_int(cfg, "int.empty", 7) == 7);
 
+    char long_path[256];
+    assert(snprintf(long_path, sizeof(long_path), "%s/long.properties", directory) > 0);
+    file = fopen(long_path, "wb");
+    assert(file != NULL);
+    assert(fputs("exact=", file) >= 0);
+    const size_t exact_value_len = 1023 - strlen("exact=");
+    for (size_t i = 0; i < exact_value_len; i++) assert(fputc('x', file) != EOF);
+    assert(fputs("\nlong=", file) >= 0);
+    for (size_t i = 0; i < 2048; i++) assert(fputc('y', file) != EOF);
+    assert(fputs("\nafter=loaded\n", file) >= 0);
+    assert(fclose(file) == 0);
+
+    cwist_config_load_file(cfg, long_path);
+    const char *exact_value = cwist_config_get(cfg, "exact");
+    assert(exact_value != NULL && strlen(exact_value) == exact_value_len);
+    for (size_t i = 0; i < exact_value_len; i++) assert(exact_value[i] == 'x');
+    const char *long_value = cwist_config_get(cfg, "long");
+    assert(long_value != NULL && strlen(long_value) == 2048);
+    for (size_t i = 0; i < 2048; i++) assert(long_value[i] == 'y');
+    assert(strcmp(cwist_config_get(cfg, "after"), "loaded") == 0);
+
     cwist_config_destroy(cfg);
     assert(unlink(path) == 0);
+    assert(unlink(long_path) == 0);
     assert(rmdir(directory) == 0);
     puts("test_config: all passed");
     return 0;
