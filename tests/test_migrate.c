@@ -153,6 +153,48 @@ static void test_migrate_down_steps_skip_irreversible(void) {
     printf("  Passed.\n");
 }
 
+static void test_migrate_history_failure_rolls_back(void) {
+    printf("Testing migration history failures roll back schema changes...\n");
+
+    sqlite3 *db = NULL;
+    assert(sqlite3_open(":memory:", &db) == SQLITE_OK);
+    assert(cwist_migrate_version(db) == 0);
+    assert(sqlite3_exec(db,
+                        "CREATE TRIGGER reject_history_insert BEFORE INSERT ON _cwist_migrations "
+                        "BEGIN SELECT RAISE(FAIL, 'history unavailable'); END;",
+                        NULL, NULL, NULL) == SQLITE_OK);
+
+    const cwist_migration_t migration = {
+        1, "create_items", "CREATE TABLE items (id INTEGER PRIMARY KEY);", "DROP TABLE items;"};
+    assert(cwist_migrate_up(db, &migration, 1) == CWIST_MIGRATE_ERR_SQL);
+    assert(cwist_migrate_version(db) == 0);
+    sqlite3_stmt *stmt = NULL;
+    assert(sqlite3_prepare_v2(db, "SELECT count(*) FROM sqlite_master WHERE name='items';", -1,
+                              &stmt, NULL) == SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) == 0);
+    sqlite3_finalize(stmt);
+
+    assert(sqlite3_exec(db, "DROP TRIGGER reject_history_insert;", NULL, NULL, NULL) == SQLITE_OK);
+    assert(cwist_migrate_up(db, &migration, 1) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_version(db) == 1);
+    assert(sqlite3_exec(db,
+                        "CREATE TRIGGER reject_history_delete BEFORE DELETE ON _cwist_migrations "
+                        "BEGIN SELECT RAISE(FAIL, 'history unavailable'); END;",
+                        NULL, NULL, NULL) == SQLITE_OK);
+    assert(cwist_migrate_down(db, &migration, 1, 1) == CWIST_MIGRATE_ERR_SQL);
+    assert(cwist_migrate_version(db) == 1);
+    assert(sqlite3_prepare_v2(db, "SELECT count(*) FROM sqlite_master WHERE name='items';", -1,
+                              &stmt, NULL) == SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) == 1);
+    sqlite3_finalize(stmt);
+
+    assert(sqlite3_exec(db, "DROP TRIGGER reject_history_delete;", NULL, NULL, NULL) == SQLITE_OK);
+    assert(cwist_migrate_down(db, &migration, 1, 1) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_version(db) == 0);
+    sqlite3_close(db);
+    printf("  Passed.\n");
+}
+
 /* -------------------------------------------------------------------------
  * db_crypt tests
  * ---------------------------------------------------------------------- */
@@ -246,6 +288,7 @@ int main(void) {
     test_migrate_down_one();
     test_migrate_down_all();
     test_migrate_down_steps_skip_irreversible();
+    test_migrate_history_failure_rolls_back();
 
     printf("=== DB Crypt tests ===\n");
     test_db_crypt_roundtrip();

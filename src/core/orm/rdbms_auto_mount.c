@@ -16,6 +16,19 @@
 #include <cwist/core/log.h>
 #include <cwist/core/mem/alloc.h>
 
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
+static void rdbms_no_sigpipe(int sock) {
+#ifdef SO_NOSIGPIPE
+    int one = 1;
+    (void)setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+#else
+    (void)sock;
+#endif
+}
+
 /**
  * @brief Send a minimal PostgreSQL StartupMessage and check for 'R' response.
  *
@@ -40,7 +53,7 @@ static bool probe_postgresql(int sock) {
     /* trailing null already present from memset */
 
     size_t total = 8 + payload;
-    if (send(sock, startup, total, 0) != (ssize_t)total) return false;
+    if (send(sock, startup, total, MSG_NOSIGNAL) != (ssize_t)total) return false;
 
     char resp = 0;
     ssize_t n = recv(sock, &resp, 1, 0);
@@ -87,6 +100,7 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
         return CWIST_RDBMS_NONE;
     }
 
+    rdbms_no_sigpipe(sock);
     struct timeval tv;
     tv.tv_sec = 2;
     tv.tv_usec = 0;
@@ -118,6 +132,7 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
         close(sock);
         sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock < 0) return CWIST_RDBMS_NONE;
+        rdbms_no_sigpipe(sock);
         setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
         setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
