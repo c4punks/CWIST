@@ -347,9 +347,11 @@ Functions</h2></td></tr>
 <tr class="memitem:a49bd9e920c1ec6ff450b7225b544ff40" id="r_a49bd9e920c1ec6ff450b7225b544ff40"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d30/sys_2app_2middleware_8h.html#a49bd9e920c1ec6ff450b7225b544ff40">cwist_mw_jwt_auth</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">secret</a>)</td></tr>
 <tr class="memdesc:a49bd9e920c1ec6ff450b7225b544ff40"><td class="mdescLeft">&#160;</td><td class="mdescRight">JWT authentication middleware factory.  <br /></td></tr>
 <tr class="separator:a49bd9e920c1ec6ff450b7225b544ff40"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abf34e6f515162b89d169d928fd34327c" id="r_abf34e6f515162b89d169d928fd34327c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d30/sys_2app_2middleware_8h.html#abf34e6f515162b89d169d928fd34327c">cwist_mw_compress</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">min_body_size</a>)</td></tr>
+<tr class="memitem:abf34e6f515162b89d169d928fd34327c" id="r_abf34e6f515162b89d169d928fd34327c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d30/sys_2app_2middleware_8h.html#abf34e6f515162b89d169d928fd34327c">cwist_mw_compress</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> min_body_size)</td></tr>
 <tr class="memdesc:abf34e6f515162b89d169d928fd34327c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Response compression middleware factory.  <br /></td></tr>
 <tr class="separator:abf34e6f515162b89d169d928fd34327c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad84e9b022c5051eca665934002c75e8a" id="r_ad84e9b022c5051eca665934002c75e8a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a59a567fc98735ff0bdff462250277826">cwist_middleware_func_ex</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d30/sys_2app_2middleware_8h.html#ad84e9b022c5051eca665934002c75e8a">cwist_mw_compress_ex</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> min_body_size, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> **user_ctx, <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a71352283afe9113948a031a4e6fc5852">cwist_middleware_ctx_destroy_func</a> *destroy)</td></tr>
+<tr class="separator:ad84e9b022c5051eca665934002c75e8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e08ffed838908a792a6b7f431cdca4e" id="r_a4e08ffed838908a792a6b7f431cdca4e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> cwist_jwt_claims *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d30/sys_2app_2middleware_8h.html#a4e08ffed838908a792a6b7f431cdca4e">cwist_mw_jwt_get_claims</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req)</td></tr>
 <tr class="memdesc:a4e08ffed838908a792a6b7f431cdca4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieve JWT claims stored by cwist_mw_jwt_auth from a request.  <br /></td></tr>
 <tr class="separator:a4e08ffed838908a792a6b7f431cdca4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -454,7 +456,44 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware handler that compresses eligible responses. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00713">713</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00787">787</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+
+</div>
+</div>
+<a id="ad84e9b022c5051eca665934002c75e8a" name="ad84e9b022c5051eca665934002c75e8a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad84e9b022c5051eca665934002c75e8a">&#9670;&#160;</a></span>cwist_mw_compress_ex()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a59a567fc98735ff0bdff462250277826">cwist_middleware_func_ex</a> cwist_mw_compress_ex </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
+          <td class="paramname"><em>min_body_size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> **&#160;</td>
+          <td class="paramname"><em>user_ctx</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a71352283afe9113948a031a4e6fc5852">cwist_middleware_ctx_destroy_func</a> *&#160;</td>
+          <td class="paramname"><em>destroy</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Create compression middleware with an independent threshold per registration. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00793">793</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
 </div>
 </div>
@@ -651,7 +690,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/otel_8c_source.html#l00272">272</a> of file <a class="el" href="../../d3/db2/otel_8c_source.html">otel.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00054">batch</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00121">cwist_otel_cfg_t::batch_size</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00117">cwist_otel_cfg_t::endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00052">endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00032">OTEL_DEFAULT_BATCH</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00029">OTEL_DEFAULT_ENDPOINT</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00031">OTEL_DEFAULT_QUEUE</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00030">OTEL_DEFAULT_SERVICE</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00120">cwist_otel_cfg_t::queue_cap</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00119">cwist_otel_cfg_t::service_name</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00054">batch</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00125">cwist_otel_cfg_t::batch_size</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00121">cwist_otel_cfg_t::endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00052">endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00032">OTEL_DEFAULT_BATCH</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00029">OTEL_DEFAULT_ENDPOINT</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00031">OTEL_DEFAULT_QUEUE</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00030">OTEL_DEFAULT_SERVICE</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00124">cwist_otel_cfg_t::queue_cap</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00123">cwist_otel_cfg_t::service_name</a>.</p>
 
 </div>
 </div>

@@ -1,6 +1,7 @@
 var orm_8c =
 [
     [ "_GNU_SOURCE", "d8/d03/orm_8c.html#a369266c24eacffb87046522897a570d5", null ],
+    [ "MSG_NOSIGNAL", "d8/d03/orm_8c.html#a9f55d0e90dc8cc6b2287312435cdde48", null ],
     [ "cwist_orm_close_socket", "d8/d03/orm_8c.html#ab8358b56c5396e61785186a6e0895f67", null ],
     [ "cwist_orm_commit", "d8/d03/orm_8c.html#adc4a8786c8a4b530dd12c39219734c57", null ],
     [ "cwist_orm_delete", "d8/d03/orm_8c.html#a44c4c64eae50d22d4a0da07bb17938a3", null ],

@@ -327,9 +327,11 @@ Functions</h2></td></tr>
 <tr class="memitem:a013f1603572acfd49aae53b6dc30e062" id="r_a013f1603572acfd49aae53b6dc30e062"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d6/deb/structcwist__compress__backend.html">cwist_compress_backend</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d6b/compress_8c.html#a013f1603572acfd49aae53b6dc30e062">cwist_compress_backend_zstd</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>)</td></tr>
 <tr class="memdesc:a013f1603572acfd49aae53b6dc30e062"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the built-in zstd backend.  <br /></td></tr>
 <tr class="separator:a013f1603572acfd49aae53b6dc30e062"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abf34e6f515162b89d169d928fd34327c" id="r_abf34e6f515162b89d169d928fd34327c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d6b/compress_8c.html#abf34e6f515162b89d169d928fd34327c">cwist_mw_compress</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">min_body_size</a>)</td></tr>
+<tr class="memitem:abf34e6f515162b89d169d928fd34327c" id="r_abf34e6f515162b89d169d928fd34327c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d6b/compress_8c.html#abf34e6f515162b89d169d928fd34327c">cwist_mw_compress</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> min_body_size)</td></tr>
 <tr class="memdesc:abf34e6f515162b89d169d928fd34327c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create the response compression middleware.  <br /></td></tr>
 <tr class="separator:abf34e6f515162b89d169d928fd34327c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad84e9b022c5051eca665934002c75e8a" id="r_ad84e9b022c5051eca665934002c75e8a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a59a567fc98735ff0bdff462250277826">cwist_middleware_func_ex</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d6b/compress_8c.html#ad84e9b022c5051eca665934002c75e8a">cwist_mw_compress_ex</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> min_body_size, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> **user_ctx, <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a71352283afe9113948a031a4e6fc5852">cwist_middleware_ctx_destroy_func</a> *destroy)</td></tr>
+<tr class="separator:ad84e9b022c5051eca665934002c75e8a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Compression middleware and built-in zlib/brotli/zstd backends. </p>
@@ -389,7 +391,7 @@ Functions</h2></td></tr>
 <p>Returns the built-in Brotli backend.</p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the static Brotli backend descriptor. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00350">350</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00354">354</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
 </div>
 </div>
@@ -413,7 +415,7 @@ Functions</h2></td></tr>
 <p>Returns the built-in zlib/deflate backend.</p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the static deflate backend descriptor. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00173">173</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00177">177</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
 </div>
 </div>
@@ -437,7 +439,7 @@ Functions</h2></td></tr>
 <p>Returns the built-in zlib/gzip backend.</p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the static gzip backend descriptor. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00165">165</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00169">169</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
 </div>
 </div>
@@ -461,7 +463,7 @@ Functions</h2></td></tr>
 <p>Returns the built-in Zstandard (zstd) backend.</p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the static zstd backend descriptor. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00524">524</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00528">528</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
 </div>
 </div>
@@ -490,7 +492,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00030">30</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00034">34</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/d6b/compress_8c_source.html#l00019">CWIST_MAX_BACKENDS</a>.</p>
 
@@ -515,7 +517,7 @@ Functions</h2></td></tr>
 <p>Remove all registered compression backends. </p>
 <p>Unregister all compression backends. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00038">38</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00042">42</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
 </div>
 </div>
@@ -546,9 +548,46 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware handler that compresses eligible responses. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00713">713</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00787">787</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+</div>
+</div>
+<a id="ad84e9b022c5051eca665934002c75e8a" name="ad84e9b022c5051eca665934002c75e8a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad84e9b022c5051eca665934002c75e8a">&#9670;&#160;</a></span>cwist_mw_compress_ex()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a59a567fc98735ff0bdff462250277826">cwist_middleware_func_ex</a> cwist_mw_compress_ex </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
+          <td class="paramname"><em>min_body_size</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> **&#160;</td>
+          <td class="paramname"><em>user_ctx</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a71352283afe9113948a031a4e6fc5852">cwist_middleware_ctx_destroy_func</a> *&#160;</td>
+          <td class="paramname"><em>destroy</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Create compression middleware with an independent threshold per registration. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d0/d6b/compress_8c_source.html#l00793">793</a> of file <a class="el" href="../../d0/d6b/compress_8c_source.html">compress.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
 </div>
 </div>
