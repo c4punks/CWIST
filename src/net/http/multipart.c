@@ -32,71 +32,31 @@ typedef struct {
     cwist_multipart_result *result;
 } mp_parse_ctx;
 
-static void mp_parse_headers(mp_parse_ctx *ctx);
+static int mp_parse_headers(mp_parse_ctx *ctx);
 
-/**
- * @brief multipart-parser-c callback: header field fragment received.
- *
- * Appends the fragment to the buffered header field name (truncated at the
- * fixed buffer size). If a header value was already seen for the previous
- * field, that pair is finalized via mp_parse_headers() before buffering.
- *
- * @param p Parser instance (carries mp_parse_ctx).
- * @param at Pointer to the fragment.
- * @param len Fragment length.
- * @return 0 on success.
- */
+/** Buffer one header-name fragment, rejecting over-limit metadata. */
 static int mp_on_header_field(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    if (ctx->have_value) {
-        /* Previous header value is complete, parse it before moving to next field. */
-        mp_parse_headers(ctx);
-    }
-    if (ctx->header_field_len + len < sizeof(ctx->header_field)) {
-        memcpy(ctx->header_field + ctx->header_field_len, at, len);
-        ctx->header_field_len += len;
-    }
+    if (ctx->have_value && mp_parse_headers(ctx) != 0) return 1;
+    if (ctx->header_field_len + len >= sizeof(ctx->header_field)) return 1;
+    memcpy(ctx->header_field + ctx->header_field_len, at, len);
+    ctx->header_field_len += len;
     return 0;
 }
 
-/**
- * @brief multipart-parser-c callback: header value fragment received.
- *
- * Marks the current header as having a value and appends the fragment to the
- * buffered header value (truncated at the fixed buffer size).
- *
- * @param p Parser instance (carries mp_parse_ctx).
- * @param at Pointer to the fragment.
- * @param len Fragment length.
- * @return 0 on success.
- */
+/** Buffer one header-value fragment, rejecting over-limit metadata. */
 static int mp_on_header_value(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     ctx->have_value = true;
-    if (ctx->header_value_len + len < sizeof(ctx->header_value)) {
-        memcpy(ctx->header_value + ctx->header_value_len, at, len);
-        ctx->header_value_len += len;
-    }
+    if (ctx->header_value_len + len >= sizeof(ctx->header_value)) return 1;
+    memcpy(ctx->header_value + ctx->header_value_len, at, len);
+    ctx->header_value_len += len;
     return 0;
 }
 
-/**
- * @brief Finalize the buffered header field/value pair into ctx state.
- *
- * NUL-terminates both buffers (truncating at their fixed sizes), then, for
- * "Content-Disposition", extracts the name="..." and filename="..." tags, and
- * for "Content-Type" stores the whole value. Not thread-safe: operates on the
- * caller's ctx. Resets the field/value buffers and have_value afterwards.
- *
- * @param ctx Parse context to update in place.
- */
-static void mp_parse_headers(mp_parse_ctx *ctx) {
-    if (ctx->header_field_len >= sizeof(ctx->header_field))
-        ctx->header_field_len = sizeof(ctx->header_field) - 1;
+/** Finalize one complete header pair without accepting truncated values. */
+static int mp_parse_headers(mp_parse_ctx *ctx) {
     ctx->header_field[ctx->header_field_len] = '\0';
-
-    if (ctx->header_value_len >= sizeof(ctx->header_value))
-        ctx->header_value_len = sizeof(ctx->header_value) - 1;
     ctx->header_value[ctx->header_value_len] = '\0';
 
     if (strcasecmp(ctx->header_field, "Content-Disposition") == 0) {
@@ -106,10 +66,9 @@ static void mp_parse_headers(mp_parse_ctx *ctx) {
             const char *name_end = strchr(name_tag, '"');
             if (name_end) {
                 size_t nlen = (size_t)(name_end - name_tag);
-                if (nlen < sizeof(ctx->name)) {
-                    memcpy(ctx->name, name_tag, nlen);
-                    ctx->name[nlen] = '\0';
-                }
+                if (nlen >= sizeof(ctx->name)) return 1;
+                memcpy(ctx->name, name_tag, nlen);
+                ctx->name[nlen] = '\0';
             }
         }
         const char *filename_tag = strstr(ctx->header_value, "filename=\"");
@@ -118,35 +77,26 @@ static void mp_parse_headers(mp_parse_ctx *ctx) {
             const char *filename_end = strchr(filename_tag, '"');
             if (filename_end) {
                 size_t flen = (size_t)(filename_end - filename_tag);
-                if (flen < sizeof(ctx->filename)) {
-                    memcpy(ctx->filename, filename_tag, flen);
-                    ctx->filename[flen] = '\0';
-                }
+                if (flen >= sizeof(ctx->filename)) return 1;
+                memcpy(ctx->filename, filename_tag, flen);
+                ctx->filename[flen] = '\0';
             }
         }
     } else if (strcasecmp(ctx->header_field, "Content-Type") == 0) {
         size_t vlen = strlen(ctx->header_value);
-        if (vlen < sizeof(ctx->content_type)) strcpy(ctx->content_type, ctx->header_value);
+        if (vlen >= sizeof(ctx->content_type)) return 1;
+        strcpy(ctx->content_type, ctx->header_value);
     }
 
     ctx->header_field_len = 0;
     ctx->header_value_len = 0;
     ctx->have_value = false;
+    return 0;
 }
 
-/**
- * @brief multipart-parser-c callback: all headers of a part were received.
- *
- * Flushes any pending header pair via mp_parse_headers() so its values are
- * visible before part data begins.
- *
- * @param p Parser instance (carries mp_parse_ctx).
- * @return 0 on success.
- */
 static int mp_on_headers_complete(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    mp_parse_headers(ctx);
-    return 0;
+    return mp_parse_headers(ctx);
 }
 
 /**
@@ -162,9 +112,7 @@ static int mp_on_headers_complete(multipart_parser *p) {
  */
 static int mp_on_part_data_begin(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
-    if (ctx->have_value) {
-        mp_parse_headers(ctx);
-    }
+    if (ctx->have_value && mp_parse_headers(ctx) != 0) return 1;
     ctx->header_field_len = 0;
     ctx->header_value_len = 0;
     ctx->have_value = false;
