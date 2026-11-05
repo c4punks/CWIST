@@ -408,7 +408,11 @@ static cwist_job_t *jq_redis_autoclaim(cwist_job_queue_t *q) {
             uint32_t attempts = 0;
             cwist_error_t derr =
                 jq_redis_delivery_count(q, candidate->id, strlen(candidate->id), &attempts);
-            if (!cwist_error_is_ok(&derr) || attempts <= q->max_retries) {
+            if (!cwist_error_is_ok(&derr)) {
+                cwist_job_free(candidate);
+                continue;
+            }
+            if (attempts <= q->max_retries) {
                 candidate->attempts = attempts;
                 job = candidate;
             } else {
