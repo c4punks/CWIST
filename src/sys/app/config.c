@@ -185,8 +185,9 @@ void cwist_config_load_file(cwist_config *cfg, const char *path) {
     if (!cfg || !path) return;
     FILE *f = fopen(path, "r");
     if (!f) return;
-    char line[1024];
-    while (fgets(line, sizeof(line), f)) {
+    char *line = NULL;
+    size_t line_cap = 0;
+    while (getline(&line, &line_cap, f) != -1) {
         char *p = line;
         while (isspace((unsigned char)*p)) p++;
         if (*p == '#' || *p == '\0') continue;
@@ -209,5 +210,7 @@ void cwist_config_load_file(cwist_config *cfg, const char *path) {
         }
         cwist_config_set(cfg, key, value);
     }
+    /* getline() allocates with libc, so its buffer must be released with free(). */
+    free(line);
     fclose(f);
 }
