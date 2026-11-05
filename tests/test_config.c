@@ -2,6 +2,7 @@
 #include <cwist/sys/app/config.h>
 
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,30 @@ int main(void) {
     assert(strcmp(cwist_config_get(cfg, "key"), "") == 0);
     assert(strcmp(cwist_config_get(cfg, "valid"), "quoted") == 0);
     assert(strcmp(cwist_config_get(cfg, "empty"), "") == 0);
+
+    char int_max[32];
+    char int_min[32];
+    char int_above_max[32];
+    char int_below_min[32];
+    assert(snprintf(int_max, sizeof(int_max), "%d", INT_MAX) > 0);
+    assert(snprintf(int_min, sizeof(int_min), "%d", INT_MIN) > 0);
+    assert(snprintf(int_above_max, sizeof(int_above_max), "%lld", (long long)INT_MAX + 1) > 0);
+    assert(snprintf(int_below_min, sizeof(int_below_min), "%lld", (long long)INT_MIN - 1) > 0);
+
+    cwist_config_set(cfg, "int.max", int_max);
+    assert(cwist_config_get_int(cfg, "int.max", 0) == INT_MAX);
+    cwist_config_set(cfg, "int.min", int_min);
+    assert(cwist_config_get_int(cfg, "int.min", 0) == INT_MIN);
+    cwist_config_set(cfg, "int.above-max", int_above_max);
+    assert(cwist_config_get_int(cfg, "int.above-max", 7) == 7);
+    cwist_config_set(cfg, "int.below-min", int_below_min);
+    assert(cwist_config_get_int(cfg, "int.below-min", 7) == 7);
+    cwist_config_set(cfg, "int.huge", "999999999999999999999999999999");
+    assert(cwist_config_get_int(cfg, "int.huge", 7) == 7);
+    cwist_config_set(cfg, "int.junk", "12x");
+    assert(cwist_config_get_int(cfg, "int.junk", 7) == 7);
+    cwist_config_set(cfg, "int.empty", "");
+    assert(cwist_config_get_int(cfg, "int.empty", 7) == 7);
 
     cwist_config_destroy(cfg);
     assert(unlink(path) == 0);
