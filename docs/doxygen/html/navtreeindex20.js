@@ -1,5 +1,7 @@
 var NAVTREEINDEX20 =
 {
+"de/dc2/baremetal__time_8c.html":[94,0,2,4,6,1],
+"de/dc2/baremetal__time_8c_source.html":[94,0,2,4,6,1],
 "de/ddb/structcwist__bind__result.html":[93,0,9],
 "de/ddb/structcwist__bind__result.html#a11707e64c1b5f009e85dc4aecf1aceb4":[93,0,9,2],
 "de/ddb/structcwist__bind__result.html#a319b44e5fa677cdd406b6e5f4ae71dc3":[93,0,9,1],
@@ -99,6 +101,7 @@ var NAVTREEINDEX20 =
 "df/d4c/compress_8h.html#aa1b3515b51073e8b429cfa5f442ae56f":[94,0,1,0,4,0,3,1],
 "df/d4c/compress_8h.html#abf34e6f515162b89d169d928fd34327c":[94,0,1,0,4,0,3,8],
 "df/d4c/compress_8h.html#ac4d46953471ce216fe2ab53d6ad2fb3a":[94,0,1,0,4,0,3,7],
+"df/d4c/compress_8h.html#ad84e9b022c5051eca665934002c75e8a":[94,0,1,0,4,0,3,9],
 "df/d4c/compress_8h.html#af0fe70fc60745ce6e5a640b044a53f5d":[94,0,1,0,4,0,3,4],
 "df/d4c/compress_8h_source.html":[94,0,1,0,4,0,3],
 "df/d51/structcwist__reactor__timer.html":[93,0,82],
@@ -246,8 +249,5 @@ var NAVTREEINDEX20 =
 "df/d6d/ssl_8h.html#af8c6360e29eae40ddf875ffee45de354":[94,0,2,3,2,0,0,7,57],
 "df/d6d/ssl_8h.html#af9aa670457cd517c048310debadc81b9":[94,0,2,3,2,0,0,7,95],
 "df/d6d/ssl_8h.html#afb6a3c48e555d21b01f588b08c8d6d74":[94,0,2,3,2,0,0,7,40],
-"df/d6d/ssl_8h.html#afcc5ca4403c61f28928cc15c86b25404":[94,0,2,3,2,0,0,7,30],
-"df/d6d/ssl_8h.html#afdf7f81d593feecafab8673f74bb3b23":[94,0,2,3,2,0,0,7,85],
-"df/d6d/ssl_8h.html#afe0d45b9905f519fa032e134eaccb01c":[94,0,2,3,2,0,0,7,52],
-"df/d6d/ssl_8h.html#afe8680137afb44ac82f6cee079b93e67":[94,0,2,3,2,0,0,7,19]
+"df/d6d/ssl_8h.html#afcc5ca4403c61f28928cc15c86b25404":[94,0,2,3,2,0,0,7,30]
 };

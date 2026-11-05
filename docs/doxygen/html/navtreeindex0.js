@@ -126,6 +126,7 @@ var NAVTREEINDEX0 =
 "d0/d6b/compress_8c.html#abf34e6f515162b89d169d928fd34327c":[94,0,2,4,0,5,8],
 "d0/d6b/compress_8c.html#ac4d46953471ce216fe2ab53d6ad2fb3a":[94,0,2,4,0,5,7],
 "d0/d6b/compress_8c.html#ac8e91b35d87f4dddf6d937cd2390ed16":[94,0,2,4,0,5,1],
+"d0/d6b/compress_8c.html#ad84e9b022c5051eca665934002c75e8a":[94,0,2,4,0,5,9],
 "d0/d6b/compress_8c.html#af0fe70fc60745ce6e5a640b044a53f5d":[94,0,2,4,0,5,4],
 "d0/d6b/compress_8c_source.html":[94,0,2,4,0,5],
 "d0/d6b/structcwist__css__scope.html":[93,0,19],
@@ -248,6 +249,5 @@ var NAVTREEINDEX0 =
 "d0/d82/structcwist__test__client__cookie.html#a3e09f1890a2df2844d1f506273e26700":[93,0,96,3],
 "d0/d82/structcwist__test__client__cookie.html#a6ec84d0070acc5b8bf414f87d247d915":[93,0,96,2],
 "d0/d82/structcwist__test__client__cookie.html#acd0fa778aac9138cb4a17936a152bd37":[93,0,96,0],
-"d0/d82/structcwist__test__client__cookie.html#acd511353d83bc041c1c27ff60659be66":[93,0,96,1],
-"d0/d89/md_docs_2api_2sse.html":[11]
+"d0/d82/structcwist__test__client__cookie.html#acd511353d83bc041c1c27ff60659be66":[93,0,96,1]
 };
