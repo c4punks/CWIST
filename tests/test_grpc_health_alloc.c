@@ -69,6 +69,15 @@ int main(void) {
     fail_service_copy = 0;
     assert(res != NULL);
     assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "13") == 0);
+    cwist_http_response_destroy(res);
+
+    fail_service_copy = 1;
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST,
+                                       "/grpc.health.v1.Health/Watch", &opts);
+    fail_service_copy = 0;
+    assert(res != NULL);
+    assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "13") == 0);
+    assert(res->body == NULL || res->body->size == 0);
 
     cwist_http_response_destroy(res);
     cwist_test_client_destroy(client);

@@ -17,6 +17,15 @@
 #include <unistd.h>
 #include <zlib.h>
 
+void *__real_cwist_alloc(size_t size);
+
+static _Atomic int fail_health_watch_copy;
+
+void *__wrap_cwist_alloc(size_t size) {
+    if (atomic_load(&fail_health_watch_copy) && size == 64) return NULL;
+    return __real_cwist_alloc(size);
+}
+
 /* --- tiny HPACK literal encoder (without indexing, no huffman) --- */
 
 static size_t te_int(uint8_t *dst, uint32_t value, uint8_t prefix_bits) {
@@ -633,6 +642,40 @@ static void test_health_watch(cwist_app *app) {
     stop_server(cfd, &ctx, tid);
 }
 
+static void test_health_watch_alloc_failure(cwist_app *app) {
+    printf("  health Watch allocation failure...\n");
+    server_ctx ctx;
+    pthread_t tid;
+    int cfd = start_server(app, &ctx, &tid);
+
+    uint8_t block[4096];
+    size_t blen = build_request_block(block, "/grpc.health.v1.Health/Watch", NULL, 0);
+    fd_send_frame(cfd, 0x01, 0x04, 1, block, (uint32_t)blen);
+
+    char service[64];
+    memset(service, 'x', sizeof(service) - 1);
+    service[sizeof(service) - 1] = '\0';
+    cwist_pb_writer pb;
+    cwist_pb_writer_init(&pb);
+    assert(cwist_pb_write_string_field(&pb, 1, service) == 0);
+    uint8_t frame[256];
+    size_t frame_len;
+    make_pb_frame(frame, &frame_len, NULL, 0, pb.data, pb.len);
+    cwist_pb_writer_free(&pb);
+
+    atomic_store(&fail_health_watch_copy, 1);
+    fd_send_frame(cfd, 0x00, 0x01, 1, frame, (uint32_t)frame_len);
+
+    test_frame f;
+    assert(fd_read_stream_frame(cfd, &f, 0x01, 1, 5000) == 0);
+    atomic_store(&fail_health_watch_copy, 0);
+    assert(f.flags & 0x01);
+    assert(frame_payload_contains(&f, "grpc-status"));
+    assert(frame_payload_contains(&f, "13"));
+    assert(cwist_app_grpc_health_watchers(app) == 0);
+    stop_server(cfd, &ctx, tid);
+}
+
 int main(void) {
     printf("Testing gRPC HTTP/2 streaming...\n");
 
@@ -663,6 +706,7 @@ int main(void) {
     test_streaming_incremental(app, &live_st);
     test_deadline(app, &deadline_st);
     test_health_watch(app);
+    test_health_watch_alloc_failure(app);
 
     /* Cancellation uses the Block handler; swap in the cancel flag state. */
     assert(cwist_app_grpc_stream(app, "cwist.test.Wire", "Block", wire_block, &cancel_st) == 0);

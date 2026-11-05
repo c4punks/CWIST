@@ -2584,7 +2584,7 @@ test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
 	./test_grpc_health_alloc
 
 test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
-	$(CC) $(CFLAGS) -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
 	./test_grpc_stream
 
 test_grpc_client: $(LIB_NAME) tests/test_grpc_client.c
