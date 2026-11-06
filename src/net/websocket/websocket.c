@@ -271,6 +271,12 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             uint16_t len16;
             if (read_exact(ws->fd, &len16, 2) < 0) return NULL;
             payload_len = ntohs(len16);
+            if (payload_len < 126) {
+                uint8_t body[2] = {0x03, 0xEA};
+                cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE, body, sizeof(body));
+                ws->is_closed = true;
+                return NULL;
+            }
         } else if (payload_len == 127) {
             uint64_t len64;
             if (read_exact(ws->fd, &len64, 8) < 0) return NULL;
@@ -278,6 +284,12 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             payload_len = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) | ((uint64_t)p[2] << 40) |
                           ((uint64_t)p[3] << 32) | ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
                           ((uint64_t)p[6] << 8) | ((uint64_t)p[7]);
+            if (payload_len < 65536) {
+                uint8_t body[2] = {0x03, 0xEA};
+                cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE, body, sizeof(body));
+                ws->is_closed = true;
+                return NULL;
+            }
         }
 
         /* Reject frames that would force a huge allocation before any payload
@@ -365,6 +377,14 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
 
         /* --- Deliver the complete frame ---------------------------------- */
 
+        if (opcode == CWIST_WS_FRAME_TEXT &&
+            !cwist_ws_internal_utf8_valid(payload, (size_t)payload_len)) {
+            uint8_t body[2] = {0x03, 0xEF};
+            cwist_websocket_send(ws, CWIST_WS_FRAME_CLOSE, body, sizeof(body));
+            ws->is_closed = true;
+            cwist_free(payload);
+            return NULL;
+        }
         if (opcode == CWIST_WS_FRAME_CLOSE) {
             int close_error = cwist_ws_internal_close_error(payload, (size_t)payload_len);
             if (close_error) {
