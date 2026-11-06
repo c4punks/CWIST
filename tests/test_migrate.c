@@ -102,18 +102,21 @@ static void test_migrate_down_all(void) {
     assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
 
     int rc = cwist_migrate_down(db, migrations, N_MIGRATIONS, 0);
-    assert(rc == CWIST_MIGRATE_OK);
+    assert(rc == CWIST_MIGRATE_ERR_GENERIC);
 
-    /* version 2 has no down_sql so it's left in the history but not reverted.
-     * versions 1 and 3 have down_sql. After full rollback version should be 2
-     * (since v2's down_sql is NULL it stays in history). */
-    /* sessions (v3) rolled back, users (v1) rolled back, email col stays */
+    /* v3 is rolled back, then the irreversible v2 stops the rollback. */
     sqlite3_stmt *stmt = NULL;
     assert(sqlite3_prepare_v2(
                db, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='sessions';", -1,
                &stmt, NULL) == SQLITE_OK);
     assert(sqlite3_step(stmt) == SQLITE_ROW);
     assert(sqlite3_column_int(stmt, 0) == 0);
+    sqlite3_finalize(stmt);
+    assert(sqlite3_prepare_v2(
+               db, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='users';", -1,
+               &stmt, NULL) == SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW);
+    assert(sqlite3_column_int(stmt, 0) == 1);
     sqlite3_finalize(stmt);
 
     /* The irreversible v2 must still be recorded as applied. */
@@ -136,8 +139,8 @@ static void test_migrate_down_steps_skip_irreversible(void) {
     assert(cwist_migrate_up(db, migrations, N_MIGRATIONS) == CWIST_MIGRATE_OK);
     assert(cwist_migrate_version(db) == 3);
 
-    /* Two steps: v3 and v1 are rolled back; irreversible v2 is skipped. */
-    assert(cwist_migrate_down(db, migrations, N_MIGRATIONS, 2) == CWIST_MIGRATE_OK);
+    /* v3 is rolled back, then the irreversible v2 stops the second step. */
+    assert(cwist_migrate_down(db, migrations, N_MIGRATIONS, 2) == CWIST_MIGRATE_ERR_GENERIC);
     assert(cwist_migrate_version(db) == 2);
 
     sqlite3_stmt *stmt = NULL;
@@ -146,7 +149,7 @@ static void test_migrate_down_steps_skip_irreversible(void) {
                               "('users','sessions');",
                               -1, &stmt, NULL) == SQLITE_OK);
     assert(sqlite3_step(stmt) == SQLITE_ROW);
-    assert(sqlite3_column_int(stmt, 0) == 0);
+    assert(sqlite3_column_int(stmt, 0) == 1);
     sqlite3_finalize(stmt);
 
     sqlite3_close(db);
