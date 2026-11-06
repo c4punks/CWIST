@@ -1,6 +1,4 @@
 1	src/core/db/db.c:free(serialised);
-2	src/core/db/migrate.c:(cwist_migration_t *)malloc(sizeof(cwist_migration_t) * (size_t)count);
-4	src/core/db/migrate.c:free(sorted);
 3	src/core/mem/alloc.c:free(ptr);
 1	src/core/mem/alloc.c:return calloc(1, size ? size : 1);
 1	src/core/mem/alloc.c:return realloc(ptr, new_size ? new_size : 1);
