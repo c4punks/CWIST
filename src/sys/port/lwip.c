@@ -452,27 +452,25 @@ static err_t conn_process(cwist_lwip_conn *c) {
     int status = 0;
     bool expect_continue = false;
     switch (frame_request(c, &req_len, &status, &expect_continue)) {
-    case FRAME_ERROR:
-        return conn_send_error(c, status);
-    case FRAME_NEED_MORE:
-        if (c->peer_closed) return conn_close(c); /* truncated request */
-        if (expect_continue && !c->continue_sent) {
-            c->continue_sent = true;
+        case FRAME_ERROR: return conn_send_error(c, status);
+        case FRAME_NEED_MORE:
+            if (c->peer_closed) return conn_close(c); /* truncated request */
+            if (expect_continue && !c->continue_sent) {
+                c->continue_sent = true;
 #ifdef CWIST_LWIP_TLS
-            if (c->ssl) { /* must go through the record layer, like any reply */
-                return conn_send(c, CWIST_LWIP_100_CONTINUE,
-                                 sizeof(CWIST_LWIP_100_CONTINUE) - 1, false);
-            }
+                if (c->ssl) { /* must go through the record layer, like any reply */
+                    return conn_send(c, CWIST_LWIP_100_CONTINUE,
+                                     sizeof(CWIST_LWIP_100_CONTINUE) - 1, false);
+                }
 #endif
-            if (tcp_write(c->pcb, CWIST_LWIP_100_CONTINUE, sizeof(CWIST_LWIP_100_CONTINUE) - 1, 0) ==
-                ERR_OK) {
-                c->ack_skip += sizeof(CWIST_LWIP_100_CONTINUE) - 1;
-                tcp_output(c->pcb);
+                if (tcp_write(c->pcb, CWIST_LWIP_100_CONTINUE, sizeof(CWIST_LWIP_100_CONTINUE) - 1,
+                              0) == ERR_OK) {
+                    c->ack_skip += sizeof(CWIST_LWIP_100_CONTINUE) - 1;
+                    tcp_output(c->pcb);
+                }
             }
-        }
-        return ERR_OK;
-    case FRAME_COMPLETE:
-        break;
+            return ERR_OK;
+        case FRAME_COMPLETE: break;
     }
 
     cwist_http_request *req = cwist_http_parse_request_len(c->rx, req_len);
