@@ -65,8 +65,7 @@ static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_ht
             h3_hdr_out hdrs = {.arr = hdr_arr, .max = 1, .buf = hbuf, .cap = sizeof(hbuf)};
             h3_hdr_out_add_str(&hdrs, ":status", "200");
             lsquic_http_headers_t headers = {.count = 1, .headers = hdr_arr};
-            if (lsquic_stream_send_headers(stream, &headers, 0) == 0)
-                lsquic_stream_flush(stream);
+            if (lsquic_stream_send_headers(stream, &headers, 0) == 0) lsquic_stream_flush(stream);
         }
         lsquic_conn_abort(lsquic_stream_conn(stream));
     }
@@ -165,8 +164,10 @@ static void raw_process_io(raw_h3_client_t *cl, int timeout_ms) {
     int diff = timeout_ms * 1000;
     if (diff <= 0) diff = 1000;
     if (lsquic_engine_earliest_adv_tick(cl->engine, &diff)) {
-        if (diff <= 0) diff = 0;
-        else if (diff > 1000000) diff = 1000000;
+        if (diff <= 0)
+            diff = 0;
+        else if (diff > 1000000)
+            diff = 1000000;
     }
 
     struct pollfd pfd = {.fd = cl->udp_fd, .events = POLLIN};
@@ -178,8 +179,7 @@ static void raw_process_io(raw_h3_client_t *cl, int timeout_ms) {
         ssize_t nr = recvfrom(cl->udp_fd, buf, sizeof(buf), 0, (struct sockaddr *)&peer_addr,
                               &peer_addr_len);
         if (nr > 0) {
-            lsquic_engine_packet_in(cl->engine, buf, (size_t)nr,
-                                    (struct sockaddr *)&cl->local_addr,
+            lsquic_engine_packet_in(cl->engine, buf, (size_t)nr, (struct sockaddr *)&cl->local_addr,
                                     (struct sockaddr *)&peer_addr, NULL, 0);
         }
     }
@@ -408,8 +408,8 @@ int main(void) {
     assert(memcmp(g_server_datagram, "ping", 4) == 0);
 
     res = NULL;
-    err = cwist_http3_client_request(client, "/datagram-reply", CWIST_HTTP_GET, NULL, NULL, 0,
-                                     &res);
+    err =
+        cwist_http3_client_request(client, "/datagram-reply", CWIST_HTTP_GET, NULL, NULL, 0, &res);
     assert(err.error.err_i16 == 0 && res != NULL);
     cwist_http_response_destroy(res);
     assert(g_server_datagram_result == 0);
@@ -428,11 +428,11 @@ int main(void) {
     printf("[PASS] HTTP/3 datagrams negotiated and exchanged in both directions.\n");
 
     cwist_http3_client_enable_datagrams(client, 1);
-    assert(cwist_http3_client_send_datagram(client, g_oversized_dgram,
-                                            sizeof(g_oversized_dgram)) == -1);
+    assert(cwist_http3_client_send_datagram(client, g_oversized_dgram, sizeof(g_oversized_dgram)) ==
+           -1);
     res = NULL;
-    err = cwist_http3_client_request(client, "/datagram-limit", CWIST_HTTP_GET, NULL, NULL, 0,
-                                     &res);
+    err =
+        cwist_http3_client_request(client, "/datagram-limit", CWIST_HTTP_GET, NULL, NULL, 0, &res);
     assert(err.error.err_i16 == 0 && res != NULL);
     assert(res->status_code == 200);
     assert(g_server_oversized_dgram_result == -1);
@@ -470,6 +470,66 @@ int main(void) {
     assert(g_handler_called == 0);
     cwist_http_response_destroy(res);
     printf("[PASS] HTTP/3 CONNECT with :scheme/:path rejected with 400.\n");
+
+    static const struct {
+        const char *name;
+        const char *value;
+        const char *body;
+        bool valid;
+    } request_cases[] = {
+        {"content-length", "-1", NULL, false},
+        {"content-length", "18446744073709551616", NULL, false},
+        {"connection", "close", NULL, false},
+        {"upgrade", "websocket", NULL, false},
+        {"te", "gzip", NULL, false},
+        {"content-length", "0", "x", false},
+        {"X-Uppercase", "value", NULL, false},
+        {"te", "trailers", NULL, true},
+        {"content-length", "1", "x", true},
+    };
+    for (size_t i = 0; i < sizeof(request_cases) / sizeof(request_cases[0]); i++) {
+        g_handler_called = 0;
+        hdrs = NULL;
+        cwist_http_header_add(&hdrs, request_cases[i].name, request_cases[i].value);
+        res = NULL;
+        size_t body_len = request_cases[i].body ? strlen(request_cases[i].body) : 0;
+        err = cwist_http3_client_request(client, "/", CWIST_HTTP_POST, hdrs, request_cases[i].body,
+                                         body_len, &res);
+        cwist_http_header_free_all(hdrs);
+        if (request_cases[i].valid) {
+            assert(err.error.err_i16 == 0);
+            assert(res != NULL && res->status_code == CWIST_HTTP_OK);
+            assert(g_handler_called == 1);
+        } else {
+            assert((err.error.err_i16 == 0 && res && res->status_code == CWIST_HTTP_BAD_REQUEST) ||
+                   (err.error.err_i16 != 0 && res == NULL));
+            assert(g_handler_called == 0);
+        }
+        if (res) cwist_http_response_destroy(res);
+    }
+    printf("[PASS] HTTP/3 field validation and Content-Length enforcement.\n");
+
+    for (int matching = 1; matching >= 0; matching--) {
+        g_handler_called = 0;
+        hdrs = NULL;
+        cwist_http_header_add(&hdrs, "content-length", "0");
+        cwist_http_header_add(&hdrs, "content-length", matching ? "0" : "1");
+        res = NULL;
+        err = cwist_http3_client_request(client, "/", CWIST_HTTP_POST, hdrs, NULL, 0, &res);
+        cwist_http_header_free_all(hdrs);
+        if (matching) {
+            assert((err.error.err_i16 == 0 && res &&
+                    (res->status_code == CWIST_HTTP_OK || res->status_code == CWIST_HTTP_BAD_REQUEST)) ||
+                   (err.error.err_i16 != 0 && res == NULL));
+            assert(g_handler_called == 0 || g_handler_called == 1);
+        } else {
+            assert((err.error.err_i16 == 0 && res && res->status_code == CWIST_HTTP_BAD_REQUEST) ||
+                   (err.error.err_i16 != 0 && res == NULL));
+            assert(g_handler_called == 0);
+        }
+        if (res) cwist_http_response_destroy(res);
+    }
+    printf("[PASS] HTTP/3 duplicate Content-Length consistency checks.\n");
 
     cwist_http3_client_destroy(client);
     __atomic_store_n(&ctx->running, 0, __ATOMIC_RELEASE);
@@ -567,8 +627,7 @@ int main(void) {
     raw_local.sin_port = htons(0);
     assert(bind(raw.udp_fd, (struct sockaddr *)&raw_local, sizeof(raw_local)) == 0);
     raw.local_addr_len = sizeof(raw.local_addr);
-    assert(getsockname(raw.udp_fd, (struct sockaddr *)&raw.local_addr,
-                       &raw.local_addr_len) == 0);
+    assert(getsockname(raw.udp_fd, (struct sockaddr *)&raw.local_addr, &raw.local_addr_len) == 0);
 
     raw.ssl_ctx = SSL_CTX_new(TLS_method());
     assert(raw.ssl_ctx != NULL);
@@ -592,10 +651,9 @@ int main(void) {
     raw.engine = lsquic_engine_new(LSENG_HTTP, &raw_api);
     assert(raw.engine != NULL);
 
-    raw.conn = lsquic_engine_connect(raw.engine, N_LSQVER,
-                                     (struct sockaddr *)&raw.local_addr,
-                                     (struct sockaddr *)&addr, &raw, NULL, "localhost", 0,
-                                     NULL, 0, NULL, 0);
+    raw.conn = lsquic_engine_connect(raw.engine, N_LSQVER, (struct sockaddr *)&raw.local_addr,
+                                     (struct sockaddr *)&addr, &raw, NULL, "localhost", 0, NULL, 0,
+                                     NULL, 0);
     assert(raw.conn != NULL);
 
     int hsk_ok = 0;
