@@ -18,6 +18,7 @@ var sctp_8c =
     [ "cwist_sctp_conn_input", "df/dc8/sctp_8c.html#affa113261ada5faeb9e7691f3810f719", null ],
     [ "cwist_sctp_conn_open", "df/dc8/sctp_8c.html#a1a2a5b4ed96f1ef3305acece26a9631f", null ],
     [ "cwist_sctp_global_init", "df/dc8/sctp_8c.html#a313741506d044ab7cf9eeee03f20f803", null ],
+    [ "cwist_sctp_rx_partial_append", "df/dc8/sctp_8c.html#a2c10e29379e68fddd9eba391e678ab2b", null ],
     [ "cwist_sctp_send", "df/dc8/sctp_8c.html#ab5d0e757cb672a87251900f24dca1735", null ],
     [ "cwist_sctp_tick", "df/dc8/sctp_8c.html#a80115b86389291a063671fde3eb80a5a", null ]
 ];

@@ -57,8 +57,11 @@ var searchData=
   ['rx_5fbufs_54',['rx_bufs',['../dc/d88/structcwist__webrtc__ctx.html#ad0dd1a98c0583739b5c8b7b7151820aa',1,'cwist_webrtc_ctx']]],
   ['rx_5fdata_5fready_55',['rx_data_ready',['../db/d8a/structcwist__http__async__conn.html#ac6ff2ef0a548f81d5bddc99c492bd3f5',1,'cwist_http_async_conn']]],
   ['rx_5fpartial_56',['rx_partial',['../d9/daa/structcwist__webrtc__conn.html#a40353b3fb44d547282b5ddd85e24b5c4',1,'cwist_webrtc_conn']]],
-  ['rx_5fpartial_5fcap_57',['rx_partial_cap',['../d9/daa/structcwist__webrtc__conn.html#a9d90b3d01cab5d91f54ac6a50df94c1a',1,'cwist_webrtc_conn']]],
-  ['rx_5fpartial_5flen_58',['rx_partial_len',['../d9/daa/structcwist__webrtc__conn.html#a2644ac1c3084e7bfc587e94cfb129461',1,'cwist_webrtc_conn']]],
-  ['rx_5fprefers_5fpoll_59',['rx_prefers_poll',['../db/d8a/structcwist__http__async__conn.html#aa600bd7e1e75d051402308e87041e8f2',1,'cwist_http_async_conn']]],
-  ['rx_5frecv_5finflight_60',['rx_recv_inflight',['../db/d8a/structcwist__http__async__conn.html#aff2c72c0421589cdfc2f16c3f8d62580',1,'cwist_http_async_conn']]]
+  ['rx_5fpartial_5factive_57',['rx_partial_active',['../d9/daa/structcwist__webrtc__conn.html#a0bf3f0ec15923fa3646bf100ee8f6dbb',1,'cwist_webrtc_conn']]],
+  ['rx_5fpartial_5fcap_58',['rx_partial_cap',['../d9/daa/structcwist__webrtc__conn.html#a9d90b3d01cab5d91f54ac6a50df94c1a',1,'cwist_webrtc_conn']]],
+  ['rx_5fpartial_5flen_59',['rx_partial_len',['../d9/daa/structcwist__webrtc__conn.html#a2644ac1c3084e7bfc587e94cfb129461',1,'cwist_webrtc_conn']]],
+  ['rx_5fpartial_5fppid_60',['rx_partial_ppid',['../d9/daa/structcwist__webrtc__conn.html#a66efb7738fa7f8df720cb180b6df178a',1,'cwist_webrtc_conn']]],
+  ['rx_5fpartial_5fsid_61',['rx_partial_sid',['../d9/daa/structcwist__webrtc__conn.html#ae9f9cd94c89dc52fb40f1f8f62a4f50e',1,'cwist_webrtc_conn']]],
+  ['rx_5fprefers_5fpoll_62',['rx_prefers_poll',['../db/d8a/structcwist__http__async__conn.html#aa600bd7e1e75d051402308e87041e8f2',1,'cwist_http_async_conn']]],
+  ['rx_5frecv_5finflight_63',['rx_recv_inflight',['../db/d8a/structcwist__http__async__conn.html#aff2c72c0421589cdfc2f16c3f8d62580',1,'cwist_http_async_conn']]]
 ];
