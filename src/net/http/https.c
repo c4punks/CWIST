@@ -50,7 +50,7 @@ static uint64_t cwist_https_now_ms(void) {
 
 /**
  * @brief Poll the socket for the direction OpenSSL is waiting on.
- * @return 0 if the requested event is ready, -1 on timeout/error.
+ * @return 0 if ready, 1 on timeout, -1 on error.
  */
 static int cwist_ssl_wait(int fd, int ssl_error, int timeout_ms) {
     struct pollfd pfd = {.fd = fd, .events = 0};
@@ -62,8 +62,12 @@ static int cwist_ssl_wait(int fd, int ssl_error, int timeout_ms) {
         return -1;
     }
 
-    int ret = poll(&pfd, 1, timeout_ms);
-    if (ret <= 0) return -1;
+    int ret;
+    do {
+        ret = poll(&pfd, 1, timeout_ms);
+    } while (ret < 0 && errno == EINTR);
+    if (ret == 0) return 1;
+    if (ret < 0) return -1;
     if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
     return 0;
 }
@@ -2130,7 +2134,7 @@ static int cwist_ssl_write_all(cwist_https_connection *conn, const char *buf, si
                 int wait_ms = 100;
                 if (total_left < (uint64_t)wait_ms) wait_ms = (int)total_left;
                 if (idle_left < (uint64_t)wait_ms) wait_ms = (int)idle_left;
-                if (wait_ms <= 0 || cwist_ssl_wait(conn->fd, ssl_err, wait_ms) != 0) return -1;
+                if (wait_ms <= 0 || cwist_ssl_wait(conn->fd, ssl_err, wait_ms) < 0) return -1;
                 continue;
             }
             return -1;
