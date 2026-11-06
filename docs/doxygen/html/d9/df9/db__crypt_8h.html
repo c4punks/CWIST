@@ -408,9 +408,9 @@ Version 2 wire format produced by cwist_db_crypt_seal()</h1>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated SQLite bytes, or NULL on error. Caller must <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00229">229</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00237">237</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00020">CWIST_DB_CRYPT_AUTH_TAG_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00046">CWIST_DB_CRYPT_HDR_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00043">CWIST_DB_CRYPT_KEY_LEN</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00025">EVP_sha256</a>, <a class="el" href="../../d0/dc6/hmac_8h_source.html#l00021">HMAC</a>, and <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00057">cwist_db_crypt_ctx_t::kek</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00022">CWIST_DB_CRYPT_AUTH_TAG_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00046">CWIST_DB_CRYPT_HDR_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00043">CWIST_DB_CRYPT_KEY_LEN</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00025">EVP_sha256</a>, <a class="el" href="../../d0/dc6/hmac_8h_source.html#l00021">HMAC</a>, and <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00057">cwist_db_crypt_ctx_t::kek</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00228">cwist_db_sync_pull()</a>.</p>
 
@@ -457,7 +457,7 @@ Version 2 wire format produced by cwist_db_crypt_seal()</h1>
 <p>Explicitly decrypt an unauthenticated legacy v1 blob for migration. </p>
 <p>This compatibility path provides no ciphertext integrity. Validate the result and reseal it with <a class="el" href="../../d9/df9/db__crypt_8h.html#a143dd0293baa2219458fd4f1092763c8" title="Encrypt an SQLite database blob.">cwist_db_crypt_seal()</a> before further use. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00221">221</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00229">229</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00046">CWIST_DB_CRYPT_HDR_LEN</a>.</p>
 
@@ -514,9 +514,9 @@ Version 2 wire format produced by cwist_db_crypt_seal()</h1>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated sealed blob, or NULL on error. Caller must <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">free()</a> the returned pointer. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00072">72</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00074">74</a> of file <a class="el" href="../../dc/d64/db__crypt_8c_source.html">db_crypt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00020">CWIST_DB_CRYPT_AUTH_TAG_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00044">CWIST_DB_CRYPT_IV_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00043">CWIST_DB_CRYPT_KEY_LEN</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00025">EVP_sha256</a>, <a class="el" href="../../d0/dc6/hmac_8h_source.html#l00021">HMAC</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00057">cwist_db_crypt_ctx_t::kek</a>, <a class="el" href="../../da/da0/crypto_8h_source.html#l00016">OPENSSL_cleanse</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00022">CWIST_DB_CRYPT_AUTH_TAG_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00044">CWIST_DB_CRYPT_IV_LEN</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00043">CWIST_DB_CRYPT_KEY_LEN</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00025">EVP_sha256</a>, <a class="el" href="../../d0/dc6/hmac_8h_source.html#l00021">HMAC</a>, <a class="el" href="../../d9/df9/db__crypt_8h_source.html#l00057">cwist_db_crypt_ctx_t::kek</a>, <a class="el" href="../../da/da0/crypto_8h_source.html#l00016">OPENSSL_cleanse</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00128">cwist_db_sync_serve()</a>.</p>
 

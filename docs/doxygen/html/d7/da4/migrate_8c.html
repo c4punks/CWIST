@@ -114,6 +114,7 @@ $(document).ready(function(){initNavTree('d7/da4/migrate_8c.html','../../'); ini
 <p>Schema migration helpers for applying and rolling back ordered SQL revisions.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d1/d2a/migrate_8h_source.html">cwist/core/db/migrate.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
@@ -122,17 +123,28 @@ Include dependency graph for migrate.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../db/d7a/migrate_8c__incl.png" border="0" usemap="#asrc_2core_2db_2migrate_8c" alt=""/></div>
 <map name="asrc_2core_2db_2migrate_8c" id="asrc_2core_2db_2migrate_8c">
-<area shape="rect" title="Schema migration helpers for applying and rolling back ordered SQL revisions." alt="" coords="203,5,361,33"/>
-<area shape="rect" href="../../d1/d2a/migrate_8h.html" title="Schema migration system with version history and rollback." alt="" coords="5,81,180,109"/>
-<area shape="poly" title=" " alt="" coords="249,36,141,78,139,73,247,31"/>
-<area shape="rect" title=" " alt="" coords="204,81,269,109"/>
-<area shape="poly" title=" " alt="" coords="276,35,255,69,250,66,271,32"/>
-<area shape="rect" title=" " alt="" coords="294,81,363,109"/>
-<area shape="poly" title=" " alt="" coords="292,32,314,67,310,69,288,35"/>
-<area shape="rect" title=" " alt="" coords="387,81,457,109"/>
-<area shape="poly" title=" " alt="" coords="308,31,385,71,382,76,306,36"/>
-<area shape="rect" title=" " alt="" coords="54,157,131,184"/>
-<area shape="poly" title=" " alt="" coords="95,109,95,141,90,141,90,109"/>
+<area shape="rect" title="Schema migration helpers for applying and rolling back ordered SQL revisions." alt="" coords="356,5,515,31"/>
+<area shape="rect" href="../../d1/d2a/migrate_8h.html" title="Schema migration system with version history and rollback." alt="" coords="5,79,180,104"/>
+<area shape="poly" title=" " alt="" coords="381,33,162,78,161,73,380,28"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="205,79,378,104"/>
+<area shape="poly" title=" " alt="" coords="413,33,328,75,326,70,411,28"/>
+<area shape="rect" title=" " alt="" coords="402,79,469,104"/>
+<area shape="poly" title=" " alt="" coords="438,31,438,65,433,65,433,31"/>
+<area shape="rect" title=" " alt="" coords="493,79,564,104"/>
+<area shape="poly" title=" " alt="" coords="452,29,504,68,501,72,449,33"/>
+<area shape="rect" title=" " alt="" coords="588,79,659,104"/>
+<area shape="poly" title=" " alt="" coords="466,28,581,71,579,76,465,33"/>
+<area shape="rect" title=" " alt="" coords="53,152,132,177"/>
+<area shape="poly" title=" " alt="" coords="95,104,95,138,90,138,90,104"/>
+<area shape="rect" title=" " alt="" coords="241,225,315,251"/>
+<area shape="poly" title=" " alt="" coords="265,106,235,125,221,138,211,153,208,170,215,187,230,203,247,216,244,220,226,206,211,190,203,171,206,151,217,135,232,121,263,102"/>
+<area shape="rect" title=" " alt="" coords="221,152,362,177"/>
+<area shape="poly" title=" " alt="" coords="294,104,294,138,289,138,289,104"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="386,152,565,177"/>
+<area shape="poly" title=" " alt="" coords="322,102,433,144,431,149,320,107"/>
+<area shape="poly" title=" " alt="" coords="445,180,324,223,322,218,443,175"/>
+<area shape="rect" title=" " alt="" coords="434,225,517,251"/>
+<area shape="poly" title=" " alt="" coords="478,178,478,212,473,212,473,178"/>
 </map>
 </div>
 </div>
@@ -206,9 +218,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_MIGRATE_OK on success, or a specific migration error code. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/da4/migrate_8c_source.html#l00180">180</a> of file <a class="el" href="../../d7/da4/migrate_8c_source.html">migrate.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/da4/migrate_8c_source.html#l00181">181</a> of file <a class="el" href="../../d7/da4/migrate_8c_source.html">migrate.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00020">CWIST_MIGRATE_ERR_ARGS</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00018">CWIST_MIGRATE_ERR_GENERIC</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00019">CWIST_MIGRATE_ERR_SQL</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00017">CWIST_MIGRATE_OK</a>, and <a class="el" href="../../d7/da4/migrate_8c_source.html#l00118">cwist_migrate_version()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00020">CWIST_MIGRATE_ERR_ARGS</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00018">CWIST_MIGRATE_ERR_GENERIC</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00019">CWIST_MIGRATE_ERR_SQL</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00017">CWIST_MIGRATE_OK</a>, and <a class="el" href="../../d7/da4/migrate_8c_source.html#l00119">cwist_migrate_version()</a>.</p>
 
 </div>
 </div>
@@ -256,9 +268,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_MIGRATE_OK on success, or a specific migration error code. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/da4/migrate_8c_source.html#l00142">142</a> of file <a class="el" href="../../d7/da4/migrate_8c_source.html">migrate.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/da4/migrate_8c_source.html#l00143">143</a> of file <a class="el" href="../../d7/da4/migrate_8c_source.html">migrate.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00020">CWIST_MIGRATE_ERR_ARGS</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00018">CWIST_MIGRATE_ERR_GENERIC</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00019">CWIST_MIGRATE_ERR_SQL</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00017">CWIST_MIGRATE_OK</a>, and <a class="el" href="../../d7/da4/migrate_8c_source.html#l00118">cwist_migrate_version()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00020">CWIST_MIGRATE_ERR_ARGS</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00018">CWIST_MIGRATE_ERR_GENERIC</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00019">CWIST_MIGRATE_ERR_SQL</a>, <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00017">CWIST_MIGRATE_OK</a>, and <a class="el" href="../../d7/da4/migrate_8c_source.html#l00119">cwist_migrate_version()</a>.</p>
 
 </div>
 </div>
@@ -288,11 +300,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Highest applied version, or -1 when the query fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/da4/migrate_8c_source.html#l00118">118</a> of file <a class="el" href="../../d7/da4/migrate_8c_source.html">migrate.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/da4/migrate_8c_source.html#l00119">119</a> of file <a class="el" href="../../d7/da4/migrate_8c_source.html">migrate.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/d2a/migrate_8h_source.html#l00017">CWIST_MIGRATE_OK</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/da4/migrate_8c_source.html#l00180">cwist_migrate_down()</a>, and <a class="el" href="../../d7/da4/migrate_8c_source.html#l00142">cwist_migrate_up()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/da4/migrate_8c_source.html#l00181">cwist_migrate_down()</a>, and <a class="el" href="../../d7/da4/migrate_8c_source.html#l00143">cwist_migrate_up()</a>.</p>
 
 </div>
 </div>

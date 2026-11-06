@@ -40,7 +40,7 @@ var searchData=
   ['gql_5fsub_5ffield_5ft_37',['gql_sub_field_t',['../d7/d38/graphql__ws_8c.html#ae61cec4a4a34dd3ce926157889fc056a',1,'graphql_ws.c']]],
   ['gql_5fws_5fclose_5fbad_5frequest_38',['GQL_WS_CLOSE_BAD_REQUEST',['../d7/d38/graphql__ws_8c.html#aa6b53348a4b6708e0dd9eb1497b77efc',1,'graphql_ws.c']]],
   ['gql_5fws_5fclose_5fduplicate_5fid_39',['GQL_WS_CLOSE_DUPLICATE_ID',['../d7/d38/graphql__ws_8c.html#a80d271e1cc72d94d8f5b7b22a4588236',1,'graphql_ws.c']]],
-  ['gql_5fws_5fclose_5fsubscribe_5fbefore_5finit_40',['GQL_WS_CLOSE_SUBSCRIBE_BEFORE_INIT',['../d7/d38/graphql__ws_8c.html#a839ddba89b20821e11ea6c252efaf3fb',1,'graphql_ws.c']]],
+  ['gql_5fws_5fclose_5ftoo_5fmany_5finit_40',['GQL_WS_CLOSE_TOO_MANY_INIT',['../d7/d38/graphql__ws_8c.html#ab95f164d23b9adbbb5f397f03db3f664',1,'graphql_ws.c']]],
   ['gql_5fws_5fclose_5funauthorized_41',['GQL_WS_CLOSE_UNAUTHORIZED',['../d7/d38/graphql__ws_8c.html#aae247960761be8d65aba2f46192b962c',1,'graphql_ws.c']]],
   ['gql_5fws_5fconn_5ft_42',['gql_ws_conn_t',['../d7/d38/graphql__ws_8c.html#aef2c4a462e1681ff0e82f5ce20131036',1,'graphql_ws.c']]],
   ['gql_5fws_5fflush_5ft_43',['gql_ws_flush_t',['../d7/d38/graphql__ws_8c.html#aa30aba1917dea0d94356c11bb82792da',1,'graphql_ws.c']]],
