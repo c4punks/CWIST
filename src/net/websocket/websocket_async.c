@@ -918,6 +918,11 @@ static int ws_async_process_frame(cwist_websocket_async *ws, bool fin, cwist_ws_
     }
 
     /* --- Deliver the complete frame ---------------------------------- */
+    if (opcode == CWIST_WS_FRAME_TEXT && !cwist_ws_internal_utf8_valid(payload, payload_len)) {
+        cwist_websocket_async_close_code(ws, 1007);
+        cwist_free(payload);
+        return -1;
+    }
     if (opcode == CWIST_WS_FRAME_CLOSE) {
         int close_error = cwist_ws_internal_close_error(payload, payload_len);
         if (close_error) {
@@ -987,6 +992,10 @@ static int ws_async_feed(cwist_websocket_async *ws) {
         if (payload_len == 126) {
             if (ws->stash_len - off < 4) break;
             payload_len = ((uint64_t)base[2] << 8) | (uint64_t)base[3];
+            if (payload_len < 126) {
+                cwist_websocket_async_close_code(ws, 1002);
+                return -1;
+            }
             hdr = 4;
         } else if (payload_len == 127) {
             if (ws->stash_len - off < 10) break;
@@ -994,6 +1003,10 @@ static int ws_async_feed(cwist_websocket_async *ws) {
             payload_len = ((uint64_t)e[0] << 56) | ((uint64_t)e[1] << 48) | ((uint64_t)e[2] << 40) |
                           ((uint64_t)e[3] << 32) | ((uint64_t)e[4] << 24) | ((uint64_t)e[5] << 16) |
                           ((uint64_t)e[6] << 8) | (uint64_t)e[7];
+            if (payload_len < 65536) {
+                cwist_websocket_async_close_code(ws, 1002);
+                return -1;
+            }
             hdr = 10;
         }
 
