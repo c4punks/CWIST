@@ -1520,17 +1520,19 @@ static void test_http2_request_validation(void) {
         size_t extra_len;
         bool include_scheme;
         bool valid;
+        const char *body;
     } cases[] = {
-        {unknown_pseudo, sizeof(unknown_pseudo), true, false},
-        {uppercase, sizeof(uppercase), true, false},
-        {connection, sizeof(connection), true, false},
-        {NULL, 0, false, false},
-        {length_one, sizeof(length_one), true, false},
-        {valid_te, sizeof(valid_te), true, true},
-        {duplicate_zero, sizeof(duplicate_zero), true, true},
-        {duplicate_mismatch, sizeof(duplicate_mismatch), true, false},
-        {negative_length, sizeof(negative_length), true, false},
-        {NULL, 0, true, true},
+        {unknown_pseudo, sizeof(unknown_pseudo), true, false, NULL},
+        {uppercase, sizeof(uppercase), true, false, NULL},
+        {connection, sizeof(connection), true, false, NULL},
+        {NULL, 0, false, false, NULL},
+        {length_one, sizeof(length_one), true, false, NULL},
+        {valid_te, sizeof(valid_te), true, true, NULL},
+        {duplicate_zero, sizeof(duplicate_zero), true, true, NULL},
+        {duplicate_mismatch, sizeof(duplicate_mismatch), true, false, NULL},
+        {negative_length, sizeof(negative_length), true, false, NULL},
+        {NULL, 0, true, true, NULL},
+        {length_one, sizeof(length_one), true, true, "x"},
     };
 
     int sv[2];
@@ -1564,12 +1566,12 @@ static void test_http2_request_validation(void) {
         frame[1] = (unsigned char)(body_len >> 8);
         frame[2] = (unsigned char)body_len;
         frame[3] = 0x01;
-        frame[4] = 0x05;
+        frame[4] = cases[i].body ? 0x04 : 0x05;
         uint32_t stream_id = (uint32_t)(i * 2 + 1);
         frame[7] = (unsigned char)(stream_id >> 8);
         frame[8] = (unsigned char)stream_id;
         size_t off = 9;
-        frame[off++] = 0x82;
+        frame[off++] = cases[i].body ? 0x83 : 0x82;
         if (cases[i].include_scheme) frame[off++] = 0x87;
         frame[off++] = 0x84;
         if (cases[i].extra_len) {
@@ -1578,6 +1580,12 @@ static void test_http2_request_validation(void) {
         }
         assert(off == 9 + body_len);
         assert(ssl_write_all(client, frame, off) == 0);
+        if (cases[i].body) {
+            assert(strlen(cases[i].body) == 1);
+            unsigned char data_frame[10] = {0, 0, 1, 0, 1, 0, 0, (unsigned char)(stream_id >> 8),
+                                            (unsigned char)stream_id, cases[i].body[0]};
+            assert(ssl_write_all(client, data_frame, sizeof(data_frame)) == 0);
+        }
 
         bool completed = false;
         for (int j = 0; j < 32 && !completed; j++) {
@@ -1601,7 +1609,7 @@ static void test_http2_request_validation(void) {
         }
         assert(completed);
     }
-    assert(http2_request_count == 3);
+    assert(http2_request_count == 4);
     SSL_shutdown(client);
     SSL_free(client);
     SSL_CTX_free(client_ctx);
