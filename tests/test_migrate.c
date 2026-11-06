@@ -6,10 +6,14 @@
 #include <cwist/core/db/migrate.h>
 #include <cwist/security/db_crypt/db_crypt.h>
 #include <sqlite3.h>
+#include <openssl/hmac.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
+
+#define TEST_DB_CRYPT_AUTH_TAG_LEN 32
 
 /* -------------------------------------------------------------------------
  * Migration tests
@@ -280,6 +284,31 @@ static void test_db_crypt_rejects_tampering(void) {
     printf("  Passed.\n");
 }
 
+static void test_db_crypt_length_guards(void) {
+    printf("Testing db_crypt length guards...\n");
+
+    cwist_db_crypt_ctx_t ctx;
+    memset(ctx.kek, 0x5A, sizeof(ctx.kek));
+    const unsigned char plaintext[] = "length checked";
+    size_t blob_len = 0;
+    assert(cwist_db_crypt_seal(&ctx, plaintext, (size_t)INT_MAX + 1, &blob_len) == NULL);
+
+    unsigned char *blob = cwist_db_crypt_seal(&ctx, plaintext, sizeof(plaintext) - 1, &blob_len);
+    assert(blob != NULL);
+    size_t pt_len_offset = CWIST_DB_CRYPT_HDR_LEN - 8;
+    for (int i = 0; i < 8; i++) blob[pt_len_offset + (size_t)i] = 0;
+    unsigned int tag_len = 0;
+    assert(HMAC(EVP_sha256(), ctx.kek, CWIST_DB_CRYPT_KEY_LEN, blob,
+                blob_len - TEST_DB_CRYPT_AUTH_TAG_LEN,
+                blob + blob_len - TEST_DB_CRYPT_AUTH_TAG_LEN, &tag_len) != NULL);
+    assert(tag_len == TEST_DB_CRYPT_AUTH_TAG_LEN);
+
+    size_t out_len = 0;
+    assert(cwist_db_crypt_open(&ctx, blob, blob_len, &out_len) == NULL);
+    free(blob);
+    printf("  Passed.\n");
+}
+
 /* -------------------------------------------------------------------------
  * Main
  * ---------------------------------------------------------------------- */
@@ -297,6 +326,7 @@ int main(void) {
     test_db_crypt_roundtrip();
     test_db_crypt_wrong_kek();
     test_db_crypt_rejects_tampering();
+    test_db_crypt_length_guards();
 
     printf("\nAll tests passed.\n");
     return 0;
