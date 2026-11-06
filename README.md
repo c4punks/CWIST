@@ -12,14 +12,14 @@
 </p>
 
 <p align="center">
-<strong>Write your routes and handlers once in C. Serve them from a native server,
-a WASI 0.2 edge runtime, a browser Service Worker, or bare-metal MCU firmware.</strong>
+<strong>Write a web app once in C. Serve it from a native server, a WASI 0.2
+edge runtime, a browser Service Worker, or bare-metal MCU firmware.</strong>
 </p>
 
 <p align="center">
-<strong>Bare-metal embedded support:</strong> raw-lwIP HTTP, optional mbedTLS
-HTTPS, static connection pools, and bounded response streaming on Cortex-M,
-validated on a physical STM32F769I-DISCO board.
+<strong>Bare-metal embedded support:</strong> STM32F769I-DISCO and NUCLEO-H743ZI2,
+raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, and bounded
+response streaming on Cortex-M.
 </p>
 
 <p align="center">
@@ -34,7 +34,7 @@ adapter without BSD sockets, pthreads, epoll, or the hosted C1M reactor.
 </p>
 
 <p align="center">
-  <strong>Dogfooded in production (maintainer-operated):</strong> <a href="https://oborona.zip">oborona.zip</a> (daily engineering blog) · <a href="https://github.com/gg582/fly.board">fly.board</a>
+  <strong>Powered by CWIST in production:</strong> <a href="https://oborona.zip">oborona.zip</a> (daily engineering blog) · <a href="https://github.com/gg582/fly.board">fly.board</a>
 </p>
 
 ## Supported platforms
@@ -43,7 +43,7 @@ adapter without BSD sockets, pthreads, epoll, or the hosted C1M reactor.
 |--------|-----------------------|--------------------------|
 | **Linux, macOS, BSD** | HTTP/1.1, HTTP/2, HTTP/3, TLS, WebSocket, WebTransport, io_uring/epoll/kqueue | [simple-server](example/simple-server) |
 | **WASI 0.2 and browser Service Worker** | The same routes and handlers on Wasmtime or in the browser | [wasip2-kv](example/wasip2-kv), [wasm-service-worker](example/wasm-service-worker) |
-| **Bare-metal STM32 and Cortex-M** | Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses | [STM32 guide](docs/embedded/stm32.md); STM32F769I-DISCO [fortress](example/stm32f769-fortress) (physical-board validated); NUCLEO-H743ZI2 [example](example/stm32) (reference integration: cross-build / QEMU) |
+| **Bare-metal STM32 and Cortex-M** | Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses | [STM32 guide](docs/embedded/stm32.md), [STM32F769I-DISCO fortress](example/stm32f769-fortress), [NUCLEO-H743ZI2](example/stm32) |
 
 ## Quick start
 
@@ -78,11 +78,10 @@ Or scaffold a hot-reloading project with `cwist new project demo && cwist watche
 Next steps: the 30 modules in [tutorials/](tutorials/README.md) and the guides in
 [docs/](docs/README.md).
 
-## Same routes and handlers across four targets
+## One app, four targets
 
-A CWIST app registers routes and middleware on a `cwist_app`. The same route
-and handler definitions compile across four target environments, while transport
-and runtime capabilities follow each host:
+A CWIST app is a set of routes on a `cwist_app`. Where it runs depends only on
+how you hand that app to a host:
 
 | Host | Entry point | What you get | Example |
 |------|-------------|--------------|---------|
@@ -101,7 +100,7 @@ yet (for example, the wasip2 demo does not promise crash-durable writes).
 
 | Layer | What you get |
 |-------|-------------|
-| **Embedded / bare metal** | Cortex-M Thumb-2 builds, STM32F769I-DISCO (physical-board validated) and NUCLEO-H743ZI2 (reference integration) examples, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming |
+| **Embedded / bare metal** | Cortex-M Thumb-2 builds, STM32F769I-DISCO and NUCLEO-H743ZI2 integrations, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming |
 | **Protocols** | HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels |
 | **TLS / Security** | BoringSSL, one-call hybrid post-quantum TLS (X25519MLKEM768), ECH, certificate hot reload, JWT, CSRF, WAF, rate limiting, secure headers, encrypted DB columns |
 | **Database** | SQLite3 + ORM and migrations, Nuke DB (in-memory SQLite synced to disk on COMMIT), PostgreSQL/MySQL/MariaDB detection by wire protocol |
@@ -122,21 +121,19 @@ under `wrk -t12 -c400 -d10s` on a GitHub runner.
 
 | | CWIST reactor | CWIST Classic | Actix | Axum | Gin | Spring Boot |
 |---|---:|---:|---:|---:|---:|---:|
-| req/s | 141,827 | 125,506 | 138,706 | 122,094 | 93,312 | 60,884 |
-| Mean latency | 2.80 ms | **1.82 ms** | 2.84 ms | 3.13 ms | 6.16 ms | 6.54 ms |
-| p50 (median) | 2.60 ms | **1.43 ms** | 2.63 ms | 2.93 ms | 4.05 ms | 5.95 ms |
+| req/s | **141,827** | 125,506 | 138,706 | 122,094 | 93,312 | 60,884 |
+| p50 | 2.60 ms | **1.43 ms** | 2.63 ms | 2.93 ms | 4.05 ms | 5.95 ms |
 | p99 | 8.20 ms | **6.91 ms** | 7.74 ms | 7.91 ms | 38.17 ms | 14.25 ms |
 | P99.999 | 18.15 ms | 25.76 ms | 15.87 ms | **15.65 ms** | 84.59 ms | 59.71 ms |
 | RSS | 22.2 MiB | 58.4 MiB | **12.0 MiB** | 14.8 MiB | 27.5 MiB | 1.22 GiB |
 | Context switches | **123,365** | 1,244,131 | 155,742 | 244,680 | 310,205 | 277,009 |
 
-In this run the reactor is within runner variance of Actix on throughput (~2%
-apart) with fewer context switches, and the Classic pool answers the median
-request in about half of Axum's time and has the lowest p99. **Actix and Axum
-have the tighter extreme tail (P99.999) and the smaller memory footprint**;
-closing the tail gap is open work. The [benchmark section](#latest-benchmark-run)
-below is regenerated by CI (`Latency` in that summary line is `wrk` mean
-latency), so it shows the most recent run, which may be newer than this table.
+In this run the reactor has the highest throughput and the fewest context
+switches, and the Classic pool answers the median request in about half of
+Axum's time and has the lowest p99. **Actix and Axum have the tighter extreme
+tail (P99.999) and the smaller memory footprint**; closing the tail gap is open
+work. The [benchmark section](#latest-benchmark-run) below is regenerated by CI,
+so it shows the most recent run, which may be newer than this table.
 Methodology and fairness settings are in
 [docs/webserver-benchmark.md](docs/webserver-benchmark.md).
 
@@ -174,19 +171,17 @@ needed, and the per-run details are in
 
 Known limits of the async path: HTTPS still runs the request phase on pool
 threads, a handler that writes faster than the socket drains waits inside the
-reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`). Idle cleartext
-keep-alive connections are closed by a per-worker sweep timer once they wait
-longer than `CWIST_HTTP_KEEP_ALIVE_TIMEOUT` (default 15 s), counted in
-`cwist_http_idle_reaped_total`.
+reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`), and idle cleartext
+keep-alive connections are not yet reaped by a timer.
 
 ## Why C, when Axum and Gin exist?
 
 1. **Your C and C++ code is already the backend.** Libraries for finance,
    game servers, ML inference or device control link straight into the server
    with no FFI layer, no serialization boundary and no second runtime.
-2. **The same routes and handlers reach the browser, the edge, and MCUs.** C
-   compiles to WASM and bare-metal targets with mature toolchains, which lets
-   shared handler logic run across the hosts above.
+2. **The same app reaches the browser and the edge.** C compiles to WASM with
+   mature toolchains, which is what lets one CWIST app run in all three hosts
+   above.
 3. **Predictable footprint and start-up.** No garbage collector, VM or JIT
    warm-up: the reactor's RSS is above the Rust frameworks but below Go and
    about 60× below the JVM.
@@ -207,26 +202,17 @@ leaks. What CWIST does about it, and where each check lives:
 - **Allocator gate.** New raw `malloc`/`free` calls in the framework fail
   `cwist audit --gate` against `scripts/ci/malloc-baseline.txt`
   ([malloc_lint.sh](scripts/ci/malloc_lint.sh)).
-- **Fuzzing.** libFuzzer + ASan/UBSan targets (`make fuzz`) exercise the
-  sequenced-chunk assembler ([tests/fuzz_seq.c](tests/fuzz_seq.c)), HTTP/1.1
-  request/query/cookie/date/multipart parsers
-  ([tests/fuzz_http1.c](tests/fuzz_http1.c)), HTTP/2 HPACK and frame handling
-  ([tests/fuzz_http2.c](tests/fuzz_http2.c)), HTTP/3 QPACK header validation and
-  QUIC packet-in paths ([tests/fuzz_http3.c](tests/fuzz_http3.c)), WebSocket
-  frame and UTF-8 parsing ([tests/fuzz_websocket.c](tests/fuzz_websocket.c)),
-  and reverse-proxy URL/header/body sanitization
-  ([tests/fuzz_proxy.c](tests/fuzz_proxy.c)).
+- **Fuzzing.** A libFuzzer target covers the sequenced-chunk assembler
+  (`make fuzz_seq`, [tests/fuzz_seq.c](tests/fuzz_seq.c)). Fuzz targets for
+  the HTTP/1.1, HTTP/2, WebSocket and multipart parsers are not written yet,
+  and contributions are welcome.
 - **Deterministic lifetimes.** Request buffers and cached replies live in
   libttak generational arenas and epoch-based reclamation critical sections.
   Deferred responses use an explicit ownership handoff, and
   `CWIST_ASYNC_STRICT=1` turns misuse into an abort instead of a warning.
-- **Built-in security controls and opt-in PQC TLS.** Default HTTPS enforces TLS
-  1.2+ with AEAD cipher suites (`X25519:P-256`), while
-  `cwist_app_use_pqc_layer(app, true)` opts into hybrid post-quantum key
-  exchange (`X25519MLKEM768:X25519:P-256`) and a TLS 1.3 minimum. Built-in
-  middleware and session helpers provide WAF checks, token-bucket rate limiting,
-  timing-safe HMAC session verification, CSRF tokens and strict security headers
-  (HSTS, COOP, Permissions-Policy).
+- **Secure defaults.** Hybrid post-quantum TLS with TLS 1.3 minimum, a built-in
+  WAF, token-bucket rate limiting, timing-safe HMAC session verification, CSRF
+  tokens and strict security headers (HSTS, COOP, Permissions-Policy).
 
 Design decisions and their current status are recorded in
 [docs/decisions/](docs/decisions/README.md).
@@ -276,28 +262,14 @@ CWIST also provides a socket-free Cortex-M path for firmware that uses
 middleware, handlers, JSON helpers, and HTTP/1.1 parser are available without
 `cwist_app_listen()`, pthreads, epoll, or the C1M reactor.
 
-Each board carries exactly one of three labels:
-
-| Board | Status | What backs it |
-|-------|--------|---------------|
-| STM32F769I-DISCO | **Physical-board validated** | Flashed and run on real hardware ([example/stm32f769](example/stm32f769), [fortress](example/stm32f769-fortress)) |
-| NUCLEO-H743ZI2 | **Reference integration (cross-build / QEMU)** | Cross-built; not yet run on a physical board ([example/stm32](example/stm32)) |
-| STM32F429I-DISCO | **Planned** | Low-resource target; hardware on hand, not validated yet |
-
 - **Validated on STM32F769I-DISCO:** raw-lwIP HTTP, mbedTLS HTTPS, static
   connection pools, and streamed responses through bounded TX buffers.
 - **LCD and load demo:** `example/stm32f769-fortress/` exposes 288 real
   connection-pool slots on the 800x480 LCD and browser dashboard, with
   selectable responses up to 1 MiB.
-- **Reference integration:** NUCLEO-H743ZI2 application, HAL hooks, and lwIP
-  options. It is cross-built only and has not been run on a physical board.
-- **Automated checks (not hardware validation):**
-  [`baremetal.yml`](.github/workflows/baremetal.yml) builds Cortex-M7 Thumb-2
-  firmware with `arm-none-eabi-gcc` and runs it under `qemu-arm` semihosting
-  (`make baremetal-smoke`, `make baremetal-size-gate`);
-  [`cross-compile.yml`](.github/workflows/cross-compile.yml) cross-builds
-  `fat-dist` for embedded Linux triplets and link-smokes it under qemu-user.
-  Passing either says nothing about a board's PHY, clock tree, NVIC, or RNG.
+- **Reference integration:** NUCLEO-H743ZI2 and Cortex-M7 Thumb-2 builds for
+  `arm-none-eabi-gcc`, with QEMU semihosting checks kept separate from
+  physical-board validation.
 
 Build inputs and the lwIP/TLS integration are documented in
 [docs/embedded/stm32.md](docs/embedded/stm32.md). Board-specific wiring,
@@ -417,12 +389,12 @@ CI regenerates this block from each benchmark run.
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 117878 req/s | Latency 1.91ms (P50 1.50ms, P90 3.96ms, P99 7.48ms, P99.999 20.82ms) | RSS 60988KiB | Csw 1147409
-- **CWIST reactor**: 143108 req/s | Latency 2.75ms (P50 2.55ms, P90 4.92ms, P99 7.78ms, P99.999 13.73ms) | RSS 24272KiB | Csw 121601
-- **Actix**: 128403 req/s | Latency 3.06ms (P50 2.84ms, P90 5.12ms, P99 7.80ms, P99.999 22.37ms) | RSS 12156KiB | Csw 167399
-- **Axum**: 110125 req/s | Latency 3.57ms (P50 3.38ms, P90 5.98ms, P99 8.83ms, P99.999 16.81ms) | RSS 15820KiB | Csw 225548
-- **Gin (Go)**: 78999 req/s | Latency 7.77ms (P50 4.86ms, P90 19.10ms, P99 52.15ms, P99.999 117.59ms) | RSS 27960KiB | Csw 312920
-- **Spring Boot**: 45273 req/s | Latency 8.73ms (P50 8.12ms, P90 11.67ms, P99 18.76ms, P99.999 57.40ms) | RSS 1311692KiB | Csw 226789
+- **CWIST Classic pool**: 187608 req/s | Latency 1.23ms (P90 2.59ms, P99 5.23ms, P99.999 22.96ms) | RSS 62812KiB | Csw 1819825
+- **CWIST reactor**: 229814 req/s | Latency 1.81ms (P90 3.71ms, P99 6.32ms, P99.999 11.41ms) | RSS 24484KiB | Csw 203363
+- **Actix**: 226931 req/s | Latency 1.83ms (P90 3.69ms, P99 6.29ms, P99.999 12.58ms) | RSS 12360KiB | Csw 252388
+- **Axum**: 194723 req/s | Latency 2.06ms (P90 3.72ms, P99 5.79ms, P99.999 11.28ms) | RSS 15832KiB | Csw 374520
+- **Gin (Go)**: 154801 req/s | Latency 4.18ms (P90 10.95ms, P99 25.91ms, P99.999 55.74ms) | RSS 28308KiB | Csw 553532
+- **Spring Boot**: 127470 req/s | Latency 3.14ms (P90 4.65ms, P99 7.20ms, P99.999 50.83ms) | RSS 1307948KiB | Csw 446887
 
 _Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 
@@ -499,7 +471,7 @@ Runnable demos under [example/](example/): a [minimal server](example/simple-ser
 [rps-showcase](example/rps-showcase) throughput demo. The
 [examples table](docs/README.md#4-runnable-examples) lists them all.
 
-Maintainer-operated production deployments built on CWIST: [oborona.zip](https://oborona.zip) (live daily engineering blog) and [fly.board](https://github.com/gg582/fly.board).
+Production deployments built on CWIST: [oborona.zip](https://oborona.zip) (live daily engineering blog) and [fly.board](https://github.com/gg582/fly.board).
 
 ## Community
 
