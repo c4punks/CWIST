@@ -1483,6 +1483,7 @@ TEST_TARGETS = test_worker_affinity \
                test_grpc \
                test_grpc_append_error \
                test_grpc_route_alloc \
+               test_grpc_health_alloc \
                test_grpc_stream \
                test_grpc_client \
                test_grpc_client_headers \
