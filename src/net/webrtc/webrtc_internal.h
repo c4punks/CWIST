@@ -74,6 +74,9 @@ typedef struct cwist_webrtc_msg {
     uint8_t data[];               /**< Payload. */
 } cwist_webrtc_msg;
 
+#define CWIST_WEBRTC_ICE_CREDENTIAL_MAX 256
+#define CWIST_WEBRTC_ICE_CREDENTIAL_CAP (CWIST_WEBRTC_ICE_CREDENTIAL_MAX + 1)
+
 /** @brief One peer: ICE state, DTLS session, SCTP association. */
 struct cwist_webrtc_conn {
     cwist_webrtc_ctx *ctx;   /**< Owning ctx (referenced). */
@@ -96,26 +99,29 @@ struct cwist_webrtc_conn {
     struct cwist_webrtc_conn *dirty_next;   /**< Dirty-list link. */
 
     /* ICE */
-    char peer_ufrag[64];     /**< Remote ICE ufrag. */
-    char peer_pwd[128];      /**< Remote ICE password (client role signs with it). */
+    char peer_ufrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+    char peer_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
     char peer_fingerprint[128]; /**< Expected DTLS certificate fingerprint from SDP. */
-    uint8_t stun_txid[12];   /**< Outstanding Binding request (client role). */
-    int stun_attempts;       /**< Binding requests sent so far (client role). */
-    uint32_t stun_rto_ms;    /**< Current retransmit timeout (client role). */
+    uint8_t stun_txid[12];      /**< Outstanding Binding request (client role). */
+    int stun_attempts;          /**< Binding requests sent so far (client role). */
+    uint32_t stun_rto_ms;       /**< Current retransmit timeout (client role). */
 
     /* DTLS */
-    SSL *ssl;                /**< DTLS session (custom datagram BIO). */
-    const uint8_t *dtls_in;  /**< Datagram being fed to the BIO, or NULL. */
-    size_t dtls_in_len;      /**< Length of dtls_in. */
+    SSL *ssl;               /**< DTLS session (custom datagram BIO). */
+    const uint8_t *dtls_in; /**< Datagram being fed to the BIO, or NULL. */
+    size_t dtls_in_len;     /**< Length of dtls_in. */
 
     /* SCTP */
     struct socket *sctp_sock; /**< Listening (server) or connected (client) socket. */
     struct socket *sctp_acc;  /**< Accepted association socket (server role). */
-    uint8_t *ch_bits;        /**< 2 bits per stream: bit0 opened by peer, bit1 OPEN sent. */
-    uint32_t ch_bits_len;    /**< Size of ch_bits in bytes. */
-    uint8_t *rx_partial;     /**< Reassembly buffer for a message delivered in pieces. */
-    size_t rx_partial_len;   /**< Bytes held in rx_partial. */
-    size_t rx_partial_cap;   /**< Capacity of rx_partial. */
+    uint8_t *ch_bits;         /**< 2 bits per stream: bit0 opened by peer, bit1 OPEN sent. */
+    uint32_t ch_bits_len;     /**< Size of ch_bits in bytes. */
+    uint8_t *rx_partial;      /**< Reassembly buffer for a message delivered in pieces. */
+    size_t rx_partial_len;    /**< Bytes held in rx_partial. */
+    size_t rx_partial_cap;    /**< Capacity of rx_partial. */
+    uint16_t rx_partial_sid;  /**< Stream identity of the partial message. */
+    uint32_t rx_partial_ppid; /**< Payload protocol identity in host byte order. */
+    bool rx_partial_active;   /**< A partial message identity is present. */
     cwist_webrtc_msg *pending_head; /**< Sends waiting for SCTP. */
     cwist_webrtc_msg *pending_tail; /**< Tail of the pending queue. */
     _Atomic(cwist_webrtc_msg *) inbox; /**< Foreign-thread sends (LIFO stack). */
@@ -246,12 +252,12 @@ void cwist_ice_random_creds(char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd
 
 /** @brief Fields the ICE-lite agent needs from an SDP description. */
 typedef struct {
-    char ice_ufrag[64];     /**< Remote ICE ufrag. */
-    char ice_pwd[128];      /**< Remote ICE password. */
-    char fingerprint[128];  /**< Remote DTLS certificate fingerprint. */
-    char setup[16];         /**< a=setup value (e.g. "active", "passive"). */
-    char mid[16];           /**< a=mid value. */
-    int has_lite;           /**< Non-zero if a=ice-lite was present. */
+    char ice_ufrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+    char ice_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+    char fingerprint[128]; /**< Remote DTLS certificate fingerprint. */
+    char setup[16];        /**< a=setup value (e.g. "active", "passive"). */
+    char mid[16];          /**< a=mid value. */
+    int has_lite;          /**< Non-zero if a=ice-lite was present. */
 } cwist_sdp_info;
 
 /** @name SDP (sdp.c) */
@@ -307,6 +313,9 @@ int cwist_sctp_conn_open(struct cwist_webrtc_conn *conn);
 void cwist_sctp_conn_close(struct cwist_webrtc_conn *conn);
 /** @brief Feed one decrypted SCTP packet to usrsctp. */
 void cwist_sctp_conn_input(struct cwist_webrtc_conn *conn, const uint8_t *data, size_t len);
+/** @brief Append only fragments matching the current partial message identity. */
+int cwist_sctp_rx_partial_append(struct cwist_webrtc_conn *conn, uint16_t sid, uint32_t ppid,
+                                 const uint8_t *data, size_t len);
 /**
  * @brief Accept (server role), then deliver every complete inbound message.
  * @return 0 normally, -1 if the association is gone and the conn should close.

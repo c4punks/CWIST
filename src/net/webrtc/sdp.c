@@ -11,36 +11,29 @@
 #include <stdio.h>
 #include <string.h>
 
-/** @brief Copy the value part of an attribute line after a fixed prefix.
- * @param line   NUL-terminated SDP line beginning with @p prefix.
- * @param prefix Attribute prefix (e.g. "a=ice-ufrag:") to strip.
- * @param dst    Destination buffer, always NUL-terminated on success.
- * @param cap    Capacity of @p dst in bytes.
- * @note Does nothing if @p line does not start with @p prefix.
- *       Silently truncates values longer than cap - 1.
- */
-static void copy_attr_value(const char *line, const char *prefix, char *dst, size_t cap) {
+/** @brief Copy a recognized attribute value without accepting truncation. */
+static int copy_attr_value(const char *line, const char *prefix, char *dst, size_t cap) {
     size_t plen = strlen(prefix);
-    if (strncmp(line, prefix, plen) != 0)
-        return;
+    if (strncmp(line, prefix, plen) != 0) return -1;
     const char *v = line + plen;
     size_t n = strcspn(v, "\r\n");
-    if (n >= cap)
-        n = cap - 1;
+    if (n >= cap) return -1;
     memcpy(dst, v, n);
     dst[n] = '\0';
+    return 0;
 }
 
 /** @brief Parse an SDP blob into a cwist_sdp_info structure.
  * @param sdp   SDP text (not required to be NUL-terminated).
  * @param len   Length of @p sdp in bytes.
  * @param info  Output structure; zeroed first, then filled from recognized lines.
- * @return 0 on success, -1 if ice-ufrag or ice-pwd is missing or empty.
- * @note Lines longer than 511 bytes are truncated. If an attribute appears
- *       more than once, the last occurrence wins. Sets info->has_lite when
- *       "a=ice-lite" appears.
+ * @return 0 on success, -1 if a recognized value is over-limit or required ICE
+ *         credentials are missing or empty.
+ * @note If an attribute appears more than once, the last occurrence wins.
+ *       Sets info->has_lite when "a=ice-lite" appears.
  */
 int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
+    if (!sdp || !info) return -1;
     memset(info, 0, sizeof(*info));
     char line[512];
     size_t pos = 0;
@@ -48,29 +41,31 @@ int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
         size_t line_len = 0;
         while (pos + line_len < len && sdp[pos + line_len] != '\r' && sdp[pos + line_len] != '\n')
             line_len++;
-        size_t n = line_len < sizeof(line) ? line_len : sizeof(line) - 1;
-        memcpy(line, sdp + pos, n);
-        line[n] = '\0';
+        if (line_len >= sizeof(line)) return -1;
+        memcpy(line, sdp + pos, line_len);
+        line[line_len] = '\0';
         pos += line_len;
-        while (pos < len && (sdp[pos] == '\r' || sdp[pos] == '\n'))
-            pos++;
+        while (pos < len && (sdp[pos] == '\r' || sdp[pos] == '\n')) pos++;
 
-        if (strncmp(line, "a=ice-ufrag:", 12) == 0)
-            copy_attr_value(line, "a=ice-ufrag:", info->ice_ufrag, sizeof(info->ice_ufrag));
-        else if (strncmp(line, "a=ice-pwd:", 10) == 0)
-            copy_attr_value(line, "a=ice-pwd:", info->ice_pwd, sizeof(info->ice_pwd));
-        else if (strncmp(line, "a=fingerprint:", 14) == 0)
-            copy_attr_value(line, "a=fingerprint:sha-256 ", info->fingerprint,
-                            sizeof(info->fingerprint));
-        else if (strncmp(line, "a=setup:", 8) == 0)
-            copy_attr_value(line, "a=setup:", info->setup, sizeof(info->setup));
-        else if (strncmp(line, "a=mid:", 6) == 0)
-            copy_attr_value(line, "a=mid:", info->mid, sizeof(info->mid));
-        else if (strcmp(line, "a=ice-lite") == 0)
+        if (strncmp(line, "a=ice-ufrag:", 12) == 0) {
+            if (copy_attr_value(line, "a=ice-ufrag:", info->ice_ufrag, sizeof(info->ice_ufrag)) < 0)
+                return -1;
+        } else if (strncmp(line, "a=ice-pwd:", 10) == 0) {
+            if (copy_attr_value(line, "a=ice-pwd:", info->ice_pwd, sizeof(info->ice_pwd)) < 0)
+                return -1;
+        } else if (strncmp(line, "a=fingerprint:", 14) == 0) {
+            if (copy_attr_value(line, "a=fingerprint:sha-256 ", info->fingerprint,
+                                sizeof(info->fingerprint)) < 0)
+                return -1;
+        } else if (strncmp(line, "a=setup:", 8) == 0) {
+            if (copy_attr_value(line, "a=setup:", info->setup, sizeof(info->setup)) < 0) return -1;
+        } else if (strncmp(line, "a=mid:", 6) == 0) {
+            if (copy_attr_value(line, "a=mid:", info->mid, sizeof(info->mid)) < 0) return -1;
+        } else if (strcmp(line, "a=ice-lite") == 0) {
             info->has_lite = 1;
+        }
     }
-    if (info->ice_ufrag[0] == '\0' || info->ice_pwd[0] == '\0')
-        return -1;
+    if (info->ice_ufrag[0] == '\0' || info->ice_pwd[0] == '\0') return -1;
     return 0;
 }
 
@@ -108,8 +103,7 @@ static int write_session(char *out, size_t cap, const char *fingerprint, const c
                      "a=max-message-size:262144\r\n",
                      sess_id, mid, mid, ufrag, pwd, with_lite ? "a=ice-lite\r\n" : "", fingerprint,
                      setup);
-    if (n < 0 || (size_t)n >= cap)
-        return -1;
+    if (n < 0 || (size_t)n >= cap) return -1;
     return 0;
 }
 
@@ -149,8 +143,7 @@ int cwist_sdp_write_answer(char *out, size_t cap, const char *fingerprint, const
                      "a=sctp-port:5000\r\n"
                      "a=max-message-size:262144\r\n",
                      mid, mid, ufrag, pwd, fingerprint, host, (unsigned)port);
-    if (n < 0 || (size_t)n >= cap)
-        return -1;
+    if (n < 0 || (size_t)n >= cap) return -1;
     return 0;
 }
 
