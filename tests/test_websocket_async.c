@@ -86,9 +86,29 @@ static int wait_for_message(recorded_msg_t *out) {
     return wait_for_seen(out, seen_before);
 }
 
-/* Build and write one masked client frame (payloads < 126 bytes here). */
+static void write_masked_extended(int fd, uint8_t head0, const uint8_t *payload, size_t len,
+                                  uint8_t length_code) {
+    uint8_t frame[65536 + 14];
+    size_t pos = 0;
+    assert(length_code == 126 || length_code == 127);
+    assert(length_code != 126 || len <= 65535);
+    frame[pos++] = head0;
+    frame[pos++] = 0x80 | length_code;
+    size_t ext_len = length_code == 126 ? 2 : 8;
+    for (size_t i = 0; i < ext_len; i++) frame[pos++] = (uint8_t)(len >> ((ext_len - i - 1) * 8));
+    uint8_t mask[4] = {0x12, 0x34, 0x56, 0x78};
+    memcpy(frame + pos, mask, 4);
+    pos += 4;
+    for (size_t i = 0; i < len; i++) frame[pos++] = payload[i] ^ mask[i % 4];
+    assert(send(fd, frame, pos, MSG_NOSIGNAL) == (ssize_t)pos);
+}
+
+/* Build and write one masked client frame. */
 static void write_masked(int fd, uint8_t head0, const uint8_t *payload, size_t len) {
-    assert(len < 126);
+    if (len >= 126) {
+        write_masked_extended(fd, head0, payload, len, 126);
+        return;
+    }
     uint8_t frame[140];
     size_t pos = 0;
     frame[pos++] = head0;
@@ -274,10 +294,10 @@ static void backpressure_on_message(cwist_websocket_async *ws, cwist_ws_frame *f
     pthread_mutex_lock(&ctx->lock);
     ctx->accepted = accepted;
     ctx->terminal_rc = rc;
-    ctx->repeat_rc = rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE
-                         ? cwist_websocket_async_send(ws, CWIST_WS_FRAME_BINARY, payload,
-                                                      sizeof(payload))
-                         : 0;
+    ctx->repeat_rc =
+        rc == CWIST_WEBSOCKET_ASYNC_SEND_BACKPRESSURE
+            ? cwist_websocket_async_send(ws, CWIST_WS_FRAME_BINARY, payload, sizeof(payload))
+            : 0;
     ctx->done = 1;
     pthread_cond_signal(&ctx->cond);
     pthread_mutex_unlock(&ctx->lock);
@@ -389,6 +409,12 @@ int main(void) {
     assert(cwist_websocket_async_attach(conn_e[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_f[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_g[0], reactor, on_message, NULL, NULL, 0));
+    int conn_invalid[4][2];
+    for (size_t i = 0; i < 4; i++) {
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_invalid[i]) == 0);
+        assert(
+            cwist_websocket_async_attach(conn_invalid[i][0], reactor, on_message, NULL, NULL, 0));
+    }
 
     pthread_t rt;
     assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
@@ -570,6 +596,39 @@ int main(void) {
     assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
     assert(read(conn_g[1], payload, sizeof(payload)) == 0);
     puts("invalid close status and UTF-8 rejection: ok");
+
+    for (size_t i = 0; i < 2; i++) {
+        write_masked_extended(conn_invalid[i][1], 0x81, (const uint8_t *)"x", 1,
+                              i == 0 ? 126 : 127);
+        read_server_frame(conn_invalid[i][1], &opcode, payload, &len);
+        assert(opcode == CWIST_WS_FRAME_CLOSE && len == 2);
+        assert(payload[0] == 0x03 && payload[1] == 0xEA);
+        pfd.fd = conn_invalid[i][1];
+        assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+        assert(read(conn_invalid[i][1], payload, sizeof(payload)) == 0);
+        close(conn_invalid[i][1]);
+    }
+
+    const uint8_t bad_text[] = {0xC0, 0xAF};
+    write_masked(conn_invalid[2][1], 0x81, bad_text, sizeof(bad_text));
+    read_server_frame(conn_invalid[2][1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE && len == 2);
+    assert(payload[0] == 0x03 && payload[1] == 0xEF);
+    pfd.fd = conn_invalid[2][1];
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_invalid[2][1], payload, sizeof(payload)) == 0);
+    close(conn_invalid[2][1]);
+
+    write_masked(conn_invalid[3][1], 0x01, bad_text, 1);
+    write_masked(conn_invalid[3][1], 0x80, bad_text + 1, 1);
+    read_server_frame(conn_invalid[3][1], &opcode, payload, &len);
+    assert(opcode == CWIST_WS_FRAME_CLOSE && len == 2);
+    assert(payload[0] == 0x03 && payload[1] == 0xEF);
+    pfd.fd = conn_invalid[3][1];
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    assert(read(conn_invalid[3][1], payload, sizeof(payload)) == 0);
+    close(conn_invalid[3][1]);
+    puts("non-minimal lengths and invalid text UTF-8 rejected: ok");
 
     /* Stop the reactor thread via a posted callback (wakes the poller). */
     cwist_reactor_post_t stop_node = {.cb = stop_cb, .ctx = reactor};
