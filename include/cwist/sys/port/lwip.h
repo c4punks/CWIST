@@ -68,18 +68,21 @@ extern "C" {
 /** @brief Listener settings; start from cwist_lwip_config_init(). */
 typedef struct cwist_lwip_config {
     uint16_t port;            /**< TCP port to listen on (default 80). */
-    uint16_t max_conns;       /**< Concurrent connections; extra accepts are aborted (default 4). */
-    size_t max_header_bytes;  /**< Request line + headers + CRLFCRLF cap; 431 above (default 4096). */
-    size_t max_body_bytes;    /**< Content-Length cap; 413 above (default 16384). */
-    size_t rx_buffer_bytes;   /**< Per-connection request buffer in the static pool; a request that
-                                   does not fit is refused with 431/413 even when the protocol caps
-                                   above allow it (default 2048). */
-    size_t tx_buffer_bytes;   /**< Per-connection response buffer in the static pool; responses
-                                   larger than this are streamed through the buffer in chunks as
-                                   the peer acknowledges them (default 2048). */
-    uint32_t idle_timeout_ms; /**< Close a connection with no traffic for this long; 0 = never (default 30000). */
-    bool keep_alive;          /**< Allow persistent connections (default true). */
-    struct cwist_lwip_tls *tls; /**< Serve HTTPS with this context; NULL = plaintext (default). Not owned. */
+    uint16_t max_conns; /**< Concurrent connections; extra accepts are aborted (default 4). */
+    size_t
+        max_header_bytes; /**< Request line + headers + CRLFCRLF cap; 431 above (default 4096). */
+    size_t max_body_bytes; /**< Content-Length cap; 413 above (default 16384). */
+    size_t rx_buffer_bytes; /**< Per-connection request buffer in the static pool; a request that
+                                 does not fit is refused with 431/413 even when the protocol caps
+                                 above allow it (default 2048). */
+    size_t tx_buffer_bytes; /**< Per-connection response buffer in the static pool; responses
+                                 larger than this are streamed through the buffer in chunks as
+                                 the peer acknowledges them (default 2048). */
+    uint32_t idle_timeout_ms; /**< Close a connection with no traffic for this long; 0 = never
+                                 (default 30000). */
+    bool keep_alive; /**< Allow persistent connections (default true). */
+    struct cwist_lwip_tls
+        *tls; /**< Serve HTTPS with this context; NULL = plaintext (default). Not owned. */
 } cwist_lwip_config;
 
 /** @brief Opaque TLS server context: certificate chain, key, DRBG and mbedTLS config. */
