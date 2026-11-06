@@ -34,7 +34,6 @@ cwist_gc_raw
 cwist_gc_rotate
 cwist_gc_shutdown
 cwist_get_available_ram
-cwist_graphql_parse_subscription
 cwist_graphql_serve
 cwist_grpc_call_await_headers
 cwist_grpc_call_cancel
