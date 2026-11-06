@@ -1,4 +1,5 @@
 #include <cwist/core/db/migrate.h>
+#include <cwist/core/mem/alloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -130,7 +131,7 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
 
     /* Work on a sorted copy so callers need not pre-sort. */
     cwist_migration_t *sorted =
-        (cwist_migration_t *)malloc(sizeof(cwist_migration_t) * (size_t)count);
+        (cwist_migration_t *)cwist_alloc(sizeof(cwist_migration_t) * (size_t)count);
     if (!sorted) return CWIST_MIGRATE_ERR_GENERIC;
     memcpy(sorted, migrations, sizeof(cwist_migration_t) * (size_t)count);
     qsort(sorted, (size_t)count, sizeof(cwist_migration_t), migration_cmp_asc);
@@ -141,7 +142,7 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
 
         int rc = migrate_exec_sql(db, sorted[i].up_sql, sorted[i].version, "up");
         if (rc != CWIST_MIGRATE_OK) {
-            free(sorted);
+            cwist_free(sorted);
             return rc;
         }
 
@@ -159,7 +160,7 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
         }
     }
 
-    free(sorted);
+    cwist_free(sorted);
     return CWIST_MIGRATE_OK;
 }
 
@@ -181,7 +182,7 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
 
     /* Sort descending so we undo in reverse order. */
     cwist_migration_t *sorted =
-        (cwist_migration_t *)malloc(sizeof(cwist_migration_t) * (size_t)count);
+        (cwist_migration_t *)cwist_alloc(sizeof(cwist_migration_t) * (size_t)count);
     if (!sorted) return CWIST_MIGRATE_ERR_GENERIC;
     memcpy(sorted, migrations, sizeof(cwist_migration_t) * (size_t)count);
     qsort(sorted, (size_t)count, sizeof(cwist_migration_t), migration_cmp_desc);
@@ -204,13 +205,13 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
         if (!found) continue;
 
         if (!sorted[i].down_sql) {
-            free(sorted);
+            cwist_free(sorted);
             return CWIST_MIGRATE_ERR_GENERIC;
         }
 
         int rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, "down");
         if (rc != CWIST_MIGRATE_OK) {
-            free(sorted);
+            cwist_free(sorted);
             return rc;
         }
 
@@ -228,6 +229,6 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
         rolled++;
     }
 
-    free(sorted);
+    cwist_free(sorted);
     return CWIST_MIGRATE_OK;
 }
