@@ -157,6 +157,23 @@ static void send_masked_frame(int fd, uint8_t head0, const uint8_t *payload, siz
     assert(write(fd, frame, pos) == (ssize_t)pos);
 }
 
+static void send_masked_extended_frame(int fd, uint8_t head0, const uint8_t *payload, size_t len,
+                                       uint8_t length_code) {
+    uint8_t frame[65536 + 14];
+    size_t pos = 0;
+    assert(length_code == 126 || length_code == 127);
+    assert(length_code != 126 || len <= 65535);
+    frame[pos++] = head0;
+    frame[pos++] = 0x80 | length_code;
+    size_t ext_len = length_code == 126 ? 2 : 8;
+    for (size_t i = 0; i < ext_len; i++) frame[pos++] = (uint8_t)(len >> ((ext_len - i - 1) * 8));
+    uint8_t mask[4] = {0x12, 0x34, 0x56, 0x78};
+    memcpy(frame + pos, mask, 4);
+    pos += 4;
+    for (size_t i = 0; i < len; i++) frame[pos++] = payload[i] ^ mask[i % 4];
+    assert(write(fd, frame, pos) == (ssize_t)pos);
+}
+
 static void send_masked_binary_frame(int fd, const uint8_t *payload, size_t len) {
     send_masked_frame(fd, 0x82, payload, len); /* FIN=1, BINARY */
 }
@@ -446,6 +463,55 @@ static void test_frame_validation(void) {
         close(sv[0]);
         close(sv[1]);
     }
+    for (size_t i = 0; i < 2; i++) {
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        ws = upgrade_for_frames(sv, &req);
+        send_masked_extended_frame(sv[1], 0x81, (const uint8_t *)"x", 1, i == 0 ? 126 : 127);
+        assert(cwist_websocket_receive(ws) == NULL);
+        uint8_t close_frame[4];
+        assert(read(sv[1], close_frame, sizeof(close_frame)) == (ssize_t)sizeof(close_frame));
+        const uint8_t expected[] = {0x88, 0x02, 0x03, 0xEA};
+        assert(memcmp(close_frame, expected, sizeof(expected)) == 0);
+        cwist_websocket_destroy(ws);
+        cwist_http_request_destroy(req);
+        close(sv[0]);
+        close(sv[1]);
+    }
+
+    const uint8_t bad_text[] = {0xC0, 0xAF};
+    for (size_t fragmented = 0; fragmented < 2; fragmented++) {
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        ws = upgrade_for_frames(sv, &req);
+        if (fragmented) {
+            send_masked_frame(sv[1], 0x01, bad_text, 1);
+            send_masked_frame(sv[1], 0x80, bad_text + 1, 1);
+        } else {
+            send_masked_frame(sv[1], 0x81, bad_text, sizeof(bad_text));
+        }
+        assert(cwist_websocket_receive(ws) == NULL);
+        uint8_t close_frame[4];
+        assert(read(sv[1], close_frame, sizeof(close_frame)) == (ssize_t)sizeof(close_frame));
+        const uint8_t expected[] = {0x88, 0x02, 0x03, 0xEF};
+        assert(memcmp(close_frame, expected, sizeof(expected)) == 0);
+        cwist_websocket_destroy(ws);
+        cwist_http_request_destroy(req);
+        close(sv[0]);
+        close(sv[1]);
+    }
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    ws = upgrade_for_frames(sv, &req);
+    uint8_t boundary[126];
+    memset(boundary, 'v', sizeof(boundary));
+    send_masked_extended_frame(sv[1], 0x81, boundary, sizeof(boundary), 126);
+    cwist_ws_frame *frame = cwist_websocket_receive(ws);
+    assert(frame && frame->opcode == CWIST_WS_FRAME_TEXT && frame->payload_len == sizeof(boundary));
+    assert(memcmp(frame->payload, boundary, sizeof(boundary)) == 0);
+    cwist_websocket_frame_destroy(frame);
+    cwist_websocket_destroy(ws);
+    cwist_http_request_destroy(req);
+    close(sv[0]);
+    close(sv[1]);
     puts("WebSocket frame validation tests passed.");
 }
 
