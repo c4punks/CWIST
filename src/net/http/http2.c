@@ -217,6 +217,8 @@ typedef struct cwist_h2_stream {
     bool hook_offered;     /* on_headers already consulted for this stream */
     cwist_http_response *response;
     h2_async_node *async_response;
+    bool has_content_length;
+    size_t received_content;
     size_t response_sent;
     uint32_t response_chunk_index;
     uint32_t response_total_chunks;
@@ -1546,7 +1548,8 @@ char *h2_huffman_decode(const unsigned char *src, size_t src_len, size_t *out_le
  * @param pos In/out: offset of the string; advanced past it on success.
  * @return Newly allocated string (caller frees), or NULL on malformed input.
  */
-char *h2_decode_string(const unsigned char *buf, size_t len, size_t *pos) {
+static char *h2_decode_string_counted(const unsigned char *buf, size_t len, size_t *pos,
+                                      size_t *out_len) {
     if (*pos >= len) return NULL;
     bool huffman = (buf[*pos] & 0x80) != 0;
     uint32_t str_len = 0;
@@ -1554,8 +1557,7 @@ char *h2_decode_string(const unsigned char *buf, size_t len, size_t *pos) {
     if (*pos + str_len > len) return NULL;
 
     if (huffman) {
-        size_t decoded_len = 0;
-        char *out = h2_huffman_decode(buf + *pos, str_len, &decoded_len);
+        char *out = h2_huffman_decode(buf + *pos, str_len, out_len);
         *pos += str_len;
         return out;
     }
@@ -1565,7 +1567,12 @@ char *h2_decode_string(const unsigned char *buf, size_t len, size_t *pos) {
     memcpy(out, buf + *pos, str_len);
     out[str_len] = '\0';
     *pos += str_len;
+    if (out_len) *out_len = str_len;
     return out;
+}
+
+char *h2_decode_string(const unsigned char *buf, size_t len, size_t *pos) {
+    return h2_decode_string_counted(buf, len, pos, NULL);
 }
 
 /**
@@ -1666,20 +1673,56 @@ static void h2_parse_path(cwist_http_request *req, const char *path) {
     }
 }
 
-/* Per-header-block decode state for pseudo-header validation
- * (RFC 7540 section 8.1.2.3). */
 typedef struct h2_header_state {
     bool seen_method;
     bool seen_path;
     bool seen_scheme;
     bool seen_authority;
     bool seen_regular;
+    bool seen_host;
+    bool is_connect;
+    bool is_request;
     uint32_t header_count;
 } h2_header_state;
 
-static int h2_apply_header(cwist_http_request *req, const char *name, const char *value,
-                           h2_header_state *st) {
-    if (!req || !name || !value || !st) return -1;
+static bool h2_field_name_is_valid(const char *name, size_t len) {
+    if (len == 0) return false;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)name[i];
+        if (c <= 0x20 || c >= 0x7f || (c >= 'A' && c <= 'Z') ||
+            (c == ':' && (i == 0 ? name[0] != ':' : true)))
+            return false;
+    }
+    return name[0] != ':' || len > 1;
+}
+
+static bool h2_field_value_is_valid(const char *value, size_t len) {
+    if (len > 0 &&
+        (value[0] == ' ' || value[0] == '\t' || value[len - 1] == ' ' || value[len - 1] == '\t'))
+        return false;
+    for (size_t i = 0; i < len; i++) {
+        if (value[i] == '\0' || value[i] == '\r' || value[i] == '\n') return false;
+    }
+    return true;
+}
+
+static int h2_parse_content_length(const char *value, size_t len, size_t *out) {
+    if (len == 0) return -1;
+    size_t parsed = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (value[i] < '0' || value[i] > '9' || parsed > (SIZE_MAX - 9) / 10) return -1;
+        parsed = parsed * 10 + (size_t)(value[i] - '0');
+    }
+    *out = parsed;
+    return 0;
+}
+
+static int h2_apply_header(h2_stream *s, const char *name, size_t name_len, const char *value,
+                           size_t value_len, h2_header_state *st) {
+    if (!s || !s->req || !name || !value || !st || !h2_field_name_is_valid(name, name_len) ||
+        !h2_field_value_is_valid(value, value_len))
+        return -1;
+    cwist_http_request *req = s->req;
     st->header_count++;
     if (st->header_count > CWIST_HTTP2_MAX_HEADERS_PER_REQUEST) {
         CWIST_LOG_WARN("[h2] request exceeds maximum header count %u",
@@ -1688,7 +1731,6 @@ static int h2_apply_header(cwist_http_request *req, const char *name, const char
     }
 
     if (name[0] == ':') {
-        /* Pseudo-headers must precede all regular headers. */
         if (st->seen_regular) return -1;
         bool *flag = NULL;
         if (strcmp(name, ":method") == 0)
@@ -1699,46 +1741,40 @@ static int h2_apply_header(cwist_http_request *req, const char *name, const char
             flag = &st->seen_scheme;
         else if (strcmp(name, ":authority") == 0)
             flag = &st->seen_authority;
-        if (flag) {
-            if (*flag) return -1; /* duplicate pseudo-header */
-            *flag = true;
-        }
+        else
+            return -1;
+        if (*flag) return -1;
+        *flag = true;
         if (strcmp(name, ":method") == 0) {
+            st->is_connect = value_len == 7 && memcmp(value, "CONNECT", 7) == 0;
             req->method = cwist_http_string_to_method(value);
         } else if (strcmp(name, ":path") == 0) {
             h2_parse_path(req, value);
         } else if (strcmp(name, ":authority") == 0) {
             cwist_http_header_add(&req->headers, "host", value);
         }
-        /* :scheme and unknown pseudo-headers are accepted but not mapped. */
         return 0;
     }
 
     st->seen_regular = true;
-    /* HTTP/2 field names are lowercase by mandate (RFC 9113 section 8.2.1);
-     * normalize lenient peers so lookups (e.g. gRPC metadata) are uniform. */
-    char lower_buf[256];
-    if (strcmp(name, "host") != 0) {
-        size_t name_len = strlen(name);
-        int needs_lower = 0;
-        for (size_t i = 0; i < name_len; ++i) {
-            if (name[i] >= 'A' && name[i] <= 'Z') {
-                needs_lower = 1;
-                break;
-            }
-        }
-        if (needs_lower && name_len < sizeof(lower_buf)) {
-            for (size_t i = 0; i < name_len; ++i)
-                lower_buf[i] = (char)tolower((unsigned char)name[i]);
-            lower_buf[name_len] = '\0';
-            name = lower_buf;
-        }
-    }
+    if (strcmp(name, "connection") == 0 || strcmp(name, "keep-alive") == 0 ||
+        strcmp(name, "proxy-connection") == 0 || strcmp(name, "transfer-encoding") == 0 ||
+        strcmp(name, "upgrade") == 0)
+        return -1;
+    if (strcmp(name, "te") == 0 && (value_len != 8 || memcmp(value, "trailers", 8) != 0)) return -1;
     if (strcmp(name, "host") == 0) {
-        cwist_http_header_add(&req->headers, "host", value);
-    } else {
-        cwist_http_header_add(&req->headers, name, value);
+        if (st->seen_host) return -1;
+        st->seen_host = true;
     }
+    if (st->is_request && strcmp(name, "content-length") == 0) {
+        size_t content_length;
+        if (h2_parse_content_length(value, value_len, &content_length) != 0 ||
+            (s->has_content_length && req->content_length != content_length))
+            return -1;
+        s->has_content_length = true;
+        req->content_length = content_length;
+    }
+    cwist_http_header_add(&req->headers, name, value);
     return 0;
 }
 
@@ -1748,24 +1784,13 @@ static int h2_apply_header(cwist_http_request *req, const char *name, const char
 #define H2_DECODE_STREAM_ERROR 1
 #define H2_DECODE_COMPRESSION_ERROR 2
 
-static int h2_decode_header_block(h2_conn *hc, cwist_http_request *req,
-                                  const unsigned char *payload, size_t len, bool is_request) {
+static int h2_decode_header_block(h2_conn *hc, h2_stream *s, const unsigned char *payload,
+                                  size_t len, bool is_request) {
     size_t pos = 0;
     h2_header_state st;
     memset(&st, 0, sizeof(st));
-    /* Pseudo-headers are forbidden outside the request header block
-     * (e.g. trailers); seed the state so any ':' name errors out. */
     st.seen_regular = !is_request;
-    /* A semantically invalid field (duplicate/misplaced pseudo-header,
-     * missing :method/:path, ...) is a stream error, not a connection
-     * error: the request is answered with RST_STREAM, but the HPACK
-     * dynamic table is a connection-wide compression context shared with
-     * the peer's encoder. Bailing out mid-block on a stream error would
-     * skip any incremental-indexing insertions still to come and desync
-     * the decoder's table from the encoder's, corrupting *unrelated*
-     * requests later on the same connection. So keep decoding the full
-     * block to keep the table in sync, and only report the stream error
-     * once the whole block has been consumed. */
+    st.is_request = is_request;
     bool stream_error = false;
 
     while (pos < len) {
@@ -1773,36 +1798,35 @@ static int h2_decode_header_block(h2_conn *hc, cwist_http_request *req,
         uint32_t name_index = 0;
         char *name = NULL;
         char *value = NULL;
+        size_t name_len = 0;
+        size_t value_len = 0;
 
         if (b & 0x80) {
-            /* Indexed header field: static table or dynamic table. */
             uint32_t index = 0;
             if (h2_decode_integer(payload, len, &pos, 7, &index) != 0)
                 return H2_DECODE_COMPRESSION_ERROR;
             const cwist_http2_static_header *entry = h2_static_header(index);
             if (entry && entry->name) {
-                if (h2_apply_header(req, entry->name, entry->value, &st) != 0) stream_error = true;
+                name_len = strlen(entry->name);
+                value_len = strlen(entry->value);
+                if (h2_apply_header(s, entry->name, name_len, entry->value, value_len, &st) != 0)
+                    stream_error = true;
                 continue;
             }
             const h2_hpack_entry *dyn = h2_hpack_dynamic_get(hc, index);
-            if (!dyn) {
-                CWIST_LOG_WARN("[h2] header field index=%u beyond static+dynamic tables", index);
-                return H2_DECODE_COMPRESSION_ERROR;
-            }
-            if (h2_apply_header(req, dyn->name, dyn->value, &st) != 0) stream_error = true;
+            if (!dyn) return H2_DECODE_COMPRESSION_ERROR;
+            name_len = strlen(dyn->name);
+            value_len = strlen(dyn->value);
+            if (h2_apply_header(s, dyn->name, name_len, dyn->value, value_len, &st) != 0)
+                stream_error = true;
             continue;
         }
 
         if ((b & 0xE0) == 0x20) {
-            /* Dynamic table size update. */
             uint32_t new_size = 0;
             if (h2_decode_integer(payload, len, &pos, 5, &new_size) != 0)
                 return H2_DECODE_COMPRESSION_ERROR;
-            if (h2_hpack_set_capacity(hc, new_size) != 0) {
-                CWIST_LOG_WARN("[h2] dynamic table size update %u exceeds advertised capacity",
-                               new_size);
-                return H2_DECODE_COMPRESSION_ERROR;
-            }
+            if (h2_hpack_set_capacity(hc, new_size) != 0) return H2_DECODE_COMPRESSION_ERROR;
             continue;
         }
 
@@ -1829,26 +1853,24 @@ static int h2_decode_header_block(h2_conn *hc, cwist_http_request *req,
                 const h2_hpack_entry *dyn = h2_hpack_dynamic_get(hc, name_index);
                 if (dyn) name = cwist_strdup(dyn->name);
             }
-            if (!name) {
-                CWIST_LOG_WARN("[h2] literal field name index=%u beyond static+dynamic tables",
-                               name_index);
-                return H2_DECODE_COMPRESSION_ERROR;
-            }
+            if (!name) return H2_DECODE_COMPRESSION_ERROR;
+            name_len = strlen(name);
         } else {
-            name = h2_decode_string(payload, len, &pos);
+            name = h2_decode_string_counted(payload, len, &pos, &name_len);
         }
-        value = h2_decode_string(payload, len, &pos);
+        value = h2_decode_string_counted(payload, len, &pos, &value_len);
         if (!name || !value) {
             cwist_free(name);
             cwist_free(value);
             return H2_DECODE_COMPRESSION_ERROR;
         }
-        int rc = h2_apply_header(req, name, value, &st);
-        /* Insert into the dynamic table regardless of rc: incremental
-         * indexing is a compression-context effect, independent of
-         * whether this particular field made the request semantically
-         * invalid (see comment above stream_error). */
+        int rc = h2_apply_header(s, name, name_len, value, value_len, &st);
         if (incremental_indexing) {
+            if (strlen(name) != name_len || strlen(value) != value_len) {
+                cwist_free(name);
+                cwist_free(value);
+                return H2_DECODE_COMPRESSION_ERROR;
+            }
             if (h2_hpack_insert(hc, name, value) != 0) rc = -2;
         }
         cwist_free(name);
@@ -1858,11 +1880,16 @@ static int h2_decode_header_block(h2_conn *hc, cwist_http_request *req,
     }
 
     if (stream_error) return H2_DECODE_STREAM_ERROR;
-
-    /* RFC 7540 section 8.1.2.3: request header blocks must carry :method and :path. */
-    if (is_request && (!st.seen_method || !st.seen_path)) {
-        CWIST_LOG_WARN("[h2] request header block missing :method or :path");
-        return H2_DECODE_STREAM_ERROR;
+    if (is_request) {
+        bool control_valid;
+        if (st.is_connect) {
+            control_valid = st.seen_method && st.seen_authority && !st.seen_scheme && !st.seen_path;
+        } else {
+            control_valid = st.seen_method && st.seen_scheme && st.seen_path;
+        }
+        if (!control_valid ||
+            (st.seen_path && s->req->path->size == 0 && s->req->method != CWIST_HTTP_OPTIONS))
+            return H2_DECODE_STREAM_ERROR;
     }
     return H2_DECODE_OK;
 }
@@ -2911,7 +2938,7 @@ static h2_stream *h2_request_stream_create(h2_conn *hc, uint32_t stream_id, bool
  */
 static int h2_decode_stream_headers(h2_conn *hc, h2_stream *s, const unsigned char *block,
                                     size_t block_len, bool is_request) {
-    int rc = h2_decode_header_block(hc, s->req, block, block_len, is_request);
+    int rc = h2_decode_header_block(hc, s, block, block_len, is_request);
     if (rc == H2_DECODE_COMPRESSION_ERROR) return -1;
     if (rc == H2_DECODE_STREAM_ERROR) {
         int rst_rc = h2_send_rst_stream(hc, s->stream_id, H2_ERR_PROTOCOL_ERROR);
@@ -2920,6 +2947,17 @@ static int h2_decode_stream_headers(h2_conn *hc, h2_stream *s, const unsigned ch
         return (rst_rc == -2) ? -1 : 1;
     }
     return 0;
+}
+
+static bool h2_content_length_matches(const h2_stream *s) {
+    return !s->has_content_length || s->req->content_length == s->received_content;
+}
+
+static int h2_reject_content_length(h2_conn *hc, h2_stream *s) {
+    uint8_t rst[4] = {0, 0, 0, H2_ERR_PROTOCOL_ERROR};
+    h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, s->stream_id, rst, sizeof(rst));
+    h2_stream_remove(hc, s->stream_id);
+    return 1;
 }
 
 /**
@@ -3690,6 +3728,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                             hooks->on_data(hc->hook_ctx, s->hook_ctx, NULL, 0, 1);
                         break;
                     }
+                    if (s && s->req && !h2_content_length_matches(s)) {
+                        h2_reject_content_length(hc, s);
+                        break;
+                    }
                     h2_hook_offer(hc, s);
                     if (s && s->hook_ctx) {
                         if (hooks->on_data && (flags & CWIST_HTTP2_FLAG_END_STREAM))
@@ -3759,6 +3801,10 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 }
                 if ((flags & CWIST_HTTP2_FLAG_END_HEADERS) && hc->cont_end_stream) {
                     h2_stream *s = h2_stream_find(hc, stream_id);
+                    if (s && s->req && !h2_content_length_matches(s)) {
+                        h2_reject_content_length(hc, s);
+                        break;
+                    }
                     h2_hook_offer(hc, s);
                     if (s && s->hook_ctx) {
                         if (hooks->on_data) hooks->on_data(hc->hook_ctx, s->hook_ctx, NULL, 0, 1);
@@ -3836,10 +3882,22 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     cwist_http2_flow_control_consume(&hc->fc, len);
                     cwist_http2_stream_flow_control_consume(&s->fc, len);
                 }
+                if (!hc->sequenced_data) {
+                    s->received_content += data_len;
+                    if (s->has_content_length && s->received_content > s->req->content_length) {
+                        h2_reject_content_length(hc, s);
+                        break;
+                    }
+                }
                 if (s->hook_ctx) {
                     /* Hook-taken stream: DATA is fed to the hook as it
                      * arrives instead of being buffered for dispatch. */
                     int end_stream = (flags & CWIST_HTTP2_FLAG_END_STREAM) != 0;
+                    if (end_stream && !hc->sequenced_data && !h2_content_length_matches(s)) {
+                        h2_reject_content_length(hc, s);
+                        s = NULL;
+                        break;
+                    }
                     int hook_rc = 0;
                     if ((data_len > 0 || end_stream) && hooks->on_data)
                         hook_rc =
@@ -3921,6 +3979,12 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                        sizeof(rst));
                         h2_auto_window_update(hc, s);
                         h2_stream_remove(hc, stream_id);
+                        break;
+                    }
+                    if (hc->sequenced_data) s->received_content = s->req->body->size;
+                    if (!h2_content_length_matches(s)) {
+                        h2_reject_content_length(hc, s);
+                        s = NULL;
                         break;
                     }
                     cwist_http_response *res = cwist_http_response_create_in_arena(s->req->arena);
