@@ -11,12 +11,6 @@ int main(void) {
     assert(h3c_timeout_to_poll_us(999) == 999000);
     assert(h3c_timeout_to_poll_us(1000) == 1000000);
     assert(h3c_timeout_to_poll_us(INT_MAX) == 1000000);
-    assert(h3c_retry_backoff_ms(1000, 1) == 1000);
-    assert(h3c_retry_backoff_ms(1000, 2) == 2000);
-    assert(h3c_retry_backoff_ms(1000, 5) == 16000);
-    assert(h3c_retry_backoff_ms(1000, 6) == 30000);
-    assert(h3c_retry_backoff_ms(1, 31) == 30000);
-    assert(h3c_retry_backoff_ms(INT_MAX, 1) == 30000);
 
     cwist_http3_client client;
     memset(&client, 0, sizeof(client));

@@ -451,15 +451,9 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
             sqlite3_free(vals_buf);
             return NULL;
         }
-        char *new_cols = sqlite3_mprintf("%s%s", cols_buf, col_frag);
-        if (!new_cols) {
-            sqlite3_free(col_frag);
-            sqlite3_free(cols_buf);
-            sqlite3_free(vals_buf);
-            return NULL;
-        }
-        sqlite3_free(cols_buf);
-        cols_buf = new_cols;
+        size_t cols_cap = (size_t)(count * 64 + 16);
+        size_t cols_used = strlen(cols_buf);
+        if (cols_used < cols_cap - 1) strncat(cols_buf, col_frag, cols_cap - 1 - cols_used);
         sqlite3_free(col_frag);
 
         /* Value */

@@ -152,11 +152,10 @@ control block is roughly 130 bytes, plus:
 
 - the slot's fixed request buffer (`rx_buffer_bytes`); a request that does not
   fit is refused with 431/413 even when the protocol caps would allow it;
-- the slot's fixed response buffer (`tx_buffer_bytes`); small streamed bodies
-  are referenced directly after the header to avoid an initial ACK stall, while
-  larger bodies use bounded buffer chunks as the peer acknowledges. Owned
-  bodies retain their response object, while application-owned pointer bodies
-  release it before streaming, so response size does not inflate the pool;
+- the slot's fixed response buffer (`tx_buffer_bytes`); larger responses are
+  streamed through the buffer in chunks as the peer acknowledges. Owned bodies
+  retain their response object, while application-owned pointer bodies release
+  it before streaming, so response size does not inflate the pool;
 - lwIP's own PCB, pbuf, segment, and timer pools.
 
 Size the pool as `max_conns * (conn + rx + tx)` and validate it with a linker

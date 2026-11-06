@@ -70,6 +70,111 @@ static void gql_add_error(cJSON *errors, const char *message) {
     }
 }
 
+static char *gql_name_dup(const char *start, size_t len) {
+    char *name = cwist_alloc(len + 1);
+    if (!name) return NULL;
+    memcpy(name, start, len);
+    name[len] = '\0';
+    return name;
+}
+
+static int gql_hex_digit(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static int gql_hex_quad(const char *p, unsigned long *out) {
+    unsigned long value = 0;
+    for (int i = 0; i < 4; i++) {
+        int digit = gql_hex_digit(p[i]);
+        if (digit < 0) return -1;
+        value = value * 16 + (unsigned long)digit;
+    }
+    *out = value;
+    return 0;
+}
+
+static void gql_utf8_append(char *out, size_t *pos, unsigned long cp) {
+    if (cp <= 0x7f) {
+        out[(*pos)++] = (char)cp;
+    } else if (cp <= 0x7ff) {
+        out[(*pos)++] = (char)(0xc0 | (cp >> 6));
+        out[(*pos)++] = (char)(0x80 | (cp & 0x3f));
+    } else if (cp <= 0xffff) {
+        out[(*pos)++] = (char)(0xe0 | (cp >> 12));
+        out[(*pos)++] = (char)(0x80 | ((cp >> 6) & 0x3f));
+        out[(*pos)++] = (char)(0x80 | (cp & 0x3f));
+    } else {
+        out[(*pos)++] = (char)(0xf0 | (cp >> 18));
+        out[(*pos)++] = (char)(0x80 | ((cp >> 12) & 0x3f));
+        out[(*pos)++] = (char)(0x80 | ((cp >> 6) & 0x3f));
+        out[(*pos)++] = (char)(0x80 | (cp & 0x3f));
+    }
+}
+
+static char *gql_decode_string(const char *src, size_t len) {
+    char *out = cwist_alloc(len + 1);
+    if (!out) return NULL;
+    size_t pos = 0;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)src[i];
+        if (c < 0x20) {
+            cwist_free(out);
+            return NULL;
+        }
+        if (c != '\\') {
+            out[pos++] = (char)c;
+            continue;
+        }
+        if (++i >= len) {
+            cwist_free(out);
+            return NULL;
+        }
+        char escape = src[i];
+        const char *simple = NULL;
+        switch (escape) {
+            case '"': simple = "\""; break;
+            case '\\': simple = "\\"; break;
+            case '/': simple = "/"; break;
+            case 'b': simple = "\b"; break;
+            case 'f': simple = "\f"; break;
+            case 'n': simple = "\n"; break;
+            case 'r': simple = "\r"; break;
+            case 't': simple = "\t"; break;
+            case 'u': {
+                if (i + 4 >= len || gql_hex_quad(src + i + 1, &(unsigned long){0}) != 0) {
+                    cwist_free(out);
+                    return NULL;
+                }
+                unsigned long cp = 0;
+                (void)gql_hex_quad(src + i + 1, &cp);
+                i += 4;
+                if (cp >= 0xd800 && cp <= 0xdbff) {
+                    unsigned long low = 0;
+                    if (i + 6 >= len || src[i + 1] != '\\' || src[i + 2] != 'u' ||
+                        gql_hex_quad(src + i + 3, &low) != 0 || low < 0xdc00 || low > 0xdfff) {
+                        cwist_free(out);
+                        return NULL;
+                    }
+                    cp = 0x10000 + ((cp - 0xd800) << 10) + (low - 0xdc00);
+                    i += 6;
+                } else if (cp >= 0xdc00 && cp <= 0xdfff) {
+                    cwist_free(out);
+                    return NULL;
+                }
+                gql_utf8_append(out, &pos, cp);
+                continue;
+            }
+            default: cwist_free(out); return NULL;
+        }
+        out[pos++] = *simple;
+    }
+    out[pos] = '\0';
+    return out;
+}
+
 /**
  * @brief Allocate an empty GraphQL schema with no query or mutation fields.
  * @return Newly allocated schema on success, NULL on allocation failure.
@@ -223,7 +328,7 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
     *out_args = NULL;
     p = skip_ws_comments(p);
     if (*p != '(') return p;
-    p++; /* skip '(' */
+    p++;
 
     cJSON *args = cJSON_CreateObject();
     if (!args) {
@@ -231,14 +336,16 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
         return p;
     }
 
+    bool closed = false;
     while (*p) {
         p = skip_ws_comments(p);
-        if (*p == ')' || *p == '\0') {
-            if (*p == ')') p++;
+        if (*p == ')') {
+            closed = true;
+            p++;
             break;
         }
+        if (*p == '\0') break;
 
-        /* Read argument name */
         const char *name_start = p;
         if (!gql_name_char(*p, true)) {
             gql_add_error(errors, "Invalid argument name");
@@ -246,22 +353,23 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
             return p;
         }
         while (*p && gql_name_char(*p, false)) p++;
-        size_t name_len = (size_t)(p - name_start);
-        char arg_name[128];
-        if (name_len >= sizeof(arg_name)) name_len = sizeof(arg_name) - 1;
-        memcpy(arg_name, name_start, name_len);
-        arg_name[name_len] = '\0';
+        char *arg_name = gql_name_dup(name_start, (size_t)(p - name_start));
+        if (!arg_name) {
+            gql_add_error(errors, "Internal memory error parsing argument name");
+            cJSON_Delete(args);
+            return p;
+        }
 
         p = skip_ws_comments(p);
         if (*p != ':') {
             gql_add_error(errors, "Expected ':' after argument name");
+            cwist_free(arg_name);
             cJSON_Delete(args);
             return p;
         }
-        p++; /* skip ':' */
+        p++;
         p = skip_ws_comments(p);
 
-        /* Parse argument value */
         cJSON *val = NULL;
         if (*p == '"') {
             p++;
@@ -274,33 +382,41 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
             }
             if (*p != '"') {
                 gql_add_error(errors, "Unterminated string in argument");
+                cwist_free(arg_name);
                 cJSON_Delete(args);
                 return p;
             }
-            size_t str_len = (size_t)(p - str_start);
-            cwist_scratch_t str_val_s CWIST_SCRATCH_DEFER = {0};
-            char *str_val = cwist_scratch_alloc(&str_val_s, str_len + 1);
-            if (str_val) {
-                memcpy(str_val, str_start, str_len);
-                str_val[str_len] = '\0';
-                val = cJSON_CreateString(str_val);
+            char *decoded = gql_decode_string(str_start, (size_t)(p - str_start));
+            if (decoded) {
+                val = cJSON_CreateString(decoded);
+                cwist_free(decoded);
+            } else {
+                gql_add_error(errors, "Invalid string escape sequence");
             }
-            p++; /* skip closing '"' */
-        } else if (*p == '$') { /* Variable reference */
+            p++;
+        } else if (*p == '$') {
             p++;
             const char *var_start = p;
+            if (!gql_name_char(*p, true)) {
+                gql_add_error(errors, "Invalid variable name");
+                cwist_free(arg_name);
+                cJSON_Delete(args);
+                return p;
+            }
             while (*p && gql_name_char(*p, false)) p++;
-            size_t var_len = (size_t)(p - var_start);
-            char var_name[128];
-            if (var_len >= sizeof(var_name)) var_len = sizeof(var_name) - 1;
-            memcpy(var_name, var_start, var_len);
-            var_name[var_len] = '\0';
-
+            char *var_name = gql_name_dup(var_start, (size_t)(p - var_start));
+            if (!var_name) {
+                gql_add_error(errors, "Internal memory error parsing variable name");
+                cwist_free(arg_name);
+                cJSON_Delete(args);
+                return p;
+            }
             if (variables && cJSON_IsObject(variables)) {
                 cJSON *v = cJSON_GetObjectItemCaseSensitive(variables, var_name);
                 if (v) val = cJSON_Duplicate(v, true);
             }
             if (!val) val = cJSON_CreateNull();
+            cwist_free(var_name);
         } else if (isdigit((unsigned char)*p) || *p == '-') {
             char *endptr = NULL;
             double num = strtod(p, &endptr);
@@ -317,15 +433,25 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
             p += 4;
         } else {
             gql_add_error(errors, "Unsupported argument value format");
+            cwist_free(arg_name);
             cJSON_Delete(args);
             return p;
         }
 
-        if (val) {
-            cJSON_AddItemToObject(args, arg_name, val);
+        if (!val) {
+            cwist_free(arg_name);
+            cJSON_Delete(args);
+            return p;
         }
+        cJSON_AddItemToObject(args, arg_name, val);
+        cwist_free(arg_name);
     }
 
+    if (!closed) {
+        gql_add_error(errors, "Unterminated argument list");
+        cJSON_Delete(args);
+        return p;
+    }
     *out_args = args;
     return p;
 }
@@ -346,7 +472,7 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
  */
 static const char *parse_selection_set(const char *p, graphql_field_t *schema_fields,
                                        const cJSON *variables, cJSON *parent_data, cJSON *errors,
-                                       unsigned int depth) {
+                                       unsigned int depth, bool validate_only) {
     if (depth > CWIST_GRAPHQL_MAX_DEPTH) {
         gql_add_error(errors, "Query selection depth exceeds maximum allowed");
         return p;
@@ -354,22 +480,23 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
 
     p = skip_ws_comments(p);
     if (*p != '{') return p;
-    p++; /* skip '{' */
+    p++;
 
     size_t field_count = 0;
+    bool closed = false;
     while (*p) {
         p = skip_ws_comments(p);
-        if (*p == '}' || *p == '\0') {
-            if (*p == '}') p++;
+        if (*p == '}') {
+            closed = true;
+            p++;
             break;
         }
-
+        if (*p == '\0') break;
         if (++field_count > CWIST_GRAPHQL_MAX_FIELDS) {
             gql_add_error(errors, "Field count limit exceeded");
             break;
         }
 
-        /* Read Alias or Field Name */
         const char *name_start = p;
         if (!gql_name_char(*p, true)) {
             gql_add_error(errors, "Invalid field name syntax");
@@ -377,59 +504,79 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
         }
         while (*p && gql_name_char(*p, false)) p++;
         size_t name_len = (size_t)(p - name_start);
-        char token1[128];
-        if (name_len >= sizeof(token1)) name_len = sizeof(token1) - 1;
-        memcpy(token1, name_start, name_len);
-        token1[name_len] = '\0';
-
-        char field_name[128];
-        char output_key[128];
-        strcpy(output_key, token1);
-        strcpy(field_name, token1);
+        char *token1 = gql_name_dup(name_start, name_len);
+        char *field_name = token1 ? gql_name_dup(name_start, name_len) : NULL;
+        char *output_key = token1 ? gql_name_dup(name_start, name_len) : NULL;
+        if (!token1 || !field_name || !output_key) {
+            gql_add_error(errors, "Internal memory error parsing field name");
+            cwist_free(token1);
+            cwist_free(field_name);
+            cwist_free(output_key);
+            break;
+        }
 
         p = skip_ws_comments(p);
-        if (*p == ':') { /* Alias: output_key: field_name */
+        if (*p == ':') {
             p++;
             p = skip_ws_comments(p);
             const char *field_start = p;
             if (!gql_name_char(*p, true)) {
                 gql_add_error(errors, "Invalid field name after alias");
+                cwist_free(token1);
+                cwist_free(field_name);
+                cwist_free(output_key);
                 break;
             }
             while (*p && gql_name_char(*p, false)) p++;
-            size_t f_len = (size_t)(p - field_start);
-            if (f_len >= sizeof(field_name)) f_len = sizeof(field_name) - 1;
-            memcpy(field_name, field_start, f_len);
-            field_name[f_len] = '\0';
+            char *alias_name = gql_name_dup(field_start, (size_t)(p - field_start));
+            if (!alias_name) {
+                gql_add_error(errors, "Internal memory error parsing aliased field");
+                cwist_free(token1);
+                cwist_free(field_name);
+                cwist_free(output_key);
+                break;
+            }
+            cwist_free(field_name);
+            field_name = alias_name;
         }
 
-        /* Parse Field Arguments if present */
         cJSON *args = NULL;
         p = parse_arguments(p, variables, &args, errors);
 
-        /* Resolve Field Value */
         cJSON *val = NULL;
         graphql_field_t *f = gql_lookup(schema_fields, field_name);
-        if (!f) {
-            char err_buf[256];
-            snprintf(err_buf, sizeof(err_buf), "Cannot query field '%s' on schema", field_name);
-            gql_add_error(errors, err_buf);
+        if (validate_only) {
+            if (!f) {
+                size_t err_len = strlen(field_name) + 32;
+                char *err_buf = cwist_alloc(err_len);
+                if (err_buf) {
+                    snprintf(err_buf, err_len, "Cannot query field '%s' on schema", field_name);
+                    gql_add_error(errors, err_buf);
+                    cwist_free(err_buf);
+                }
+            }
+            val = cJSON_CreateObject();
+        } else if (!f) {
+            size_t err_len = strlen(field_name) + 32;
+            char *err_buf = cwist_alloc(err_len);
+            if (err_buf) {
+                snprintf(err_buf, err_len, "Cannot query field '%s' on schema", field_name);
+                gql_add_error(errors, err_buf);
+                cwist_free(err_buf);
+            }
             val = cJSON_CreateNull();
         } else {
             val = f->fn(args, variables, f->ctx);
-            if (!val) {
-                val = cJSON_CreateNull();
-            }
+            if (!val) val = cJSON_CreateNull();
         }
         if (args) cJSON_Delete(args);
 
-        /* Parse nested selection set if present and value is object */
         p = skip_ws_comments(p);
         if (*p == '{') {
             if (cJSON_IsObject(val)) {
-                p = parse_selection_set(p, schema_fields, variables, val, errors, depth + 1);
+                p = parse_selection_set(p, schema_fields, variables, val, errors, depth + 1,
+                                        validate_only);
             } else {
-                /* Skip sub-selection if non-object or null */
                 int brace_count = 0;
                 while (*p) {
                     if (*p == '{')
@@ -446,9 +593,13 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
             }
         }
 
-        cJSON_AddItemToObject(parent_data, output_key, val);
+        if (val) cJSON_AddItemToObject(parent_data, output_key, val);
+        cwist_free(token1);
+        cwist_free(field_name);
+        cwist_free(output_key);
     }
 
+    if (!closed) gql_add_error(errors, "Unterminated selection set");
     return p;
 }
 
@@ -513,7 +664,18 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
         } else {
             graphql_field_t *target_schema =
                 (op_type == GQL_OP_MUTATION) ? schema->mutations : schema->queries;
-            parse_selection_set(p, target_schema, variables, data, errors, 1);
+            cJSON *validated = cJSON_CreateObject();
+            if (!validated) {
+                gql_add_error(errors, "Internal memory error validating query");
+            } else {
+                const char *end =
+                    parse_selection_set(p, target_schema, variables, validated, errors, 1, true);
+                end = skip_ws_comments(end);
+                if (*end) gql_add_error(errors, "Unexpected trailing content after operation");
+                if (cJSON_GetArraySize(errors) == 0)
+                    (void)parse_selection_set(p, target_schema, variables, data, errors, 1, false);
+                cJSON_Delete(validated);
+            }
         }
     }
 
@@ -572,30 +734,38 @@ bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables,
     p = skip_ws_comments(p);
     if (*p == '}' || !gql_name_char(*p, true)) return false;
 
-    char token[128];
     const char *name_start = p;
     while (*p && gql_name_char(*p, false)) p++;
     size_t name_len = (size_t)(p - name_start);
-    if (name_len >= sizeof(token)) name_len = sizeof(token) - 1;
-    memcpy(token, name_start, name_len);
-    token[name_len] = '\0';
+    char *token = gql_name_dup(name_start, name_len);
+    if (!token) return false;
 
     p = skip_ws_comments(p);
-    if (*p == ':') { /* Alias: the resolvable name follows the alias. */
+    if (*p == ':') {
         p++;
         p = skip_ws_comments(p);
         name_start = p;
-        if (!gql_name_char(*p, true)) return false;
+        if (!gql_name_char(*p, true)) {
+            cwist_free(token);
+            return false;
+        }
         while (*p && gql_name_char(*p, false)) p++;
-        name_len = (size_t)(p - name_start);
-        if (name_len >= sizeof(token)) name_len = sizeof(token) - 1;
-        memcpy(token, name_start, name_len);
-        token[name_len] = '\0';
+        char *alias = gql_name_dup(name_start, (size_t)(p - name_start));
+        if (!alias) {
+            cwist_free(token);
+            return false;
+        }
+        cwist_free(token);
+        token = alias;
     }
 
     size_t out_len = strlen(token);
-    if (out_len >= field_cap) return false;
+    if (out_len >= field_cap) {
+        cwist_free(token);
+        return false;
+    }
     memcpy(field_out, token, out_len + 1);
+    cwist_free(token);
 
     cJSON *errors = cJSON_CreateArray();
     if (!errors) return false;

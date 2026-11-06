@@ -225,6 +225,10 @@ static void sctp_apply_sockopts(struct socket *sock) {
     usrsctp_setsockopt(sock, IPPROTO_SCTP, SCTP_RECVRCVINFO, &on, sizeof(on));
     usrsctp_setsockopt(sock, IPPROTO_SCTP, SCTP_NODELAY, &on, sizeof(on));
 
+    int fragment_interleave = 0;
+    usrsctp_setsockopt(sock, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE, &fragment_interleave,
+                       sizeof(fragment_interleave));
+
     /* close() aborts instead of lingering in SHUTDOWN: no timer can fire for
      * the association after its conn is gone. */
     struct linger lg = {.l_onoff = 1, .l_linger = 0};
@@ -312,19 +316,19 @@ void cwist_sctp_conn_close(struct cwist_webrtc_conn *conn) {
     cwist_free(conn->rx_partial);
     conn->rx_partial = NULL;
     conn->rx_partial_len = conn->rx_partial_cap = 0;
+    conn->rx_partial_active = false;
 }
 
 void cwist_sctp_conn_input(struct cwist_webrtc_conn *conn, const uint8_t *data, size_t len) {
     if (conn->sctp_sock || conn->sctp_acc) usrsctp_conninput(conn, data, len, 0);
 }
 
-/**
- * @brief Append a piece of a partially delivered message.
- * @return 0, or -1 if the message would exceed the advertised maximum.
- */
-static int rx_partial_append(struct cwist_webrtc_conn *conn, const uint8_t *data, size_t len) {
+int cwist_sctp_rx_partial_append(struct cwist_webrtc_conn *conn, uint16_t sid, uint32_t ppid,
+                                 const uint8_t *data, size_t len) {
+    if (conn->rx_partial_active && (conn->rx_partial_sid != sid || conn->rx_partial_ppid != ppid))
+        return -1;
+    if (len > CWIST_WEBRTC_MAX_MESSAGE - conn->rx_partial_len) return -1;
     size_t need = conn->rx_partial_len + len;
-    if (need > CWIST_WEBRTC_MAX_MESSAGE) return -1;
     if (need > conn->rx_partial_cap) {
         size_t cap = conn->rx_partial_cap ? conn->rx_partial_cap : 65536;
         while (cap < need) cap *= 2;
@@ -334,6 +338,11 @@ static int rx_partial_append(struct cwist_webrtc_conn *conn, const uint8_t *data
         cwist_free(conn->rx_partial);
         conn->rx_partial = buf;
         conn->rx_partial_cap = cap;
+    }
+    if (!conn->rx_partial_active) {
+        conn->rx_partial_sid = sid;
+        conn->rx_partial_ppid = ppid;
+        conn->rx_partial_active = true;
     }
     memcpy(conn->rx_partial + conn->rx_partial_len, data, len);
     conn->rx_partial_len = need;
@@ -379,18 +388,23 @@ int cwist_sctp_conn_drain(struct cwist_webrtc_conn *conn) {
             continue;
         }
         if (infotype != SCTP_RECVV_RCVINFO || infolen < (socklen_t)sizeof(rcv)) continue;
+        uint32_t ppid = ntohl(rcv.rcv_ppid);
         if (!(msg_flags & MSG_EOR)) {
-            /* Partial delivery: keep the piece until the end of the message. */
-            if (rx_partial_append(conn, buf, (size_t)n) < 0) return -1;
+            if (cwist_sctp_rx_partial_append(conn, rcv.rcv_sid, ppid, buf, (size_t)n) < 0)
+                return -1;
             continue;
         }
-        if (conn->rx_partial_len) {
-            if (rx_partial_append(conn, buf, (size_t)n) < 0) return -1;
+        if (conn->rx_partial_active) {
+            if (cwist_sctp_rx_partial_append(conn, rcv.rcv_sid, ppid, buf, (size_t)n) < 0)
+                return -1;
             size_t total = conn->rx_partial_len;
+            uint16_t sid = conn->rx_partial_sid;
+            uint32_t partial_ppid = conn->rx_partial_ppid;
             conn->rx_partial_len = 0;
-            dispatch_message(conn, rcv.rcv_sid, ntohl(rcv.rcv_ppid), conn->rx_partial, total);
+            conn->rx_partial_active = false;
+            dispatch_message(conn, sid, partial_ppid, conn->rx_partial, total);
         } else {
-            dispatch_message(conn, rcv.rcv_sid, ntohl(rcv.rcv_ppid), buf, (size_t)n);
+            dispatch_message(conn, rcv.rcv_sid, ppid, buf, (size_t)n);
         }
         if (conn->close_requested || atomic_load(&conn->detached)) return 0;
     }

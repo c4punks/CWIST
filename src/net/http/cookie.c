@@ -35,6 +35,7 @@ static int needs_url_encode(char c) {
 char *cwist_cookie_encode(const char *value) {
     if (!value) return NULL;
     size_t len = strlen(value);
+    if (len > (SIZE_MAX - 1) / 3) return NULL;
     size_t max = len * 3 + 1;
     char *out = cwist_alloc(max);
     if (!out) return NULL;
@@ -130,9 +131,55 @@ static int cookie_append_attr(cwist_sstring *cookie, const char *prefix, const c
     return cookie_append(cookie, prefix) == 0 ? cookie_append(cookie, value) : -1;
 }
 
+static bool cookie_name_is_valid(const char *name) {
+    if (!name || !*name) return false;
+    for (const unsigned char *p = (const unsigned char *)name; *p; p++) {
+        unsigned char c = *p;
+        if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+            c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' ||
+            c == '+' || c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '|' ||
+            c == '~')
+            continue;
+        return false;
+    }
+    return true;
+}
+
+static bool cookie_path_is_valid(const char *path) {
+    if (!path || !*path) return false;
+    for (const unsigned char *p = (const unsigned char *)path; *p; p++) {
+        if (*p < 0x20 || *p == 0x7f || *p == ';') return false;
+    }
+    return true;
+}
+
+static bool cookie_domain_is_valid(const char *domain) {
+    if (!domain || !*domain) return false;
+    for (const unsigned char *p = (const unsigned char *)domain; *p; p++) {
+        if ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+            *p == '-' || *p == '.')
+            continue;
+        return false;
+    }
+    return true;
+}
+
+static bool cookie_same_site_is_valid(const char *same_site) {
+    return same_site && (strcmp(same_site, "Strict") == 0 || strcmp(same_site, "Lax") == 0 ||
+                         strcmp(same_site, "None") == 0);
+}
+
+static bool cookie_options_are_valid(const cwist_cookie_options *opts) {
+    if (!opts) return true;
+    if (opts->path && !cookie_path_is_valid(opts->path)) return false;
+    if (opts->domain && !cookie_domain_is_valid(opts->domain)) return false;
+    if (opts->same_site && !cookie_same_site_is_valid(opts->same_site)) return false;
+    return true;
+}
+
 int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value,
                      const cwist_cookie_options *opts) {
-    if (!res || !name) return -1;
+    if (!res || !cookie_name_is_valid(name) || !cookie_options_are_valid(opts)) return -1;
 
     char *encoded = value ? cwist_cookie_encode(value) : cwist_strdup("");
     if (!encoded) return -1;
@@ -157,7 +204,8 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
         }
         if (ok && opts->http_only) ok = cookie_append(cookie, "; HttpOnly") == 0;
         if (ok && opts->secure) ok = cookie_append(cookie, "; Secure") == 0;
-        if (ok && opts->same_site) ok = cookie_append_attr(cookie, "; SameSite=", opts->same_site) == 0;
+        if (ok && opts->same_site)
+            ok = cookie_append_attr(cookie, "; SameSite=", opts->same_site) == 0;
     }
 
     int rc = ok ? add_set_cookie(res, cookie->data) : -1;
@@ -166,12 +214,13 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
 }
 
 int cwist_cookie_delete(cwist_http_response *res, const char *name) {
-    if (!res || !name) return -1;
+    if (!res || !cookie_name_is_valid(name)) return -1;
 
     cwist_sstring *cookie = cwist_sstring_create();
     if (!cookie) return -1;
 
-    bool ok = cookie_append(cookie, name) == 0 && cookie_append(cookie, "=; Path=/; Max-Age=0") == 0;
+    bool ok =
+        cookie_append(cookie, name) == 0 && cookie_append(cookie, "=; Path=/; Max-Age=0") == 0;
     int rc = ok ? add_set_cookie(res, cookie->data) : -1;
     cwist_sstring_destroy(cookie);
     return rc;

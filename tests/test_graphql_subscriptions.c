@@ -26,7 +26,7 @@
 #define CLOSE_BAD_REQUEST 4400
 #define CLOSE_UNAUTHORIZED 4401
 #define CLOSE_DUPLICATE_ID 4409
-#define CLOSE_SUBSCRIBE_BEFORE_INIT 4429
+#define CLOSE_TOO_MANY_INIT 4429
 
 static cwist_graphql_schema_t *g_schema;
 static cwist_graphql_ws_t *g_gws;
@@ -224,50 +224,74 @@ int main(void) {
 
     /* All connections attach before the reactor thread starts, matching the
      * harness pattern in tests/test_websocket_async.c. */
-    int fd_early = attach_conn(reactor);    /* subscribe-before-init */
-    int fd_ping = attach_conn(reactor);     /* ping-before-init */
-    int fd_garbage = attach_conn(reactor);  /* malformed JSON */
+    int fd_early = attach_conn(reactor);       /* subscribe-before-init */
+    int fd_ping = attach_conn(reactor);        /* ping-before-init */
+    int fd_garbage = attach_conn(reactor);     /* malformed JSON */
     int fd_second_init = attach_conn(reactor); /* duplicate connection_init */
-    int fd_dup = attach_conn(reactor);      /* duplicate operation id */
-    int fd = attach_conn(reactor);          /* main flow */
+    int fd_binary = attach_conn(reactor);      /* binary GraphQL message */
+    int fd_shape = attach_conn(reactor);       /* non-object JSON message */
+    int fd_bad_subscribe = attach_conn(reactor);
+    int fd_dup = attach_conn(reactor);         /* duplicate operation id */
+    int fd = attach_conn(reactor);             /* main flow */
 
     pthread_t rt;
     assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
 
-    /* 1. subscribe before connection_init closes with 4429. */
+    /* 1. subscribe before connection_init closes with 4401. */
     write_text(fd_early,
                "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription "
                "{ counter }\"}}");
-    expect_close_code(fd_early, CLOSE_SUBSCRIBE_BEFORE_INIT);
+    expect_close_code(fd_early, CLOSE_UNAUTHORIZED);
     expect_eof(fd_early);
     close(fd_early);
-    printf("1. subscribe before init -> close 4429: ok\n");
+    printf("1. subscribe before init -> close 4401: ok\n");
 
-    /* 2. Any other pre-init message closes with 4401. */
-    write_text(fd_ping, "{\"type\":\"ping\"}");
-    expect_close_code(fd_ping, CLOSE_UNAUTHORIZED);
+    /* 2. Keepalive is valid before connection_init. */
+    write_text(fd_ping, "{\"type\":\"ping\",\"payload\":{\"early\":true}}");
+    cJSON *early_pong = read_json_message(fd_ping);
+    cJSON *early_type = cJSON_GetObjectItemCaseSensitive(early_pong, "type");
+    assert(cJSON_IsString(early_type) && strcmp(early_type->valuestring, "pong") == 0);
+    cJSON_Delete(early_pong);
+    write_masked(fd_ping, 0x88, (const uint8_t *)"\x03\xE8", 2);
+    expect_close_code(fd_ping, 1000);
     expect_eof(fd_ping);
     close(fd_ping);
-    printf("2. ping before init -> close 4401: ok\n");
+    printf("2. ping before init -> pong: ok\n");
 
-    /* 3. A non-JSON text frame closes with 4400. */
+    /* 3. Malformed JSON, non-object JSON, and binary messages close with 4400. */
     write_text(fd_garbage, "this is not json");
     expect_close_code(fd_garbage, CLOSE_BAD_REQUEST);
     expect_eof(fd_garbage);
     close(fd_garbage);
-    printf("3. malformed JSON -> close 4400: ok\n");
+    write_text(fd_shape, "[]");
+    expect_close_code(fd_shape, CLOSE_BAD_REQUEST);
+    expect_eof(fd_shape);
+    close(fd_shape);
+    write_masked(fd_binary, 0x82, (const uint8_t *)"x", 1);
+    expect_close_code(fd_binary, CLOSE_BAD_REQUEST);
+    expect_eof(fd_binary);
+    close(fd_binary);
+    printf("3. malformed and non-text messages -> close 4400: ok\n");
 
-    /* 4. A second connection_init closes with 4401. */
+    /* 4. A second connection_init closes with 4429. */
     write_text(fd_second_init, "{\"type\":\"connection_init\"}");
     {
         cJSON *ack = read_json_message(fd_second_init);
         cJSON_Delete(ack);
     }
     write_text(fd_second_init, "{\"type\":\"connection_init\"}");
-    expect_close_code(fd_second_init, CLOSE_UNAUTHORIZED);
+    expect_close_code(fd_second_init, CLOSE_TOO_MANY_INIT);
     expect_eof(fd_second_init);
     close(fd_second_init);
-    printf("4. duplicate connection_init -> close 4401: ok\n");
+    printf("4. duplicate connection_init -> close 4429: ok\n");
+
+    write_text(fd_bad_subscribe, "{\"type\":\"connection_init\"}");
+    cJSON_Delete(read_json_message(fd_bad_subscribe));
+    write_text(fd_bad_subscribe, "{\"id\":\"bad\",\"type\":\"subscribe\",\"payload\":{}}");
+    expect_close_code(fd_bad_subscribe, CLOSE_BAD_REQUEST);
+    expect_eof(fd_bad_subscribe);
+    close(fd_bad_subscribe);
+    puts("invalid subscribe shape -> close 4400: ok");
 
     /* 5. Duplicate subscriber id closes with 4409. */
     write_text(fd_dup, "{\"type\":\"connection_init\"}");

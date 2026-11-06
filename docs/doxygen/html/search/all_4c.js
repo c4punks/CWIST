@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['웹소켓_20연동_20실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md489',1,'']]],
-  ['웹_20개발_20튜토리얼_20a_20to_20z_1',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]]
+  ['때까지의_20권장_20처리_0',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md635',1,'']]]
 ];

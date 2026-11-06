@@ -12,8 +12,14 @@
 </p>
 
 <p align="center">
-<strong>Write a web app once in C. Serve it from a native server, from a WASI 0.2
-edge runtime, or from inside the browser's Service Worker.</strong>
+<strong>Write a web app once in C. Serve it from a native server, a WASI 0.2
+edge runtime, a browser Service Worker, or bare-metal MCU firmware.</strong>
+</p>
+
+<p align="center">
+<strong>Bare-metal embedded support:</strong> STM32F769I-DISCO and NUCLEO-H743ZI2,
+raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, and bounded
+response streaming on Cortex-M.
 </p>
 
 <p align="center">
@@ -23,8 +29,21 @@ HTTP/2, HTTP/3, WebSocket and WebTransport, with an io_uring/epoll/kqueue reacto
 </p>
 
 <p align="center">
+Bare-metal firmware uses <code>cwist_app_dispatch_memory()</code> or the raw-lwIP
+adapter without BSD sockets, pthreads, epoll, or the hosted C1M reactor.
+</p>
+
+<p align="center">
   <strong>Powered by CWIST in production:</strong> <a href="https://oborona.zip">oborona.zip</a> (daily engineering blog) · <a href="https://github.com/gg582/fly.board">fly.board</a>
 </p>
+
+## Supported platforms
+
+| Target | Runtime and transport | Validation and examples |
+|--------|-----------------------|--------------------------|
+| **Linux, macOS, BSD** | HTTP/1.1, HTTP/2, HTTP/3, TLS, WebSocket, WebTransport, io_uring/epoll/kqueue | [simple-server](example/simple-server) |
+| **WASI 0.2 and browser Service Worker** | The same routes and handlers on Wasmtime or in the browser | [wasip2-kv](example/wasip2-kv), [wasm-service-worker](example/wasm-service-worker) |
+| **Bare-metal STM32 and Cortex-M** | Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses | [STM32 guide](docs/embedded/stm32.md), [STM32F769I-DISCO fortress](example/stm32f769-fortress), [NUCLEO-H743ZI2](example/stm32) |
 
 ## Quick start
 
@@ -59,7 +78,7 @@ Or scaffold a hot-reloading project with `cwist new project demo && cwist watche
 Next steps: the 30 modules in [tutorials/](tutorials/README.md) and the guides in
 [docs/](docs/README.md).
 
-## One app, three places to run it
+## One app, four targets
 
 A CWIST app is a set of routes on a `cwist_app`. Where it runs depends only on
 how you hand that app to a host:
@@ -69,6 +88,7 @@ how you hand that app to a host:
 | **Native server** (Linux, macOS, BSD) | `cwist_app_listen(app, port)` | The full stack: HTTP/1.1–3, TLS, WebSocket, WebTransport, C1M reactor | [simple-server](example/simple-server) |
 | **Browser Service Worker** | `CWIST_WASM_DEFINE_ENTRY(app)`, built with emcc | Routing, zod validation, templates, `cwist_db` and signed-cookie sessions answering `fetch` inside the browser: no origin server, no framework JS | [wasm-service-worker](example/wasm-service-worker) |
 | **WASI 0.2 edge runtime** (Wasmtime) | `cwist_app_listen` on WASI sockets, built for `wasm32-wasip2` | The same app on Wasmtime; the host owns persistence as a KV-style blob | [wasip2-kv](example/wasip2-kv) |
+| **Bare-metal STM32 firmware** | `cwist_app_dispatch_memory()` or the raw-lwIP adapter | Routing, middleware, JSON helpers, and HTTP/1.1 without BSD sockets or pthreads; optional mbedTLS HTTPS and bounded streaming | [STM32 guide](docs/embedded/stm32.md), [fortress](example/stm32f769-fortress) |
 
 The WASM hosts speak serialized HTTP/1.1 across a [WIT interface](wit/cwist.wit),
 and the [`cwist-wasm`](wasm/npm) npm package wraps the jco-transpiled
@@ -80,6 +100,7 @@ yet (for example, the wasip2 demo does not promise crash-durable writes).
 
 | Layer | What you get |
 |-------|-------------|
+| **Embedded / bare metal** | Cortex-M Thumb-2 builds, STM32F769I-DISCO and NUCLEO-H743ZI2 integrations, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming |
 | **Protocols** | HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels |
 | **TLS / Security** | BoringSSL, one-call hybrid post-quantum TLS (X25519MLKEM768), ECH, certificate hot reload, JWT, CSRF, WAF, rate limiting, secure headers, encrypted DB columns |
 | **Database** | SQLite3 + ORM and migrations, Nuke DB (in-memory SQLite synced to disk on COMMIT), PostgreSQL/MySQL/MariaDB detection by wire protocol |
@@ -96,16 +117,16 @@ yet (for example, the wasip2 demo does not promise crash-durable writes).
 Every push and pull request runs CWIST against Actix, Axum, Gin and Spring Boot
 under `wrk -t12 -c400 -d10s` on a GitHub runner.
 
-**Latest run at the time of writing** (2026-10-20, commit `94937494`, 4 vCPU AMD EPYC 9V74):
+**[Latest completed CI benchmark](https://github.com/c4punks/CWIST/actions/runs/42153892833)** (2026-11-06, commit `b3834e0d`, 4 vCPU AMD EPYC 9V74):
 
 | | CWIST reactor | CWIST Classic | Actix | Axum | Gin | Spring Boot |
 |---|---:|---:|---:|---:|---:|---:|
-| req/s | **183,303** | 155,941 | 174,662 | 151,695 | 116,080 | 74,789 |
-| p50 | 1.95 ms | **1.21 ms** | 2.04 ms | 2.38 ms | 3.31 ms | 4.98 ms |
-| p99 | 7.57 ms | **5.92 ms** | 7.08 ms | 6.92 ms | 21.34 ms | 10.37 ms |
-| P99.999 | 22.01 ms | 18.63 ms | **13.55 ms** | 14.29 ms | 43.04 ms | 42.51 ms |
-| RSS | 21.5 MiB | 59.7 MiB | **11.7 MiB** | 14.6 MiB | 30.1 MiB | 1.25 GiB |
-| Context switches | **145,617** | 1,488,999 | 189,420 | 260,600 | 367,969 | 338,919 |
+| req/s | **141,827** | 125,506 | 138,706 | 122,094 | 93,312 | 60,884 |
+| p50 | 2.60 ms | **1.43 ms** | 2.63 ms | 2.93 ms | 4.05 ms | 5.95 ms |
+| p99 | 8.20 ms | **6.91 ms** | 7.74 ms | 7.91 ms | 38.17 ms | 14.25 ms |
+| P99.999 | 18.15 ms | 25.76 ms | 15.87 ms | **15.65 ms** | 84.59 ms | 59.71 ms |
+| RSS | 22.2 MiB | 58.4 MiB | **12.0 MiB** | 14.8 MiB | 27.5 MiB | 1.22 GiB |
+| Context switches | **123,365** | 1,244,131 | 155,742 | 244,680 | 310,205 | 277,009 |
 
 In this run the reactor has the highest throughput and the fewest context
 switches, and the Classic pool answers the median request in about half of
@@ -368,12 +389,12 @@ CI regenerates this block from each benchmark run.
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 152541 req/s | Latency 1.51ms (P90 3.05ms, P99 5.98ms, P99.999 19.11ms) | RSS 61776KiB | Csw 1522922
-- **CWIST reactor**: 190399 req/s | Latency 2.14ms (P90 4.20ms, P99 7.03ms, P99.999 13.54ms) | RSS 22724KiB | Csw 154302
-- **Actix**: 175040 req/s | Latency 2.28ms (P90 4.20ms, P99 6.80ms, P99.999 13.34ms) | RSS 12480KiB | Csw 208011
-- **Axum**: 150113 req/s | Latency 2.58ms (P90 4.49ms, P99 6.90ms, P99.999 187.21ms) | RSS 15616KiB | Csw 297869
-- **Gin (Go)**: 113715 req/s | Latency 5.81ms (P90 15.12ms, P99 38.57ms, P99.999 77.12ms) | RSS 28264KiB | Csw 435765
-- **Spring Boot**: 75739 req/s | Latency 5.33ms (P90 7.34ms, P99 11.80ms, P99.999 69.08ms) | RSS 1305712KiB | Csw 342334
+- **CWIST Classic pool**: 125506 req/s | Latency 1.82ms (P90 3.80ms, P99 6.91ms, P99.999 25.76ms) | RSS 59840KiB | Csw 1244131
+- **CWIST reactor**: 141827 req/s | Latency 2.80ms (P90 5.20ms, P99 8.20ms, P99.999 18.15ms) | RSS 22736KiB | Csw 123365
+- **Actix**: 138706 req/s | Latency 2.84ms (P90 4.95ms, P99 7.74ms, P99.999 15.87ms) | RSS 12308KiB | Csw 155742
+- **Axum**: 122094 req/s | Latency 3.13ms (P90 5.34ms, P99 7.91ms, P99.999 15.65ms) | RSS 15124KiB | Csw 244680
+- **Gin (Go)**: 93312 req/s | Latency 6.16ms (P90 14.97ms, P99 38.17ms, P99.999 84.59ms) | RSS 28184KiB | Csw 310205
+- **Spring Boot**: 60884 req/s | Latency 6.54ms (P90 9.02ms, P99 14.25ms, P99.999 59.71ms) | RSS 1275236KiB | Csw 277009
 
 _Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 

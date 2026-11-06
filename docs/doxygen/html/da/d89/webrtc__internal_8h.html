@@ -223,6 +223,10 @@ Macros</h2></td></tr>
 <tr class="separator:a82ddfc60fbfdfeff233c5b4e7a88182b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8d79355360ea1939d282a26772f59725" id="r_a8d79355360ea1939d282a26772f59725"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d89/webrtc__internal_8h.html#a8d79355360ea1939d282a26772f59725">CWIST_WEBRTC_TX_BATCH</a>&#160;&#160;&#160;64</td></tr>
 <tr class="separator:a8d79355360ea1939d282a26772f59725"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad2bd72965ee1ce227eb5e365ec1ac96" id="r_aad2bd72965ee1ce227eb5e365ec1ac96"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d89/webrtc__internal_8h.html#aad2bd72965ee1ce227eb5e365ec1ac96">CWIST_WEBRTC_ICE_CREDENTIAL_MAX</a>&#160;&#160;&#160;256</td></tr>
+<tr class="separator:aad2bd72965ee1ce227eb5e365ec1ac96"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3abaccb4a988840a9432f4f830c08f99" id="r_a3abaccb4a988840a9432f4f830c08f99"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d89/webrtc__internal_8h.html#a3abaccb4a988840a9432f4f830c08f99">CWIST_WEBRTC_ICE_CREDENTIAL_CAP</a>&#160;&#160;&#160;(<a class="el" href="../../da/d89/webrtc__internal_8h.html#aad2bd72965ee1ce227eb5e365ec1ac96">CWIST_WEBRTC_ICE_CREDENTIAL_MAX</a> + 1)</td></tr>
+<tr class="separator:a3abaccb4a988840a9432f4f830c08f99"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">STUN message types (ice.c)</div></td></tr>
 <tr class="memitem:aeb7d0254353be51025ec1da96aa554ae" id="r_aeb7d0254353be51025ec1da96aa554ae"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d89/webrtc__internal_8h.html#aeb7d0254353be51025ec1da96aa554ae">CWIST_STUN_BINDING_REQUEST</a>&#160;&#160;&#160;0x0001</td></tr>
 <tr class="separator:aeb7d0254353be51025ec1da96aa554ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -322,6 +326,9 @@ Functions</h2></td></tr>
 <tr class="memitem:affa113261ada5faeb9e7691f3810f719" id="r_affa113261ada5faeb9e7691f3810f719"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d89/webrtc__internal_8h.html#affa113261ada5faeb9e7691f3810f719">cwist_sctp_conn_input</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> <a class="el" href="../../d9/daa/structcwist__webrtc__conn.html">cwist_webrtc_conn</a> *conn, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> *data, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> len)</td></tr>
 <tr class="memdesc:affa113261ada5faeb9e7691f3810f719"><td class="mdescLeft">&#160;</td><td class="mdescRight">Feed one decrypted SCTP packet to usrsctp.  <br /></td></tr>
 <tr class="separator:affa113261ada5faeb9e7691f3810f719"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c10e29379e68fddd9eba391e678ab2b" id="r_a2c10e29379e68fddd9eba391e678ab2b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d89/webrtc__internal_8h.html#a2c10e29379e68fddd9eba391e678ab2b">cwist_sctp_rx_partial_append</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> <a class="el" href="../../d9/daa/structcwist__webrtc__conn.html">cwist_webrtc_conn</a> *conn, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint16_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sid</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint32_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">ppid</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> *data, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> len)</td></tr>
+<tr class="memdesc:a2c10e29379e68fddd9eba391e678ab2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Append only fragments matching the current partial message identity.  <br /></td></tr>
+<tr class="separator:a2c10e29379e68fddd9eba391e678ab2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a46bd31a35778a7d9e031d542947b185c" id="r_a46bd31a35778a7d9e031d542947b185c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/d89/webrtc__internal_8h.html#a46bd31a35778a7d9e031d542947b185c">cwist_sctp_conn_drain</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> <a class="el" href="../../d9/daa/structcwist__webrtc__conn.html">cwist_webrtc_conn</a> *conn)</td></tr>
 <tr class="memdesc:a46bd31a35778a7d9e031d542947b185c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Accept (server role), then deliver every complete inbound message.  <br /></td></tr>
 <tr class="separator:a46bd31a35778a7d9e031d542947b185c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -372,7 +379,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>STUN Binding request. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00196">196</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00202">202</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
 </div>
 </div>
@@ -389,7 +396,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>STUN Binding success response. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00197">197</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00203">203</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
 </div>
 </div>
@@ -407,6 +414,38 @@ Functions</h2></td></tr>
 <p>Largest UDP datagram handled; bigger ones are dropped. </p>
 
 <p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00048">48</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+
+</div>
+</div>
+<a id="a3abaccb4a988840a9432f4f830c08f99" name="a3abaccb4a988840a9432f4f830c08f99"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3abaccb4a988840a9432f4f830c08f99">&#9670;&#160;</a></span>CWIST_WEBRTC_ICE_CREDENTIAL_CAP</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_WEBRTC_ICE_CREDENTIAL_CAP&#160;&#160;&#160;(<a class="el" href="../../da/d89/webrtc__internal_8h.html#aad2bd72965ee1ce227eb5e365ec1ac96">CWIST_WEBRTC_ICE_CREDENTIAL_MAX</a> + 1)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00078">78</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+
+</div>
+</div>
+<a id="aad2bd72965ee1ce227eb5e365ec1ac96" name="aad2bd72965ee1ce227eb5e365ec1ac96"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad2bd72965ee1ce227eb5e365ec1ac96">&#9670;&#160;</a></span>CWIST_WEBRTC_ICE_CREDENTIAL_MAX</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_WEBRTC_ICE_CREDENTIAL_MAX&#160;&#160;&#160;256</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00077">77</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
 </div>
 </div>
@@ -818,7 +857,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>On random generation failure, outputs with nonzero capacity are empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00587">587</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00571">571</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
@@ -877,9 +916,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total request length in bytes, or -1 if <code>cap</code> is too small. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00357">357</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00348">348</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00031">ATTR_ICE_CONTROLLING</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_PRIORITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00027">ATTR_USE_CANDIDATE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00024">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00196">CWIST_STUN_BINDING_REQUEST</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00021">STUN_MAGIC</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00033">ATTR_ICE_CONTROLLING</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00028">ATTR_PRIORITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00029">ATTR_USE_CANDIDATE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00025">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00202">CWIST_STUN_BINDING_REQUEST</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00021">STUN_MAGIC</a>.</p>
 
 </div>
 </div>
@@ -950,9 +989,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total response length in bytes, or -1 if the request is truncated, <code>cap</code> is too small, or OpenSSL allocation fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00284">284</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00277">277</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00029">ATTR_FINGERPRINT</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00025">ATTR_MESSAGE_INTEGRITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00028">ATTR_XOR_MAPPED_ADDRESS</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00197">CWIST_STUN_BINDING_RESPONSE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00021">STUN_MAGIC</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00031">ATTR_FINGERPRINT</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_MESSAGE_INTEGRITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00030">ATTR_XOR_MAPPED_ADDRESS</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00203">CWIST_STUN_BINDING_RESPONSE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00021">STUN_MAGIC</a>.</p>
 
 </div>
 </div>
@@ -1015,9 +1054,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00551">551</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00535">535</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00024">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00025">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>.</p>
 
 </div>
 </div>
@@ -1057,9 +1096,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00191">191</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00188">188</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00027">ATTR_USE_CANDIDATE</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00029">ATTR_USE_CANDIDATE</a>.</p>
 
 </div>
 </div>
@@ -1102,7 +1141,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00113">113</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00196">CWIST_STUN_BINDING_REQUEST</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00202">CWIST_STUN_BINDING_REQUEST</a>.</p>
 
 </div>
 </div>
@@ -1148,7 +1187,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00021">STUN_MAGIC</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00551">cwist_ice_stun_get_remote_ufrag()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00113">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00513">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00255">cwist_ice_stun_validate_request()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00535">cwist_ice_stun_get_remote_ufrag()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00113">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00502">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00248">cwist_ice_stun_validate_request()</a>.</p>
 
 </div>
 </div>
@@ -1224,9 +1263,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00513">513</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00502">502</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00255">cwist_ice_stun_validate_request()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00197">CWIST_STUN_BINDING_RESPONSE</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00248">cwist_ice_stun_validate_request()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00203">CWIST_STUN_BINDING_RESPONSE</a>.</p>
 
 </div>
 </div>
@@ -1282,7 +1321,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New total length, or -1 on failure (see stun_sign()). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00469">469</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00457">457</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -1334,11 +1373,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>1 if the HMAC matches, 0 if the message is malformed, the HMAC does not match, MESSAGE-INTEGRITY is missing, or OpenSSL allocation fails. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The HMAC covers the message up to and including the MI attribute header, with the header's length field adjusted to end at the MI attribute, per RFC 5389. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00255">255</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00248">248</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00104">cwist_ice_stun_is_message()</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00023">EVP_MAX_MD_SIZE</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_HDR_LEN</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00513">cwist_ice_stun_parse_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00502">cwist_ice_stun_parse_response()</a>.</p>
 
 </div>
 </div>
@@ -1360,9 +1399,9 @@ Functions</h2></td></tr>
 
 <p>true once the SCTP association is up. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00399">399</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00413">413</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00085">cwist_webrtc_conn::is_server_role</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00113">cwist_webrtc_conn::sctp_acc</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00112">cwist_webrtc_conn::sctp_sock</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00088">cwist_webrtc_conn::is_server_role</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00116">cwist_webrtc_conn::sctp_acc</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00115">cwist_webrtc_conn::sctp_sock</a>.</p>
 
 </div>
 </div>
@@ -1384,11 +1423,11 @@ Functions</h2></td></tr>
 
 <p>Abort the association and release SCTP state. Idempotent. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00296">296</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00300">300</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00114">cwist_webrtc_conn::ch_bits</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00115">cwist_webrtc_conn::ch_bits_len</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00116">cwist_webrtc_conn::rx_partial</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00118">cwist_webrtc_conn::rx_partial_cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00117">cwist_webrtc_conn::rx_partial_len</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00113">cwist_webrtc_conn::sctp_acc</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00112">cwist_webrtc_conn::sctp_sock</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00117">cwist_webrtc_conn::ch_bits</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00118">cwist_webrtc_conn::ch_bits_len</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00119">cwist_webrtc_conn::rx_partial</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00124">cwist_webrtc_conn::rx_partial_active</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00121">cwist_webrtc_conn::rx_partial_cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00120">cwist_webrtc_conn::rx_partial_len</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00116">cwist_webrtc_conn::sctp_acc</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00115">cwist_webrtc_conn::sctp_sock</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dc8/sctp_8c_source.html#l00265">cwist_sctp_conn_open()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dc8/sctp_8c_source.html#l00269">cwist_sctp_conn_open()</a>.</p>
 
 </div>
 </div>
@@ -1411,9 +1450,9 @@ Functions</h2></td></tr>
 <p>Accept (server role), then deliver every complete inbound message. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 normally, -1 if the association is gone and the conn should close. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00343">343</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00352">352</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00090">cwist_webrtc_conn::close_requested</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00043">CWIST_WEBRTC_MAX_MESSAGE</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00081">cwist_webrtc_conn::detached</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00085">cwist_webrtc_conn::is_server_role</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00116">cwist_webrtc_conn::rx_partial</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00117">cwist_webrtc_conn::rx_partial_len</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00113">cwist_webrtc_conn::sctp_acc</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00180">cwist_webrtc_ctx::sctp_buf</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00112">cwist_webrtc_conn::sctp_sock</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00093">cwist_webrtc_conn::close_requested</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00082">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00326">cwist_sctp_rx_partial_append()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00043">CWIST_WEBRTC_MAX_MESSAGE</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00084">cwist_webrtc_conn::detached</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00088">cwist_webrtc_conn::is_server_role</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00119">cwist_webrtc_conn::rx_partial</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00124">cwist_webrtc_conn::rx_partial_active</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00120">cwist_webrtc_conn::rx_partial_len</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00123">cwist_webrtc_conn::rx_partial_ppid</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00122">cwist_webrtc_conn::rx_partial_sid</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00116">cwist_webrtc_conn::sctp_acc</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00186">cwist_webrtc_ctx::sctp_buf</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00115">cwist_webrtc_conn::sctp_sock</a>.</p>
 
 </div>
 </div>
@@ -1451,9 +1490,9 @@ Functions</h2></td></tr>
 
 <p>Feed one decrypted SCTP packet to usrsctp. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00317">317</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00322">322</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00113">cwist_webrtc_conn::sctp_acc</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00112">cwist_webrtc_conn::sctp_sock</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00116">cwist_webrtc_conn::sctp_acc</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00115">cwist_webrtc_conn::sctp_sock</a>.</p>
 
 </div>
 </div>
@@ -1476,9 +1515,9 @@ Functions</h2></td></tr>
 <p>Create, bind and listen/connect the conn's SCTP socket. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 or -1. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00265">265</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00269">269</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00296">cwist_sctp_conn_close()</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00106">cwist_sctp_global_init()</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00052">CWIST_SCTP_PORT</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00085">cwist_webrtc_conn::is_server_role</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00112">cwist_webrtc_conn::sctp_sock</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00300">cwist_sctp_conn_close()</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00106">cwist_sctp_global_init()</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00052">CWIST_SCTP_PORT</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00088">cwist_webrtc_conn::is_server_role</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00115">cwist_webrtc_conn::sctp_sock</a>.</p>
 
 </div>
 </div>
@@ -1505,7 +1544,61 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/dc8/sctp_8c_source.html#l00265">cwist_sctp_conn_open()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/dc8/sctp_8c_source.html#l00269">cwist_sctp_conn_open()</a>.</p>
+
+</div>
+</div>
+<a id="a2c10e29379e68fddd9eba391e678ab2b" name="a2c10e29379e68fddd9eba391e678ab2b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2c10e29379e68fddd9eba391e678ab2b">&#9670;&#160;</a></span>cwist_sctp_rx_partial_append()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> cwist_sctp_rx_partial_append </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> <a class="el" href="../../d9/daa/structcwist__webrtc__conn.html">cwist_webrtc_conn</a> *&#160;</td>
+          <td class="paramname"><em>conn</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint16_t</a>&#160;</td>
+          <td class="paramname"><em>sid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint32_t</a>&#160;</td>
+          <td class="paramname"><em>ppid</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint8_t</a> *&#160;</td>
+          <td class="paramname"><em>data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
+          <td class="paramname"><em>len</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Append only fragments matching the current partial message identity. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00326">326</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00043">CWIST_WEBRTC_MAX_MESSAGE</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00119">cwist_webrtc_conn::rx_partial</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00124">cwist_webrtc_conn::rx_partial_active</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00121">cwist_webrtc_conn::rx_partial_cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00120">cwist_webrtc_conn::rx_partial_len</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00123">cwist_webrtc_conn::rx_partial_ppid</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00122">cwist_webrtc_conn::rx_partial_sid</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../df/dc8/sctp_8c_source.html#l00352">cwist_sctp_conn_drain()</a>.</p>
 
 </div>
 </div>
@@ -1556,11 +1649,11 @@ Functions</h2></td></tr>
 <p>Send one message, announcing the channel with DCEP OPEN first if we are opening it. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 when SCTP took it, 1 when the send buffer is full (retry after the next inbound packet), -1 on a hard error (message dropped). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00410">410</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/dc8/sctp_8c_source.html#l00424">424</a> of file <a class="el" href="../../df/dc8/sctp_8c_source.html">sctp.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00055">CWIST_SCTP_STREAMS</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00039">DCEP_OPEN</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00046">PPID_BINARY</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00048">PPID_BINARY_EMPTY</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00045">PPID_STRING</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00047">PPID_STRING_EMPTY</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00089">cwist_webrtc_conn::sctp_ready</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00055">CWIST_SCTP_STREAMS</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00039">DCEP_OPEN</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00046">PPID_BINARY</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00048">PPID_BINARY_EMPTY</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00045">PPID_STRING</a>, <a class="el" href="../../df/dc8/sctp_8c_source.html#l00047">PPID_STRING_EMPTY</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00092">cwist_webrtc_conn::sctp_ready</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01171">cwist_webrtc_conn_send()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01177">cwist_webrtc_conn_send()</a>.</p>
 
 </div>
 </div>
@@ -1637,14 +1730,14 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>0 on success, -1 if ice-ufrag or ice-pwd is missing or empty. </dd></dl>
-<dl class="section note"><dt>Note</dt><dd>Lines longer than 511 bytes are truncated. If an attribute appears more than once, the last occurrence wins. Sets info-&gt;has_lite when "a=ice-lite" appears. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>0 on success, -1 if a recognized value is over-limit or required ICE credentials are missing or empty. </dd></dl>
+<dl class="section note"><dt>Note</dt><dd>If an attribute appears more than once, the last occurrence wins. Sets info-&gt;has_lite when "a=ice-lite" appears. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00043">43</a> of file <a class="el" href="../../d6/d9d/sdp_8c_source.html">sdp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00035">35</a> of file <a class="el" href="../../d6/d9d/sdp_8c_source.html">sdp.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01048">cwist_webrtc_handle_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01050">cwist_webrtc_handle_offer()</a>.</p>
 
 </div>
 </div>
@@ -1729,11 +1822,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 if the output was truncated or encoding failed. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Declares ice-lite and hardcodes a=setup:passive, since the ICE-lite answering endpoint takes the passive DTLS role, and emits a single host candidate followed by end-of-candidates. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00130">130</a> of file <a class="el" href="../../d6/d9d/sdp_8c_source.html">sdp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00124">124</a> of file <a class="el" href="../../d6/d9d/sdp_8c_source.html">sdp.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01048">cwist_webrtc_handle_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01050">cwist_webrtc_handle_offer()</a>.</p>
 
 </div>
 </div>
@@ -1804,7 +1897,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 if the output was truncated or encoding failed. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>Thin wrapper over write_session() with setup "active", no ice-lite, and a fixed session ID; the full agent offering endpoint takes the active DTLS role. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00169">169</a> of file <a class="el" href="../../d6/d9d/sdp_8c_source.html">sdp.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00162">162</a> of file <a class="el" href="../../d6/d9d/sdp_8c_source.html">sdp.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -1844,9 +1937,9 @@ Functions</h2></td></tr>
 
 <p>Queue one datagram to the conn's peer (owner thread). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00559">559</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00561">561</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00094">cwist_webrtc_conn::remote</a>.</p>
+<p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00082">cwist_webrtc_conn::ctx</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00097">cwist_webrtc_conn::remote</a>.</p>
 
 </div>
 </div>
@@ -1884,9 +1977,9 @@ Functions</h2></td></tr>
 
 <p>Report a channel the peer opened to the channel handler. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00553">553</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00555">555</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00158">cwist_webrtc_ctx::ch_cb</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00159">cwist_webrtc_ctx::ch_user</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00164">cwist_webrtc_ctx::ch_cb</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00165">cwist_webrtc_ctx::ch_user</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00082">cwist_webrtc_conn::ctx</a>.</p>
 
 </div>
 </div>
@@ -1936,9 +2029,9 @@ Functions</h2></td></tr>
 
 <p>Deliver a complete inbound message to the message handler. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00545">545</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00547">547</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../dd/d3b/webrtc_8h_source.html#l00040">CWIST_WEBRTC_DATA_BINARY</a>, <a class="el" href="../../dd/d3b/webrtc_8h_source.html#l00041">CWIST_WEBRTC_DATA_STRING</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00156">cwist_webrtc_ctx::msg_cb</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00157">cwist_webrtc_ctx::msg_user</a>.</p>
+<p class="reference">References <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00082">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../dd/d3b/webrtc_8h_source.html#l00040">CWIST_WEBRTC_DATA_BINARY</a>, <a class="el" href="../../dd/d3b/webrtc_8h_source.html#l00041">CWIST_WEBRTC_DATA_STRING</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00162">cwist_webrtc_ctx::msg_cb</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00163">cwist_webrtc_ctx::msg_user</a>.</p>
 
 </div>
 </div>
@@ -1976,9 +2069,9 @@ Functions</h2></td></tr>
 
 <p>usrsctp output for <code>conn</code>; marshalled to the owner thread when needed. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00582">582</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00584">584</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00100">cwist_webrtc_on_owner()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00107">cwist_webrtc_conn::ssl</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00172">SSL_write</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00082">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00100">cwist_webrtc_on_owner()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00140">cwist_webrtc_ctx::reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00110">cwist_webrtc_conn::ssl</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00172">SSL_write</a>.</p>
 
 </div>
 </div>
@@ -2029,9 +2122,9 @@ Functions</h2></td></tr>
 <p>Offering-side dialer used by the loopback tests: registers a client conn to <code>remote</code> and starts ICE. </p>
 <dl class="section return"><dt>Returns</dt><dd>A conn reference owned by the caller (<a class="el" href="../../dd/d3b/webrtc_8h.html#aa37449f92a112ca3fd972baf1f77ec41" title="Drop a reference taken with cwist_webrtc_conn_retain().">cwist_webrtc_conn_release()</a>), or NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01085">1085</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01087">1087</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00079">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00086">cwist_webrtc_conn_release()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00101">cwist_webrtc_conn::peer_fingerprint</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00100">cwist_webrtc_conn::peer_pwd</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00099">cwist_webrtc_conn::peer_ufrag</a>, <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00134">cwist_webrtc_ctx::reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00127">cwist_webrtc_conn::reg_post</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00094">cwist_webrtc_conn::remote</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00102">cwist_webrtc_conn::stun_txid</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00048">cwist_reactor_post::cb</a>, <a class="el" href="../../dc/d85/reactor_8h_source.html#l00049">cwist_reactor_post::ctx</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00082">cwist_webrtc_conn::ctx</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00086">cwist_webrtc_conn_release()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00082">cwist_webrtc_conn_retain()</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00077">CWIST_WEBRTC_ICE_CREDENTIAL_MAX</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00104">cwist_webrtc_conn::peer_fingerprint</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00103">cwist_webrtc_conn::peer_pwd</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00102">cwist_webrtc_conn::peer_ufrag</a>, <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00140">cwist_webrtc_ctx::reactor</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00133">cwist_webrtc_conn::reg_post</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00097">cwist_webrtc_conn::remote</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00105">cwist_webrtc_conn::stun_txid</a>.</p>
 
 </div>
 </div>
@@ -2055,7 +2148,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00100">100</a> of file <a class="el" href="../../d3/d90/webrtc_8c_source.html">webrtc.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01240">cwist_webrtc_conn_close()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00582">cwist_webrtc_conn_sctp_out()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01171">cwist_webrtc_conn_send()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01246">cwist_webrtc_conn_close()</a>, <a class="el" href="../../d3/d90/webrtc_8c_source.html#l00584">cwist_webrtc_conn_sctp_out()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01177">cwist_webrtc_conn_send()</a>.</p>
 
 </div>
 </div>
