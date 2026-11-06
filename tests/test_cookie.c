@@ -155,12 +155,37 @@ static void test_cookie_large_value_and_attributes(void) {
     printf("  Passed large cookie values and attributes.\n");
 }
 
+static void test_cookie_rejects_invalid_attributes(void) {
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    assert(cwist_cookie_set(res, "bad name", "value", NULL) == -1);
+    assert(cwist_cookie_set(res, "bad\r\nname", "value", NULL) == -1);
+    assert(cwist_cookie_delete(res, "bad\r\nname") == -1);
+
+    cwist_cookie_options opts = {.path = "/; HttpOnly"};
+    assert(cwist_cookie_set(res, "session", "value", &opts) == -1);
+    opts.path = "/\r\n";
+    assert(cwist_cookie_set(res, "session", "value", &opts) == -1);
+    opts.path = "/valid";
+    opts.domain = "example.com; Secure";
+    assert(cwist_cookie_set(res, "session", "value", &opts) == -1);
+    opts.domain = "example.com";
+    opts.same_site = "Invalid";
+    assert(cwist_cookie_set(res, "session", "value", &opts) == -1);
+    opts.same_site = "Strict";
+    assert(cwist_cookie_set(res, "session", "value", &opts) == 0);
+
+    cwist_http_response_destroy(res);
+    printf("  Passed invalid cookie attribute rejection.\n");
+}
+
 int main(void) {
     test_cookie_encode();
     test_cookie_decode();
     test_cookie_parse_and_get();
     test_cookie_set_and_delete();
     test_cookie_large_value_and_attributes();
+    test_cookie_rejects_invalid_attributes();
     printf("All cookie tests passed!\n");
     return 0;
 }

@@ -209,9 +209,10 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
         }
         if (!found) continue;
 
-        /* Irreversible migration: keep the history row so a later up does
-         * not re-apply up_sql against a database that already carries it. */
-        if (!sorted[i].down_sql) continue;
+        if (!sorted[i].down_sql) {
+            free(sorted);
+            return CWIST_MIGRATE_ERR_GENERIC;
+        }
 
         int rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, NULL, 0, "down");
         if (rc != CWIST_MIGRATE_OK) {

@@ -53,10 +53,9 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
  * @brief Roll back the most recent @p steps migrations.
  *
  * Runs each migration's down_sql inside a transaction and removes the entry
- * from the history table.  Irreversible migrations (down_sql == NULL) are
- * skipped entirely: they stay in the history table, so a later
- * cwist_migrate_up will not re-apply them, and they do not count towards
- * @p steps.
+ * from the history table.  An applied irreversible migration (down_sql == NULL)
+ * is a hard rollback boundary: the function stops and returns an error instead
+ * of removing older versions underneath a newer irreversible schema.
  *
  * @param db         Open SQLite3 handle.
  * @param migrations Array of migrations (same array passed to cwist_migrate_up).
