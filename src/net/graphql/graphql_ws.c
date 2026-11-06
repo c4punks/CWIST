@@ -10,9 +10,9 @@
  *                       published event; `error` {id, payload:[...]} when the
  *                       operation fails to start; `complete` {id} when the
  *                       operation ends (client `complete` or socket close)
- *   ping/pong        -> JSON keepalive at any time after init
- *   subscribe before connection_init closes the socket with 4429; other
- *   protocol violations close with 4400/4401/4409.
+ *   ping/pong        -> JSON keepalive at any time
+ *   subscribe before connection_init closes the socket with 4401; duplicate
+ *   initialization closes with 4429; other violations close with 4400/4409.
  *
  * Broker model: a subscription resolver returns an event source (a set of
  * topics). cwist_graphql_publish() is the single fan-out entry point and may
@@ -40,7 +40,7 @@
 #define GQL_WS_CLOSE_BAD_REQUEST 4400
 #define GQL_WS_CLOSE_UNAUTHORIZED 4401
 #define GQL_WS_CLOSE_DUPLICATE_ID 4409
-#define GQL_WS_CLOSE_SUBSCRIBE_BEFORE_INIT 4429
+#define GQL_WS_CLOSE_TOO_MANY_INIT 4429
 
 /* ------------------------------------------------------------------ */
 /* Event source                                                        */
@@ -558,18 +558,26 @@ size_t cwist_graphql_publish(const char *topic, const cJSON *payload) {
 static void gql_ws_handle_subscribe(cwist_websocket_async *ws, gql_ws_conn_t *conn,
                                     const cJSON *msg) {
     const cJSON *id = cJSON_GetObjectItemCaseSensitive(msg, "id");
-    if (!cJSON_IsString(id) || !id->valuestring || id->valuestring[0] == '\0') {
-        gql_ws_send_error(ws, NULL, "Subscribe message must carry a non-empty string 'id'");
-        return;
-    }
-    const char *op_id = id->valuestring;
-
     const cJSON *payload = cJSON_GetObjectItemCaseSensitive(msg, "payload");
     const cJSON *query =
         cJSON_IsObject(payload) ? cJSON_GetObjectItemCaseSensitive(payload, "query") : NULL;
-    if (!cJSON_IsString(query) || !query->valuestring ||
-        strlen(query->valuestring) > CWIST_GRAPHQL_MAX_QUERY_SIZE) {
-        gql_ws_send_error(ws, op_id, "Subscribe payload must contain a string 'query'");
+    const cJSON *operation_name =
+        cJSON_IsObject(payload) ? cJSON_GetObjectItemCaseSensitive(payload, "operationName") : NULL;
+    const cJSON *variables =
+        cJSON_IsObject(payload) ? cJSON_GetObjectItemCaseSensitive(payload, "variables") : NULL;
+    const cJSON *extensions =
+        cJSON_IsObject(payload) ? cJSON_GetObjectItemCaseSensitive(payload, "extensions") : NULL;
+    if (!cJSON_IsString(id) || !id->valuestring || id->valuestring[0] == '\0' ||
+        !cJSON_IsString(query) || !query->valuestring ||
+        (operation_name && !cJSON_IsNull(operation_name) && !cJSON_IsString(operation_name)) ||
+        (variables && !cJSON_IsNull(variables) && !cJSON_IsObject(variables)) ||
+        (extensions && !cJSON_IsNull(extensions) && !cJSON_IsObject(extensions))) {
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
+        return;
+    }
+    const char *op_id = id->valuestring;
+    if (strlen(query->valuestring) > CWIST_GRAPHQL_MAX_QUERY_SIZE) {
+        gql_ws_send_error(ws, op_id, "Subscription query exceeds the size limit");
         return;
     }
 
@@ -588,9 +596,6 @@ static void gql_ws_handle_subscribe(cwist_websocket_async *ws, gql_ws_conn_t *co
         cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_DUPLICATE_ID);
         return;
     }
-
-    const cJSON *variables =
-        cJSON_IsObject(payload) ? cJSON_GetObjectItemCaseSensitive(payload, "variables") : NULL;
 
     char field[128];
     cJSON *args = NULL;
@@ -647,16 +652,48 @@ static void gql_ws_handle_subscribe(cwist_websocket_async *ws, gql_ws_conn_t *co
     pthread_mutex_unlock(&g_broker_lock);
 }
 
+static bool gql_ws_optional_record_valid(const cJSON *msg) {
+    const cJSON *payload = cJSON_GetObjectItemCaseSensitive(msg, "payload");
+    return !payload || cJSON_IsNull(payload) || cJSON_IsObject(payload);
+}
+
+static void gql_ws_handle_keepalive(cwist_websocket_async *ws, const cJSON *msg, bool ping) {
+    if (!gql_ws_optional_record_valid(msg)) {
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
+        return;
+    }
+    if (!ping) return;
+
+    cJSON *pong = cJSON_CreateObject();
+    if (!pong) {
+        cwist_websocket_async_close(ws);
+        return;
+    }
+    cJSON_AddStringToObject(pong, "type", "pong");
+    const cJSON *payload = cJSON_GetObjectItemCaseSensitive(msg, "payload");
+    if (payload) cJSON_AddItemToObject(pong, "payload", cJSON_Duplicate(payload, true));
+    gql_ws_send_json(ws, pong);
+}
+
 static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSON *msg) {
     const cJSON *type = cJSON_GetObjectItemCaseSensitive(msg, "type");
     if (!cJSON_IsString(type) || !type->valuestring) {
-        gql_ws_send_error(ws, NULL, "Message must carry a string 'type'");
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
         return;
     }
     const char *t = type->valuestring;
 
+    if (strcmp(t, "ping") == 0 || strcmp(t, "pong") == 0) {
+        gql_ws_handle_keepalive(ws, msg, strcmp(t, "ping") == 0);
+        return;
+    }
+
     if (!conn->init_done) {
         if (strcmp(t, "connection_init") == 0) {
+            if (!gql_ws_optional_record_valid(msg)) {
+                cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
+                return;
+            }
             conn->init_done = true;
             cJSON *ack = cJSON_CreateObject();
             if (!ack) {
@@ -665,33 +702,19 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
             }
             cJSON_AddStringToObject(ack, "type", "connection_ack");
             gql_ws_send_json(ws, ack);
-        } else if (strcmp(t, "subscribe") == 0) {
-            cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_SUBSCRIBE_BEFORE_INIT);
         } else {
             cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_UNAUTHORIZED);
         }
         return;
     }
-    if (strcmp(t, "ping") == 0) {
-        cJSON *pong = cJSON_CreateObject();
-        if (!pong) {
-            cwist_websocket_async_close(ws);
-            return;
-        }
-        cJSON_AddStringToObject(pong, "type", "pong");
-        const cJSON *pl = cJSON_GetObjectItemCaseSensitive(msg, "payload");
-        if (pl) cJSON_AddItemToObject(pong, "payload", cJSON_Duplicate(pl, true));
-        gql_ws_send_json(ws, pong);
-    } else if (strcmp(t, "pong") == 0) {
-        /* Keepalive. */
-    } else if (strcmp(t, "connection_init") == 0) {
-        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_UNAUTHORIZED);
+    if (strcmp(t, "connection_init") == 0) {
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_TOO_MANY_INIT);
     } else if (strcmp(t, "subscribe") == 0) {
         gql_ws_handle_subscribe(ws, conn, msg);
     } else if (strcmp(t, "complete") == 0) {
         const cJSON *id = cJSON_GetObjectItemCaseSensitive(msg, "id");
         if (!cJSON_IsString(id) || !id->valuestring) {
-            gql_ws_send_error(ws, NULL, "Complete message must carry a string 'id'");
+            cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
             return;
         }
         pthread_mutex_lock(&g_broker_lock);
@@ -754,15 +777,19 @@ static void gql_ws_on_close(cwist_websocket_async *ws, void *user_data) {
 
 static void gql_ws_on_message(cwist_websocket_async *ws, cwist_ws_frame *frame, void *user_data) {
     gql_ws_conn_t *conn = (gql_ws_conn_t *)user_data;
-    /* CLOSE is handled by the WS layer itself (echo + teardown); PING already
-     * got its PONG. Binary frames carry no graphql-ws semantics. */
-    if (frame->opcode != CWIST_WS_FRAME_TEXT) {
+    if (frame->opcode == CWIST_WS_FRAME_PING || frame->opcode == CWIST_WS_FRAME_PONG) {
         cwist_websocket_frame_destroy(frame);
         return;
     }
-    cJSON *msg = cJSON_Parse((const char *)frame->payload);
+    if (frame->opcode != CWIST_WS_FRAME_TEXT) {
+        cwist_websocket_frame_destroy(frame);
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
+        return;
+    }
+    cJSON *msg = cJSON_ParseWithLength((const char *)frame->payload, frame->payload_len);
     cwist_websocket_frame_destroy(frame);
-    if (!msg) {
+    if (!cJSON_IsObject(msg)) {
+        cJSON_Delete(msg);
         cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
         return;
     }
