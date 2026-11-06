@@ -1,4 +1,5 @@
 #include <cwist/security/db_crypt/db_crypt.h>
+#include <cwist/core/mem/alloc.h>
 
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
@@ -107,7 +108,7 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
 
     /* 3. Encrypt SQLite bytes with DEK. */
     size_t ct_max = sqlite_len + 16 + 1; /* extra block for padding */
-    unsigned char *ct = (unsigned char *)malloc(ct_max);
+    unsigned char *ct = (unsigned char *)cwist_alloc(ct_max);
     if (!ct) {
         OPENSSL_cleanse(dek, sizeof(dek));
         OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
@@ -118,7 +119,7 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
     OPENSSL_cleanse(dek, sizeof(dek));
     OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
     if (ct_len <= 0) {
-        free(ct);
+        cwist_free(ct);
         return NULL;
     }
 
@@ -126,14 +127,14 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
     size_t hdr_fixed =
         4 + 1 + CWIST_DB_CRYPT_IV_LEN + (size_t)enc_dek_len + CWIST_DB_CRYPT_IV_LEN + 8;
     if ((size_t)ct_len > SIZE_MAX - hdr_fixed - CWIST_DB_CRYPT_AUTH_TAG_LEN) {
-        free(ct);
+        cwist_free(ct);
         return NULL;
     }
     size_t total = hdr_fixed + (size_t)ct_len;
 
     unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
     if (!blob) {
-        free(ct);
+        cwist_free(ct);
         return NULL;
     }
 
@@ -157,7 +158,7 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
     off += 8;
 
     memcpy(blob + off, ct, (size_t)ct_len);
-    free(ct);
+    cwist_free(ct);
 
     unsigned int tag_len = 0;
     if (!HMAC(EVP_sha256(), ctx->kek, CWIST_DB_CRYPT_KEY_LEN, blob, total, blob + total,
