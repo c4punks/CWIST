@@ -162,11 +162,9 @@
 1	src/net/http/tls_chain.c:free(out->data);
 2	src/net/http/tls_chain.c:free(url);
 1	src/net/http/tls_chain.c:uint8_t *tmp = (uint8_t *)realloc(buf->data, new_cap);
-3	src/security/db_crypt/db_crypt.c:free(ct);
 1	src/security/db_crypt/db_crypt.c:free(pt);
 1	src/security/db_crypt/db_crypt.c:free(blob);
 1	src/security/db_crypt/db_crypt.c:unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
-1	src/security/db_crypt/db_crypt.c:unsigned char *ct = (unsigned char *)malloc(ct_max);
 1	src/security/db_crypt/db_crypt.c:unsigned char *pt = (unsigned char *)malloc(ct_len + 1);
 1	src/sys/app/app.c:char *buf = (char *)malloc((size_t)sz + 1);
 1	src/sys/app/app.c:cwist_multiport_http_client *payload = malloc(sizeof(*payload));
