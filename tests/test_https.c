@@ -2,6 +2,7 @@
 #include <cwist/sys/app/shutdown.h>
 #include <cwist/net/http/https.h>
 #include <cwist/net/http/async.h>
+#include "../src/core/utils/buffer.h"
 #include <assert.h>
 #include <arpa/inet.h>
 #include <limits.h>
@@ -745,8 +746,25 @@ static void test_https_no_content_response(void) {
     printf("Passed HTTPS no-content response suppression.\n");
 }
 
+static void test_internal_buffer_growth(void) {
+    static const size_t targets[] = {1, 4096, 16384, 65536, 65537, 131073};
+    static const size_t capacities[] = {4096, 4096, 16384, 65536, 131072, 196608};
+    char block[65536];
+    memset(block, 'b', sizeof(block));
+    cwist_buffer b;
+    cwist_buffer_init(&b);
+    for (size_t i = 0; i < sizeof(targets) / sizeof(targets[0]); ++i) {
+        assert(cwist_buffer_append(&b, block, targets[i] - b.len));
+        assert(b.len == targets[i]);
+        assert(b.capacity == capacities[i]);
+    }
+    cwist_buffer_destroy(&b);
+    assert(b.data == NULL && b.len == 0 && b.capacity == 0);
+}
+
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
+    test_internal_buffer_growth();
     test_https_defaults();
     test_https_alpn_negotiates_h2_and_http11_fallback();
     test_app_http2_toggle_rebuilds_context();
