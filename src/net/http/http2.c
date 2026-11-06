@@ -3728,7 +3728,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                             hooks->on_data(hc->hook_ctx, s->hook_ctx, NULL, 0, 1);
                         break;
                     }
-                    if (s && s->req && !h2_content_length_matches(s)) {
+                    if ((flags & CWIST_HTTP2_FLAG_END_STREAM) && s && s->req &&
+                        !h2_content_length_matches(s)) {
                         h2_reject_content_length(hc, s);
                         break;
                     }
