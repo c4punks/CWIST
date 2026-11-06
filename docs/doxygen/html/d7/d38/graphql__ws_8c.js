@@ -2,7 +2,7 @@ var graphql__ws_8c =
 [
     [ "GQL_WS_CLOSE_BAD_REQUEST", "d7/d38/graphql__ws_8c.html#aa6b53348a4b6708e0dd9eb1497b77efc", null ],
     [ "GQL_WS_CLOSE_DUPLICATE_ID", "d7/d38/graphql__ws_8c.html#a80d271e1cc72d94d8f5b7b22a4588236", null ],
-    [ "GQL_WS_CLOSE_SUBSCRIBE_BEFORE_INIT", "d7/d38/graphql__ws_8c.html#a839ddba89b20821e11ea6c252efaf3fb", null ],
+    [ "GQL_WS_CLOSE_TOO_MANY_INIT", "d7/d38/graphql__ws_8c.html#ab95f164d23b9adbbb5f397f03db3f664", null ],
     [ "GQL_WS_CLOSE_UNAUTHORIZED", "d7/d38/graphql__ws_8c.html#aae247960761be8d65aba2f46192b962c", null ],
     [ "GQL_WS_MAX_PENDING_BYTES", "d7/d38/graphql__ws_8c.html#a5f60416001094d518bee80c3bdc881ff", null ],
     [ "gql_sub_field_t", "d7/d38/graphql__ws_8c.html#ae61cec4a4a34dd3ce926157889fc056a", null ],
