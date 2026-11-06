@@ -27,6 +27,18 @@
 #include "tls_chain.h"
 #include "h3_hdr_out.h"
 #include "http3_global.h"
+#include <sys/queue.h>
+#include "../../../lib/lsquic/src/liblsquic/lsquic_int_types.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_packet_common.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_packet_in.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_malo.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_conn_flow.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_rtt.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_sfcw.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_varint.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_hq.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_hash.h"
+#include "../../../lib/lsquic/src/liblsquic/lsquic_stream.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -143,6 +155,7 @@ typedef struct h3_stream_ctx {
     char *body;
     size_t body_len;
     size_t body_cap;
+    size_t data_frame_bytes;
     int headers_done;
     int response_ready;
     int write_state; /* 0=headers, 1=body, 2=done */
@@ -159,6 +172,7 @@ typedef struct h3_stream_ctx {
     int is_connect;          /* :method CONNECT */
     int saw_empty_path;      /* :path arrived with a zero-length value */
     int malformed;           /* RFC 9114 Section 4.3.1 violation */
+    bool has_content_length; /* content-length was present and valid */
 #ifdef CWIST_WEBTRANSPORT_SERVER
     int is_webtransport; /* extended CONNECT with :protocol webtransport */
     int wt_taken;
@@ -1028,7 +1042,8 @@ static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_err
     h3_ctx->last_close_code = error_code;
     if (reason && reason_len > 0) {
         size_t n = (size_t)reason_len >= sizeof(h3_ctx->last_close_reason)
-                     ? sizeof(h3_ctx->last_close_reason) - 1 : (size_t)reason_len;
+                       ? sizeof(h3_ctx->last_close_reason) - 1
+                       : (size_t)reason_len;
         memcpy(h3_ctx->last_close_reason, reason, n);
         h3_ctx->last_close_reason[n] = '\0';
     } else {
@@ -1178,64 +1193,73 @@ static void h3_json_error(cwist_http_response *res, int status, const char *body
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }
 
-/**
- * @brief Fold one decoded request header into the cwist_http_request.
- *
- * Recognized pseudo-headers update method/path/authority; known regular
- * headers are stored in the header list; unrecognized pseudo-headers are
- * silently ignored (RFC 9114); other regular headers pass through.  Also
- * detects the WebTransport extended-CONNECT signature (:protocol
- * "webtransport" with method CONNECT).
- */
-static void h3_apply_header(cwist_http_request *req, const char *name, const char *value) {
+static bool h3_field_name_is_valid(const char *name, size_t len) {
+    if (len == 0) return false;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)name[i];
+        if (c <= 0x20 || c >= 0x7f || (c >= 'A' && c <= 'Z') || (c == ':' && i != 0)) return false;
+    }
+    return name[0] != ':' || len > 1;
+}
+
+static bool h3_field_value_is_valid(const char *value, size_t len) {
+    if (len > 0 &&
+        (value[0] == ' ' || value[0] == '\t' || value[len - 1] == ' ' || value[len - 1] == '\t'))
+        return false;
+    for (size_t i = 0; i < len; i++) {
+        if (value[i] == '\0' || value[i] == '\r' || value[i] == '\n') return false;
+    }
+    return true;
+}
+
+static int h3_parse_content_length(const char *value, size_t len, size_t *out) {
+    if (len == 0) return -1;
+    size_t parsed = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (value[i] < '0' || value[i] > '9' || parsed > (SIZE_MAX - 9) / 10) return -1;
+        parsed = parsed * 10 + (size_t)(value[i] - '0');
+    }
+    *out = parsed;
+    return 0;
+}
+
+static int h3_apply_header(h3_stream_ctx_t *st, const char *name, size_t name_len,
+                           const char *value, size_t value_len) {
+    if (!h3_field_name_is_valid(name, name_len) || !h3_field_value_is_valid(value, value_len))
+        return -1;
+    cwist_http_request *req = st->req;
     if (strcmp(name, ":method") == 0) {
         req->method = cwist_http_string_to_method(value);
-    } else if (strcmp(name, ":path") == 0) {
-        h3_parse_path(req, value);
-    } else if (strcmp(name, ":authority") == 0 || strcmp(name, "host") == 0) {
-        if (!cwist_http_header_get(req->headers, "host")) {
-            cwist_http_header_add(&req->headers, "host", value);
-        }
-    } else if (strcmp(name, ":scheme") == 0) {
-        /* RFC 9114: silently ignore pseudo-headers we don't need to expose */
-    } else if (strcmp(name, "content-length") == 0) {
-        char *endptr = NULL;
-        unsigned long long cl = strtoull(value, &endptr, 10);
-        if (endptr && *endptr == '\0') {
-            req->content_length = (size_t)cl;
-        }
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "content-type") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "cookie") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "authorization") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "accept") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "user-agent") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "accept-encoding") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "accept-language") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "referer") == 0 || strcmp(name, "referrer") == 0) {
-        cwist_http_header_add(&req->headers, "referer", value);
-    } else if (strcmp(name, "origin") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "x-requested-with") == 0) {
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (strcmp(name, "priority") == 0) {
-        /* RFC 9218 Extensible Priorities: u=urgency, i=incremental.
-         * Record the header only: calling lsquic_stream_set_priority() here
-         * would emit a PRIORITY_UPDATE frame for a request stream, which a
-         * server MUST NOT send (strict clients abort with
-         * H3_FRAME_UNEXPECTED). */
-        cwist_http_header_add(&req->headers, name, value);
-    } else if (name[0] != ':') {
-        /* Any other non-pseudo header */
-        cwist_http_header_add(&req->headers, name, value);
+        return 0;
     }
+    if (strcmp(name, ":path") == 0) {
+        h3_parse_path(req, value);
+        return 0;
+    }
+    if (strcmp(name, ":authority") == 0 || strcmp(name, "host") == 0) {
+        if (!cwist_http_header_get(req->headers, "host"))
+            cwist_http_header_add(&req->headers, "host", value);
+        return 0;
+    }
+    if (name[0] == ':') return 0;
+    if (strcmp(name, "connection") == 0 || strcmp(name, "keep-alive") == 0 ||
+        strcmp(name, "proxy-connection") == 0 || strcmp(name, "transfer-encoding") == 0 ||
+        strcmp(name, "upgrade") == 0)
+        return -1;
+    if (strcmp(name, "te") == 0 && (value_len != 8 || memcmp(value, "trailers", 8) != 0)) return -1;
+    if (strcmp(name, "content-length") == 0) {
+        size_t content_length;
+        if (h3_parse_content_length(value, value_len, &content_length) != 0 ||
+            (st->has_content_length && req->content_length != content_length))
+            return -1;
+        st->has_content_length = true;
+        req->content_length = content_length;
+    }
+    if (strcmp(name, "referrer") == 0)
+        cwist_http_header_add(&req->headers, "referer", value);
+    else
+        cwist_http_header_add(&req->headers, name, value);
+    return 0;
 }
 
 /**
@@ -1337,58 +1361,61 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
      * safe. */
     char name_scratch[1024 + 1];
     char value_scratch[H3_DECODE_BUF_SIZE];
+    bool seen_host = false;
     for (size_t i = 0; i < hs->count; ++i) {
         const struct lsxpack_header *xhdr = &hs->headers[i];
         const char *raw_name = lsxpack_header_get_name(xhdr);
         const char *raw_value = lsxpack_header_get_value(xhdr);
         size_t name_len = xhdr->name_len;
         size_t value_len = xhdr->val_len;
-        if (raw_name && raw_value && name_len > 0 && name_len <= 1024 &&
-            value_len <= H3_DECODE_BUF_SIZE - 1) {
-            char *name = name_scratch;
-            char *value = value_scratch;
-            memcpy(name, raw_name, name_len);
-            name[name_len] = '\0';
-            memcpy(value, raw_value, value_len);
-            value[value_len] = '\0';
-            if (name[0] == ':') {
-                /* RFC 9114 Section 4.3.1: pseudo-headers precede regular
-                 * headers, appear at most once, and only the defined set is
-                 * valid in requests. */
-                unsigned bit = 0;
-                if (strcmp(name, ":method") == 0)
-                    bit = H3_PSEUDO_METHOD;
-                else if (strcmp(name, ":scheme") == 0)
-                    bit = H3_PSEUDO_SCHEME;
-                else if (strcmp(name, ":path") == 0)
-                    bit = H3_PSEUDO_PATH;
-                else if (strcmp(name, ":authority") == 0)
-                    bit = H3_PSEUDO_AUTHORITY;
-                else if (strcmp(name, ":protocol") == 0)
-                    bit = H3_PSEUDO_PROTOCOL;
-                if (bit == 0 || st->seen_regular_header || (st->pseudo_seen & bit)) {
+        if (!raw_name || !raw_value || name_len == 0 || name_len > 1024 ||
+            value_len > H3_DECODE_BUF_SIZE - 1) {
+            h3_reject_malformed_request(stream, st);
+            return false;
+        }
+        char *name = name_scratch;
+        char *value = value_scratch;
+        memcpy(name, raw_name, name_len);
+        name[name_len] = '\0';
+        memcpy(value, raw_value, value_len);
+        value[value_len] = '\0';
+        if (name[0] == ':') {
+            unsigned bit = 0;
+            if (strcmp(name, ":method") == 0)
+                bit = H3_PSEUDO_METHOD;
+            else if (strcmp(name, ":scheme") == 0)
+                bit = H3_PSEUDO_SCHEME;
+            else if (strcmp(name, ":path") == 0)
+                bit = H3_PSEUDO_PATH;
+            else if (strcmp(name, ":authority") == 0)
+                bit = H3_PSEUDO_AUTHORITY;
+            else if (strcmp(name, ":protocol") == 0)
+                bit = H3_PSEUDO_PROTOCOL;
+            if (bit == 0 || st->seen_regular_header || (st->pseudo_seen & bit)) {
+                h3_reject_malformed_request(stream, st);
+                return false;
+            }
+            st->pseudo_seen |= bit;
+            if (bit == H3_PSEUDO_METHOD && strcmp(value, "CONNECT") == 0) st->is_connect = 1;
+            if (bit == H3_PSEUDO_PATH && value_len == 0) st->saw_empty_path = 1;
+        } else {
+            st->seen_regular_header = 1;
+            if (strcmp(name, "host") == 0) {
+                if (seen_host) {
                     h3_reject_malformed_request(stream, st);
                     return false;
                 }
-                st->pseudo_seen |= bit;
-                if (bit == H3_PSEUDO_METHOD && strcmp(value, "CONNECT") == 0) {
-                    st->is_connect = 1;
-                }
-                if (bit == H3_PSEUDO_PATH && value_len == 0) {
-                    st->saw_empty_path = 1;
-                }
-            } else {
-                st->seen_regular_header = 1;
+                seen_host = true;
             }
-            h3_apply_header(st->req, name, value);
-#ifdef CWIST_WEBTRANSPORT_SERVER
-            /* :protocol may precede :method; is_connect is checked once the
-             * whole block is in (below). */
-            if (strcmp(name, ":protocol") == 0 && strcmp(value, "webtransport") == 0) {
-                st->is_webtransport = 1;
-            }
-#endif
         }
+        if (h3_apply_header(st, name, name_len, value, value_len) != 0) {
+            h3_reject_malformed_request(stream, st);
+            return false;
+        }
+#ifdef CWIST_WEBTRANSPORT_SERVER
+        if (strcmp(name, ":protocol") == 0 && strcmp(value, "webtransport") == 0)
+            st->is_webtransport = 1;
+#endif
     }
     /* RFC 9114 Section 4.3.1 completeness rules, evaluated once the whole
      * header block has been seen. */
@@ -1694,6 +1721,7 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
 #endif
 
     while ((nread = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
+        st->data_frame_bytes += (size_t)nread;
         if (st->sequenced_data) {
             if (h3_seq_append_and_feed(st, buf, (size_t)nread) != 0) {
                 lsquic_stream_close(stream);
@@ -1792,6 +1820,14 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
             }
         }
 
+        if (st->has_content_length && stream->sm_data_in != st->data_frame_bytes) {
+            lsquic_stream_close(stream);
+            return;
+        }
+        if (st->has_content_length && st->req->content_length != st->body_len) {
+            h3_reject_malformed_request(stream, st);
+            return;
+        }
         if (st->body_len > 0 && st->req && st->req->body) {
             cwist_sstring_assign_len(st->req->body, st->body, st->body_len);
         }
