@@ -7,6 +7,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
 #include <cwist/sys/app/shutdown.h>
+#include "../../core/utils/buffer.h"
 #include "tls_chain.h"
 #include "async_internal.h"
 #include <openssl/ssl.h>
@@ -36,10 +37,6 @@
 
 /* Forward declaration: PQC layer applied inside TLS bootstrap */
 bool cwist_tls_apply_pqc_layer(cwist_app *app, SSL_CTX *ctx);
-
-/* Bodies up to this size are written in the same TLS record as the
- * response headers; larger bodies amortize the per-record overhead. */
-#define CWIST_TLS_COALESCE_MAX (16 * 1024)
 
 /**
  * @brief Monotonic clock in milliseconds, for connection deadlines.
@@ -2115,9 +2112,9 @@ static int cwist_ssl_write_all(cwist_https_connection *conn, const char *buf, si
             now - budget->last_progress_ms >= CWIST_HTTP_TIMEOUT_MS)
             return -1;
 
-        /* SSL_write takes an int; cap each call well below INT_MAX. */
+        /* Large non-blocking writes can stall after 64 KiB on OpenSSL. */
         size_t left = len - off;
-        int chunk = left > 0x3fffffff ? 0x3fffffff : (int)left;
+        int chunk = left > 16384 ? 16384 : (int)left;
         int sent = SSL_write(conn->ssl, buf + off, chunk);
         if (sent <= 0) {
             int ssl_err = SSL_get_error(conn->ssl, sent);
@@ -2147,10 +2144,8 @@ static int cwist_ssl_write_all(cwist_https_connection *conn, const char *buf, si
 /**
  * @brief Serialize an HTTP response and send it over an active TLS connection.
  *
- * Zero-copy counterpart of the plaintext send path: the header block is
- * serialized into a stack buffer and written first, then the body is
- * streamed straight from its origin (pointer body, sstring, or file stream)
- * instead of materializing one contiguous heap blob.
+ * Pointer bodies are gathered in an internal dynamic buffer and written in
+ * bounded TLS records. File streams retain their chunked read path.
  *
  * @param conn Active HTTPS connection wrapper.
  * @param res Response object to serialize.
@@ -2184,10 +2179,6 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
     }
 
-    // 1+2. Headers onto a stack buffer; a small body rides in the same TLS
-    // record, saving one record's AEAD tag and one syscall on the common
-    // short-response path. Larger bodies keep the split writes (BoringSSL
-    // records a big SSL_write at 16 KiB internally).
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
     size_t header_len = cwist_http_serialize_headers(res, header_buf, sizeof(header_buf));
     if (header_len == 0) return make_ssl_error("HTTP response headers too large");
@@ -2205,31 +2196,16 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         }
     }
 
-    bool body_coalesced = false;
-    if (body_ptr && body_len > 0 && body_len <= CWIST_TLS_COALESCE_MAX) {
-        char *combined = (char *)cwist_alloc(header_len + body_len);
-        if (combined) {
-            memcpy(combined, header_buf, header_len);
-            memcpy(combined + header_len, body_ptr, body_len);
-            int rc = cwist_ssl_write_all(conn, combined, header_len + body_len, &write_budget);
-            cwist_free(combined);
-            if (rc != 0) {
-                return make_ssl_error("SSL coalesced write failed");
-            }
-            body_coalesced = true;
-        }
-        /* Allocation failure: fall through to the split writes. */
+    cwist_buffer output;
+    cwist_buffer_init(&output);
+    if (!cwist_buffer_append(&output, header_buf, header_len) ||
+        (body_len && !cwist_buffer_append(&output, body_ptr, body_len))) {
+        cwist_buffer_destroy(&output);
+        return make_ssl_error("HTTP response buffer allocation failed");
     }
-    if (!body_coalesced) {
-        if (cwist_ssl_write_all(conn, header_buf, header_len, &write_budget) != 0) {
-            return make_ssl_error("SSL header write failed");
-        }
-        if (body_ptr && body_len > 0) {
-            if (cwist_ssl_write_all(conn, body_ptr, body_len, &write_budget) != 0) {
-                return make_ssl_error("SSL body write failed");
-            }
-        }
-    }
+    int write_rc = cwist_ssl_write_all(conn, output.data, output.len, &write_budget);
+    cwist_buffer_destroy(&output);
+    if (write_rc != 0) return make_ssl_error("SSL response write failed");
 
     // 3. File streams cannot use sendfile() through userland TLS; chunk them
     if (!bodyless && res->use_file_stream && res->file_stream_fd >= 0) {
