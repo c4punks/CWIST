@@ -7,7 +7,6 @@ var https_8c =
     [ "CWIST_ALPN_H3_H2_HTTP11_LEN", "d2/db2/https_8c.html#ae8666293785285feae4439a75f8091f9", null ],
     [ "CWIST_ALPN_HTTP11", "d2/db2/https_8c.html#ac907bb51a8f07f416f589e88b8d5d748", null ],
     [ "CWIST_ALPN_HTTP11_LEN", "d2/db2/https_8c.html#a027c2b23babf6b4eb959ff576658be55", null ],
-    [ "CWIST_TLS_COALESCE_MAX", "d2/db2/https_8c.html#a6835b6b7a93f845248aaeec1bc5bc711", null ],
     [ "HTTPS_TASK_QUEUE_INITIAL", "d2/db2/https_8c.html#af21d4d9c6fb18c83be5a973f6f7c8e71", null ],
     [ "HTTPS_TASK_QUEUE_MAX", "d2/db2/https_8c.html#a51ec3d5395575ffa0b801f0242115470", null ],
     [ "cwist_ssl_write_budget", "d2/db2/https_8c.html#a6dec2dbace9f2cb5039bca2cd2e1dcf0", null ],

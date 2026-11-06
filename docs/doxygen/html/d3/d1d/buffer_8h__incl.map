@@ -1,0 +1,20 @@
+<map id="src/core/utils/buffer.h" name="src/core/utils/buffer.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="382,5,541,31"/>
+<area shape="rect" id="Node000002" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="156,79,329,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="427,33,292,77,290,72,425,28"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,225,80,251"/>
+<area shape="poly" id="edge8_Node000001_Node000003" title=" " alt="" coords="382,27,267,44,205,59,145,81,89,108,69,125,50,153,42,182,42,211,36,211,37,181,46,151,65,122,86,104,143,76,203,54,266,38,381,21"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="356,225,439,251"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="464,31,458,95,451,137,438,178,417,216,413,213,434,176,446,136,453,94,458,31"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="499,79,570,104"/>
+<area shape="poly" id="edge9_Node000001_Node000007" title=" " alt="" coords="475,29,515,67,511,71,472,33"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="594,79,665,104"/>
+<area shape="poly" id="edge10_Node000001_Node000008" title=" " alt="" coords="489,28,590,71,588,76,487,33"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="161,107,112,124,90,137,70,154,54,182,47,212,42,211,49,180,66,150,86,133,110,119,159,102"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="80,152,221,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="230,106,178,146,175,141,226,102"/>
+<area shape="rect" id="Node000005" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="245,152,424,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="259,102,311,141,307,146,256,106"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="288,180,94,227,93,222,287,175"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="347,176,380,213,376,217,343,179"/>
+</map>

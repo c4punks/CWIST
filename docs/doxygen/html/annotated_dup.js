@@ -12,6 +12,7 @@ var annotated_dup =
     [ "cwist_bind_result", "de/ddb/structcwist__bind__result.html", "de/ddb/structcwist__bind__result" ],
     [ "cwist_bind_rule", "de/d25/structcwist__bind__rule.html", "de/d25/structcwist__bind__rule" ],
     [ "cwist_bind_schema", "d4/d79/structcwist__bind__schema.html", "d4/d79/structcwist__bind__schema" ],
+    [ "cwist_buffer", "dd/d82/structcwist__buffer.html", "dd/d82/structcwist__buffer" ],
     [ "cwist_color_hsl", "d7/da3/structcwist__color__hsl.html", "d7/da3/structcwist__color__hsl" ],
     [ "cwist_color_rgb", "d1/db9/structcwist__color__rgb.html", "d1/db9/structcwist__color__rgb" ],
     [ "cwist_compress_backend", "d6/deb/structcwist__compress__backend.html", "d6/deb/structcwist__compress__backend" ],
