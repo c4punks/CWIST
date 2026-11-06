@@ -19,10 +19,11 @@
  *
  * tx is written without TCP_WRITE_FLAG_COPY, so lwIP references it until
  * the peer acknowledges. A response that fits the buffer is copied into it
- * and the response object is destroyed immediately; a larger response streams
- * through the buffer one chunk at a time as acknowledgements arrive. Owned
- * bodies retain their response object, while application-owned pointer bodies
- * let the response and its arena be released before streaming starts.
+ * and the response object is destroyed immediately. Small streamed bodies are
+ * referenced directly after the header so a tiny staging chunk never waits for
+ * an ACK before the rest is queued. Larger bodies use tx_store chunks to bound
+ * memory and avoid referencing external storage. Owned bodies retain their
+ * response object, while application-owned pointer bodies release it early.
  *
  * With CWIST_LWIP_TLS and cfg.tls set, mbedTLS sits between the pcb and the
  * same rx/tx buffers: received ciphertext queues in tin and is decrypted
@@ -120,6 +121,7 @@ struct cwist_lwip_conn {
     size_t stream_body_len;
     size_t stream_off;
     bool stream_active;
+    bool stream_direct;
 
     bool close_after_tx; /* Connection: close, error reply, or peer FIN */
     bool peer_closed;
@@ -450,27 +452,25 @@ static err_t conn_process(cwist_lwip_conn *c) {
     int status = 0;
     bool expect_continue = false;
     switch (frame_request(c, &req_len, &status, &expect_continue)) {
-    case FRAME_ERROR:
-        return conn_send_error(c, status);
-    case FRAME_NEED_MORE:
-        if (c->peer_closed) return conn_close(c); /* truncated request */
-        if (expect_continue && !c->continue_sent) {
-            c->continue_sent = true;
+        case FRAME_ERROR: return conn_send_error(c, status);
+        case FRAME_NEED_MORE:
+            if (c->peer_closed) return conn_close(c); /* truncated request */
+            if (expect_continue && !c->continue_sent) {
+                c->continue_sent = true;
 #ifdef CWIST_LWIP_TLS
-            if (c->ssl) { /* must go through the record layer, like any reply */
-                return conn_send(c, CWIST_LWIP_100_CONTINUE,
-                                 sizeof(CWIST_LWIP_100_CONTINUE) - 1, false);
-            }
+                if (c->ssl) { /* must go through the record layer, like any reply */
+                    return conn_send(c, CWIST_LWIP_100_CONTINUE,
+                                     sizeof(CWIST_LWIP_100_CONTINUE) - 1, false);
+                }
 #endif
-            if (tcp_write(c->pcb, CWIST_LWIP_100_CONTINUE, sizeof(CWIST_LWIP_100_CONTINUE) - 1, 0) ==
-                ERR_OK) {
-                c->ack_skip += sizeof(CWIST_LWIP_100_CONTINUE) - 1;
-                tcp_output(c->pcb);
+                if (tcp_write(c->pcb, CWIST_LWIP_100_CONTINUE, sizeof(CWIST_LWIP_100_CONTINUE) - 1,
+                              0) == ERR_OK) {
+                    c->ack_skip += sizeof(CWIST_LWIP_100_CONTINUE) - 1;
+                    tcp_output(c->pcb);
+                }
             }
-        }
-        return ERR_OK;
-    case FRAME_COMPLETE:
-        break;
+            return ERR_OK;
+        case FRAME_COMPLETE: break;
     }
 
     cwist_http_request *req = cwist_http_parse_request_len(c->rx, req_len);
@@ -530,6 +530,7 @@ static err_t conn_process(cwist_lwip_conn *c) {
         c->stream_res = res;
     }
     c->stream_active = true;
+    c->stream_direct = body_len <= CWIST_LWIP_DIRECT_STREAM_MAX;
     c->stream_body = body;
     c->stream_body_len = body_len;
     if (c->stream_direct) {
