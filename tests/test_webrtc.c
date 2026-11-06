@@ -197,10 +197,10 @@ static void *crc_init_worker(void *arg) {
         return NULL;
     }
     len = cwist_ice_stun_sign_request(req, sizeof(req), (size_t)len, "testpassword0123456789");
-    probe->rc = len > 0 && cwist_ice_stun_validate_request(req, (size_t)len,
-                                                          "testpassword0123456789") == 1
-                    ? 0
-                    : -1;
+    probe->rc =
+        len > 0 && cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1
+            ? 0
+            : -1;
     return NULL;
 }
 
@@ -339,6 +339,45 @@ static void unit_checks(void) {
         memcpy(long_line, ufrag_line, sizeof(ufrag_line) - 1);
         memcpy(long_line + sizeof(ufrag_line) - 1 + 511, "a=ice-pwd:embedded", 18);
         assert(cwist_sdp_parse(long_line, sizeof(long_line), &info) == -1);
+
+        char max_ufrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+        char max_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+        memset(max_ufrag, 'u', CWIST_WEBRTC_ICE_CREDENTIAL_MAX);
+        memset(max_pwd, 'p', CWIST_WEBRTC_ICE_CREDENTIAL_MAX);
+        max_ufrag[CWIST_WEBRTC_ICE_CREDENTIAL_MAX] = '\0';
+        max_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_MAX] = '\0';
+        char max_sdp[640];
+        int sdp_len = snprintf(max_sdp, sizeof(max_sdp), "a=ice-ufrag:%s\r\na=ice-pwd:%s\r\n",
+                               max_ufrag, max_pwd);
+        assert(sdp_len > 0 && (size_t)sdp_len < sizeof(max_sdp));
+        assert(cwist_sdp_parse(max_sdp, (size_t)sdp_len, &info) == 0);
+        assert(strcmp(info.ice_ufrag, max_ufrag) == 0);
+        assert(strcmp(info.ice_pwd, max_pwd) == 0);
+
+        char over_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_CAP + 1];
+        memset(over_pwd, 'p', CWIST_WEBRTC_ICE_CREDENTIAL_MAX + 1);
+        over_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_MAX + 1] = '\0';
+        sdp_len =
+            snprintf(max_sdp, sizeof(max_sdp), "a=ice-ufrag:ufrag\r\na=ice-pwd:%s\r\n", over_pwd);
+        assert(sdp_len > 0 && (size_t)sdp_len < sizeof(max_sdp));
+        assert(cwist_sdp_parse(max_sdp, (size_t)sdp_len, &info) == -1);
+        assert(cwist_sdp_parse(NULL, 0, &info) == -1);
+        assert(cwist_sdp_parse(max_sdp, 0, NULL) == -1);
+    }
+
+    /* Partial-message reassembly never mixes stream or payload identities. */
+    {
+        struct cwist_webrtc_conn partial = {0};
+        assert(cwist_sctp_rx_partial_append(&partial, 1, 53, (const uint8_t *)"ab", 2) == 0);
+        assert(cwist_sctp_rx_partial_append(&partial, 2, 53, (const uint8_t *)"XX", 2) == -1);
+        assert(cwist_sctp_rx_partial_append(&partial, 1, 51, (const uint8_t *)"XX", 2) == -1);
+        assert(partial.rx_partial_len == 2);
+        assert(memcmp(partial.rx_partial, "ab", 2) == 0);
+        assert(cwist_sctp_rx_partial_append(&partial, 1, 53, (const uint8_t *)"cd", 2) == 0);
+        assert(partial.rx_partial_len == 4);
+        assert(memcmp(partial.rx_partial, "abcd", 4) == 0);
+        assert(partial.rx_partial_sid == 1 && partial.rx_partial_ppid == 53);
+        free(partial.rx_partial);
     }
 }
 
