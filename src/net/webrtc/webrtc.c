@@ -424,9 +424,11 @@ static void conn_dtls_input(struct cwist_webrtc_conn *conn, const uint8_t *buf, 
 
 /** @brief Send (or resend) the client-role Binding request. */
 static void conn_send_stun_request(struct cwist_webrtc_conn *conn) {
-    uint8_t msg[512];
-    char username[128];
-    snprintf(username, sizeof(username), "%s:%s", conn->peer_ufrag, conn->ctx->ice_ufrag);
+    uint8_t msg[640];
+    char username[CWIST_WEBRTC_ICE_CREDENTIAL_CAP * 2];
+    int username_len =
+        snprintf(username, sizeof(username), "%s:%s", conn->peer_ufrag, conn->ctx->ice_ufrag);
+    if (username_len < 0 || (size_t)username_len >= sizeof(username)) return;
     int len = cwist_ice_stun_build_request(msg, sizeof(msg), conn->stun_txid, username);
     if (len < 0) return;
     len = cwist_ice_stun_sign_request(msg, sizeof(msg), (size_t)len, conn->peer_pwd);
@@ -622,7 +624,7 @@ static void handle_stun(cwist_webrtc_ctx *ctx, const uint8_t *buf, size_t len,
             /* Adopt the conn parked by cwist_webrtc_handle_offer() when the
              * USERNAME's remote ufrag matches; otherwise the request is still
              * authenticated with our password, so start a fresh conn. */
-            char rfrag[64] = "";
+            char rfrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP] = "";
             cwist_ice_stun_get_remote_ufrag(buf, len, rfrag, sizeof(rfrag));
             for (struct cwist_webrtc_conn *c = ctx->parked; c; c = c->hnext) {
                 if (rfrag[0] && strcmp(c->peer_ufrag, rfrag) == 0) {
@@ -1085,6 +1087,10 @@ static void connect_post_cb(void *arg) {
 cwist_webrtc_conn *cwist_webrtc_connect(cwist_webrtc_ctx *ctx, const struct sockaddr_in *remote,
                                         const char *peer_ufrag, const char *peer_pwd,
                                         const char *peer_fingerprint) {
+    if (!ctx || !remote || !peer_ufrag || !peer_pwd ||
+        strlen(peer_ufrag) > CWIST_WEBRTC_ICE_CREDENTIAL_MAX ||
+        strlen(peer_pwd) > CWIST_WEBRTC_ICE_CREDENTIAL_MAX)
+        return NULL;
     struct cwist_webrtc_conn *conn = conn_new(ctx, remote, false);
     if (!conn) return NULL;
     snprintf(conn->peer_ufrag, sizeof(conn->peer_ufrag), "%s", peer_ufrag);
