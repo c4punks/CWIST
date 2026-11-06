@@ -27,18 +27,6 @@
 #include "tls_chain.h"
 #include "h3_hdr_out.h"
 #include "http3_global.h"
-#include <sys/queue.h>
-#include "../../../lib/lsquic/src/liblsquic/lsquic_int_types.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_packet_common.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_packet_in.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_malo.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_conn_flow.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_rtt.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_sfcw.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_varint.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_hq.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_hash.h"
-#include "../../../lib/lsquic/src/liblsquic/lsquic_stream.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -155,7 +143,6 @@ typedef struct h3_stream_ctx {
     char *body;
     size_t body_len;
     size_t body_cap;
-    size_t data_frame_bytes;
     int headers_done;
     int response_ready;
     int write_state; /* 0=headers, 1=body, 2=done */
@@ -1721,7 +1708,6 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
 #endif
 
     while ((nread = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
-        st->data_frame_bytes += (size_t)nread;
         if (st->sequenced_data) {
             if (h3_seq_append_and_feed(st, buf, (size_t)nread) != 0) {
                 lsquic_stream_close(stream);
@@ -1820,9 +1806,12 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
             }
         }
 
-        if (st->has_content_length && stream->sm_data_in != st->data_frame_bytes) {
-            lsquic_stream_close(stream);
-            return;
+        if (st->has_content_length) {
+            enum LSQUIC_CONN_STATUS status = lsquic_conn_status(lsquic_stream_conn(stream), NULL, 0);
+            if (status != LSCONN_ST_CONNECTED && status != LSCONN_ST_HSK_IN_PROGRESS) {
+                lsquic_stream_close(stream);
+                return;
+            }
         }
         if (st->has_content_length && st->req->content_length != st->body_len) {
             h3_reject_malformed_request(stream, st);
