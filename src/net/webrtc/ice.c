@@ -20,15 +20,17 @@
  * @{ */
 #define STUN_MAGIC 0x2112A442u /**< Magic cookie; also the XOR mask for addresses/ports. */
 #define STUN_HDR_LEN 20        /**< Fixed STUN message header size in bytes. */
-#define ATTR_MAPPED_ADDRESS 0x0001     /**< MAPPED-ADDRESS attribute type. Unused (we send XOR-MAPPED-ADDRESS). */
+#define ATTR_MAPPED_ADDRESS \
+    0x0001     /**< MAPPED-ADDRESS attribute type. Unused (we send XOR-MAPPED-ADDRESS). */
 #define ATTR_USERNAME 0x0006           /**< USERNAME attribute type ("remoteufrag:localufrag"). */
-#define ATTR_MESSAGE_INTEGRITY 0x0008  /**< MESSAGE-INTEGRITY attribute type (HMAC-SHA1, 20 bytes). */
+#define ATTR_MESSAGE_INTEGRITY \
+    0x0008  /**< MESSAGE-INTEGRITY attribute type (HMAC-SHA1, 20 bytes). */
 #define ATTR_PRIORITY 0x0024           /**< PRIORITY attribute type (ICE, RFC 8445). */
 #define ATTR_USE_CANDIDATE 0x0025      /**< USE-CANDIDATE attribute type (nomination hint). */
 #define ATTR_XOR_MAPPED_ADDRESS 0x0020 /**< XOR-MAPPED-ADDRESS attribute type. */
 #define ATTR_FINGERPRINT 0x8028        /**< FINGERPRINT attribute type (CRC-32 xor 0x5354554E). */
-#define ATTR_ICE_CONTROLLED 0x8029     /**< ICE-CONTROLLED attribute type. Unused by this agent. */
-#define ATTR_ICE_CONTROLLING 0x802A    /**< ICE-CONTROLLING attribute type (we always send it). */
+#define ATTR_ICE_CONTROLLED 0x8029 /**< ICE-CONTROLLED attribute type. Unused by this agent. */
+#define ATTR_ICE_CONTROLLING 0x802A /**< ICE-CONTROLLING attribute type (we always send it). */
 /** @} */
 
 /** Byte-at-a-time CRC-32 (IEEE, poly 0xEDB88320) lookup table. */
@@ -39,8 +41,7 @@ static pthread_once_t crc32_once = PTHREAD_ONCE_INIT;
 static void crc32_init(void) {
     for (uint32_t i = 0; i < 256; i++) {
         uint32_t c = i;
-        for (int k = 0; k < 8; k++)
-            c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
+        for (int k = 0; k < 8; k++) c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
         crc32_table[i] = c;
     }
 }
@@ -54,8 +55,7 @@ static void crc32_init(void) {
  */
 static uint32_t crc32_update(uint32_t c, const uint8_t *data, size_t len) {
     pthread_once(&crc32_once, crc32_init);
-    for (size_t i = 0; i < len; i++)
-        c = crc32_table[(c ^ data[i]) & 0xFF] ^ (c >> 8);
+    for (size_t i = 0; i < len; i++) c = crc32_table[(c ^ data[i]) & 0xFF] ^ (c >> 8);
     return c;
 }
 
@@ -134,18 +134,15 @@ typedef bool (*attr_cb)(uint16_t type, const uint8_t *val, uint16_t val_len, voi
  */
 static bool walk_attrs(const uint8_t *msg, size_t len, attr_cb cb, void *arg) {
     uint16_t msg_len = rd16(msg + 2);
-    if ((size_t)msg_len + STUN_HDR_LEN > len || msg_len % 4 != 0)
-        return false;
+    if ((size_t)msg_len + STUN_HDR_LEN > len || msg_len % 4 != 0) return false;
     size_t off = STUN_HDR_LEN;
     size_t end = STUN_HDR_LEN + msg_len;
     while (off + 4 <= end) {
         uint16_t type = rd16(msg + off);
         uint16_t alen = rd16(msg + off + 2);
         off += 4;
-        if (off + alen > end)
-            return false;
-        if (!cb(type, msg + off, alen, arg))
-            return false;
+        if (off + alen > end) return false;
+        if (!cb(type, msg + off, alen, arg)) return false;
         off += (alen + 3) & ~3u;
     }
     return off == end;
@@ -153,8 +150,8 @@ static bool walk_attrs(const uint8_t *msg, size_t len, attr_cb cb, void *arg) {
 
 /** State for attr_find_cb(): which attribute type to look for and the result. */
 typedef struct {
-    bool found;           /**< Set true once the wanted attribute has been seen. */
-    uint16_t val_len;     /**< Value length of the found attribute (valid only if found). */
+    bool found; /**< Set true once the wanted attribute has been seen. */
+    uint16_t val_len; /**< Value length of the found attribute (valid only if found). */
     uint16_t type_wanted; /**< Attribute type to search for. */
 } attr_find_arg;
 
@@ -179,7 +176,7 @@ static bool attr_find_cb(uint16_t type, const uint8_t *val, uint16_t val_len, vo
  * @return true if present. Malformed messages simply report "not found".
  */
 static bool attr_present(const uint8_t *msg, size_t len, uint16_t type) {
-    attr_find_arg a = { .type_wanted = type };
+    attr_find_arg a = {.type_wanted = type};
     walk_attrs(msg, len, attr_find_cb, &a);
     return a.found;
 }
@@ -200,8 +197,7 @@ typedef struct {
 } mi_find_arg;
 
 static bool find_mi_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg) {
-    if (type != ATTR_MESSAGE_INTEGRITY)
-        return true;
+    if (type != ATTR_MESSAGE_INTEGRITY) return true;
     mi_find_arg *a = arg;
     a->off = (size_t)(val - a->msg) - 4;
     a->found = true;
@@ -219,25 +215,22 @@ static bool find_mi_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void
  *          treat that as an unsigned message rather than as a hard error.
  */
 static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off) {
-    if (!cwist_ice_stun_is_message(msg, len))
-        return false;
-    mi_find_arg a = { .msg = msg };
+    if (!cwist_ice_stun_is_message(msg, len)) return false;
+    mi_find_arg a = {.msg = msg};
     walk_attrs(msg, len, find_mi_cb, &a);
-    if (!a.found || !a.valid)
-        return false;
+    if (!a.found || !a.valid) return false;
     *mi_off = a.off;
     return true;
 }
 
-static int stun_hmac_sha1(const uint8_t *hdr, const uint8_t *body, size_t body_len,
-                          const char *pwd, uint8_t out[20]) {
+static int stun_hmac_sha1(const uint8_t *hdr, const uint8_t *body, size_t body_len, const char *pwd,
+                          uint8_t out[20]) {
     HMAC_CTX *ctx = HMAC_CTX_new();
     if (!ctx) return -1;
     unsigned int out_len = 0;
     int ok = HMAC_Init_ex(ctx, pwd, (int)strlen(pwd), EVP_sha1(), NULL) == 1 &&
-             HMAC_Update(ctx, hdr, STUN_HDR_LEN) == 1 &&
-             HMAC_Update(ctx, body, body_len) == 1 && HMAC_Final(ctx, out, &out_len) == 1 &&
-             out_len == 20;
+             HMAC_Update(ctx, hdr, STUN_HDR_LEN) == 1 && HMAC_Update(ctx, body, body_len) == 1 &&
+             HMAC_Final(ctx, out, &out_len) == 1 && out_len == 20;
     HMAC_CTX_free(ctx);
     return ok ? 0 : -1;
 }
@@ -304,8 +297,7 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
     uint32_t addr = ntohl(mapped->sin_addr.s_addr) ^ STUN_MAGIC;
     wr32(body + blen, addr);
     blen += 4;
-    while (blen % 4)
-        body[blen++] = 0;
+    while (blen % 4) body[blen++] = 0;
 
     /* MESSAGE-INTEGRITY over header+body+MI attr header with adjusted length */
     uint16_t len_for_mi = (uint16_t)(blen + 4 + 20);
@@ -337,8 +329,7 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
     wr32(body + blen + 4, c ^ 0x5354554Eu);
     blen += 8;
 
-    if (cap < STUN_HDR_LEN + blen)
-        return -1;
+    if (cap < STUN_HDR_LEN + blen) return -1;
     memcpy(out, hdr2, STUN_HDR_LEN);
     memcpy(out + STUN_HDR_LEN, body, blen);
     return (int)(STUN_HDR_LEN + blen);
@@ -362,7 +353,7 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
 int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12],
                                  const char *username) {
     size_t ulen = strlen(username);
-    uint8_t body[256];
+    uint8_t body[544];
     if (ulen > UINT16_MAX) return -1;
     size_t username_attr_len = ulen ? 4 + ((ulen + 3) & ~3u) : 0;
     const size_t fixed_attrs_len = 12 + 4 + 8;
@@ -383,8 +374,7 @@ int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12
         blen += 4;
         memcpy(body + blen, username, ulen);
         blen += ulen;
-        while (blen % 4)
-            body[blen++] = 0;
+        while (blen % 4) body[blen++] = 0;
     }
     /* ICE-CONTROLLING (8 bytes) */
     wr16(body + blen, ATTR_ICE_CONTROLLING);
@@ -405,8 +395,7 @@ int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12
      * keep the request unsigned because the MI key (peer pwd) is supplied at
      * send time. cwist_ice_stun_sign_request() handles it. */
     wr16(out + 2, (uint16_t)blen);
-    if (cap < STUN_HDR_LEN + blen)
-        return -1;
+    if (cap < STUN_HDR_LEN + blen) return -1;
     memcpy(out + STUN_HDR_LEN, body, blen);
     return (int)(STUN_HDR_LEN + blen);
 }
@@ -457,8 +446,7 @@ static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) 
     wr32(body + blen + 4, c ^ 0x5354554Eu);
     blen += 8;
 
-    if (cap < msg_len + blen)
-        return -1;
+    if (cap < msg_len + blen) return -1;
     memcpy(msg + msg_len, body, blen);
     memcpy(msg, hdr2, STUN_HDR_LEN);
     return (int)(msg_len + blen);
@@ -477,9 +465,10 @@ int cwist_ice_stun_sign_request(uint8_t *msg, size_t cap, size_t msg_len, const 
 
 /** State for parse_resp_cb(): collected MESSAGE-INTEGRITY value and mapped address. */
 typedef struct {
-    const uint8_t *mi_val;   /**< Pointer to the MI attribute value (into the message buffer), or NULL. */
+    const uint8_t
+        *mi_val; /**< Pointer to the MI attribute value (into the message buffer), or NULL. */
     struct sockaddr_in mapped; /**< Decoded XOR-MAPPED-ADDRESS, valid only if has_mapped. */
-    bool has_mapped;         /**< True once an IPv4 XOR-MAPPED-ADDRESS has been decoded. */
+    bool has_mapped; /**< True once an IPv4 XOR-MAPPED-ADDRESS has been decoded. */
 } parse_resp_arg;
 
 /** @brief attr_cb collecting the MI value and XOR-MAPPED-ADDRESS from a response.
@@ -517,27 +506,22 @@ static bool parse_resp_cb(uint16_t type, const uint8_t *val, uint16_t val_len, v
  */
 int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t txid[12],
                                   const char *pwd, struct sockaddr_in *mapped) {
-    if (!cwist_ice_stun_is_message(buf, len) || rd16(buf) != CWIST_STUN_BINDING_RESPONSE)
-        return 0;
-    if (memcmp(buf + 8, txid, 12) != 0)
-        return 0;
-    if (!cwist_ice_stun_validate_request(buf, len, pwd))
-        return 0;
-    parse_resp_arg a = { 0 };
-    if (!walk_attrs(buf, len, parse_resp_cb, &a))
-        return 0;
-    if (!a.mi_val)
-        return 0;
+    if (!cwist_ice_stun_is_message(buf, len) || rd16(buf) != CWIST_STUN_BINDING_RESPONSE) return 0;
+    if (memcmp(buf + 8, txid, 12) != 0) return 0;
+    if (!cwist_ice_stun_validate_request(buf, len, pwd)) return 0;
+    parse_resp_arg a = {0};
+    if (!walk_attrs(buf, len, parse_resp_cb, &a)) return 0;
+    if (!a.mi_val) return 0;
     if (mapped) {
-        if (!a.has_mapped)
-            return 0;
+        if (!a.has_mapped) return 0;
         *mapped = a.mapped;
     }
     return 1;
 }
 
 /** Base64url alphabet (no padding) used to encode random ICE credentials. */
-static const char b64url_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+static const char b64url_chars[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /** @brief Extract the sender's ufrag from the USERNAME attribute of a STUN message.
  *
@@ -593,16 +577,13 @@ void cwist_ice_random_creds(char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd
     uint8_t raw[24];
     if (ufrag && ufrag_cap > 0) ufrag[0] = '\0';
     if (pwd && pwd_cap > 0) pwd[0] = '\0';
-    if (!ufrag || !pwd || ufrag_cap == 0 || pwd_cap == 0 ||
-        RAND_bytes(raw, sizeof(raw)) != 1)
+    if (!ufrag || !pwd || ufrag_cap == 0 || pwd_cap == 0 || RAND_bytes(raw, sizeof(raw)) != 1)
         return;
 
     size_t n = ufrag_cap - 1 < 8 ? ufrag_cap - 1 : 8;
-    for (size_t i = 0; i < n; i++)
-        ufrag[i] = b64url_chars[raw[i] & 63];
+    for (size_t i = 0; i < n; i++) ufrag[i] = b64url_chars[raw[i] & 63];
     ufrag[n] = '\0';
     size_t m = pwd_cap - 1 < 32 ? pwd_cap - 1 : 32;
-    for (size_t i = 0; i < m; i++)
-        pwd[i] = b64url_chars[raw[8 + (i % 16)] & 63];
+    for (size_t i = 0; i < m; i++) pwd[i] = b64url_chars[raw[8 + (i % 16)] & 63];
     pwd[m] = '\0';
 }
