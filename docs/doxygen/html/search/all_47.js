@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['도구_20체인_20현황_202026_2009_2021_20측정_0',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md531',1,'']]],
-  ['도우미_1',['도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md350',1,'그 밖에 내보낸 inline 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md361',1,'메서드 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md362',1,'소켓 도우미'],['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md392',1,'요청 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md353',1,'핵심 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md360',1,'헤더 도우미']]]
+  ['양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md490',1,'']]],
+  ['양자내성_20하이브리드_20키_20교환_1',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md488',1,'']]]
 ];

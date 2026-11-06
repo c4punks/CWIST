@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['릴리스_20관문_0',['구현과 릴리스 관문',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md597',1,'']]],
-  ['릴리스_20사전_20빌드_20에셋_1',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
+  ['첫_20상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md375',1,'']]],
+  ['첫_20서버_20띄우기_1',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md482',1,'']]]
 ];

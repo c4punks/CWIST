@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['감사_0',['해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md534',1,'']]],
-  ['감지_1',['종류 감지',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md523',1,'']]]
+  ['검증_0',['3. JSON 파싱과 Zod 스키마 검증',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md484',1,'']]],
+  ['검증_20범위_1',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md348',1,'']]]
 ];

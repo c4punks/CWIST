@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['낙서_20마방진_20洛書_0',['1. 낙서 마방진 (洛書)',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md685',1,'']]]
+  ['사이드_20합성_0',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md494',1,'']]]
 ];

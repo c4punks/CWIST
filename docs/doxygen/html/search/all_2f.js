@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['결과_0',['결과',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md596',1,'']]],
-  ['결정론적_20회귀_20테스트_1',['결정론적 회귀 테스트',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md578',1,'']]],
-  ['결정_2',['결정',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md590',1,'']]]
+  ['동적_20css_20합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md492',1,'']]]
 ];

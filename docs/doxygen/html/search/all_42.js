@@ -1,8 +1,5 @@
 var searchData=
 [
-  ['단계_0',['단계',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md535',1,'']]],
-  ['단계_20선형_20외삽_1',['5. 단일 단계 선형 외삽',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md689',1,'']]],
-  ['단언_20매크로_2',['테스트 단언 매크로',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md394',1,'']]],
-  ['단위로_20생성_3',['스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md550',1,'']]],
-  ['단일_20단계_20선형_20외삽_4',['5. 단일 단계 선형 외삽',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md689',1,'']]]
+  ['스레드_20풀_0',['Classic 스레드 풀',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md361',1,'']]],
+  ['스키마_20검증_1',['3. JSON 파싱과 Zod 스키마 검증',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md484',1,'']]]
 ];
