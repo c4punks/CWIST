@@ -41,6 +41,8 @@ var app_8c =
     [ "cwist_app_get_scheduler", "df/d7f/app_8c.html#a9947960b6bc6f8960cab6d5fd98ccb09", null ],
     [ "cwist_app_http_handler", "df/d7f/app_8c.html#a325fd348f45902dee5b10c6e7aaba6df", null ],
     [ "cwist_app_http_handler_async", "df/d7f/app_8c.html#abce3097da6bd88caa96f00bd9e153cb2", null ],
+    [ "cwist_app_http_handler_resume", "df/d7f/app_8c.html#a70497c0210773e077d1294a17026427d", null ],
+    [ "cwist_app_internal_set_fallback", "df/d7f/app_8c.html#a6dc6b758ef4ec64fd15b524f0c3722aa", null ],
     [ "cwist_app_listen", "df/d7f/app_8c.html#a05f9a10f4d2ab307c211dd56d54fe7c3", null ],
     [ "cwist_app_listen_ex", "df/d7f/app_8c.html#ac41b80406f8bc60ccf68ba36b2810db2", null ],
     [ "cwist_app_patch", "df/d7f/app_8c.html#acf71ebb3a7e5c9a84791648312279dc7", null ],

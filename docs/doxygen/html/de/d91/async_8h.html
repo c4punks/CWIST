@@ -208,15 +208,17 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d9/da7/async_8h__dep__incl.png" border="0" usemap="#ainclude_2cwist_2net_2http_2async_8hdep" alt=""/></div>
 <map name="ainclude_2cwist_2net_2http_2async_8hdep" id="ainclude_2cwist_2net_2http_2async_8hdep">
-<area shape="rect" title="Deferred&#45;response (async handler) API for CWIST." alt="" coords="249,5,412,45"/>
+<area shape="rect" title="Deferred&#45;response (async handler) API for CWIST." alt="" coords="333,5,496,45"/>
 <area shape="rect" href="../../db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="5,101,155,126"/>
-<area shape="poly" title=" " alt="" coords="263,52,114,103,113,98,262,47"/>
+<area shape="poly" title=" " alt="" coords="329,51,125,103,124,98,327,46"/>
 <area shape="rect" href="../../d0/dbc/async__tls_8c.html" title="Dispatch&#45;thread record of a deferred&#45;response handoff." alt="" coords="179,93,317,133"/>
-<area shape="poly" title=" " alt="" coords="305,57,268,95,264,91,301,54"/>
+<area shape="poly" title=" " alt="" coords="367,54,286,96,283,91,365,49"/>
 <area shape="rect" href="../../d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="342,101,487,126"/>
-<area shape="poly" title=" " alt="" coords="361,53,405,98,401,102,357,57"/>
-<area shape="rect" href="../../df/d7f/app_8c.html" title=" " alt="" coords="511,101,646,126"/>
-<area shape="poly" title=" " alt="" coords="399,47,547,98,545,103,397,52"/>
+<area shape="poly" title=" " alt="" coords="417,59,417,100,412,100,412,59"/>
+<area shape="rect" href="../../dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="512,101,669,126"/>
+<area shape="poly" title=" " alt="" coords="467,49,568,98,566,103,464,54"/>
+<area shape="rect" href="../../df/d7f/app_8c.html" title=" " alt="" coords="694,101,829,126"/>
+<area shape="poly" title=" " alt="" coords="505,46,716,98,715,103,503,51"/>
 </map>
 </div>
 </div>
@@ -316,9 +318,9 @@ Functions</h2></td></tr>
 
 <p>Complete the exchange with an error status and close the connection. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00370">370</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00515">515</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01861">cwist_http_header_add()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00519">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>
@@ -351,9 +353,9 @@ Functions</h2></td></tr>
 <p>Defer the response for the current request. </p>
 <p>Call from inside a route handler and return immediately afterwards; the handler must not touch <code>req</code> or <code>res</code> after this call. Ownership of both objects transfers to the returned handle. Framework middleware may finish its synchronous posthandler work before dispatch acknowledges the transfer. A foreign producer waits for that acknowledgement before mutating or sending the exchange. Do not join or otherwise wait for a completing producer from the handler/middleware. Inline completion claims and records the response, but sending and cleanup wait until dispatch/middleware unwind. This also permits inline abort when scheduling a producer fails, without another allocation or scheduler. </p><dl class="section return"><dt>Returns</dt><dd>Handle to complete later, or NULL on allocation failure (the framework falls back to answering whatever the handler wrote). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00103">103</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00152">152</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00178">cwist_http_request::app</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00247">cwist_http_response::async</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00190">cwist_http_request::async_conn</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00075">cwist_http_request::client_fd</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d0/dbc/async__tls_8c_source.html#l00038">cwist_async_record_pending()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00039">CWIST_ASYNC_ST_PENDING</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00320">cwist_h2_async_queue_acquire()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00268">cwist_http_reactor_generation()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00246">cwist_http_response::deferred</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00193">cwist_http_request::h2_queue</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00192">cwist_http_request::https_conn</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00074">cwist_http_request::keep_alive</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00088">cwist_http_response::keep_alive</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00492">cwist_http_async_conn::reactor</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00077">cwist_http_request::stream_id</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00178">cwist_http_request::app</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00247">cwist_http_response::async</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00190">cwist_http_request::async_conn</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00075">cwist_http_request::client_fd</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d0/dbc/async__tls_8c_source.html#l00038">cwist_async_record_pending()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d2/db0/http2_8c_source.html#l00320">cwist_h2_async_queue_acquire()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00306">cwist_h3_async_queue_acquire()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00261">cwist_h3_pending_acquire()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00268">cwist_http_reactor_generation()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00246">cwist_http_response::deferred</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00193">cwist_http_request::h2_queue</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00192">cwist_http_request::https_conn</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00074">cwist_http_request::keep_alive</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00088">cwist_http_response::keep_alive</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00492">cwist_http_async_conn::reactor</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00077">cwist_http_request::stream_id</a>.</p>
 
 </div>
 </div>
@@ -375,9 +377,9 @@ Functions</h2></td></tr>
 
 <p>Internal: on the dispatch thread, after all middleware has unwound. Call exactly once; do not touch the exchange after this release-publication. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00167">167</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00251">251</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00052">CWIST_ASYNC_ACKED</a>, <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>, and <a class="el" href="../../db/d84/async_8c_source.html#l00051">CWIST_ASYNC_PUBLISHED</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d2/db0/http2_8c_source.html#l03445">cwist_http2_serve_connection_ex()</a>.</p>
 
@@ -401,11 +403,11 @@ Functions</h2></td></tr>
 
 <p>Release a reference acquired with <a class="el" href="../../de/d91/async_8h.html#a1ca4ddf51cd2ebb5df71fb044776c837" title="Retain a live handle for a producer that may outlive completion. Must be called while the caller alre...">cwist_async_retain()</a>. Does not complete or abort the exchange. NULL is accepted. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00159">159</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00218">218</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875">cwist_async_forget_handle()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00311">cwist_h3_async_queue_release()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l00266">cwist_h3_pending_release()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00328">cwist_async_set_timeout()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00464">cwist_async_set_timeout()</a>.</p>
 
 </div>
 </div>
@@ -455,9 +457,9 @@ Functions</h2></td></tr>
 
 <p>Complete the exchange with a simple body response. Thread-safe and one-shot: the first of respond/respond_with/abort wins, later calls return false. <code>body</code> is copied. A winning foreign call may wait for dispatch/middleware to return. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00340">340</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00476">476</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01861">cwist_http_header_add()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00519">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00088">cwist_sstring_assign_len()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>.</p>
 
 </div>
 </div>
@@ -489,7 +491,7 @@ Functions</h2></td></tr>
 
 <p>Complete the exchange with a caller-built response. On success the framework takes ownership of <code>res</code> (destroyed after send). On false the caller retains ownership. Build the response on the calling producer thread, or explicitly disown its GC-tracked owned allocations on their allocating thread before passing it to this producer. Borrowed data and opaque cleanup-context dependencies must remain live until destruction; the framework transfers a managed payload but cannot traverse its context. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00359">359</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00504">504</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -513,11 +515,11 @@ Functions</h2></td></tr>
 
 <p>Retain a live handle for a producer that may outlive completion. Must be called while the caller already holds a reference, or before the dispatch handoff can complete. It cannot resurrect an expired handle. Returns <code>a</code> (NULL is accepted). Each retain requires one release. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00154">154</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00213">213</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00328">cwist_async_set_timeout()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00464">cwist_async_set_timeout()</a>.</p>
 
 </div>
 </div>
@@ -549,9 +551,9 @@ Functions</h2></td></tr>
 
 <p>Answer with a 504 Gateway Timeout if the exchange is still pending after <code>ms</code> milliseconds. The timeout routes through the same completion path as a normal response. The timer holds its own handle reference until its callback runs, even if another producer wins. Default is no timeout (0). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00328">328</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00464">464</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00159">cwist_async_release()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00154">cwist_async_retain()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00379">cwist_scheduler_schedule()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00218">cwist_async_release()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00213">cwist_async_retain()</a>, and <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00379">cwist_scheduler_schedule()</a>.</p>
 
 </div>
 </div>
@@ -574,9 +576,11 @@ Functions</h2></td></tr>
 <p>Wait until dispatch has acknowledged the handoff of <code>a</code>. </p>
 <p>A producer on another thread must not read or mutate the deferred request or response until dispatch and the middleware chain have unwound: until then the dispatch thread still reads the response (including res-&gt;deferred) and may send and destroy it. Call this on the producer before touching req/res directly; respond, respond_with and abort already wait on their own. Returns immediately on the dispatch thread itself (an inline producer runs before the acknowledgement by construction) and for NULL. The wait is short: dispatch acknowledges as soon as the handler and middleware return. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00185">185</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d84/async_8c_source.html#l00266">266</a> of file <a class="el" href="../../db/d84/async_8c_source.html">async.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00536">cwist_async_stream_start()</a>.</p>
 
 </div>
 </div>

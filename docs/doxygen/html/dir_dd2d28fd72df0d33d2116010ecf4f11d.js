@@ -30,5 +30,6 @@ var dir_dd2d28fd72df0d33d2116010ecf4f11d =
     [ "sse.c", "d2/dd2/sse_8c.html", "d2/dd2/sse_8c" ],
     [ "tls_chain.c", "d3/d65/tls__chain_8c.html", "d3/d65/tls__chain_8c" ],
     [ "tls_chain.h", "dc/d94/tls__chain_8h.html", "dc/d94/tls__chain_8h" ],
+    [ "tls_info.h", "df/d2f/tls__info_8h.html", "df/d2f/tls__info_8h" ],
     [ "writer_fast.c", "d5/d23/writer__fast_8c.html", "d5/d23/writer__fast_8c" ]
 ];

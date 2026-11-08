@@ -239,6 +239,10 @@ Public Attributes</h2></td></tr>
 <tr class="separator:ad918a84e8d6791a6dd5d829b1bd5d6d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a64bfd71e45584da5a0918c146205efca" id="r_a64bfd71e45584da5a0918c146205efca"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dae/structcwist__http3__context.html#a64bfd71e45584da5a0918c146205efca">last_close_reason</a> [256]</td></tr>
 <tr class="separator:a64bfd71e45584da5a0918c146205efca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa4dc2d3ad070f9bcc4bf636e65d8e786" id="r_aa4dc2d3ad070f9bcc4bf636e65d8e786"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dae/structcwist__http3__context.html#aa4dc2d3ad070f9bcc4bf636e65d8e786">async_queue</a></td></tr>
+<tr class="separator:aa4dc2d3ad070f9bcc4bf636e65d8e786"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a235a50bfb5a034787334c2716a6f12b0" id="r_a235a50bfb5a034787334c2716a6f12b0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/dae/structcwist__http3__context.html#a235a50bfb5a034787334c2716a6f12b0">tls_groups</a></td></tr>
+<tr class="separator:a235a50bfb5a034787334c2716a6f12b0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>HTTP/3 server context encapsulating lsquic/BoringSSL settings. </p>
@@ -261,7 +265,26 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00046">46</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>.</p>
+
+</div>
+</div>
+<a id="aa4dc2d3ad070f9bcc4bf636e65d8e786" name="aa4dc2d3ad070f9bcc4bf636e65d8e786"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa4dc2d3ad070f9bcc4bf636e65d8e786">&#9670;&#160;</a></span>async_queue</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>* cwist_http3_context::async_queue</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Deferred-response queue of the running server loop (internal) </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00079">79</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -279,7 +302,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00048">48</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03900">cwist_http3_set_datagram_callback()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l04194">cwist_http3_set_datagram_callback()</a>.</p>
 
 </div>
 </div>
@@ -298,7 +321,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00047">47</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03892">cwist_http3_set_datagram_enabled()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l04186">cwist_http3_set_datagram_enabled()</a>.</p>
 
 </div>
 </div>
@@ -316,7 +339,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00049">49</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03900">cwist_http3_set_datagram_callback()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l04194">cwist_http3_set_datagram_callback()</a>.</p>
 
 </div>
 </div>
@@ -335,7 +358,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00044">44</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02949">cwist_http3_reload_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03517">cwist_http3_set_early_data()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03204">cwist_http3_reload_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03811">cwist_http3_set_early_data()</a>.</p>
 
 </div>
 </div>
@@ -354,7 +377,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00045">45</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03517">cwist_http3_set_early_data()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03539">cwist_http3_set_early_data_guard()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03811">cwist_http3_set_early_data()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03833">cwist_http3_set_early_data_guard()</a>.</p>
 
 </div>
 </div>
@@ -373,7 +396,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00038">38</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02918">cwist_http3_destroy_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03157">cwist_http3_destroy_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -391,7 +414,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00039">39</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -410,7 +433,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00055">55</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03862">cwist_http3_set_handshake_timeout()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l04156">cwist_http3_set_handshake_timeout()</a>.</p>
 
 </div>
 </div>
@@ -446,7 +469,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00054">54</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03854">cwist_http3_set_idle_timeout()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l04148">cwist_http3_set_idle_timeout()</a>.</p>
 
 </div>
 </div>
@@ -465,7 +488,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00075">75</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02994">cwist_http3_last_close_error()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03255">cwist_http3_last_close_error()</a>.</p>
 
 </div>
 </div>
@@ -484,7 +507,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00076">76</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02994">cwist_http3_last_close_error()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03255">cwist_http3_last_close_error()</a>.</p>
 
 </div>
 </div>
@@ -503,7 +526,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00077">77</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02994">cwist_http3_last_close_error()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03255">cwist_http3_last_close_error()</a>.</p>
 
 </div>
 </div>
@@ -522,7 +545,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00074">74</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02994">cwist_http3_last_close_error()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03255">cwist_http3_last_close_error()</a>.</p>
 
 </div>
 </div>
@@ -541,7 +564,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00057">57</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03878">cwist_http3_set_noprogress_timeout()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l04172">cwist_http3_set_noprogress_timeout()</a>.</p>
 
 </div>
 </div>
@@ -560,7 +583,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00056">56</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03870">cwist_http3_set_ping_period()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l04164">cwist_http3_set_ping_period()</a>.</p>
 
 </div>
 </div>
@@ -579,7 +602,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00043">43</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03506">cwist_http3_set_push_enabled()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03800">cwist_http3_set_push_enabled()</a>.</p>
 
 </div>
 </div>
@@ -598,7 +621,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00041">41</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -617,7 +640,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">36</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02918">cwist_http3_destroy_context()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l02949">cwist_http3_reload_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03517">cwist_http3_set_early_data()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03157">cwist_http3_destroy_context()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l03185">cwist_http3_internal_set_tls_groups()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l03204">cwist_http3_reload_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03811">cwist_http3_set_early_data()</a>.</p>
 
 </div>
 </div>
@@ -635,7 +658,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00068">68</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02918">cwist_http3_destroy_context()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03157">cwist_http3_destroy_context()</a>.</p>
 
 </div>
 </div>
@@ -653,7 +676,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">67</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02918">cwist_http3_destroy_context()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l02949">cwist_http3_reload_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03517">cwist_http3_set_early_data()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03157">cwist_http3_destroy_context()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l03185">cwist_http3_internal_set_tls_groups()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l03204">cwist_http3_reload_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03811">cwist_http3_set_early_data()</a>.</p>
 
 </div>
 </div>
@@ -671,7 +694,26 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00069">69</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l02918">cwist_http3_destroy_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l02949">cwist_http3_reload_context()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03157">cwist_http3_destroy_context()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03204">cwist_http3_reload_context()</a>.</p>
+
+</div>
+</div>
+<a id="a235a50bfb5a034787334c2716a6f12b0" name="a235a50bfb5a034787334c2716a6f12b0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a235a50bfb5a034787334c2716a6f12b0">&#9670;&#160;</a></span>tls_groups</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a>* cwist_http3_context::tls_groups</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Key-exchange groups re-applied on reload, e.g. PQC (internal) </p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00080">80</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03157">cwist_http3_destroy_context()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l03185">cwist_http3_internal_set_tls_groups()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03204">cwist_http3_reload_context()</a>.</p>
 
 </div>
 </div>
@@ -690,7 +732,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00037">37</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -708,7 +750,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00040">40</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -727,7 +769,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00050">50</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03031">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03628">cwist_http3_set_webtransport_handler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03292">cwist_http3_server_loop()</a>, and <a class="el" href="../../de/daf/http3_8c_source.html#l03922">cwist_http3_set_webtransport_handler()</a>.</p>
 
 </div>
 </div>
@@ -746,7 +788,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00053">53</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03637">cwist_webtransport_set_new_stream_handler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03931">cwist_webtransport_set_new_stream_handler()</a>.</p>
 
 </div>
 </div>
@@ -765,7 +807,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/dff/http3_8h_source.html#l00051">51</a> of file <a class="el" href="../../dd/dff/http3_8h_source.html">http3.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03637">cwist_webtransport_set_new_stream_handler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/daf/http3_8c_source.html#l03931">cwist_webtransport_set_new_stream_handler()</a>.</p>
 
 </div>
 </div>
