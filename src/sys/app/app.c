@@ -29,6 +29,9 @@
 #include <cwist/net/http/http2.h>
 #include <cwist/net/grpc/grpc.h>
 #include <cwist/net/http/http3.h>
+#ifdef CWIST_HTTP3
+#include "../../net/http/http3_global.h"
+#endif
 #include <cwist/net/http/async_server.h>
 
 /* Network headers (internal) */
@@ -1253,6 +1256,21 @@ static void cwist_app_refresh_https_request_handler(cwist_app *app) {
 /**
  * @brief Initialize or refresh the HTTP/3 context based on current settings.
  */
+/* The PQC layer used to reach only the TCP TLS context, so HTTP/3 kept
+ * classical key exchange even with cwist_app_use_pqc_layer(). QUIC is
+ * TLS 1.3 already; only the group list needs applying. */
+static void cwist_app_apply_pqc_to_http3(cwist_app *app) {
+#if defined(CWIST_HTTP3) && !defined(CWIST_TLS_MBEDTLS)
+    if (!app || !app->pqc_layer_enabled || !app->h3_ctx) return;
+    const char *groups = app->tls_groups ? app->tls_groups : "X25519MLKEM768:X25519:P-256";
+    if (cwist_http3_internal_set_tls_groups(app->h3_ctx, groups) != 0) {
+        fprintf(stderr, "PQC layer: HTTP/3 rejected TLS groups %s\n", groups);
+    }
+#else
+    (void)app;
+#endif
+}
+
 static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!app) {
@@ -1277,6 +1295,7 @@ static cwist_error_t cwist_app_refresh_http3_context(cwist_app *app) {
         if (app->h3_ctx && app->wt_handler) {
             cwist_http3_set_webtransport_handler(app->h3_ctx, app->wt_handler);
         }
+        cwist_app_apply_pqc_to_http3(app);
     } else {
         err.error.err_i16 = 0;
     }
@@ -1745,6 +1764,9 @@ cwist_error_t cwist_app_reload_tls(cwist_app *app, const char *cert_path, const 
 void cwist_app_use_pqc_layer(cwist_app *app, bool enabled) {
     if (!app) return;
     app->pqc_layer_enabled = enabled;
+#if defined(CWIST_PLATFORM_HOSTED)
+    cwist_app_apply_pqc_to_http3(app);
+#endif
 }
 
 void cwist_app_set_tls_groups(cwist_app *app, const char *groups) {
@@ -2771,6 +2793,15 @@ static void execute_route(cwist_app *app, cwist_http_request *req, cwist_http_re
     }
 }
 
+static cwist_app_fallback_match_fn g_app_fallback_match;
+static cwist_handler_func g_app_fallback_handler;
+
+void cwist_app_internal_set_fallback(cwist_app_fallback_match_fn match,
+                                     cwist_handler_func handler) {
+    __atomic_store_n(&g_app_fallback_handler, handler, __ATOMIC_RELEASE);
+    __atomic_store_n(&g_app_fallback_match, match, __ATOMIC_RELEASE);
+}
+
 static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                                    cwist_http_response *res) {
     if (!req || !app || !app->router) return;
@@ -2868,6 +2899,15 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         return;
     }
 
+    cwist_app_fallback_match_fn fb_match = __atomic_load_n(&g_app_fallback_match, __ATOMIC_ACQUIRE);
+    if (fb_match && fb_match(app, req)) {
+        cwist_handler_func fb = __atomic_load_n(&g_app_fallback_handler, __ATOMIC_ACQUIRE);
+        if (fb) {
+            execute_chain(app, req, res, fb, NULL);
+            return;
+        }
+    }
+
     /* In-memory assets need no filesystem, so unlike static directories they
      * are served on WASM hosts too. */
     cwist_asset_match asset_match = {0};
@@ -2922,9 +2962,11 @@ static void static_http3_route_bridge(void *user_ctx, cwist_http_request *req,
     req->app = app;
     req->db = app->db;
     internal_route_handler(app, req, res);
-    /* HTTP/3 has no deferred-response path yet; drop this thread's pending
-     * handoff so a later dispatch cannot mistake it for its own. */
-    (void)cwist_async_dispatch_take(res);
+    /* A defer was routed to the engine's completion queue by
+     * cwist_async_defer() (http3.c brackets this call); acknowledge it so the
+     * completion may take req/res. http3.c detaches them from the stream. */
+    cwist_async *deferred = cwist_async_dispatch_take(res);
+    if (deferred) cwist_async_dispatch_ack(deferred);
 }
 #endif
 
@@ -3099,9 +3141,13 @@ typedef enum {
 
 #ifndef CWIST_PLATFORM_NO_SOCKETS
 /* Socket-server request serving: preview1 hosts dispatch in memory instead. */
+/* carry/carry_len: bytes the classic handler already read past @p req (its
+ * stack buffer dies when it returns on a defer); NULL/0 on the C1M path,
+ * whose receive stash outlives the turn. */
 static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
                                                    cwist_http_request *req,
-                                                   uint32_t priority_weight) {
+                                                   uint32_t priority_weight, const char *carry,
+                                                   size_t carry_len) {
     // --- Big Dumb Reply (Read) ---
     if (app->bdr_ctx && req->method == CWIST_HTTP_GET &&
         (!req->query || req->query->size == 0)) {
@@ -3185,6 +3231,8 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
         cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
         bool broken = aconn && aconn->olen > 0 &&
                       cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
+        /* Before the ack: afterwards the completion may already re-arm. */
+        if (carry_len > 0) cwist_async_set_carry(deferred, carry, carry_len);
         cwist_async_dispatch_ack(deferred);
         if (broken) cwist_async_abort(deferred, CWIST_HTTP_INTERNAL_ERROR);
         return APP_SERVE_DEFERRED;
@@ -3459,7 +3507,8 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         req->app = app;
         req->db = app->db;
         req->async_conn = conn;
-        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, priority_weight);
+        app_serve_result_t sr =
+            app_serve_parsed_request(app, client_fd, req, priority_weight, NULL, 0);
         /* Deferred: buffered coalesced responses from this turn already
          * drained inside app_serve_parsed_request, before the defer was
          * acked; the completion path owns the fd/conn now (it re-arms or
@@ -3513,10 +3562,27 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
 #endif /* CWIST_PLATFORM_NO_SOCKETS */
 
 #ifndef CWIST_PLATFORM_NO_SOCKETS
-void cwist_app_http_handler(int client_fd, void *ctx) {
-    cwist_app *app = (cwist_app *)ctx;
+static void app_http_handler_run(int client_fd, cwist_app *app, const char *initial,
+                                 size_t initial_len);
 
-    if (app->use_http2) {
+void cwist_app_http_handler(int client_fd, void *ctx) {
+    app_http_handler_run(client_fd, (cwist_app *)ctx, NULL, 0);
+}
+
+void cwist_app_http_handler_resume(int client_fd, void *ctx) {
+    cwist_http_carry *carry = (cwist_http_carry *)ctx;
+    if (!carry) {
+        close(client_fd);
+        return;
+    }
+    app_http_handler_run(client_fd, carry->app, carry->bytes, carry->len);
+    free(carry);
+}
+
+static void app_http_handler_run(int client_fd, cwist_app *app, const char *initial,
+                                 size_t initial_len) {
+    /* A resumed connection is already HTTP/1.1; never sniff an h2c preface. */
+    if (app->use_http2 && initial_len == 0) {
         char peek_buf[24];
         ssize_t peeked = recv(client_fd, peek_buf, 24, MSG_PEEK);
         if (peeked >= 24 && memcmp(peek_buf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
@@ -3544,6 +3610,16 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
     _Alignas(64) char read_buf[CWIST_HTTP_READ_BUFFER_SIZE];
     size_t buf_len = 0;
     read_buf[0] = '\0';
+    if (initial_len > 0) {
+        /* The carry came out of this same buffer size, minus the NUL slot. */
+        if (initial_len > sizeof(read_buf) - 1) {
+            close(client_fd);
+            return;
+        }
+        memcpy(read_buf, initial, initial_len);
+        buf_len = initial_len;
+        read_buf[buf_len] = '\0';
+    }
 
     while (true) {
         // --- Zero-Alloc Ingress Fast-Path for Cached / Fixed BDR Endpoints ---
@@ -3618,10 +3694,18 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
         req->app = app;
         req->db = app->db;
 
-        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, priority_weight);
+        app_serve_result_t sr =
+            app_serve_parsed_request(app, client_fd, req, priority_weight, read_buf, buf_len);
         if (sr == APP_SERVE_DEFERRED) {
             /* The async completion owns the fd now; it re-arms on the pool
-             * (keep-alive) or closes.  Do not close here. */
+             * (keep-alive) or closes, resuming with any pipelined bytes
+             * copied onto the handle.  Do not close here. */
+            return;
+        }
+        if (sr == APP_SERVE_DETACH) {
+            /* fd ownership moved to another subsystem (e.g. the reverse
+             * proxy's raw tunnel relay for a WebSocket upgrade). That owner
+             * closes it; the HTTP layer must not close or re-arm it. */
             return;
         }
         if (sr == APP_SERVE_CLOSE) {
@@ -4065,14 +4149,43 @@ cwist_app *cwist_multiport_get_app(cwist_app **app_ref, unsigned short port) {
 typedef struct cwist_multiport_http_client {
     int client_fd;
     cwist_app *app;
+    pthread_t tid;
+    _Atomic bool done;
+    struct cwist_multiport_http_client *next;
 } cwist_multiport_http_client;
+
+static pthread_mutex_t g_multiport_clients_mu = PTHREAD_MUTEX_INITIALIZER;
+static cwist_multiport_http_client *g_multiport_clients = NULL;
 
 static void *cwist_multiport_http_client_thread(void *arg) {
     cwist_multiport_http_client *client = (cwist_multiport_http_client *)arg;
     if (!client) return NULL;
     cwist_app_http_handler(client->client_fd, client->app);
-    free(client);
+    atomic_store_explicit(&client->done, true, memory_order_release);
     return NULL;
+}
+
+static void cwist_multiport_reap_clear_clients(bool join_all) {
+    pthread_mutex_lock(&g_multiport_clients_mu);
+    cwist_multiport_http_client **pp = &g_multiport_clients;
+    while (*pp) {
+        cwist_multiport_http_client *client = *pp;
+        bool done = atomic_load_explicit(&client->done, memory_order_acquire);
+        if (!done && !join_all) {
+            pp = &client->next;
+            continue;
+        }
+        *pp = client->next;
+        if (!done && client->client_fd >= 0) {
+            shutdown(client->client_fd, SHUT_RDWR);
+        }
+        pthread_mutex_unlock(&g_multiport_clients_mu);
+        pthread_join(client->tid, NULL);
+        free(client);
+        pthread_mutex_lock(&g_multiport_clients_mu);
+        pp = &g_multiport_clients;
+    }
+    pthread_mutex_unlock(&g_multiport_clients_mu);
 }
 
 static int cwist_multiport_add_port(unsigned short *ports, size_t *count, unsigned short port) {
@@ -4103,6 +4216,8 @@ static void cwist_multiport_close_all(struct pollfd *pfds, size_t count) {
 }
 
 static int cwist_multiport_start_clear_client(int client_fd, cwist_app *app) {
+    cwist_multiport_reap_clear_clients(false);
+
     cwist_multiport_http_client *payload = malloc(sizeof(*payload));
     if (!payload) {
         close(client_fd);
@@ -4111,14 +4226,19 @@ static int cwist_multiport_start_clear_client(int client_fd, cwist_app *app) {
 
     payload->client_fd = client_fd;
     payload->app = app;
+    atomic_store_explicit(&payload->done, false, memory_order_relaxed);
+    payload->next = NULL;
 
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, cwist_multiport_http_client_thread, payload) != 0) {
+    pthread_mutex_lock(&g_multiport_clients_mu);
+    if (pthread_create(&payload->tid, NULL, cwist_multiport_http_client_thread, payload) != 0) {
+        pthread_mutex_unlock(&g_multiport_clients_mu);
         close(client_fd);
         free(payload);
         return -1;
     }
-    pthread_detach(tid);
+    payload->next = g_multiport_clients;
+    g_multiport_clients = payload;
+    pthread_mutex_unlock(&g_multiport_clients_mu);
     return 0;
 }
 
@@ -4544,6 +4664,7 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
         }
     }
 
+    cwist_multiport_reap_clear_clients(true);
     if (needs_https_pool) {
         https_pool_destroy();
     }

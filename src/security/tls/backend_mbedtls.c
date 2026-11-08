@@ -895,7 +895,9 @@ void cwist_mtls_SSL_free(SSL *ssl) {
     if (!ssl) return;
     SSL_CTX *ctx = ssl->ctx;
     mbedtls_ssl_free(&ssl->ssl);
-    mbedtls_net_free(&ssl->net);
+    /* SSL_set_fd borrows the caller-owned fd (matching OpenSSL BIO_NOCLOSE);
+     * do not call mbedtls_net_free(), which would close(fd) before the caller. */
+    ssl->net.fd = -1;
     cwist_free(ssl);
     if (ctx) cwist_mtls_SSL_CTX_free(ctx);
 }
