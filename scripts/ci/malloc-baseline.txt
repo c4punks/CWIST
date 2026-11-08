@@ -169,15 +169,6 @@
 1	src/net/http/tls_chain.c:free(out->data);
 2	src/net/http/tls_chain.c:free(url);
 1	src/net/http/tls_chain.c:uint8_t *tmp = (uint8_t *)realloc(buf->data, new_cap);
-1	src/net/proxy/proxy.c:char *grown = (char *)realloc(u->body, cap);
-1	src/net/proxy/proxy.c:char *line = (char *)malloc(n);
-1	src/net/proxy/proxy.c:free((void *)ptr);
-1	src/net/proxy/proxy.c:free(job);
-1	src/net/proxy/proxy.c:free(job->body);
-1	src/net/proxy/proxy.c:free(line);
-3	src/net/proxy/proxy.c:free(u.body);
-1	src/net/proxy/proxy.c:job->body = (char *)malloc(req->body->size);
-1	src/net/proxy/proxy.c:proxy_job *job = (proxy_job *)calloc(1, sizeof(*job));
 1	src/security/db_crypt/db_crypt.c:free(blob);
 1	src/security/db_crypt/db_crypt.c:free(pt);
 1	src/security/db_crypt/db_crypt.c:unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);

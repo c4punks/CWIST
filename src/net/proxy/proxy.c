@@ -9,6 +9,7 @@
 
 #include <cwist/net/proxy/proxy.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/net/http/async.h>
 #include <cwist/net/http/http.h>
@@ -35,6 +36,10 @@
 #define PROXY_DEFAULT_CONNECT_TIMEOUT_MS 5000
 #define PROXY_DEFAULT_TIMEOUT_MS 30000
 #define PROXY_DEFAULT_MAX_RESPONSE ((size_t)64 << 20)
+/* Buffered upstream body growth: see cwist_proxy_body_grow(). */
+#define PROXY_BODY_INITIAL_CAP ((size_t)4 << 10)
+#define PROXY_BODY_GROW_MID ((size_t)1 << 20)
+#define PROXY_BODY_GROW_HIGH ((size_t)8 << 20)
 #define PROXY_DEFAULT_WORKERS 8
 #define PROXY_QUEUE_CAPACITY 4096
 #define PROXY_MAX_CONN_TOKENS 16
@@ -551,8 +556,8 @@ static void proxy_job_free(proxy_job *job) {
     if (!job) return;
     cwist_free(job->url);
     curl_slist_free_all(job->headers);
-    free(job->body);
-    free(job);
+    cwist_free(job->body);
+    cwist_free(job);
 }
 
 typedef struct proxy_upstream_res {
@@ -623,6 +628,30 @@ static size_t proxy_upstream_header_cb(char *ptr, size_t size, size_t nmemb, voi
     return n;
 }
 
+size_t cwist_proxy_body_grow(size_t cap, size_t need, size_t max) {
+    if (need > max) return 0;
+    if (cap >= need) return cap;
+    size_t next = cap ? cap : PROXY_BODY_INITIAL_CAP;
+    while (next < need) {
+        size_t step;
+        if (next < PROXY_BODY_GROW_MID) {
+            step = next / 2; /* x1.5: most responses are small, keep slack low */
+        } else if (next < PROXY_BODY_GROW_HIGH) {
+            step = next; /* x2 */
+        } else {
+            step = next * 3; /* x4: a large transfer reaches its size in few reallocs */
+            if (step / 3 != next) step = SIZE_MAX;
+        }
+        if (step == 0) step = 1;
+        if (next > SIZE_MAX - step) {
+            next = SIZE_MAX;
+            break;
+        }
+        next += step;
+    }
+    return next > max ? max : next;
+}
+
 static size_t proxy_upstream_write_cb(void *data, size_t size, size_t nmemb, void *userp) {
     proxy_upstream_res *u = (proxy_upstream_res *)userp;
     size_t n = size * nmemb;
@@ -631,10 +660,9 @@ static size_t proxy_upstream_write_cb(void *data, size_t size, size_t nmemb, voi
         return 0; /* aborts the transfer */
     }
     if (u->len + n > u->cap) {
-        size_t cap = u->cap ? u->cap : 16384;
-        while (cap < u->len + n) cap *= 2;
-        if (cap > u->max) cap = u->max;
-        char *grown = (char *)realloc(u->body, cap);
+        size_t cap = cwist_proxy_body_grow(u->cap, u->len + n, u->max);
+        if (cap == 0) return 0;
+        char *grown = (char *)cwist_realloc(u->body, cap);
         if (!grown) return 0;
         u->body = grown;
         u->cap = cap;
@@ -647,7 +675,7 @@ static size_t proxy_upstream_write_cb(void *data, size_t size, size_t nmemb, voi
 static void proxy_body_free_cb(const void *ptr, size_t len, void *ctx) {
     (void)len;
     (void)ctx;
-    free((void *)ptr);
+    cwist_free((void *)ptr);
 }
 
 static void proxy_set_text(cwist_http_response *res, int status, const char *msg) {
@@ -733,7 +761,7 @@ static void proxy_execute(proxy_job *job, cwist_http_response *res) {
     if (cc != CURLE_OK || u.too_big || u.bad_header || u.status < 200 || u.status > 999) {
         bool timeout = (cc == CURLE_OPERATION_TIMEDOUT);
         cwist_http_header_free_all(u.headers);
-        free(u.body);
+        cwist_free(u.body);
         if (timeout) {
             proxy_set_text(res, CWIST_HTTP_GATEWAY_TIMEOUT, "504 Gateway Timeout");
         } else {
@@ -746,7 +774,7 @@ static void proxy_execute(proxy_job *job, cwist_http_response *res) {
     bool tokens_ok = proxy_collect_connection_tokens(u.headers, &tokens);
     if (!tokens_ok) {
         cwist_http_header_free_all(u.headers);
-        free(u.body);
+        cwist_free(u.body);
         proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
         return;
     }
@@ -769,9 +797,10 @@ static void proxy_execute(proxy_job *job, cwist_http_response *res) {
     proxy_apply_alt_svc(res, job->front_port, job->front_h3);
 
     if (u.len > 0 && !job->head) {
+        cwist_gc_scope_disown(u.body);
         cwist_http_response_set_body_ptr_managed(res, u.body, u.len, proxy_body_free_cb, NULL);
     } else {
-        free(u.body);
+        cwist_free(u.body);
     }
 }
 
@@ -829,7 +858,7 @@ static bool proxy_fallback_match(cwist_app *app, cwist_http_request *req) {
 
 static bool proxy_append_header(struct curl_slist **list, const char *name, const char *value) {
     size_t n = strlen(name) + strlen(value) + 3;
-    char *line = (char *)malloc(n);
+    char *line = (char *)cwist_alloc(n);
     if (!line) return false;
     if (value[0]) {
         snprintf(line, n, "%s: %s", name, value);
@@ -837,7 +866,7 @@ static bool proxy_append_header(struct curl_slist **list, const char *name, cons
         snprintf(line, n, "%s;", name); /* curl syntax for an empty value */
     }
     struct curl_slist *next = curl_slist_append(*list, line);
-    free(line);
+    cwist_free(line);
     if (!next) return false;
     *list = next;
     return true;
@@ -973,7 +1002,7 @@ static int proxy_build_job(cwist_http_request *req, proxy_job *job) {
     }
 
     if (req->body && req->body->data && req->body->size > 0) {
-        job->body = (char *)malloc(req->body->size);
+        job->body = (char *)cwist_alloc(req->body->size);
         if (!job->body) return CWIST_HTTP_INTERNAL_ERROR;
         memcpy(job->body, req->body->data, req->body->size);
         job->body_len = req->body->size;
@@ -982,11 +1011,12 @@ static int proxy_build_job(cwist_http_request *req, proxy_job *job) {
 }
 
 static void proxy_handler(cwist_http_request *req, cwist_http_response *res) {
-    proxy_job *job = (proxy_job *)calloc(1, sizeof(*job));
+    proxy_job *job = (proxy_job *)cwist_alloc(sizeof(*job));
     if (!job) {
         proxy_set_text(res, CWIST_HTTP_INTERNAL_ERROR, "500 Internal Server Error");
         return;
     }
+    memset(job, 0, sizeof(*job));
     job->front_h3 = req->version && req->version->data && strcmp(req->version->data, "HTTP/3") == 0;
     int status = proxy_build_job(req, job);
     if (status != 0) {
@@ -1013,6 +1043,11 @@ static void proxy_handler(cwist_http_request *req, cwist_http_response *res) {
         return;
     }
     job->async = cwist_async_retain(a);
+    /* The job is released on a scheduler thread; keep this thread's full-GC
+     * sweep away from it, and from the url and body it frees with it. */
+    cwist_gc_scope_disown(job->url);
+    cwist_gc_scope_disown(job->body);
+    cwist_gc_scope_disown(job);
     if (!cwist_scheduler_submit(sched, proxy_job_run, job)) {
         cwist_async_release(a);
         proxy_job_free(job);

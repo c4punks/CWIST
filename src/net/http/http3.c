@@ -32,6 +32,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdatomic.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -229,14 +231,22 @@ typedef struct h3_async_node {
 } h3_async_node;
 
 /* One per server loop (engine thread). refs: one held by the loop, one per
- * in-flight cwist_async handle. */
+ * in-flight cwist_async handle.
+ *
+ * Lock-free MPSC: producers push onto @c head with a CAS (a Treiber stack);
+ * the engine thread takes the whole stack with one exchange and reverses it
+ * into arrival order. Only a push onto an empty stack writes the wake fd, and
+ * the drain reads the fd before taking the stack, so a push that lands after
+ * the take always finds it empty and wakes the loop again. There is no
+ * single-node pop, so no ABA. Close swaps in H3_ASYNC_CLOSED, which makes
+ * every later push discard its node. The fds live until the last reference
+ * goes, and every producer holds one, so waking needs no lock either. */
+#define H3_ASYNC_CLOSED ((h3_async_node *)(uintptr_t)1)
+
 struct cwist_h3_async_queue {
     int wake_rd;
     int wake_wr;
-    pthread_mutex_t mu;
-    h3_async_node *head;
-    h3_async_node *tail;
-    bool closed; /* loop exited: enqueue discards */
+    _Atomic(h3_async_node *) head; /* newest first; H3_ASYNC_CLOSED after close */
     _Atomic int refs;
 };
 
@@ -270,7 +280,7 @@ static struct cwist_h3_async_queue *h3_async_queue_create(void) {
     if (!q) return NULL;
     q->wake_rd = -1;
     q->wake_wr = -1;
-    pthread_mutex_init(&q->mu, NULL);
+    atomic_init(&q->head, NULL);
     atomic_init(&q->refs, 1);
 #ifdef __linux__
     q->wake_rd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
@@ -287,7 +297,6 @@ static struct cwist_h3_async_queue *h3_async_queue_create(void) {
     }
 #endif
     if (q->wake_rd < 0) {
-        pthread_mutex_destroy(&q->mu);
         free(q);
         return NULL;
     }
@@ -303,7 +312,6 @@ void cwist_h3_async_queue_release(struct cwist_h3_async_queue *q) {
     if (!q || atomic_fetch_sub_explicit(&q->refs, 1, memory_order_acq_rel) != 1) return;
     if (q->wake_rd >= 0) close(q->wake_rd);
     if (q->wake_wr >= 0 && q->wake_wr != q->wake_rd) close(q->wake_wr);
-    pthread_mutex_destroy(&q->mu);
     free(q);
 }
 
@@ -327,32 +335,28 @@ int cwist_h3_async_queue_enqueue(struct cwist_h3_async_queue *q, struct cwist_h3
         h3_async_node_discard(n);
         return -1;
     }
-    pthread_mutex_lock(&q->mu);
-    if (q->closed) {
-        pthread_mutex_unlock(&q->mu);
-        h3_async_node_discard(n);
-        return -1;
+    h3_async_node *old = atomic_load_explicit(&q->head, memory_order_relaxed);
+    do {
+        if (old == H3_ASYNC_CLOSED) {
+            h3_async_node_discard(n);
+            return -1;
+        }
+        n->next = old;
+    } while (!atomic_compare_exchange_weak_explicit(&q->head, &old, n, memory_order_release,
+                                                    memory_order_relaxed));
+    if (!old) {
+        /* First node since the last drain: the loop may be asleep. */
+        uint64_t one = 1;
+        ssize_t w = write(q->wake_wr, &one, sizeof(one));
+        (void)w; /* EAGAIN: already readable */
     }
-    if (q->tail)
-        q->tail->next = n;
-    else
-        q->head = n;
-    q->tail = n;
-    /* Wake under mu: close() flips closed under it before the fds go away. */
-    uint64_t one = 1;
-    ssize_t w = write(q->wake_wr, &one, sizeof(one));
-    (void)w; /* EAGAIN: already readable */
-    pthread_mutex_unlock(&q->mu);
     return 0;
 }
 
 /* Loop exit: refuse later completions and drop everything still queued. */
 static void h3_async_queue_close(struct cwist_h3_async_queue *q) {
-    pthread_mutex_lock(&q->mu);
-    q->closed = true;
-    h3_async_node *list = q->head;
-    q->head = q->tail = NULL;
-    pthread_mutex_unlock(&q->mu);
+    h3_async_node *list = atomic_exchange_explicit(&q->head, H3_ASYNC_CLOSED, memory_order_acq_rel);
+    if (list == H3_ASYNC_CLOSED) return;
     while (list) {
         h3_async_node *next = list->next;
         h3_async_node_discard(list);
@@ -366,10 +370,18 @@ static void h3_async_drain(struct cwist_h3_async_queue *q) {
     uint64_t junk;
     while (read(q->wake_rd, &junk, sizeof(junk)) > 0) {
     }
-    pthread_mutex_lock(&q->mu);
-    h3_async_node *list = q->head;
-    q->head = q->tail = NULL;
-    pthread_mutex_unlock(&q->mu);
+    /* Take the stack after the read: a push that misses this take sees an
+     * empty stack and writes the fd again. Only this (engine) thread closes,
+     * never concurrently with a drain. */
+    if (atomic_load_explicit(&q->head, memory_order_relaxed) == H3_ASYNC_CLOSED) return;
+    h3_async_node *stack = atomic_exchange_explicit(&q->head, NULL, memory_order_acquire);
+    h3_async_node *list = NULL; /* oldest first */
+    while (stack) {
+        h3_async_node *next = stack->next;
+        stack->next = list;
+        list = stack;
+        stack = next;
+    }
     while (list) {
         h3_async_node *n = list;
         list = n->next;
