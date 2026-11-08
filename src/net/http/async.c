@@ -9,16 +9,9 @@
  *
  * Lifetime race: a foreign thread may complete (and thus want to free
  * req/res/the handle) before the dispatch thread has observed res->deferred.
- * The handoff is lock-free and rests on two rules:
- *
- *  - Single writer. Until the ack only the dispatch thread touches req/res
- *    (GC disown, keep-alive) and the dispatch-side fields; the producer that
- *    wins the claim writes only its own result fields (r_*, final_res).
- *    respond()/abort()/timeout record their outcome there instead of editing
- *    res, and the deliverer applies it to res once both sides are done.
- *  - One state word. Dispatch sets ACKED and the winner sets PUBLISHED with
- *    acq_rel fetch_or on @c st; whichever arrives second sees the other's bit,
- *    has acquired the other's writes, and delivers. Exactly one side does.
+ * A winning producer therefore waits for a->ack before touching the graph.
+ * Dispatch first detaches middleware posthandler allocations from its TLS GC,
+ * then release-publishes ack. Producer allocations are detached before post.
  */
 
 #define _POSIX_C_SOURCE 200809L
@@ -34,7 +27,6 @@
 #include "async_internal.h"
 #include <pthread.h>
 #include <stdatomic.h>
-#include <stdint.h>
 #include <fcntl.h>
 #include <sched.h>
 #include <stdlib.h>
@@ -45,35 +37,27 @@
 #endif
 #include <unistd.h>
 
-/* Bits of cwist_async.st. */
-enum {
-    CWIST_ASYNC_CLAIMED = 1u << 0,   /* A producer won the right to complete. */
-    CWIST_ASYNC_PUBLISHED = 1u << 1, /* The winner's result is fully written. */
-    CWIST_ASYNC_ACKED = 1u << 2,     /* Dispatch released req/res. */
-    CWIST_ASYNC_NOKEEP = 1u << 3,    /* The winner refused keep-alive (abort). */
-};
+enum cwist_async_state { CWIST_ASYNC_ST_PENDING = 0, CWIST_ASYNC_ST_CLAIMED };
 
 struct cwist_async {
     _Atomic size_t refs;          /* Completion plus retained producers/timers. */
-    _Atomic unsigned st;          /* CWIST_ASYNC_* bits; see the file header. */
+    _Atomic int state;
+    _Atomic bool ack;             /* Dispatch path observed the handoff. */
     pthread_t dispatch_thread;
+    /* Serializes a producer's mutation of the exchange with the dispatch
+     * ack: before the ack, dispatch still reads req/res (GC disown,
+     * keep-alive), so a producer that completes first must not touch them
+     * concurrently, and the "who sends" decision below must be atomic.
+     * Held only for short, non-blocking sections; nobody waits for the
+     * other side while holding it. */
+    pthread_mutex_t mu;
+    bool finish_on_ack; /* A completion arrived before the ack; ack sends it. Guarded by mu. */
     cwist_http_request *req;
     cwist_http_response *res;     /* Handler's response (request arena). */
-    /* Dispatch-only until ACKED. */
-    bool keep_alive;              /* Dispatch's view; the winner's is NOKEEP. */
-    cwist_http_carry *carry;      /* Classic-pool pipelined surplus (malloc). */
-    /* Claim winner only until PUBLISHED. */
     cwist_http_response *final_res;
     bool final_res_owned;         /* final_res came from respond_with. */
-    bool streamed;                /* Response streamed incrementally by winner. */
-    bool stream_ok;               /* Stream completed without write errors. */
-    bool r_apply;                 /* Apply r_* onto res at delivery. */
-    cwist_http_status_t r_status;
-    const char *r_body;           /* NULL keeps the handler's body. */
-    size_t r_len;
-    const char *r_ctype;          /* NULL adds no Content-Type. */
-    void *r_block;                /* Owns copies of r_body/r_ctype (disowned). */
     int client_fd;
+    bool keep_alive;
     struct cwist_app *app;
     cwist_reactor_t *reactor;     /* NULL on the classic pool path. */
     uint64_t reactor_gen;         /* Pool generation @c reactor belongs to. */
@@ -82,6 +66,7 @@ struct cwist_async {
     void *https_conn;             /* cwist_https_connection * on TLS path. */
     cwist_h2_async_queue *h2_queue; /* Per-connection queue on the H2 path. */
     uint32_t h2_stream_id;
+    cwist_http_carry *carry;      /* Classic-pool pipelined surplus (malloc). */
     struct cwist_h3_async_queue *h3_queue; /* Engine queue on the HTTP/3 path. */
     struct cwist_h3_pending *h3_pending;   /* Stream token on the HTTP/3 path. */
     cwist_reactor_post_t post;
@@ -89,14 +74,7 @@ struct cwist_async {
 
 static void cwist_async_reactor_complete(void *ctx);
 static void cwist_async_deliver(cwist_async *a);
-
-static bool cwist_async_acked(cwist_async *a) {
-    return (atomic_load_explicit(&a->st, memory_order_acquire) & CWIST_ASYNC_ACKED) != 0;
-}
-
-static void cwist_async_wait_ack(cwist_async *a) {
-    while (!cwist_async_acked(a)) sched_yield();
-}
+static bool cwist_async_publish_locked(cwist_async *a);
 
 static const char *cwist_async_reason(cwist_http_status_t status) {
     switch (status) {
@@ -161,7 +139,12 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     if (!a) return NULL;
     memset(a, 0, sizeof(*a));
     atomic_init(&a->refs, 1);
-    atomic_init(&a->st, 0u);
+    atomic_init(&a->state, CWIST_ASYNC_ST_PENDING);
+    atomic_init(&a->ack, false);
+    if (pthread_mutex_init(&a->mu, NULL) != 0) {
+        cwist_free(a);
+        return NULL;
+    }
     a->dispatch_thread = pthread_self();
     a->req = req;
     a->res = res;
@@ -218,8 +201,8 @@ cwist_async *cwist_async_retain(cwist_async *a) {
 void cwist_async_release(cwist_async *a) {
     if (a && atomic_fetch_sub_explicit(&a->refs, 1, memory_order_acq_rel) == 1) {
         cwist_async_forget_handle(a);
+        pthread_mutex_destroy(&a->mu);
         free(a->carry);
-        cwist_free(a->r_block);
 #ifdef CWIST_HTTP3
         /* A handle released without completing (cannot happen through the
          * public API, which always completes once) still drops its refs. */
@@ -232,83 +215,51 @@ void cwist_async_release(cwist_async *a) {
 
 void cwist_async_set_carry(cwist_async *a, const char *bytes, size_t len) {
     if (!a || !bytes || len == 0) return;
-    /* Dispatch thread, before the ack: carry and keep_alive are dispatch-only
-     * until then and the ack's release publishes them, so no lock. */
     /* malloc, not cwist_alloc: the completion thread frees it, so it must not
      * belong to the dispatch thread's GC scope. */
     cwist_http_carry *c = (cwist_http_carry *)malloc(sizeof(*c) + len);
     if (!c) {
+        pthread_mutex_lock(&a->mu);
         a->keep_alive = false;
+        pthread_mutex_unlock(&a->mu);
         return;
     }
     c->app = a->app;
     c->len = len;
     memcpy(c->bytes, bytes, len);
+    pthread_mutex_lock(&a->mu);
     free(a->carry);
     a->carry = c;
+    pthread_mutex_unlock(&a->mu);
 }
 
 void cwist_async_dispatch_ack(cwist_async *a) {
     if (!a) return;
     cwist_async_forget_handle(a);
-    /* Middleware may allocate after next() returns. Producers never touch
-     * this graph (they write only their own result fields), so detaching it
-     * from this thread's GC needs no lock. */
+    /* Middleware may allocate after next() returns. No producer may mutate
+     * or destroy this graph until the acknowledgement; a producer that
+     * already completed waits on mu and left its result to send here. */
+    pthread_mutex_lock(&a->mu);
     cwist_http_async_disown_request(a->req);
     cwist_http_async_disown_response(a->res);
     a->keep_alive = a->keep_alive && a->req->keep_alive && a->res->keep_alive;
-    unsigned old = atomic_fetch_or_explicit(&a->st, CWIST_ASYNC_ACKED, memory_order_acq_rel);
-    /* Without a published completion a foreign producer may free a from
-     * here on; with one, this thread arrived second and sends it. */
-    if (old & CWIST_ASYNC_PUBLISHED) cwist_async_deliver(a);
+    bool finish = a->finish_on_ack;
+    atomic_store_explicit(&a->ack, true, memory_order_release);
+    pthread_mutex_unlock(&a->mu);
+    /* Without a recorded completion a foreign producer may free a from
+     * here on; with one, this thread owns sending it. */
+    if (finish) cwist_async_deliver(a);
 }
 
 void cwist_async_wait_dispatched(cwist_async *a) {
     if (!a || pthread_equal(a->dispatch_thread, pthread_self())) return;
-    cwist_async_wait_ack(a);
+    while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
 }
 
 static bool cwist_async_claim(cwist_async *a) {
-    unsigned old = atomic_fetch_or_explicit(&a->st, CWIST_ASYNC_CLAIMED, memory_order_acq_rel);
-    return (old & CWIST_ASYNC_CLAIMED) == 0;
-}
-
-/* Claim winner, after its result fields are written: publish them and learn
- * whether dispatch already acked. True means this thread arrived second and
- * must deliver; false means the ack will. */
-static bool cwist_async_publish(cwist_async *a, bool keep) {
-    unsigned set = CWIST_ASYNC_PUBLISHED | (keep ? 0u : CWIST_ASYNC_NOKEEP);
-    unsigned old = atomic_fetch_or_explicit(&a->st, set, memory_order_acq_rel);
-    return (old & CWIST_ASYNC_ACKED) != 0;
-}
-
-/* Record a status/body/Content-Type outcome for delivery to apply. @p body and
- * @p ctype must outlive the handle (static) unless @p block owns them. */
-static void cwist_async_set_result(cwist_async *a, cwist_http_status_t status, const char *body,
-                                   size_t len, const char *ctype, void *block) {
-    a->r_apply = true;
-    a->r_status = status;
-    a->r_body = body;
-    a->r_len = len;
-    a->r_ctype = ctype;
-    a->r_block = block;
-}
-
-/* Deliverer, with both PUBLISHED and ACKED seen: the graph has one owner
- * again, so the recorded outcome can be written into res. */
-static void cwist_async_apply_result(cwist_async *a) {
-    if (!a->r_apply) return;
-    a->r_apply = false;
-    cwist_http_response *res = a->res;
-    res->status_code = a->r_status;
-    cwist_sstring_assign(res->status_text, (char *)cwist_async_reason(a->r_status));
-    if (a->r_body && a->r_len > 0) cwist_sstring_assign_len(res->body, a->r_body, a->r_len);
-    if (a->r_ctype) cwist_http_header_add(&res->headers, "Content-Type", a->r_ctype);
-    cwist_free(a->r_block);
-    a->r_block = NULL;
-    /* Those strings and headers belong to this thread's GC scope; the
-     * consumer may run elsewhere. */
-    cwist_http_async_disown_response(res);
+    int expected = CWIST_ASYNC_ST_PENDING;
+    return atomic_compare_exchange_strong_explicit(&a->state, &expected, CWIST_ASYNC_ST_CLAIMED,
+                                                   memory_order_acq_rel, memory_order_acquire);
 }
 
 static void cwist_async_reactor_complete(void *ctx);
@@ -317,9 +268,7 @@ static void cwist_async_reactor_complete(void *ctx);
  * request/response pair and the handle itself. */
 static void cwist_async_complete(cwist_async *a) {
     cwist_http_response *res = a->final_res;
-    bool keep = a->keep_alive &&
-                !(atomic_load_explicit(&a->st, memory_order_acquire) & CWIST_ASYNC_NOKEEP) &&
-                atomic_load(&g_cwist_running);
+    bool keep = a->keep_alive && atomic_load(&g_cwist_running);
     res->keep_alive = keep;
 
     if (a->h2_queue) {
@@ -328,7 +277,7 @@ static void cwist_async_complete(cwist_async *a) {
          * connection thread drains the queue, HPACK-encodes, and sends.
          * Wait for the dispatch ack first: enqueueing transfers req/res
          * ownership, which is only legal once dispatch observed the defer. */
-        cwist_async_wait_ack(a);
+        while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
         cwist_h2_async_queue_enqueue(a->h2_queue, a->h2_stream_id, a->req, a->final_res, a->res,
                                      a->final_res_owned);
         cwist_h2_async_queue_release(a->h2_queue);
@@ -340,7 +289,7 @@ static void cwist_async_complete(cwist_async *a) {
     if (a->h3_queue) {
         /* Same rule as HTTP/2: the engine thread alone writes the stream.
          * Enqueueing transfers req/res, legal only after the ack. */
-        cwist_async_wait_ack(a);
+        while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
         struct cwist_h3_pending *p = a->h3_pending;
         a->h3_pending = NULL;
         cwist_h3_async_queue_enqueue(a->h3_queue, p, a->req, a->final_res, a->res,
@@ -354,15 +303,10 @@ static void cwist_async_complete(cwist_async *a) {
 
     if (a->https_conn) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
-        bool ok;
-        if (a->streamed) {
-            ok = a->stream_ok;
-        } else {
-            cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
-                                    ? cwist_https_send_response_head(conn, res)
-                                    : cwist_https_send_response(conn, res);
-            ok = cwist_error_is_ok(&err);
-        }
+        cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
+                                ? cwist_https_send_response_head(conn, res)
+                                : cwist_https_send_response(conn, res);
+        bool ok = cwist_error_is_ok(&err);
 
         if (keep && ok && a->app && a->app->ssl_ctx && a->app->https_request_handler) {
             conn->deferred = false;
@@ -376,26 +320,16 @@ static void cwist_async_complete(cwist_async *a) {
          * more, so close it. */
         cwist_http_async_close_orphan(a->client_fd, a->conn);
     } else if (a->reactor) {
-        if (a->streamed) {
-            cwist_http_async_finish_stream(a->client_fd, a->reactor, a->conn,
-                                           keep && a->stream_ok);
-        } else {
-            /* Resumable write: on a partial send the remainder is parked on a
-             * POLLOUT slot and the reactor thread is freed immediately; the
-             * parked callback performs the rearm/close when the drain ends. */
-            cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn, keep,
-                                           a->req && a->req->method == CWIST_HTTP_HEAD);
-        }
+        /* Resumable write: on a partial send the remainder is parked on a
+         * POLLOUT slot and the reactor thread is freed immediately; the
+         * parked callback performs the rearm/close when the drain ends. */
+        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn, keep,
+                                       a->req && a->req->method == CWIST_HTTP_HEAD);
     } else {
-        bool ok;
-        if (a->streamed) {
-            ok = a->stream_ok;
-        } else {
-            cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
-                                    ? cwist_http_send_response_head(a->client_fd, res)
-                                    : cwist_http_send_response(a->client_fd, res);
-            ok = err.error.err_i16 == 0;
-        }
+        cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
+                                ? cwist_http_send_response_head(a->client_fd, res)
+                                : cwist_http_send_response(a->client_fd, res);
+        bool ok = err.error.err_i16 == 0;
 
         if (keep && ok && a->app) {
             if (a->carry) {
@@ -412,7 +346,7 @@ static void cwist_async_complete(cwist_async *a) {
     }
 
     /* See the file header: never free before dispatch observed the defer. */
-    cwist_async_wait_ack(a);
+    while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
 
     if (a->final_res_owned) cwist_http_response_destroy(res);
     cwist_http_response_destroy(a->res);
@@ -424,11 +358,28 @@ static void cwist_async_reactor_complete(void *ctx) {
     cwist_async_complete((cwist_async *)ctx);
 }
 
+/* Producer side, called with mu held after the response is final: detach
+ * what the producer allocated from its own GC scope, then decide who sends.
+ * Returns true if the caller must deliver (after unlocking); false if the
+ * ack has not happened yet and will deliver. */
+static bool cwist_async_publish_locked(cwist_async *a) {
+    /* Runs on the producer, before a reactor/H2 consumer can see or free
+     * newly allocated body/header/string state (also timeout and abort). */
+    cwist_http_async_disown_response(a->final_res);
+    if (!atomic_load_explicit(&a->ack, memory_order_acquire)) {
+        /* Dispatch has not unwound yet (or this is the creator completing
+         * inline): record the completion; the ack sends it. Needs no
+         * allocation, so an abort still works when scheduling failed. */
+        a->finish_on_ack = true;
+        return false;
+    }
+    return true;
+}
+
 /* Send the completed exchange: post it to the owning reactor, or finish
- * inline on the classic/TLS/orphaned paths. Runs exactly once, on whichever
- * of the producer and the dispatch ack arrived second. */
+ * inline on the classic/TLS/orphaned paths. Runs exactly once, on the
+ * producer or on the dispatch ack, never under mu. */
 static void cwist_async_deliver(cwist_async *a) {
-    cwist_async_apply_result(a);
     if (a->reactor) {
         if (cwist_http_reactor_post_live(a->reactor, a->reactor_gen, &a->post)) return;
         /* The pool that owned the reactor has been destroyed (the server
@@ -454,10 +405,15 @@ static void cwist_async_timeout_job(void *arg) {
         cwist_async_release(a); /* A real response beat the timeout. */
         return;
     }
-    const char *reason = cwist_async_reason(CWIST_HTTP_GATEWAY_TIMEOUT);
-    cwist_async_set_result(a, CWIST_HTTP_GATEWAY_TIMEOUT, reason, strlen(reason), "text/plain",
-                           NULL);
-    if (cwist_async_publish(a, true)) cwist_async_deliver(a);
+    pthread_mutex_lock(&a->mu);
+    cwist_http_response *res = a->res;
+    res->status_code = CWIST_HTTP_GATEWAY_TIMEOUT;
+    cwist_sstring_assign(res->status_text, (char *)"Gateway Timeout");
+    cwist_sstring_assign(res->body, (char *)"Gateway Timeout");
+    cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
+    bool deliver = cwist_async_publish_locked(a);
+    pthread_mutex_unlock(&a->mu);
+    if (deliver) cwist_async_deliver(a);
     cwist_async_release(a);
 }
 
@@ -476,133 +432,45 @@ void cwist_async_set_timeout(cwist_async *a, uint64_t ms) {
 bool cwist_async_respond(cwist_async *a, cwist_http_status_t status, const char *content_type,
                          const void *body, size_t len) {
     if (!a || !cwist_async_claim(a)) return false;
-    /* The caller's buffers may not outlive this call: copy them into one
-     * block that delivery applies and frees, possibly on another thread. */
-    size_t blen = (body && len > 0) ? len : 0;
-    size_t clen = content_type ? strlen(content_type) + 1 : 0;
-    bool fits = blen <= SIZE_MAX - clen;
-    size_t total = fits ? blen + clen : 0;
-    char *block = total > 0 ? (char *)cwist_alloc(total) : NULL;
-    if (!fits || (total > 0 && !block)) {
-        /* Out of memory: still complete exactly once, without allocating. */
-        const char *reason = cwist_async_reason(CWIST_HTTP_INTERNAL_ERROR);
-        cwist_async_set_result(a, CWIST_HTTP_INTERNAL_ERROR, reason, strlen(reason), "text/plain",
-                               NULL);
-        if (cwist_async_publish(a, false)) cwist_async_deliver(a);
-        return true;
+    pthread_mutex_lock(&a->mu);
+    cwist_http_response *res = a->res;
+    res->status_code = status;
+    cwist_sstring_assign(res->status_text, (char *)cwist_async_reason(status));
+    if (body && len > 0) {
+        cwist_sstring_assign_len(res->body, (const char *)body, len);
     }
-    if (block) {
-        cwist_gc_scope_disown(block);
-        if (blen) memcpy(block, body, blen);
-        if (clen) memcpy(block + blen, content_type, clen);
+    if (content_type) {
+        cwist_http_header_add(&res->headers, "Content-Type", content_type);
     }
-    cwist_async_set_result(a, status, blen ? block : NULL, blen, clen ? block + blen : NULL, block);
-    if (cwist_async_publish(a, true)) cwist_async_deliver(a);
+    bool deliver = cwist_async_publish_locked(a);
+    pthread_mutex_unlock(&a->mu);
+    if (deliver) cwist_async_deliver(a);
     return true;
 }
 
 bool cwist_async_respond_with(cwist_async *a, cwist_http_response *res) {
     if (!a || !res || !cwist_async_claim(a)) return false;
+    pthread_mutex_lock(&a->mu);
     a->final_res = res;
     a->final_res_owned = res != a->res;
-    /* Before publishing: a consumer elsewhere may free what this thread
-     * allocated into res. */
-    cwist_http_async_disown_response(res);
-    if (cwist_async_publish(a, true)) cwist_async_deliver(a);
+    bool deliver = cwist_async_publish_locked(a);
+    pthread_mutex_unlock(&a->mu);
+    if (deliver) cwist_async_deliver(a);
     return true;
 }
 
 bool cwist_async_abort(cwist_async *a, cwist_http_status_t status) {
     if (!a || !cwist_async_claim(a)) return false;
-    /* Needs no allocation, so an abort still works when scheduling failed. */
+    pthread_mutex_lock(&a->mu);
+    cwist_http_response *res = a->res;
+    res->status_code = status;
     const char *reason = cwist_async_reason(status);
-    cwist_async_set_result(a, status, reason, strlen(reason), "text/plain", NULL);
-    if (cwist_async_publish(a, false)) cwist_async_deliver(a);
+    cwist_sstring_assign(res->status_text, (char *)reason);
+    cwist_sstring_assign(res->body, (char *)reason);
+    cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
+    a->keep_alive = false;
+    bool deliver = cwist_async_publish_locked(a);
+    pthread_mutex_unlock(&a->mu);
+    if (deliver) cwist_async_deliver(a);
     return true;
-}
-
-bool cwist_async_can_stream(const cwist_async *a) {
-    if (!a || a->h2_queue) return false;
-#ifdef CWIST_HTTP3
-    if (a->h3_queue) return false;
-#endif
-    return a->https_conn != NULL || a->client_fd >= 0;
-}
-
-bool cwist_async_is_streamed(const cwist_async *a) {
-    return a && a->streamed;
-}
-
-bool cwist_async_stream_start(cwist_async *a, cwist_http_response *res, bool chunked) {
-    if (!cwist_async_can_stream(a) || !res) return false;
-    cwist_async_wait_dispatched(a);
-    if (!cwist_async_claim(a)) return false;
-    a->streamed = true;
-    a->stream_ok = false;
-    a->final_res = res;
-    a->final_res_owned = res != a->res;
-    cwist_http_async_disown_response(res);
-
-    bool keep = a->keep_alive && atomic_load(&g_cwist_running);
-    res->keep_alive = keep;
-    res->stream_mode = chunked;
-
-    if (a->https_conn) {
-        cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
-        cwist_error_t err = cwist_https_send_response_head(conn, res);
-        a->stream_ok = cwist_error_is_ok(&err);
-    } else {
-        cwist_error_t err = cwist_http_send_response_head(a->client_fd, res);
-        a->stream_ok = (err.error.err_i16 == 0);
-    }
-    return a->stream_ok;
-}
-
-bool cwist_async_stream_write(cwist_async *a, const void *data, size_t len, bool chunked) {
-    if (!a || !a->streamed || !a->stream_ok) return false;
-    if (len == 0) return true;
-    if (!data) {
-        a->stream_ok = false;
-        return false;
-    }
-    if (a->https_conn) {
-        cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
-        if (chunked) {
-            char hdr[24];
-            int hlen = snprintf(hdr, sizeof(hdr), "%zx\r\n", len);
-            if (hlen <= 0 || (size_t)hlen >= sizeof(hdr) ||
-                cwist_https_write_raw(conn, hdr, (size_t)hlen) != 0 ||
-                cwist_https_write_raw(conn, data, len) != 0 ||
-                cwist_https_write_raw(conn, "\r\n", 2) != 0) {
-                a->stream_ok = false;
-                return false;
-            }
-        } else if (cwist_https_write_raw(conn, data, len) != 0) {
-            a->stream_ok = false;
-            return false;
-        }
-    } else {
-        int rc = chunked ? cwist_http_write_chunk(a->client_fd, data, len)
-                         : cwist_http_write_raw(a->client_fd, data, len);
-        if (rc != 0) {
-            a->stream_ok = false;
-            return false;
-        }
-    }
-    return true;
-}
-
-void cwist_async_stream_finish(cwist_async *a, bool ok, bool chunked) {
-    if (!a || !a->streamed) return;
-    bool final_ok = ok && a->stream_ok;
-    if (final_ok && chunked) {
-        if (a->https_conn) {
-            cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
-            if (cwist_https_write_raw(conn, "0\r\n\r\n", 5) != 0) final_ok = false;
-        } else {
-            if (cwist_http_write_raw(a->client_fd, "0\r\n\r\n", 5) != 0) final_ok = false;
-        }
-    }
-    a->stream_ok = final_ok;
-    if (cwist_async_publish(a, final_ok)) cwist_async_deliver(a);
 }

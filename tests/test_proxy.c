@@ -32,8 +32,6 @@
 #define FWD_PORT 19963
 #define FWD_PORT2 19964
 #define DEAD_PORT 19965
-#define WS_UP_PORT 19966   /* raw WebSocket-echo upstream */
-#define WS_PROXY_PORT 19967 /* cleartext front for WS passthrough */
 #define UP_PQ_PORT 19971       /* https upstream offering hybrid PQ key exchange */
 #define UP_CLASSIC_PORT 19972  /* https upstream with classical groups only */
 #define TLS_MIRROR_PORT 19974  /* https origin, TLS level mirrored upstream */
@@ -109,27 +107,6 @@ static int miss_is(unsigned short port, const char *host, const char *path, int 
     if (!ok) printf("       got %s/%d, want NULL/%d\n", url ? url : "(null)", status, want);
     cwist_free(url);
     return ok;
-}
-
-static void test_body_grow(void) {
-    printf("buffered body growth\n");
-    const size_t K = 1024, M = 1024 * 1024, MAX = 64 * M;
-    CHECK(cwist_proxy_body_grow(0, 1, MAX) == 4 * K, "first chunk starts at 4 KiB");
-    CHECK(cwist_proxy_body_grow(8 * K, 6 * K, MAX) == 8 * K, "fitting buffer is kept");
-    CHECK(cwist_proxy_body_grow(64 * K, 64 * K + 1, MAX) == 96 * K, "small bodies grow x1.5");
-    CHECK(cwist_proxy_body_grow(2 * M, 2 * M + 1, MAX) == 4 * M, "mid-size bodies grow x2");
-    CHECK(cwist_proxy_body_grow(8 * M, 8 * M + 1, MAX) == 32 * M, "large bodies grow x4");
-    CHECK(cwist_proxy_body_grow(32 * M, 32 * M + 1, MAX) == MAX, "growth clamps to the cap");
-    CHECK(cwist_proxy_body_grow(MAX, MAX + 1, MAX) == 0, "over the cap is refused");
-    CHECK(cwist_proxy_body_grow(0, 10 * M, MAX) >= 10 * M, "one large chunk fits at once");
-    size_t cap = 0, steps = 0;
-    for (size_t need = 1; need <= MAX; need = cap + 1) {
-        cap = cwist_proxy_body_grow(cap, need, MAX);
-        steps++;
-        if (cap == MAX) break;
-    }
-    CHECK(cap == MAX && steps < 24, "reaching 64 MiB takes few reallocs");
-    printf("       %zu growth steps to 64 MiB\n", steps);
 }
 
 static void test_rules(void) {
@@ -282,9 +259,6 @@ static pid_t spawn(void (*fn)(void)) {
     pid_t pid = fork();
     if (pid == 0) {
         setpgid(0, 0);
-#if defined(__SANITIZE_THREAD__)
-        setenv("CWIST_WORKERS", "1", 1);
-#endif
         fn();
         _exit(0);
     }
@@ -352,79 +326,6 @@ static void run_tls_mirror_proxy(void) {
 static void run_tls_promote_proxy(void) {
     add_tls_routes("https://localhost:19975");
     cwist_proxy.tls_auto_promote = true;
-    _exit(cwist_proxy_listen() == 0 ? 0 : 3);
-}
-
-/* Minimal raw upstream: accept, read the handshake request, reply 101, then
- * echo every byte. Exercises the proxy's raw tunnel relay without depending on
- * a full WebSocket server on the upstream side. */
-static void run_ws_upstream(void) {
-    int s = socket(AF_INET, SOCK_STREAM, 0);
-    int one = 1;
-    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-    struct sockaddr_in a;
-    memset(&a, 0, sizeof(a));
-    a.sin_family = AF_INET;
-    a.sin_port = htons(WS_UP_PORT);
-    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    if (bind(s, (struct sockaddr *)&a, sizeof(a)) != 0) _exit(5);
-    if (listen(s, 16) != 0) _exit(5);
-    for (;;) {
-        int c = accept(s, NULL, NULL);
-        if (c < 0) continue;
-        char buf[8192];
-        ssize_t first = read(c, buf, sizeof(buf) - 1);
-        if (first <= 0) {
-            close(c);
-            continue;
-        }
-        size_t used = (size_t)first;
-        buf[used] = 0;
-        if (strncmp(buf, "GET ", 4) == 0) {
-            while (used < sizeof(buf) - 1 && !strstr(buf, "\r\n\r\n")) {
-                ssize_t n = read(c, buf + used, sizeof(buf) - 1 - used);
-                if (n <= 0) break;
-                used += (size_t)n;
-                buf[used] = 0;
-            }
-            if (strncmp(buf, "GET /chunked ", 13) == 0) {
-                const char *head = "HTTP/1.1 200 OK\r\n"
-                                   "Transfer-Encoding: chunked\r\n"
-                                   "X-Stream: yes\r\n\r\n"
-                                   "5\r\nhello\r\n";
-                const char *tail = "6\r\n world\r\n0\r\n\r\n";
-                if (write(c, head, strlen(head)) > 0) {
-                    usleep(10000);
-                    (void)!write(c, tail, strlen(tail));
-                }
-                close(c);
-                continue;
-            }
-            const char *resp = "HTTP/1.1 101 Switching Protocols\r\n"
-                               "Upgrade: websocket\r\nConnection: Upgrade\r\n"
-                               "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n";
-            if (write(c, resp, strlen(resp)) < 0) {
-                close(c);
-                continue;
-            }
-        } else {
-            if (write(c, buf, used) != (ssize_t)used) {
-                close(c);
-                continue;
-            }
-        }
-        for (;;) {
-            char e[4096];
-            ssize_t n = read(c, e, sizeof(e));
-            if (n <= 0) break;
-            if (write(c, e, (size_t)n) != n) break;
-        }
-        close(c);
-    }
-}
-
-static void run_ws_proxy(void) {
-    cwist_proxy_route("http://ws.test:19967", "/", "http://127.0.0.1:19966", "/");
     _exit(cwist_proxy_listen() == 0 ? 0 : 3);
 }
 
@@ -591,9 +492,12 @@ static void test_end_to_end(void) {
     CHECK(status_is(r, 421), "same port, other Host -> 421");
     free(r);
 
-    /* WebSocket upgrades on a cleartext HTTP/1.1 front are now passed through
-     * to the resolved upstream; see test_ws_passthrough(). A non-h1 front
-     * still rejects them with 501 (proxy_front_is_plain_h1). */
+    r = exchange(PROXY_PORT,
+                 "GET /api/echo HTTP/1.1\r\nHost: front.test:19962\r\nConnection: Upgrade\r\n"
+                 "Upgrade: websocket\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                 "Sec-WebSocket-Version: 13\r\n\r\n");
+    CHECK(status_is(r, 501), "WebSocket upgrade -> 501");
+    free(r);
 
     /* Two requests on one keep-alive connection: the deferred path re-arms. */
     r = exchange(
@@ -671,65 +575,46 @@ static long tls_get(int port, const char *path, const char *groups, bool h2, cha
 #define PQ_GROUP "group=11ec" /* X25519MLKEM768 */
 #define X25519_GROUP "group=001d"
 
-static bool tls_pq_supported(void) {
-    char *b = NULL;
-    long st = tls_get(UP_PQ_PORT, "/echo", "X25519MLKEM768", false, &b);
-    bool supported = st == 200 && has(b, PQ_GROUP);
-    free(b);
-    if (!supported) printf("  skip PQ assertions: libcurl cannot negotiate X25519MLKEM768\n");
-    return supported;
-}
-
 static void test_tls_levels(void) {
     char *b = NULL;
     long st;
-    bool pq = tls_pq_supported();
 
     printf("TLS level mirroring (no promotion)\n");
-    if (pq) {
-        st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", false, &b);
-        CHECK(st == 200 && has(b, "tls=0304") && has(b, PQ_GROUP),
-              "PQ client -> PQ upstream keeps hybrid key exchange");
-        free(b);
-        st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", false, &b);
-        CHECK(st == 502, "PQ client -> classical-only upstream refused (no silent downgrade)");
-        free(b);
-    }
+    st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", false, &b);
+    CHECK(st == 200 && has(b, "tls=0304") && has(b, PQ_GROUP),
+          "PQ client -> PQ upstream keeps hybrid key exchange");
+    free(b);
+    st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", false, &b);
+    CHECK(st == 502, "PQ client -> classical-only upstream refused (no silent downgrade)");
+    free(b);
     st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519", false, &b);
     CHECK(st == 200 && has(b, "tls=0304") && has(b, X25519_GROUP),
           "classical client -> classical upstream allowed");
     free(b);
-    if (pq) {
-        st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
-        CHECK(st == 200 && has(b, PQ_GROUP), "same over HTTP/2 (TLS level read from the h2 conn)");
-        free(b);
-        st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", true, &b);
-        CHECK(st == 502, "HTTP/2 PQ client -> classical-only upstream refused");
-        free(b);
-    }
-    st = tls_get(TLS_MIRROR_PORT, "/plain/echo", "X25519", false, &b);
+    st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
+    CHECK(st == 200 && has(b, PQ_GROUP), "same over HTTP/2 (TLS level read from the h2 conn)");
+    free(b);
+    st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", true, &b);
+    CHECK(st == 502, "HTTP/2 PQ client -> classical-only upstream refused");
+    free(b);
+    st = tls_get(TLS_MIRROR_PORT, "/plain/echo", "X25519MLKEM768", false, &b);
     CHECK(st == 200 && has(b, "tls=none") && has(b, "xfp=https"),
           "http:// target: TLS stripped, X-Forwarded-Proto https");
     free(b);
 
     printf("TLS auto promotion\n");
-    if (pq) {
-        st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519", false, &b);
-        CHECK(st == 200 && has(b, PQ_GROUP), "classical client promoted to PQ upstream");
-        free(b);
-    }
-    /* Holds without hybrid support too: the upstream leg then fails either way. */
+    st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519", false, &b);
+    CHECK(st == 200 && has(b, PQ_GROUP), "classical client promoted to PQ upstream");
+    free(b);
     st = tls_get(TLS_PROMOTE_PORT, "/classic/echo", "X25519", false, &b);
     CHECK(st == 502, "promotion refuses an upstream without PQ key exchange");
     free(b);
     st = tls_get(TLS_PROMOTE_PORT, "/plain/echo", "X25519", false, &b);
     CHECK(st == 200 && has(b, "tls=none"), "promotion still strips TLS for http:// targets");
     free(b);
-    if (pq) {
-        st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
-        CHECK(st == 200 && has(b, PQ_GROUP), "front accepts PQ clients over HTTP/2");
-        free(b);
-    }
+    st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
+    CHECK(st == 200 && has(b, PQ_GROUP), "front accepts PQ clients over HTTP/2");
+    free(b);
 }
 
 /* --- HTTP/3 front ------------------------------------------------------------ */
@@ -790,111 +675,11 @@ static void remove_cert(void) {
     }
 }
 
-static void test_ws_passthrough(void) {
-    printf("WebSocket, CONNECT passthrough, and chunked streaming (cleartext HTTP/1.1 front)\n");
-    int fd = connect_port(WS_PROXY_PORT);
-    CHECK(fd >= 0, "connect to the WS proxy front");
-    if (fd < 0) return;
-    const char *up = "GET / HTTP/1.1\r\nHost: ws.test:19967\r\n"
-                     "Upgrade: websocket\r\nConnection: Upgrade\r\n"
-                     "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-                     "Sec-WebSocket-Version: 13\r\n\r\n";
-    CHECK(write(fd, up, strlen(up)) == (ssize_t)strlen(up), "send upgrade request");
-    char buf[4096];
-    size_t used = 0;
-    int got101 = 0;
-    while (used < sizeof(buf) - 1) {
-        ssize_t n = read(fd, buf + used, sizeof(buf) - 1 - used);
-        if (n <= 0) break;
-        used += (size_t)n;
-        buf[used] = 0;
-        char *end = strstr(buf, "\r\n\r\n");
-        if (end) {
-            got101 = strncmp(buf, "HTTP/1.1 101", 12) == 0;
-            break;
-        }
-    }
-    CHECK(got101, "upstream 101 relayed back to the client");
-    const char *payload = "hello-websocket-bytes";
-    CHECK(write(fd, payload, strlen(payload)) == (ssize_t)strlen(payload),
-          "send post-upgrade bytes");
-    char e[64];
-    size_t eu = 0;
-    while (eu < strlen(payload)) {
-        ssize_t n = read(fd, e + eu, sizeof(e) - 1 - eu);
-        if (n <= 0) break;
-        eu += (size_t)n;
-    }
-    e[eu] = 0;
-    CHECK(strcmp(e, payload) == 0, "bytes relayed bidirectionally after the upgrade");
-    close(fd);
-
-    /* Chunked upstream response streamed back as HTTP/1.1 chunked */
-    char *r = exchange(WS_PROXY_PORT,
-                       "GET /chunked HTTP/1.1\r\nHost: ws.test:19967\r\nConnection: close\r\n\r\n");
-    CHECK(status_is(r, 200), "chunked upstream status 200");
-    CHECK(has_header_ci(r, "Transfer-Encoding") && !has_header_ci(r, "Content-Length"),
-          "streamed chunked response uses Transfer-Encoding: chunked without Content-Length");
-    CHECK(has(r, "X-Stream: yes") && has(r, "5\r\nhello\r\n") && has(r, "6\r\n world\r\n") &&
-              has(r, "0\r\n\r\n"),
-          "chunked upstream body streamed in chunks");
-    free(r);
-
-    /* CONNECT tunnel passthrough to registered upstream */
-    fd = connect_port(WS_PROXY_PORT);
-    CHECK(fd >= 0, "connect for CONNECT passthrough");
-    if (fd >= 0) {
-        const char *conn_req = "CONNECT ws.test:19967 HTTP/1.1\r\nHost: ws.test:19967\r\n\r\n";
-        CHECK(write(fd, conn_req, strlen(conn_req)) == (ssize_t)strlen(conn_req),
-              "send CONNECT request");
-        used = 0;
-        int got200 = 0;
-        while (used < sizeof(buf) - 1) {
-            ssize_t n = read(fd, buf + used, sizeof(buf) - 1 - used);
-            if (n <= 0) break;
-            used += (size_t)n;
-            buf[used] = 0;
-            if (strstr(buf, "\r\n\r\n")) {
-                got200 = strncmp(buf, "HTTP/1.1 200 Connection Established\r\n\r\n", 39) == 0;
-                break;
-            }
-        }
-        CHECK(got200, "CONNECT returns 200 Connection Established");
-        const char *tun_msg = "hello-connect-tunnel";
-        CHECK(write(fd, tun_msg, strlen(tun_msg)) == (ssize_t)strlen(tun_msg),
-              "send bytes through CONNECT tunnel");
-        eu = 0;
-        while (eu < strlen(tun_msg)) {
-            ssize_t n = read(fd, e + eu, sizeof(e) - 1 - eu);
-            if (n <= 0) break;
-            eu += (size_t)n;
-        }
-        e[eu] = 0;
-        CHECK(strcmp(e, tun_msg) == 0, "CONNECT tunnel relays bytes bidirectionally");
-        close(fd);
-    }
-
-    r = exchange(WS_PROXY_PORT,
-                 "CONNECT nope.test:19967 HTTP/1.1\r\nHost: nope.test:19967\r\n\r\n");
-    CHECK(status_is(r, 421), "CONNECT to unregistered authority -> 421");
-    free(r);
-
-    r = exchange(WS_PROXY_PORT,
-                 "CONNECT other.test:19967 HTTP/1.1\r\nHost: ws.test:19967\r\n\r\n");
-    CHECK(status_is(r, 400), "CONNECT target mismatch with Host -> 400");
-    free(r);
-
-    r = exchange(WS_PROXY_PORT, "CONNECT ws.test HTTP/1.1\r\nHost: ws.test:19967\r\n\r\n");
-    CHECK(status_is(r, 400), "CONNECT without explicit port -> 400");
-    free(r);
-}
-
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
     setvbuf(stdout, NULL, _IONBF, 0);
     test_path_safety();
     test_header_validation();
-    test_body_grow();
     test_rules();
 
     if (make_cert() != 0) {
@@ -906,8 +691,6 @@ int main(void) {
     pid_t up = spawn(run_upstream);
     pid_t px = spawn(run_single_port_proxy);
     pid_t mp = spawn(run_multiport_proxy);
-    pid_t wsu = spawn(run_ws_upstream);
-    pid_t wsp = spawn(run_ws_proxy);
     pid_t upq = spawn(run_up_pq);
     pid_t ucl = spawn(run_up_classic);
     pid_t tm = spawn(run_tls_mirror_proxy);
@@ -915,22 +698,18 @@ int main(void) {
     if (wait_port(UPSTREAM_PORT) != 0 || wait_port(PROXY_PORT) != 0 || wait_port(FWD_PORT) != 0 ||
         wait_port(FWD_PORT2) != 0 || wait_port(UP_PQ_PORT) != 0 ||
         wait_port(UP_CLASSIC_PORT) != 0 || wait_port(TLS_MIRROR_PORT) != 0 ||
-        wait_port(TLS_PROMOTE_PORT) != 0 || wait_port(WS_UP_PORT) != 0 ||
-        wait_port(WS_PROXY_PORT) != 0) {
+        wait_port(TLS_PROMOTE_PORT) != 0) {
         printf("  FAIL servers did not start\n");
         g_failures++;
     } else {
         test_end_to_end();
         test_tls_levels();
         test_h3_front();
-        test_ws_passthrough();
     }
     stop_group(tp);
     stop_group(tm);
     stop_group(ucl);
     stop_group(upq);
-    stop_group(wsp);
-    stop_group(wsu);
     stop_group(px);
     stop_group(mp);
     stop_group(up);

@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (811) ==
+== functions (802) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -41,7 +41,6 @@ cwist_app_grpc_health_watchers
 cwist_app_grpc_reflection
 cwist_app_grpc_stream
 cwist_app_grpc_unary
-cwist_app_grpc_unregister
 cwist_app_healthz
 cwist_app_http_handler
 cwist_app_http_handler_async
@@ -319,9 +318,7 @@ cwist_http2_stream_send_trailers
 cwist_http3_client_create
 cwist_http3_client_destroy
 cwist_http3_client_enable_0rtt
-cwist_http3_client_enable_datagram_channel
 cwist_http3_client_enable_datagrams
-cwist_http3_client_get_datagram_stats
 cwist_http3_client_recv_datagram
 cwist_http3_client_request
 cwist_http3_client_send_datagram
@@ -341,7 +338,6 @@ cwist_http3_reload_context
 cwist_http3_send_datagram
 cwist_http3_server_loop
 cwist_http3_set_datagram_callback
-cwist_http3_set_datagram_conn_callback
 cwist_http3_set_datagram_enabled
 cwist_http3_set_early_data
 cwist_http3_set_early_data_guard
@@ -766,11 +762,7 @@ cwist_stream_req_feed
 cwist_strndup
 cwist_tcp_cork_enabled
 cwist_template_render
-cwist_template_render_ex
 cwist_template_render_file
-cwist_template_render_file_ex
-cwist_template_render_file_rooted
-cwist_template_render_rooted
 cwist_test_client_clear_cookies
 cwist_test_client_create
 cwist_test_client_delete
@@ -809,7 +801,6 @@ cwist_websocket_frame_destroy
 cwist_websocket_receive
 cwist_websocket_receive_sequenced
 cwist_websocket_send
-cwist_websocket_send_fragments
 cwist_websocket_send_sequenced
 cwist_websocket_upgrade
 cwist_websocket_upgrade_response
@@ -817,7 +808,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (812) ==
+== function signatures (803) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -855,7 +846,6 @@ cwist_app_grpc_health_watchers: int (struct cwist_app *)
 cwist_app_grpc_reflection: int (struct cwist_app *)
 cwist_app_grpc_stream: int (struct cwist_app *, const char *, const char *, cwist_grpc_stream_handler_func, void *)
 cwist_app_grpc_unary: int (struct cwist_app *, const char *, const char *, cwist_grpc_unary_handler_func, void *)
-cwist_app_grpc_unregister: int (struct cwist_app *, const char *, const char *, cwist_grpc_release_func)
 cwist_app_healthz: void (cwist_http_response *)
 cwist_app_http_handler: void (int, void *)
 cwist_app_http_handler_async: cwist_async_action_t (int, cwist_http_async_conn_t *)
@@ -1133,9 +1123,7 @@ cwist_http2_stream_send_trailers: int (cwist_h2_stream *, const cwist_http2_head
 cwist_http3_client_create: cwist_http3_client * (void)
 cwist_http3_client_destroy: void (cwist_http3_client *)
 cwist_http3_client_enable_0rtt: void (cwist_http3_client *, int)
-cwist_http3_client_enable_datagram_channel: int (cwist_http3_client *, int)
 cwist_http3_client_enable_datagrams: void (cwist_http3_client *, int)
-cwist_http3_client_get_datagram_stats: void (cwist_http3_client *, cwist_http3_datagram_stats *)
 cwist_http3_client_recv_datagram: ssize_t (cwist_http3_client *, void *, size_t)
 cwist_http3_client_request: cwist_error_t (cwist_http3_client *, const char *, cwist_http_method_t, cwist_http_header_node *, const char *, size_t, cwist_http_response **)
 cwist_http3_client_send_datagram: int (cwist_http3_client *, const void *, size_t)
@@ -1155,7 +1143,6 @@ cwist_http3_reload_context: cwist_error_t (cwist_http3_context *, const char *, 
 cwist_http3_send_datagram: int (void *, const void *, size_t)
 cwist_http3_server_loop: cwist_error_t (int, cwist_http3_context *, cwist_http3_request_handler_func, void *)
 cwist_http3_set_datagram_callback: void (cwist_http3_context *, void (*)(const void *data, size_t len, void *user_ctx), void *)
-cwist_http3_set_datagram_conn_callback: void (cwist_http3_context *, void (*)(void *conn, const void *data, size_t len, void *user_ctx), void *)
 cwist_http3_set_datagram_enabled: void (cwist_http3_context *, int)
 cwist_http3_set_early_data: void (cwist_http3_context *, bool)
 cwist_http3_set_early_data_guard: void (cwist_http3_context *, int)
@@ -1580,11 +1567,7 @@ cwist_stream_req_feed: int (cwist_stream_req_t *, const char *, size_t)
 cwist_strndup: char * (const char *, size_t)
 cwist_tcp_cork_enabled: bool (void)
 cwist_template_render: cwist_sstring * (const char *, const cJSON *)
-cwist_template_render_ex: cwist_sstring * (const char *, const cJSON *, cwist_template_error_t *)
 cwist_template_render_file: cwist_sstring * (const char *, const cJSON *)
-cwist_template_render_file_ex: cwist_sstring * (const char *, const cJSON *, cwist_template_error_t *)
-cwist_template_render_file_rooted: cwist_sstring * (const char *, const cJSON *, const char *, cwist_template_error_t *)
-cwist_template_render_rooted: cwist_sstring * (const char *, const cJSON *, const char *, cwist_template_error_t *)
 cwist_test_client_clear_cookies: void (cwist_test_client *)
 cwist_test_client_create: cwist_test_client * (cwist_app *)
 cwist_test_client_delete: cwist_http_response * (cwist_test_client *, const char *)
@@ -1623,7 +1606,6 @@ cwist_websocket_frame_destroy: void (cwist_ws_frame *)
 cwist_websocket_receive: cwist_ws_frame * (cwist_websocket *)
 cwist_websocket_receive_sequenced: uint8_t * (cwist_websocket *, size_t *)
 cwist_websocket_send: int (cwist_websocket *, cwist_ws_opcode_t, const uint8_t *, size_t)
-cwist_websocket_send_fragments: int (cwist_websocket *, cwist_ws_opcode_t, const cwist_ws_fragment *, size_t)
 cwist_websocket_send_sequenced: int (cwist_websocket *, const uint8_t *, size_t, uint16_t)
 cwist_websocket_upgrade: cwist_websocket * (cwist_http_request *, int)
 cwist_websocket_upgrade_response: bool (cwist_http_request *, cwist_http_response *)
@@ -1655,7 +1637,7 @@ cwist_wasm_component_dispose: void (void *)
 cwist_wasm_dispatch_memory: const char * (cwist_app *, const char *, size_t, size_t *)
 cwist_wasm_free: void (void *)
 
-== types (struct/union/enum names) (162) ==
+== types (struct/union/enum names) (160) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -1723,7 +1705,6 @@ cwist_http2_stream_flow_control
 cwist_http2_stream_hooks
 cwist_http3_client
 cwist_http3_context
-cwist_http3_datagram_stats
 cwist_http_async_conn
 cwist_http_client
 cwist_http_header_node
@@ -1812,14 +1793,13 @@ cwist_webrtc_conn
 cwist_webrtc_ctx
 cwist_websocket
 cwist_websocket_async
-cwist_ws_fragment
 cwist_ws_frame
 cwist_zod_error
 cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (220) ==
+== typedefs (215) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1877,7 +1857,6 @@ cwist_grpc_decoder
 cwist_grpc_lb_policy
 cwist_grpc_message
 cwist_grpc_message_callback
-cwist_grpc_release_func
 cwist_grpc_retry_policy
 cwist_grpc_retry_throttle
 cwist_grpc_status_t
@@ -1906,7 +1885,6 @@ cwist_http2_stream_flow_control
 cwist_http2_stream_hooks
 cwist_http3_client
 cwist_http3_context
-cwist_http3_datagram_stats
 cwist_http3_request_handler_func
 cwist_http_async_conn_t
 cwist_http_body_cleanup_fn
@@ -2012,8 +1990,6 @@ cwist_sstring
 cwist_static_dir
 cwist_stream_req_t
 cwist_stream_write_fn
-cwist_template_error_code_t
-cwist_template_error_t
 cwist_test_client
 cwist_test_client_cookie
 cwist_test_client_kv
@@ -2027,7 +2003,6 @@ cwist_webrtc_message_cb
 cwist_websocket
 cwist_websocket_async
 cwist_write_status_t
-cwist_ws_fragment
 cwist_ws_frame
 cwist_ws_handler_func
 cwist_ws_on_close_t
@@ -2041,7 +2016,7 @@ quic_conn_fc_t
 quic_net_quality_t
 quic_stream_fc_t
 
-== enum constants (243) ==
+== enum constants (234) ==
 CWIST_ASYNC_CLOSE
 CWIST_ASYNC_DEFER
 CWIST_ASYNC_DETACH
@@ -2229,7 +2204,6 @@ CWIST_METRIC_H2_HEADERS_DROPPED
 CWIST_METRIC_HISTOGRAM
 CWIST_METRIC_HTTP_CONTINUATION_SHED
 CWIST_METRIC_HTTP_HEADER_OVERFLOW
-CWIST_METRIC_HTTP_IDLE_REAPED
 CWIST_METRIC_REQUESTS_TOTAL
 CWIST_METRIC_REQUEST_DURATION_NS
 CWIST_METRIC_STREAMS_HTTP2
@@ -2266,14 +2240,6 @@ CWIST_RDBMS_POSTGRES
 CWIST_RECV_FATAL
 CWIST_RECV_NEED_MORE
 CWIST_RECV_OK
-CWIST_TEMPLATE_ERROR_DEPTH
-CWIST_TEMPLATE_ERROR_FORBIDDEN
-CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT
-CWIST_TEMPLATE_ERROR_IO
-CWIST_TEMPLATE_ERROR_NONE
-CWIST_TEMPLATE_ERROR_NO_MEMORY
-CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK
-CWIST_TEMPLATE_ERROR_UNCLOSED_TAG
 CWIST_WEBRTC_DATA_BINARY
 CWIST_WEBRTC_DATA_STRING
 CWIST_WRITE_DONE
@@ -2289,7 +2255,7 @@ CWIST_WS_FRAME_TEXT
 == globals (extern) (1) ==
 cwist_proxy
 
-== layouts (87) ==
+== layouts (84) ==
 enum cwist_async_action_t [0] CWIST_ASYNC_CLOSE = 0
 enum cwist_async_action_t [1] CWIST_ASYNC_REARM
 enum cwist_async_action_t [2] CWIST_ASYNC_DETACH
@@ -2431,14 +2397,6 @@ enum cwist_sstring_error_t [3] ERR_SSTRING_CONSTANT
 enum cwist_sstring_error_t [4] ERR_SSTRING_RESIZE_TOO_SMALL
 enum cwist_sstring_error_t [5] ERR_SSTRING_RESIZE_TOO_LARGE
 enum cwist_sstring_error_t [6] ERR_SSTRING_OUTOFBOUND
-enum cwist_template_error_code_t [0] CWIST_TEMPLATE_ERROR_NONE = 0
-enum cwist_template_error_code_t [1] CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT
-enum cwist_template_error_code_t [2] CWIST_TEMPLATE_ERROR_UNCLOSED_TAG
-enum cwist_template_error_code_t [3] CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK
-enum cwist_template_error_code_t [4] CWIST_TEMPLATE_ERROR_DEPTH
-enum cwist_template_error_code_t [5] CWIST_TEMPLATE_ERROR_IO
-enum cwist_template_error_code_t [6] CWIST_TEMPLATE_ERROR_NO_MEMORY
-enum cwist_template_error_code_t [7] CWIST_TEMPLATE_ERROR_FORBIDDEN
 enum cwist_webrtc_data_type [0] CWIST_WEBRTC_DATA_BINARY = 0
 enum cwist_webrtc_data_type [1] CWIST_WEBRTC_DATA_STRING = 1
 enum cwist_ws_opcode_t [0] CWIST_WS_FRAME_CONTINUATION = 0x0
@@ -2635,8 +2593,6 @@ struct cwist_http3_context [26] uint64_t last_close_code
 struct cwist_http3_context [27] char last_close_reason[256]
 struct cwist_http3_context [28] void *async_queue
 struct cwist_http3_context [29] char *tls_groups
-struct cwist_http3_context [30] void (*datagram_conn_cb)(void *conn, const void *data, size_t len, void *user_ctx)
-struct cwist_http3_context [31] void *datagram_conn_user_ctx
 struct cwist_http_async_conn_t [0] int fd
 struct cwist_http_async_conn_t [1] void *user_ctx
 struct cwist_http_async_conn_t [2] char *rbuf
@@ -2660,13 +2616,6 @@ struct cwist_http_async_conn_t [19] uint64_t kern_last_mono_ns
 struct cwist_http_async_conn_t [20] bool kern_valid
 struct cwist_http_async_conn_t [21] cwist_bdr_cursor_t bdr_cursor
 struct cwist_http_async_conn_t [22] uint32_t stash_grown_sec
-struct cwist_http_async_conn_t [23] struct cwist_http_async_conn *reap_prev
-struct cwist_http_async_conn_t [24] struct cwist_http_async_conn *reap_next
-struct cwist_http_async_conn_t [25] struct cwist_http_async_conn *reap_in_next
-struct cwist_http_async_conn_t [26] uint8_t reap_state
-struct cwist_http_async_conn_t [27] bool reap_waiting
-struct cwist_http_async_conn_t [28] bool reap_kicked
-struct cwist_http_async_conn_t [29] bool reap_dead
 struct cwist_http_header_node [0] cwist_sstring *key
 struct cwist_http_header_node [1] cwist_sstring *value
 struct cwist_http_header_node [2] struct cwist_http_header_node *next
@@ -2855,10 +2804,6 @@ struct cwist_sstring [7] size_t (*get_size)(struct cwist_sstring *str)
 struct cwist_sstring [8] int (*compare)(struct cwist_sstring *left, const struct cwist_sstring *right)
 struct cwist_sstring [9] cwist_error_t (*copy)(struct cwist_sstring *str, const struct cwist_sstring *from)
 struct cwist_sstring [10] cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from)
-struct cwist_template_error_t [0] cwist_template_error_code_t code
-struct cwist_template_error_t [1] size_t byte_offset
-struct cwist_template_error_t [2] const char *tag_type
-struct cwist_template_error_t [3] char file_path[4096]
 struct cwist_test_client [0] cwist_app *app
 struct cwist_test_client [1] cwist_test_client_cookie *cookies
 struct cwist_test_client_cookie [0] char *name
@@ -2877,8 +2822,6 @@ struct cwist_test_client_request_options [6] size_t cookie_count
 struct cwist_test_client_request_options [7] const char *query_string
 struct cwist_websocket [0] int fd
 struct cwist_websocket [1] bool is_closed
-struct cwist_ws_fragment [0] const uint8_t *data
-struct cwist_ws_fragment [1] size_t len
 struct cwist_ws_frame [0] bool fin
 struct cwist_ws_frame [1] cwist_ws_opcode_t opcode
 struct cwist_ws_frame [2] uint8_t *payload

@@ -111,11 +111,6 @@ static void built_handler(cwist_http_request *req, cwist_http_response *res) {
 }
 
 static void run_server(void) {
-    /* The app scheduler's threads start before cwist_app_listen() forks its
-     * workers and do not survive the fork (TSan also refuses to start
-     * threads after it), so keep the server single-process, as
-     * test_async_defer does. */
-    setenv("CWIST_WORKERS", "1", 1);
     cwist_app *app = cwist_app_create();
     cwist_app_use_scheduler(app, 2, 64);
     cwist_app_use_http3(app, true);

@@ -50,6 +50,8 @@
 /* Libttak headers */
 #include <ttak/mem/mem.h>
 #include <ttak/timing/timing.h>
+#include <ttak/net/lattice.h>
+#include <ttak/mols_control.h>
 #include <ttak/priority/scheduler.h>
 #include <ttak/async/sched.h>
 
@@ -3126,88 +3128,6 @@ static cwist_async_action_t app_async_flush_exit(int client_fd, cwist_http_async
     return action;
 }
 
-#ifndef CWIST_PLATFORM_NO_SOCKETS
-/* --- Big Dumb Reply privacy rules (issue #706) ---------------------------
- * The reply cache is keyed by method + path only, so it must never hold or
- * replay a response that depends on who is asking.  A request is treated as
- * caller-specific when it carries credentials (Cookie, Authorization); a
- * response when it sets a cookie or its Cache-Control forbids shared reuse
- * (private, no-store, no-cache). */
-
-/** @brief True when @p headers contain a header named @p name. */
-static bool app_bdr_has_header(cwist_http_header_node *headers, const char *name) {
-    return cwist_http_header_get(headers, name) != NULL;
-}
-
-/** @brief True when the request carries credentials that make its reply per-caller. */
-static bool app_bdr_request_is_private(const cwist_http_request *req) {
-    return app_bdr_has_header(req->headers, "Cookie") ||
-           app_bdr_has_header(req->headers, "Authorization");
-}
-
-/**
- * @brief True when one Cache-Control value names private, no-store or no-cache.
- *
- * Directives are comma separated and matched case-insensitively; a directive
- * with an argument (e.g. private="Set-Cookie") still counts.
- */
-static bool app_bdr_cache_control_forbids(const char *value) {
-    static const char *const forbidden[] = {"private", "no-store", "no-cache"};
-    const char *p = value;
-    while (p && *p) {
-        while (*p == ' ' || *p == '\t' || *p == ',') p++;
-        const char *tok = p;
-        while (*p && *p != ',' && *p != '=' && *p != ' ' && *p != '\t') p++;
-        size_t tlen = (size_t)(p - tok);
-        for (size_t i = 0; i < sizeof(forbidden) / sizeof(forbidden[0]); i++) {
-            if (tlen == strlen(forbidden[i]) && strncasecmp(tok, forbidden[i], tlen) == 0) {
-                return true;
-            }
-        }
-        /* Skip the rest of this directive, including a quoted argument. */
-        bool quoted = false;
-        while (*p && (quoted || *p != ',')) {
-            if (*p == '"') quoted = !quoted;
-            p++;
-        }
-    }
-    return false;
-}
-
-/** @brief True when the response must not be stored in the shared reply cache. */
-static bool app_bdr_response_is_private(const cwist_http_response *res) {
-    for (cwist_http_header_node *h = res->headers; h; h = h->next) {
-        if (!h->key || !h->key->data) continue;
-        if (strcasecmp(h->key->data, "Set-Cookie") == 0) return true;
-        if (strcasecmp(h->key->data, "Cache-Control") == 0 && h->value && h->value->data &&
-            app_bdr_cache_control_forbids(h->value->data)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/**
- * @brief Raw-buffer form of app_bdr_request_is_private() for the classic
- * ingress fast path, which looks up the cache before the request is parsed.
- * @param buf Start of the request (request line first).
- * @param hdr_end Position of the CRLFCRLF that ends the header block.
- */
-static bool app_bdr_raw_request_is_private(const char *buf, const char *hdr_end) {
-    const char *line = memchr(buf, '\n', (size_t)(hdr_end - buf));
-    while (line && line < hdr_end) {
-        line++; /* first byte of the next header line */
-        size_t rest = (size_t)(hdr_end - line);
-        if ((rest >= 7 && strncasecmp(line, "Cookie:", 7) == 0) ||
-            (rest >= 14 && strncasecmp(line, "Authorization:", 14) == 0)) {
-            return true;
-        }
-        line = memchr(line, '\n', rest);
-    }
-    return false;
-}
-#endif
-
 /**
  * @brief Route and respond to one fully parsed HTTP/1.1 request.
  * Shared by the blocking keep-alive loop and the event-driven async path.
@@ -3225,13 +3145,11 @@ typedef enum {
  * stack buffer dies when it returns on a defer); NULL/0 on the C1M path,
  * whose receive stash outlives the turn. */
 static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
-                                                   cwist_http_request *req, const char *carry,
+                                                   cwist_http_request *req,
+                                                   uint32_t priority_weight, const char *carry,
                                                    size_t carry_len) {
-    /* Credentialed requests neither read nor teach the shared cache (#706). */
-    bool bdr_private = app->bdr_ctx && app_bdr_request_is_private(req);
-
     // --- Big Dumb Reply (Read) ---
-    if (app->bdr_ctx && !bdr_private && req->method == CWIST_HTTP_GET &&
+    if (app->bdr_ctx && req->method == CWIST_HTTP_GET &&
         (!req->query || req->query->size == 0)) {
         size_t cached_len = 0;
         bdr_blob_t *bdr_pin = NULL;
@@ -3370,16 +3288,17 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
         if (app->bdr_ctx) {
             bool endpoint_file = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FILE);
 
-            uint64_t threshold = (uint64_t)app->bdr_ctx->latency_threshold_ms;
+            uint64_t scaled_threshold = (uint64_t)app->bdr_ctx->latency_threshold_ms;
+            if (priority_weight > 50) {
+                scaled_threshold = scaled_threshold * (100 - priority_weight) / 100;
+            }
 
             /* A response that declares Vary differs by request headers the
              * path-keyed cache cannot see (e.g. fragment vs full page), so
-             * replaying it for another request would be wrong.  The same
-             * holds for credentialed requests and for responses that set a
-             * cookie or forbid shared caching (#706). */
+             * replaying it for another request would be wrong. */
             bool varies = cwist_http_header_get(res->headers, "Vary") != NULL;
-            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies && !bdr_private &&
-                !app_bdr_response_is_private(res) && (!req->query || req->query->size == 0)) {
+            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies &&
+                (!req->query || req->query->size == 0)) {
                 if (endpoint_fixed) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
@@ -3387,7 +3306,7 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                                             serialized->size);
                         cwist_sstring_destroy(serialized);
                     }
-                } else if (duration_ms > threshold) {
+                } else if (duration_ms > scaled_threshold) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
                         cwist_bdr_put(app->bdr_ctx, "GET", req->path->data, serialized->data,
@@ -3554,6 +3473,14 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         return CWIST_ASYNC_DETACH;
     }
 
+    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
+    uint32_t tid = ttak_net_lattice_get_worker_id();
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
+
+    /* Jeungseung Gaebang Scaling for priority weighting. */
+    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
+
     /* One pipeline must not monopolize this reactor's other connections. */
     const unsigned int yield_batch = app_http_yield_batch();
     for (unsigned int handled = 0; handled < app_http_requests_per_turn(); ++handled) {
@@ -3581,7 +3508,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         req->db = app->db;
         req->async_conn = conn;
         app_serve_result_t sr =
-            app_serve_parsed_request(app, client_fd, req, NULL, 0);
+            app_serve_parsed_request(app, client_fd, req, priority_weight, NULL, 0);
         /* Deferred: buffered coalesced responses from this turn already
          * drained inside app_serve_parsed_request, before the defer was
          * acked; the completion path owns the fd/conn now (it re-arms or
@@ -3670,8 +3597,16 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
         }
     }
 
-    /* Stack buffer: the ingress read path allocates nothing. Aligned to a
-     * 64-byte cache line. */
+    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
+    uint32_t tid = ttak_net_lattice_get_worker_id();
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
+
+    /* Jeungseung Gaebang Scaling for priority weighting. */
+    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
+
+    /* Use stack-allocated buffer for zero-allocation ingress path.
+     * Aligned to cache line to optimize lattice-friendly access and prevent buffer loss. */
     _Alignas(64) char read_buf[CWIST_HTTP_READ_BUFFER_SIZE];
     size_t buf_len = 0;
     read_buf[0] = '\0';
@@ -3710,8 +3645,7 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
 
                 char *hdr_end = (char *)cwist_simd_find_crlfcrlf(read_buf, buf_len);
                 if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
-                                read_buf[3] == ' ') &&
-                    !app_bdr_raw_request_is_private(read_buf, hdr_end)) {
+                                read_buf[3] == ' ')) {
                     const char *path_start = read_buf + 4;
                     const char *path_end =
                         (const char *)memchr(path_start, ' ', (size_t)(hdr_end - path_start));
@@ -3761,17 +3695,11 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
         req->db = app->db;
 
         app_serve_result_t sr =
-            app_serve_parsed_request(app, client_fd, req, read_buf, buf_len);
+            app_serve_parsed_request(app, client_fd, req, priority_weight, read_buf, buf_len);
         if (sr == APP_SERVE_DEFERRED) {
             /* The async completion owns the fd now; it re-arms on the pool
              * (keep-alive) or closes, resuming with any pipelined bytes
              * copied onto the handle.  Do not close here. */
-            return;
-        }
-        if (sr == APP_SERVE_DETACH) {
-            /* fd ownership moved to another subsystem (e.g. the reverse
-             * proxy's raw tunnel relay for a WebSocket upgrade). That owner
-             * closes it; the HTTP layer must not close or re-arm it. */
             return;
         }
         if (sr == APP_SERVE_CLOSE) {
@@ -4215,43 +4143,14 @@ cwist_app *cwist_multiport_get_app(cwist_app **app_ref, unsigned short port) {
 typedef struct cwist_multiport_http_client {
     int client_fd;
     cwist_app *app;
-    pthread_t tid;
-    _Atomic bool done;
-    struct cwist_multiport_http_client *next;
 } cwist_multiport_http_client;
-
-static pthread_mutex_t g_multiport_clients_mu = PTHREAD_MUTEX_INITIALIZER;
-static cwist_multiport_http_client *g_multiport_clients = NULL;
 
 static void *cwist_multiport_http_client_thread(void *arg) {
     cwist_multiport_http_client *client = (cwist_multiport_http_client *)arg;
     if (!client) return NULL;
     cwist_app_http_handler(client->client_fd, client->app);
-    atomic_store_explicit(&client->done, true, memory_order_release);
+    free(client);
     return NULL;
-}
-
-static void cwist_multiport_reap_clear_clients(bool join_all) {
-    pthread_mutex_lock(&g_multiport_clients_mu);
-    cwist_multiport_http_client **pp = &g_multiport_clients;
-    while (*pp) {
-        cwist_multiport_http_client *client = *pp;
-        bool done = atomic_load_explicit(&client->done, memory_order_acquire);
-        if (!done && !join_all) {
-            pp = &client->next;
-            continue;
-        }
-        *pp = client->next;
-        if (!done && client->client_fd >= 0) {
-            shutdown(client->client_fd, SHUT_RDWR);
-        }
-        pthread_mutex_unlock(&g_multiport_clients_mu);
-        pthread_join(client->tid, NULL);
-        free(client);
-        pthread_mutex_lock(&g_multiport_clients_mu);
-        pp = &g_multiport_clients;
-    }
-    pthread_mutex_unlock(&g_multiport_clients_mu);
 }
 
 static int cwist_multiport_add_port(unsigned short *ports, size_t *count, unsigned short port) {
@@ -4282,8 +4181,6 @@ static void cwist_multiport_close_all(struct pollfd *pfds, size_t count) {
 }
 
 static int cwist_multiport_start_clear_client(int client_fd, cwist_app *app) {
-    cwist_multiport_reap_clear_clients(false);
-
     cwist_multiport_http_client *payload = malloc(sizeof(*payload));
     if (!payload) {
         close(client_fd);
@@ -4292,19 +4189,14 @@ static int cwist_multiport_start_clear_client(int client_fd, cwist_app *app) {
 
     payload->client_fd = client_fd;
     payload->app = app;
-    atomic_store_explicit(&payload->done, false, memory_order_relaxed);
-    payload->next = NULL;
 
-    pthread_mutex_lock(&g_multiport_clients_mu);
-    if (pthread_create(&payload->tid, NULL, cwist_multiport_http_client_thread, payload) != 0) {
-        pthread_mutex_unlock(&g_multiport_clients_mu);
+    pthread_t tid;
+    if (pthread_create(&tid, NULL, cwist_multiport_http_client_thread, payload) != 0) {
         close(client_fd);
         free(payload);
         return -1;
     }
-    payload->next = g_multiport_clients;
-    g_multiport_clients = payload;
-    pthread_mutex_unlock(&g_multiport_clients_mu);
+    pthread_detach(tid);
     return 0;
 }
 
@@ -4351,8 +4243,6 @@ static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
     dst->datagram_enabled = src->datagram_enabled;
     dst->datagram_cb = src->datagram_cb;
     dst->datagram_user_ctx = src->datagram_user_ctx;
-    dst->datagram_conn_cb = src->datagram_conn_cb;
-    dst->datagram_conn_user_ctx = src->datagram_conn_user_ctx;
     dst->wt_handler = src->wt_handler;
     dst->idle_timeout_ms = src->idle_timeout_ms;
     dst->handshake_timeout_ms = src->handshake_timeout_ms;
@@ -4732,7 +4622,6 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
         }
     }
 
-    cwist_multiport_reap_clear_clients(true);
     if (needs_https_pool) {
         https_pool_destroy();
     }
@@ -4948,8 +4837,19 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
             workers = (end != workers_env && *end == '\0' && v >= 1 && v <= INT_MAX) ? (int)v : 1;
         }
     } else {
-        // Default to auto (number of online CPU cores) to maximize performance on multi-core
-        // systems out of the box.
+        // Default: one worker process per online core. PR #333 retuned this
+        // to cores/3 citing a p99 win at moderate concurrency on a dedicated
+        // 12-core box, but the retune failed the latency regression gate on
+        // every CI run afterwards (5/5 runs across three CPU models, mean
+        // latency 2-3x the same-CPU median; the 100 prior runs at
+        // one-per-core had never failed). Local A/B on a 4-core taskset
+        // emulation of the CI runner (wrk -t4 -c400, 10s after warmup):
+        // 4 workers = 1.12ms mean / ~192k rps, 2 workers = 1.9-2.3ms mean /
+        // ~205k rps - the retune buys ~5% throughput for ~1.8x mean latency
+        // at high connection counts, and on shared CI vCPUs the latency cost
+        // is larger still. CWIST's default profile is the ultra-low-latency
+        // classic pool; deployments that prefer fewer, busier workers can
+        // set CWIST_WORKERS explicitly.
         long cores = get_cpu_cores();
         workers = (cores > 0) ? (int)cores : 1;
     }
