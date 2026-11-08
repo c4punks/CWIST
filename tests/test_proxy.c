@@ -32,6 +32,8 @@
 #define FWD_PORT 19963
 #define FWD_PORT2 19964
 #define DEAD_PORT 19965
+#define WS_UP_PORT 19966   /* raw WebSocket-echo upstream */
+#define WS_PROXY_PORT 19967 /* cleartext front for WS passthrough */
 #define UP_PQ_PORT 19971       /* https upstream offering hybrid PQ key exchange */
 #define UP_CLASSIC_PORT 19972  /* https upstream with classical groups only */
 #define TLS_MIRROR_PORT 19974  /* https origin, TLS level mirrored upstream */
@@ -353,6 +355,54 @@ static void run_tls_promote_proxy(void) {
     _exit(cwist_proxy_listen() == 0 ? 0 : 3);
 }
 
+/* Minimal raw upstream: accept, read the handshake request, reply 101, then
+ * echo every byte. Exercises the proxy's raw tunnel relay without depending on
+ * a full WebSocket server on the upstream side. */
+static void run_ws_upstream(void) {
+    int s = socket(AF_INET, SOCK_STREAM, 0);
+    int one = 1;
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    struct sockaddr_in a;
+    memset(&a, 0, sizeof(a));
+    a.sin_family = AF_INET;
+    a.sin_port = htons(WS_UP_PORT);
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    if (bind(s, (struct sockaddr *)&a, sizeof(a)) != 0) _exit(5);
+    if (listen(s, 16) != 0) _exit(5);
+    for (;;) {
+        int c = accept(s, NULL, NULL);
+        if (c < 0) continue;
+        char buf[8192];
+        size_t used = 0;
+        while (used < sizeof(buf) - 1) {
+            ssize_t n = read(c, buf + used, sizeof(buf) - 1 - used);
+            if (n <= 0) break;
+            used += (size_t)n;
+            buf[used] = 0;
+            if (strstr(buf, "\r\n\r\n")) break;
+        }
+        const char *resp = "HTTP/1.1 101 Switching Protocols\r\n"
+                           "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                           "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n";
+        if (write(c, resp, strlen(resp)) < 0) {
+            close(c);
+            continue;
+        }
+        for (;;) {
+            char e[4096];
+            ssize_t n = read(c, e, sizeof(e));
+            if (n <= 0) break;
+            if (write(c, e, (size_t)n) != n) break;
+        }
+        close(c);
+    }
+}
+
+static void run_ws_proxy(void) {
+    cwist_proxy_route("http://ws.test:19967", "/", "http://127.0.0.1:19966", "/");
+    _exit(cwist_proxy_listen() == 0 ? 0 : 3);
+}
+
 static void run_single_port_proxy(void) {
     cwist_proxy_route("http://front.test:19962", "/api", "http://127.0.0.1:19961", "/v1");
     cwist_proxy_route("http://front.test:19962", "/dead", "http://127.0.0.1:19965", "/");
@@ -516,12 +566,9 @@ static void test_end_to_end(void) {
     CHECK(status_is(r, 421), "same port, other Host -> 421");
     free(r);
 
-    r = exchange(PROXY_PORT,
-                 "GET /api/echo HTTP/1.1\r\nHost: front.test:19962\r\nConnection: Upgrade\r\n"
-                 "Upgrade: websocket\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-                 "Sec-WebSocket-Version: 13\r\n\r\n");
-    CHECK(status_is(r, 501), "WebSocket upgrade -> 501");
-    free(r);
+    /* WebSocket upgrades on a cleartext HTTP/1.1 front are now passed through
+     * to the resolved upstream; see test_ws_passthrough(). A non-h1 front
+     * still rejects them with 501 (proxy_front_is_plain_h1). */
 
     /* Two requests on one keep-alive connection: the deferred path re-arms. */
     r = exchange(
@@ -718,6 +765,46 @@ static void remove_cert(void) {
     }
 }
 
+static void test_ws_passthrough(void) {
+    printf("WebSocket passthrough (cleartext HTTP/1.1 front)\n");
+    int fd = connect_port(WS_PROXY_PORT);
+    CHECK(fd >= 0, "connect to the WS proxy front");
+    if (fd < 0) return;
+    const char *up = "GET / HTTP/1.1\r\nHost: ws.test:19967\r\n"
+                     "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                     "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                     "Sec-WebSocket-Version: 13\r\n\r\n";
+    CHECK(write(fd, up, strlen(up)) == (ssize_t)strlen(up), "send upgrade request");
+    char buf[4096];
+    size_t used = 0;
+    int got101 = 0;
+    while (used < sizeof(buf) - 1) {
+        ssize_t n = read(fd, buf + used, sizeof(buf) - 1 - used);
+        if (n <= 0) break;
+        used += (size_t)n;
+        buf[used] = 0;
+        char *end = strstr(buf, "\r\n\r\n");
+        if (end) {
+            got101 = strncmp(buf, "HTTP/1.1 101", 12) == 0;
+            break;
+        }
+    }
+    CHECK(got101, "upstream 101 relayed back to the client");
+    const char *payload = "hello-websocket-bytes";
+    CHECK(write(fd, payload, strlen(payload)) == (ssize_t)strlen(payload),
+          "send post-upgrade bytes");
+    char e[64];
+    size_t eu = 0;
+    while (eu < strlen(payload)) {
+        ssize_t n = read(fd, e + eu, sizeof(e) - 1 - eu);
+        if (n <= 0) break;
+        eu += (size_t)n;
+    }
+    e[eu] = 0;
+    CHECK(strcmp(e, payload) == 0, "bytes relayed bidirectionally after the upgrade");
+    close(fd);
+}
+
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -735,6 +822,8 @@ int main(void) {
     pid_t up = spawn(run_upstream);
     pid_t px = spawn(run_single_port_proxy);
     pid_t mp = spawn(run_multiport_proxy);
+    pid_t wsu = spawn(run_ws_upstream);
+    pid_t wsp = spawn(run_ws_proxy);
     pid_t upq = spawn(run_up_pq);
     pid_t ucl = spawn(run_up_classic);
     pid_t tm = spawn(run_tls_mirror_proxy);
@@ -742,18 +831,22 @@ int main(void) {
     if (wait_port(UPSTREAM_PORT) != 0 || wait_port(PROXY_PORT) != 0 || wait_port(FWD_PORT) != 0 ||
         wait_port(FWD_PORT2) != 0 || wait_port(UP_PQ_PORT) != 0 ||
         wait_port(UP_CLASSIC_PORT) != 0 || wait_port(TLS_MIRROR_PORT) != 0 ||
-        wait_port(TLS_PROMOTE_PORT) != 0) {
+        wait_port(TLS_PROMOTE_PORT) != 0 || wait_port(WS_UP_PORT) != 0 ||
+        wait_port(WS_PROXY_PORT) != 0) {
         printf("  FAIL servers did not start\n");
         g_failures++;
     } else {
         test_end_to_end();
         test_tls_levels();
         test_h3_front();
+        test_ws_passthrough();
     }
     stop_group(tp);
     stop_group(tm);
     stop_group(ucl);
     stop_group(upq);
+    stop_group(wsp);
+    stop_group(wsu);
     stop_group(px);
     stop_group(mp);
     stop_group(up);

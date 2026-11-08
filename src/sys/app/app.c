@@ -3702,6 +3702,12 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
              * copied onto the handle.  Do not close here. */
             return;
         }
+        if (sr == APP_SERVE_DETACH) {
+            /* fd ownership moved to another subsystem (e.g. the reverse
+             * proxy's raw tunnel relay for a WebSocket upgrade). That owner
+             * closes it; the HTTP layer must not close or re-arm it. */
+            return;
+        }
         if (sr == APP_SERVE_CLOSE) {
             break;
         }
