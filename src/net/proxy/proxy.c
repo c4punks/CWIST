@@ -24,7 +24,10 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <curl/curl.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1010,7 +1013,319 @@ static int proxy_build_job(cwist_http_request *req, proxy_job *job) {
     return 0;
 }
 
+/* --- WebSocket passthrough (raw tunnel, cleartext HTTP/1.1 front only) ------
+ *
+ * A WebSocket upgrade cannot go through the buffered curl exchange: once the
+ * handshake completes the connection is a bidirectional byte stream for the
+ * life of the session. We dial the rule-resolved upstream with curl in
+ * CONNECT_ONLY mode (which also performs TLS for wss://), replay the client's
+ * handshake request, then hand the client fd to a relay thread that pumps
+ * bytes both ways until either side closes. This only applies to a cleartext
+ * HTTP/1.1 front: a TLS/HTTP-2/HTTP-3 front fd is not a raw byte stream, so
+ * those keep returning 501 (handled in proxy_build_job). */
+
+typedef struct proxy_tunnel {
+    int client_fd; /* owned by the relay once started */
+    CURL *curl; /* CONNECT_ONLY upstream; owns the TLS/TCP socket */
+    curl_socket_t up_fd;
+} proxy_tunnel;
+
+static void proxy_tunnel_free(proxy_tunnel *t) {
+    if (!t) return;
+    if (t->client_fd >= 0) close(t->client_fd);
+    if (t->curl) curl_easy_cleanup(t->curl);
+    cwist_curl_global_release();
+    free(t);
+}
+
+/* curl_easy_send the whole buffer (TLS-aware), waiting on EAGAIN. */
+static bool proxy_tunnel_up_send(CURL *curl, curl_socket_t fd, const char *buf, size_t len) {
+    size_t off = 0;
+    while (off < len) {
+        size_t n = 0;
+        CURLcode cc = curl_easy_send(curl, buf + off, len - off, &n);
+        if (cc == CURLE_OK) {
+            off += n;
+        } else if (cc == CURLE_AGAIN) {
+            struct pollfd p = {.fd = fd, .events = POLLOUT};
+            if (poll(&p, 1, 30000) <= 0) return false;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool proxy_fd_write_all(int fd, const char *buf, size_t len) {
+    size_t off = 0;
+    while (off < len) {
+        ssize_t n = write(fd, buf + off, len - off);
+        if (n > 0) {
+            off += (size_t)n;
+        } else if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            struct pollfd p = {.fd = fd, .events = POLLOUT};
+            if (poll(&p, 1, 30000) <= 0) return false;
+        } else {
+            return false; /* n == 0 or hard error */
+        }
+    }
+    return true;
+}
+
+static void *proxy_tunnel_run(void *arg) {
+    proxy_tunnel *t = (proxy_tunnel *)arg;
+    char buf[16384];
+    bool run = true;
+    while (run) {
+        struct pollfd fds[2] = {
+            {.fd = t->client_fd, .events = POLLIN},
+            {.fd = t->up_fd, .events = POLLIN},
+        };
+        int pr = poll(fds, 2, 120000);
+        if (pr < 0) {
+            if (errno == EINTR) continue;
+            break;
+        }
+        if (pr == 0) break; /* idle timeout */
+
+        if (fds[0].revents & (POLLIN | POLLHUP | POLLERR)) {
+            ssize_t n = read(t->client_fd, buf, sizeof(buf));
+            if (n > 0) {
+                if (!proxy_tunnel_up_send(t->curl, t->up_fd, buf, (size_t)n)) break;
+            } else if (n == 0) {
+                break; /* client closed */
+            } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
+                break;
+            }
+        }
+        if (fds[1].revents & (POLLIN | POLLHUP | POLLERR)) {
+            /* Drain until EAGAIN: TLS may hold decrypted bytes the poll cannot see. */
+            for (;;) {
+                size_t n = 0;
+                CURLcode cc = curl_easy_recv(t->curl, buf, sizeof(buf), &n);
+                if (cc == CURLE_OK) {
+                    if (n == 0) {
+                        run = false; /* upstream closed */
+                        break;
+                    }
+                    if (!proxy_fd_write_all(t->client_fd, buf, n)) {
+                        run = false;
+                        break;
+                    }
+                } else if (cc == CURLE_AGAIN) {
+                    break;
+                } else {
+                    run = false;
+                    break;
+                }
+            }
+        }
+    }
+    proxy_tunnel_free(t);
+    return NULL;
+}
+
+/* True when @p req arrived as a WebSocket upgrade. */
+static bool proxy_req_is_ws_upgrade(cwist_http_request *req) {
+    const char *up = cwist_http_header_get(req->headers, "upgrade");
+    if (!up || !strcasestr(up, "websocket")) return false;
+    const char *conn = cwist_http_header_get(req->headers, "connection");
+    return conn && strcasestr(conn, "upgrade");
+}
+
+/* True when the front connection is a cleartext HTTP/1.1 byte stream, i.e.
+ * one a raw relay can take over. */
+static bool proxy_front_is_plain_h1(cwist_http_request *req) {
+    return !req->app->use_ssl && req->https_conn == NULL && req->h2_queue == NULL &&
+           !(req->version && req->version->data && strcmp(req->version->data, "HTTP/3") == 0);
+}
+
+/* Split "scheme://host[:port]/path?query" into its authority and origin-form
+ * target. @p authority and @p target point into @p url / fallbacks; returns
+ * false on a malformed URL. */
+static bool proxy_url_split(const char *url, const char **authority_begin, size_t *authority_len,
+                            const char **target) {
+    const char *p = strstr(url, "://");
+    if (!p) return false;
+    p += 3;
+    const char *slash = strchr(p, '/');
+    *authority_begin = p;
+    *authority_len = slash ? (size_t)(slash - p) : strlen(p);
+    *target = slash ? slash : "/";
+    return *authority_len > 0;
+}
+
+/* Build the upstream handshake request into @p out (NUL-terminated). Forwards
+ * the client's headers (Host rewritten to the upstream authority, hop-by-hop
+ * proxy fields dropped, Upgrade/Connection/Sec-WebSocket-* preserved) and adds
+ * the X-Forwarded-* set. Returns the length, or 0 on overflow/error. */
+static size_t proxy_ws_build_request(cwist_http_request *req, const char *target,
+                                     const char *authority_begin, size_t authority_len,
+                                     const char *xff, bool front_tls, char *out, size_t cap) {
+    int w = snprintf(out, cap, "GET %s HTTP/1.1\r\nHost: %.*s\r\n", target, (int)authority_len,
+                     authority_begin);
+    if (w < 0 || (size_t)w >= cap) return 0;
+    size_t len = (size_t)w;
+
+    for (cwist_http_header_node *h = req->headers; h; h = h->next) {
+        if (!h->key || !h->key->data) continue;
+        const char *k = h->key->data;
+        const char *v = (h->value && h->value->data) ? h->value->data : "";
+        if (k[0] == ':') continue;
+        if (strcasecmp(k, "host") == 0) continue; /* rewritten above */
+        if (strcasecmp(k, "proxy-connection") == 0) continue;
+        if (strncasecmp(k, "x-forwarded-", 12) == 0) continue; /* regenerated below */
+        if (!cwist_proxy_header_name_ok(k) || !cwist_proxy_header_value_ok(v)) return 0;
+        w = snprintf(out + len, cap - len, "%s: %s\r\n", k, v);
+        if (w < 0 || (size_t)w >= cap - len) return 0;
+        len += (size_t)w;
+    }
+
+    if (xff && xff[0]) {
+        w = snprintf(out + len, cap - len, "X-Forwarded-For: %s\r\n", xff);
+        if (w < 0 || (size_t)w >= cap - len) return 0;
+        len += (size_t)w;
+    }
+    w = snprintf(out + len, cap - len, "X-Forwarded-Host: %.*s\r\nX-Forwarded-Proto: %s\r\n\r\n",
+                 (int)authority_len, authority_begin, front_tls ? "https" : "http");
+    if (w < 0 || (size_t)w >= cap - len) return 0;
+    len += (size_t)w;
+    return len;
+}
+
+/* Attempt a WebSocket passthrough for @p req. On success the client fd is
+ * handed to a relay thread, @p req->ws_async_handoff is set, and the caller
+ * must not touch the fd or @p res. On failure @p res carries an error status
+ * and the caller responds normally. */
+static void proxy_ws_passthrough(cwist_http_request *req, cwist_http_response *res) {
+    const char *path = proxy_req_path(req);
+    const char *query = (req->query && req->query->data) ? req->query->data : NULL;
+    if (!cwist_proxy_path_is_safe(path) || !cwist_proxy_query_is_safe(query)) {
+        proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+        return;
+    }
+    const char *host = cwist_http_header_get(req->headers, "host");
+    if (host && !cwist_proxy_header_value_ok(host)) {
+        proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+        return;
+    }
+
+    int miss = CWIST_HTTP_NOT_FOUND;
+    char *url = cwist_proxy_resolve_url((unsigned short)req->app->port, host, path, query, &miss);
+    if (!url) {
+        char msg[48];
+        snprintf(msg, sizeof(msg), "%d %s", miss, cwist_http_status_reason(miss));
+        proxy_set_text(res, miss, msg);
+        return;
+    }
+
+    const char *authority_begin, *target;
+    size_t authority_len;
+    if (!proxy_url_split(url, &authority_begin, &authority_len, &target)) {
+        cwist_free(url);
+        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
+        return;
+    }
+
+    /* TLS floor mirroring, reusing the buffered path's policy. */
+    proxy_job tls_probe;
+    memset(&tls_probe, 0, sizeof(tls_probe));
+    tls_probe.url = url;
+    proxy_set_upstream_tls(req, &tls_probe);
+
+    char xff[INET6_ADDRSTRLEN];
+    if (!proxy_peer_ip(req->client_fd, xff, sizeof(xff))) xff[0] = '\0';
+
+    char reqbuf[16384];
+    size_t reqlen = proxy_ws_build_request(req, target, authority_begin, authority_len, xff,
+                                           req->app->use_ssl, reqbuf, sizeof(reqbuf));
+    if (reqlen == 0) {
+        cwist_free(url);
+        proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+        return;
+    }
+
+    cwist_curl_global_acquire();
+    CURL *curl = curl_easy_init();
+    if (!curl) {
+        cwist_curl_global_release();
+        cwist_free(url);
+        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
+        return;
+    }
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, (long)g_proxy_cfg.connect_timeout_ms);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    if (tls_probe.upstream_tls_min != CURL_SSLVERSION_DEFAULT) {
+        curl_easy_setopt(curl, CURLOPT_SSLVERSION, tls_probe.upstream_tls_min);
+    }
+    if (tls_probe.upstream_pq_only) {
+        curl_easy_setopt(curl, CURLOPT_SSL_EC_CURVES, PROXY_PQ_GROUPS);
+    }
+    if (g_proxy_cfg.upstream_ca_path) {
+        curl_easy_setopt(curl, CURLOPT_CAINFO, g_proxy_cfg.upstream_ca_path);
+    }
+    cwist_free(url); /* curl copied CURLOPT_URL */
+
+    if (curl_easy_perform(curl) != CURLE_OK) {
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
+        return;
+    }
+    curl_socket_t up_fd = CURL_SOCKET_BAD;
+    if (curl_easy_getinfo(curl, CURLINFO_ACTIVESOCKET, &up_fd) != CURLE_OK ||
+        up_fd == CURL_SOCKET_BAD) {
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
+        return;
+    }
+    if (!proxy_tunnel_up_send(curl, up_fd, reqbuf, reqlen)) {
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
+        return;
+    }
+
+    proxy_tunnel *t = (proxy_tunnel *)malloc(sizeof(*t));
+    if (!t) {
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        proxy_set_text(res, CWIST_HTTP_INTERNAL_ERROR, "500 Internal Server Error");
+        return;
+    }
+    t->client_fd = req->client_fd;
+    t->curl = curl;
+    t->up_fd = up_fd;
+    int fl = fcntl(t->client_fd, F_GETFL, 0);
+    if (fl >= 0) fcntl(t->client_fd, F_SETFL, fl | O_NONBLOCK);
+
+    pthread_t tid;
+    if (pthread_create(&tid, NULL, proxy_tunnel_run, t) != 0) {
+        t->client_fd = -1; /* fd still owned by the HTTP layer on failure */
+        proxy_tunnel_free(t);
+        proxy_set_text(res, CWIST_HTTP_SERVICE_UNAVAILABLE, "503 Service Unavailable");
+        return;
+    }
+    pthread_detach(tid);
+
+    /* The relay owns the fd now. Signal the serve loop to detach: the upstream
+     * 101 reaches the client through the relay, so no response is sent here. */
+    req->ws_async_handoff = true;
+}
+
 static void proxy_handler(cwist_http_request *req, cwist_http_response *res) {
+    if (proxy_req_is_ws_upgrade(req)) {
+        if (proxy_front_is_plain_h1(req)) {
+            proxy_ws_passthrough(req, res);
+        } else {
+            /* TLS/HTTP-2/HTTP-3 front: the fd is not a raw byte stream. */
+            proxy_set_text(res, CWIST_HTTP_NOT_IMPLEMENTED, "501 Not Implemented");
+        }
+        return;
+    }
     proxy_job *job = (proxy_job *)cwist_alloc(sizeof(*job));
     if (!job) {
         proxy_set_text(res, CWIST_HTTP_INTERNAL_ERROR, "500 Internal Server Error");
