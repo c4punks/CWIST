@@ -2294,6 +2294,31 @@ static void *https_thread_handler(void *arg) {
     return NULL;
 }
 
+#if defined(__SANITIZE_THREAD__)
+#define HTTPS_ACCEPT_TSAN 1
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define HTTPS_ACCEPT_TSAN 1
+#endif
+#endif
+
+static int https_accept_blocking(int server_fd, struct sockaddr_in *addr, socklen_t *len) {
+#ifdef HTTPS_ACCEPT_TSAN
+    /* TSan defers asynchronous signal delivery until a thread leaves a
+     * blocking syscall, so wait with a bounded poll() first (#351). */
+    struct pollfd pfd = {.fd = server_fd, .events = POLLIN};
+    while (atomic_load(&g_cwist_running)) {
+        int r = poll(&pfd, 1, 100);
+        if (r > 0 || (r < 0 && errno != EINTR)) break;
+    }
+    if (!atomic_load(&g_cwist_running)) {
+        errno = EINTR;
+        return -1;
+    }
+#endif
+    return accept(server_fd, (struct sockaddr *)addr, len);
+}
+
 /**
  * @brief Accept HTTPS clients in a loop and dispatch each one to the supplied handler.
  * @param server_fd Bound listening socket descriptor.
@@ -2319,7 +2344,7 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx,
     while (atomic_load(&g_cwist_running)) {
         struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
-        int client_fd = accept(server_fd, (struct sockaddr *)&addr, &len);
+        int client_fd = https_accept_blocking(server_fd, &addr, &len);
 
         if (client_fd < 0) {
             if (errno == EINTR) continue;
