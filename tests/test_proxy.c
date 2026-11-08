@@ -109,6 +109,27 @@ static int miss_is(unsigned short port, const char *host, const char *path, int 
     return ok;
 }
 
+static void test_body_grow(void) {
+    printf("buffered body growth\n");
+    const size_t K = 1024, M = 1024 * 1024, MAX = 64 * M;
+    CHECK(cwist_proxy_body_grow(0, 1, MAX) == 4 * K, "first chunk starts at 4 KiB");
+    CHECK(cwist_proxy_body_grow(8 * K, 6 * K, MAX) == 8 * K, "fitting buffer is kept");
+    CHECK(cwist_proxy_body_grow(64 * K, 64 * K + 1, MAX) == 96 * K, "small bodies grow x1.5");
+    CHECK(cwist_proxy_body_grow(2 * M, 2 * M + 1, MAX) == 4 * M, "mid-size bodies grow x2");
+    CHECK(cwist_proxy_body_grow(8 * M, 8 * M + 1, MAX) == 32 * M, "large bodies grow x4");
+    CHECK(cwist_proxy_body_grow(32 * M, 32 * M + 1, MAX) == MAX, "growth clamps to the cap");
+    CHECK(cwist_proxy_body_grow(MAX, MAX + 1, MAX) == 0, "over the cap is refused");
+    CHECK(cwist_proxy_body_grow(0, 10 * M, MAX) >= 10 * M, "one large chunk fits at once");
+    size_t cap = 0, steps = 0;
+    for (size_t need = 1; need <= MAX; need = cap + 1) {
+        cap = cwist_proxy_body_grow(cap, need, MAX);
+        steps++;
+        if (cap == MAX) break;
+    }
+    CHECK(cap == MAX && steps < 24, "reaching 64 MiB takes few reallocs");
+    printf("       %zu growth steps to 64 MiB\n", steps);
+}
+
 static void test_rules(void) {
     printf("rule registration and resolution\n");
     cwist_proxy_reset();
@@ -259,6 +280,9 @@ static pid_t spawn(void (*fn)(void)) {
     pid_t pid = fork();
     if (pid == 0) {
         setpgid(0, 0);
+#if defined(__SANITIZE_THREAD__)
+        setenv("CWIST_WORKERS", "1", 1);
+#endif
         fn();
         _exit(0);
     }
@@ -575,46 +599,65 @@ static long tls_get(int port, const char *path, const char *groups, bool h2, cha
 #define PQ_GROUP "group=11ec" /* X25519MLKEM768 */
 #define X25519_GROUP "group=001d"
 
+static bool tls_pq_supported(void) {
+    char *b = NULL;
+    long st = tls_get(UP_PQ_PORT, "/echo", "X25519MLKEM768", false, &b);
+    bool supported = st == 200 && has(b, PQ_GROUP);
+    free(b);
+    if (!supported) printf("  skip PQ assertions: libcurl cannot negotiate X25519MLKEM768\n");
+    return supported;
+}
+
 static void test_tls_levels(void) {
     char *b = NULL;
     long st;
+    bool pq = tls_pq_supported();
 
     printf("TLS level mirroring (no promotion)\n");
-    st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", false, &b);
-    CHECK(st == 200 && has(b, "tls=0304") && has(b, PQ_GROUP),
-          "PQ client -> PQ upstream keeps hybrid key exchange");
-    free(b);
-    st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", false, &b);
-    CHECK(st == 502, "PQ client -> classical-only upstream refused (no silent downgrade)");
-    free(b);
+    if (pq) {
+        st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", false, &b);
+        CHECK(st == 200 && has(b, "tls=0304") && has(b, PQ_GROUP),
+              "PQ client -> PQ upstream keeps hybrid key exchange");
+        free(b);
+        st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", false, &b);
+        CHECK(st == 502, "PQ client -> classical-only upstream refused (no silent downgrade)");
+        free(b);
+    }
     st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519", false, &b);
     CHECK(st == 200 && has(b, "tls=0304") && has(b, X25519_GROUP),
           "classical client -> classical upstream allowed");
     free(b);
-    st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
-    CHECK(st == 200 && has(b, PQ_GROUP), "same over HTTP/2 (TLS level read from the h2 conn)");
-    free(b);
-    st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", true, &b);
-    CHECK(st == 502, "HTTP/2 PQ client -> classical-only upstream refused");
-    free(b);
-    st = tls_get(TLS_MIRROR_PORT, "/plain/echo", "X25519MLKEM768", false, &b);
+    if (pq) {
+        st = tls_get(TLS_MIRROR_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
+        CHECK(st == 200 && has(b, PQ_GROUP), "same over HTTP/2 (TLS level read from the h2 conn)");
+        free(b);
+        st = tls_get(TLS_MIRROR_PORT, "/classic/echo", "X25519MLKEM768", true, &b);
+        CHECK(st == 502, "HTTP/2 PQ client -> classical-only upstream refused");
+        free(b);
+    }
+    st = tls_get(TLS_MIRROR_PORT, "/plain/echo", "X25519", false, &b);
     CHECK(st == 200 && has(b, "tls=none") && has(b, "xfp=https"),
           "http:// target: TLS stripped, X-Forwarded-Proto https");
     free(b);
 
     printf("TLS auto promotion\n");
-    st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519", false, &b);
-    CHECK(st == 200 && has(b, PQ_GROUP), "classical client promoted to PQ upstream");
-    free(b);
+    if (pq) {
+        st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519", false, &b);
+        CHECK(st == 200 && has(b, PQ_GROUP), "classical client promoted to PQ upstream");
+        free(b);
+    }
+    /* Holds without hybrid support too: the upstream leg then fails either way. */
     st = tls_get(TLS_PROMOTE_PORT, "/classic/echo", "X25519", false, &b);
     CHECK(st == 502, "promotion refuses an upstream without PQ key exchange");
     free(b);
     st = tls_get(TLS_PROMOTE_PORT, "/plain/echo", "X25519", false, &b);
     CHECK(st == 200 && has(b, "tls=none"), "promotion still strips TLS for http:// targets");
     free(b);
-    st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
-    CHECK(st == 200 && has(b, PQ_GROUP), "front accepts PQ clients over HTTP/2");
-    free(b);
+    if (pq) {
+        st = tls_get(TLS_PROMOTE_PORT, "/pq/echo", "X25519MLKEM768", true, &b);
+        CHECK(st == 200 && has(b, PQ_GROUP), "front accepts PQ clients over HTTP/2");
+        free(b);
+    }
 }
 
 /* --- HTTP/3 front ------------------------------------------------------------ */
@@ -680,6 +723,7 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     test_path_safety();
     test_header_validation();
+    test_body_grow();
     test_rules();
 
     if (make_cert() != 0) {

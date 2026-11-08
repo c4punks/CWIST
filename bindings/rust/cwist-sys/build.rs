@@ -81,8 +81,14 @@ const SYSTEM_DEPS: &[&str] =
     &["libzstd", "libbrotlienc", "libbrotlicommon", "libbrotlidec", "libcurl", "libnghttp2"];
 
 /// Emits the link search paths and libraries from `cwist.pc`. Archives found
-/// in the pkg-config link paths (libcwist and its bundled dependencies) are
-/// linked statically, everything else as a system library.
+/// in CWIST's own directories (`libdir` and `depsdir`: libcwist and its
+/// bundled dependencies) are linked statically, everything else as a system
+/// library.
+///
+/// Only those two directories decide. `cwist.pc` requires libzstd and
+/// friends, so the probe's link paths can also hold the system library
+/// directory (pkg-config crate sets PKG_CONFIG_ALLOW_SYSTEM_LIBS), where
+/// glibc ships libm.a and libpthread.a; linking those statically fails.
 ///
 /// CWIST's own directories are searched first: they hold the bundled
 /// BoringSSL `libssl.a`/`libcrypto.a`, and another OpenSSL installed next to
@@ -107,10 +113,17 @@ fn emit_link_flags(cwist: &pkg_config::Library) {
     for dir in &search {
         println!("cargo:rustc-link-search=native={}", dir.display());
     }
+    let own: Vec<PathBuf> = ["libdir", "depsdir"]
+        .iter()
+        .filter_map(|var| pkg_config::get_variable("cwist", var).ok())
+        .filter(|dir| !dir.is_empty())
+        .map(PathBuf::from)
+        .collect();
+    let own = if own.is_empty() { cwist.link_paths.clone() } else { own };
     for lib in &cwist.libs {
         let lib = if apple && lib == "stdc++" { "c++" } else { lib.as_str() };
         let archive = format!("lib{lib}.a");
-        let kind = if cwist.link_paths.iter().any(|dir| dir.join(&archive).is_file()) {
+        let kind = if own.iter().any(|dir| dir.join(&archive).is_file()) {
             "static"
         } else {
             "dylib"
