@@ -4169,19 +4169,19 @@ static void cwist_multiport_reap_clear_clients(bool join_all) {
     pthread_mutex_lock(&g_multiport_clients_mu);
     cwist_multiport_http_client **pp = &g_multiport_clients;
     while (*pp) {
-        cwist_multiport_http_client *c = *pp;
-        bool done = atomic_load_explicit(&c->done, memory_order_acquire);
+        cwist_multiport_http_client *client = *pp;
+        bool done = atomic_load_explicit(&client->done, memory_order_acquire);
         if (!done && !join_all) {
-            pp = &c->next;
+            pp = &client->next;
             continue;
         }
-        *pp = c->next;
-        if (!done && c->client_fd >= 0) {
-            shutdown(c->client_fd, SHUT_RDWR);
+        *pp = client->next;
+        if (!done && client->client_fd >= 0) {
+            shutdown(client->client_fd, SHUT_RDWR);
         }
         pthread_mutex_unlock(&g_multiport_clients_mu);
-        pthread_join(c->tid, NULL);
-        free(c);
+        pthread_join(client->tid, NULL);
+        free(client);
         pthread_mutex_lock(&g_multiport_clients_mu);
         pp = &g_multiport_clients;
     }
@@ -4665,7 +4665,6 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     }
 
     cwist_multiport_reap_clear_clients(true);
-    cwist_http_pool_destroy();
     if (needs_https_pool) {
         https_pool_destroy();
     }
