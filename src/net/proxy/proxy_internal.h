@@ -8,6 +8,7 @@
 
 #include <cwist/net/proxy/proxy.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /** True when @p path is an origin-form path the proxy forwards unchanged. */
 bool cwist_proxy_path_is_safe(const char *path);
@@ -31,5 +32,14 @@ bool cwist_proxy_header_value_ok(const char *value);
  */
 char *cwist_proxy_resolve_url(unsigned short port, const char *host, const char *path,
                               const char *query, int *status_out);
+
+/**
+ * Next capacity for a buffered upstream body of @p cap bytes that must hold
+ * @p need. Growth scales with the body: x1.5 below 1 MiB, x2 below 8 MiB,
+ * x4 beyond, starting from 4 KiB, never past @p max.
+ * @return New capacity (>= @p need), @p cap when it already fits, or 0 when
+ *         @p need exceeds @p max.
+ */
+size_t cwist_proxy_body_grow(size_t cap, size_t need, size_t max);
 
 #endif
