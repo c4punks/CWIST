@@ -21,5 +21,5 @@ var searchData=
   ['buf_5flen_18',['buf_len',['../db/d95/structcwist__https__connection.html#a6eb0bf7e34e18b3c3e6392e43d1a5d48',1,'cwist_https_connection']]],
   ['buffer_19',['buffer',['../d7/ddf/structcwist__json__builder.html#a344bf2fc97ae0d2ea75d1f67300af8ce',1,'cwist_json_builder::buffer'],['../d4/d6b/structsession__arena.html#a96936de672d7549d4c9ce5f9dd850b5b',1,'session_arena::buffer']]],
   ['buffered_20',['buffered',['../d9/daa/structcwist__webrtc__conn.html#a6bd3e06b7be149ac68a6d8173f9e7016',1,'cwist_webrtc_conn']]],
-  ['bytes_21',['bytes',['../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d',1,'cwist_pb_field']]]
+  ['bytes_21',['bytes',['../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d',1,'cwist_pb_field::bytes'],['../d1/d6f/structcwist__http__carry.html#abccd4a7495f3ec5004238dc3de26ceda',1,'cwist_http_carry::bytes']]]
 ];

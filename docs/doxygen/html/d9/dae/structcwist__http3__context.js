@@ -1,6 +1,7 @@
 var structcwist__http3__context =
 [
     [ "allow_migration", "d9/dae/structcwist__http3__context.html#a791b3f0161b4db5aad4d822d9b8ed4c4", null ],
+    [ "async_queue", "d9/dae/structcwist__http3__context.html#aa4dc2d3ad070f9bcc4bf636e65d8e786", null ],
     [ "datagram_cb", "d9/dae/structcwist__http3__context.html#aead3a53aca2ff2f1d1a69b46f732ea96", null ],
     [ "datagram_enabled", "d9/dae/structcwist__http3__context.html#a751d83957d59560e48eda5a2f915279b", null ],
     [ "datagram_user_ctx", "d9/dae/structcwist__http3__context.html#ad01f3f1bb72329239f9a7f57e93616b9", null ],
@@ -23,6 +24,7 @@ var structcwist__http3__context =
     [ "ssl_ctx_handout", "d9/dae/structcwist__http3__context.html#addafdecfccf21388927cdc69ed091dd7", null ],
     [ "ssl_ctx_lock", "d9/dae/structcwist__http3__context.html#adae472ede3388db631c13268d0a40c5b", null ],
     [ "ticket_key", "d9/dae/structcwist__http3__context.html#aa4a24aa02618d1d5ffe11a22f9d7b4e2", null ],
+    [ "tls_groups", "d9/dae/structcwist__http3__context.html#a235a50bfb5a034787334c2716a6f12b0", null ],
     [ "udp_fd", "d9/dae/structcwist__http3__context.html#a213752bd0aa2f75b9d8e3fe1e764bc42", null ],
     [ "user_ctx", "d9/dae/structcwist__http3__context.html#a2cc515d04c26458bddeb106ef2bca285", null ],
     [ "wt_handler", "d9/dae/structcwist__http3__context.html#a13f4023bdaaa674b7f28d0b47aacebb2", null ],

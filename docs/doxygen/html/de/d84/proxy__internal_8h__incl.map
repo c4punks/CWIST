@@ -1,0 +1,18 @@
+<map id="src/net/proxy/proxy_internal.h" name="src/net/proxy/proxy_internal.h">
+<area shape="rect" id="Node000001" title="Reverse proxy internals exposed to the in&#45;tree unit tests." alt="" coords="289,5,437,45"/>
+<area shape="rect" id="Node000002" href="$d9/d76/proxy_8h.html" title="Reverse proxy: forward HTTP/1.1, HTTP/2 and HTTP/3 requests to HTTP/1.1 upstreams." alt="" coords="153,93,326,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="335,48,271,88,268,84,332,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="235,255,318,280"/>
+<area shape="poly" id="edge8_Node000001_Node000005" title=" " alt="" coords="376,45,390,77,402,119,404,165,400,187,391,208,379,223,365,235,332,253,330,249,362,231,375,219,386,205,395,186,399,164,396,120,385,79,371,47"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="302,174,377,199"/>
+<area shape="poly" id="edge9_Node000001_Node000007" title=" " alt="" coords="363,46,346,161,340,160,358,45"/>
+<area shape="rect" id="Node000003" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="84,167,227,207"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="229,121,187,159,184,155,225,117"/>
+<area shape="poly" id="edge6_Node000002_Node000005" title=" " alt="" coords="245,118,273,241,268,242,239,119"/>
+<area shape="poly" id="edge7_Node000002_Node000007" title=" " alt="" coords="256,117,315,163,312,167,252,121"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,255,76,280"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="129,209,70,249,67,245,126,205"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="186,205,249,245,246,249,183,209"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="100,255,211,280"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="158,207,158,241,153,241,153,207"/>
+</map>

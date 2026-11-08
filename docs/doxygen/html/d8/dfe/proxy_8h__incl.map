@@ -1,0 +1,14 @@
+<map id="include/cwist/net/proxy/proxy.h" name="include/cwist/net/proxy/proxy.h">
+<area shape="rect" id="Node000001" title="Reverse proxy: forward HTTP/1.1, HTTP/2 and HTTP/3 requests to HTTP/1.1 upstreams." alt="" coords="186,5,359,45"/>
+<area shape="rect" id="Node000002" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="89,93,232,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="249,48,198,87,195,83,246,43"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="235,181,318,207"/>
+<area shape="poly" id="edge5_Node000001_Node000004" title=" " alt="" coords="276,46,279,168,273,168,270,46"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="310,101,385,126"/>
+<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="291,44,330,88,326,92,287,47"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="5,181,76,207"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="133,136,71,176,68,172,130,131"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="190,131,250,171,247,176,187,136"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="100,181,211,207"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="162,134,160,168,154,167,157,133"/>
+</map>
