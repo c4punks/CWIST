@@ -365,6 +365,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http2_flow_control.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
+       src/net/proxy/proxy.c \
        src/net/http/https.c \
        src/net/http/https_upgrade_hook.c \
        src/net/http/tls_chain.c \
@@ -1430,6 +1431,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http2 \
                test_http2_prebuffer \
                test_http3 \
+               test_http3_defer \
                test_http3_client_datagram \
                test_shutdown \
                test_listen_signal_restore \
@@ -1469,6 +1471,7 @@ TEST_TARGETS = test_worker_affinity \
                test_redis \
                test_scheduler \
                test_async_defer \
+               test_proxy \
                test_async_after_shutdown \
                test_async_listener_rearm \
                test_async_file_park \
@@ -1941,6 +1944,11 @@ ifeq ($(CWIST_HTTP3),1)
 test_http3: $(LIB_NAME) tests/test_http3.c
 	$(CC) $(CFLAGS) -o test_http3 tests/test_http3.c $(LIB_NAME) $(LIBS)
 	./test_http3
+
+test_http3_defer: $(LIB_NAME) tests/test_http3_defer.c
+	$(CC) $(CFLAGS) -o test_http3_defer tests/test_http3_defer.c $(LIB_NAME) $(LIBS)
+	./test_http3_defer
+	CWIST_C1M_MODE=0 ./test_http3_defer
 
 test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_datagram.c $(LIB_NAME) $(LIBS)
@@ -2519,6 +2527,11 @@ test_http_fairness: $(LIB_NAME) tests/test_http_fairness.c
 	CWIST_TEST_HALF_CLOSE=1 ./$@
 	CWIST_TEST_HALF_CLOSE=1 CWIST_TEST_TRUNCATED=1 ./$@
 	CWIST_TEST_DESTROY_PENDING=1 ./$@
+
+test_proxy: $(LIB_NAME) tests/test_proxy.c
+	$(CC) $(CFLAGS) -o test_proxy tests/test_proxy.c $(LIB_NAME) $(LIBS)
+	./test_proxy
+	CWIST_C1M_MODE=0 ./test_proxy
 
 test_async_defer: $(LIB_NAME) tests/test_async_defer.c
 	$(CC) $(CFLAGS) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
