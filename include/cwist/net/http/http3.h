@@ -75,6 +75,9 @@ struct cwist_http3_context {
     int last_close_app_error;         /**< 0 transport, 1 application, -1 unknown */
     uint64_t last_close_code;         /**< QUIC transport or H3 application error code */
     char last_close_reason[256];      /**< Peer reason phrase, NUL-terminated */
+    /* Appended in 4.x; internal, not part of the API surface. */
+    void *async_queue; /**< Deferred-response queue of the running server loop (internal) */
+    char *tls_groups;  /**< Key-exchange groups re-applied on reload, e.g. PQC (internal) */
 };
 
 /**

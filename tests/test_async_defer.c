@@ -574,12 +574,11 @@ int main(void) {
     }
 
     /* 6. Pipeline ordering: first request defers, second must not jump ahead.
-     * C1M only: the classic pool handler keeps its recv stash on the stack of
-     * the returned frame, so pipelined bytes past a deferred request cannot be
-     * preserved there. */
-    const char *c1m_env = getenv("CWIST_C1M_MODE");
-    bool c1m = !(c1m_env && (c1m_env[0] == '0' || strcmp(c1m_env, "false") == 0));
-    if (c1m) {
+     * Both modes: C1M keeps the bytes in its receive stash; the classic pool
+     * copies them onto the async handle before the ack and resumes with them
+     * after the deferred response, instead of losing them with its stack
+     * buffer (the second request used to hang until the client gave up). */
+    {
         struct client_conn c = {.fd = connect_to_server(), .pending_len = 0};
         CHECK(c.fd >= 0, "connect for pipelining");
         if (c.fd >= 0) {
