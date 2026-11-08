@@ -33,9 +33,12 @@
  * thread through cwist_async_defer(); the QUIC engine keeps serving other
  * streams while an upstream answers.
  *
- * Limits of this version: request and response bodies are buffered (up to
- * cwist_proxy_config::max_response_bytes for responses), WebSocket upgrades
- * are answered with 501, and the upstream speaks HTTP/1.1.
+ * On HTTP/1.1 fronts (cleartext and TLS), response headers and body chunks
+ * stream to the client as they arrive from the upstream (bounded by
+ * cwist_proxy_config::max_response_bytes); HTTP/2 and HTTP/3 fronts assemble
+ * the response on the worker before handing it to the connection thread.
+ * WebSocket upgrades and CONNECT tunnels pass through as raw byte relays on
+ * cleartext HTTP/1.1 fronts (and return 501 on TLS/HTTP-2/HTTP-3 fronts).
  */
 
 #ifndef CWIST_NET_PROXY_PROXY_H
