@@ -382,12 +382,12 @@ Feature notes</h2>
 Latest benchmark run</h2>
 <p>CI regenerates this block from each benchmark run.</p>
 <p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
-<li><b>CWIST Classic pool</b>: 125506 req/s | Latency 1.82ms (P90 3.80ms, P99 6.91ms, P99.999 25.76ms) | RSS 59840KiB | Csw 1244131</li>
-<li><b>CWIST reactor</b>: 141827 req/s | Latency 2.80ms (P90 5.20ms, P99 8.20ms, P99.999 18.15ms) | RSS 22736KiB | Csw 123365</li>
-<li><b>Actix</b>: 138706 req/s | Latency 2.84ms (P90 4.95ms, P99 7.74ms, P99.999 15.87ms) | RSS 12308KiB | Csw 155742</li>
-<li><b>Axum</b>: 122094 req/s | Latency 3.13ms (P90 5.34ms, P99 7.91ms, P99.999 15.65ms) | RSS 15124KiB | Csw 244680</li>
-<li><b>Gin (Go)</b>: 93312 req/s | Latency 6.16ms (P90 14.97ms, P99 38.17ms, P99.999 84.59ms) | RSS 28184KiB | Csw 310205</li>
-<li><b>Spring Boot</b>: 60884 req/s | Latency 6.54ms (P90 9.02ms, P99 14.25ms, P99.999 59.71ms) | RSS 1275236KiB | Csw 277009</li>
+<li><b>CWIST Classic pool</b>: 187608 req/s | Latency 1.23ms (P90 2.59ms, P99 5.23ms, P99.999 22.96ms) | RSS 62812KiB | Csw 1819825</li>
+<li><b>CWIST reactor</b>: 229814 req/s | Latency 1.81ms (P90 3.71ms, P99 6.32ms, P99.999 11.41ms) | RSS 24484KiB | Csw 203363</li>
+<li><b>Actix</b>: 226931 req/s | Latency 1.83ms (P90 3.69ms, P99 6.29ms, P99.999 12.58ms) | RSS 12360KiB | Csw 252388</li>
+<li><b>Axum</b>: 194723 req/s | Latency 2.06ms (P90 3.72ms, P99 5.79ms, P99.999 11.28ms) | RSS 15832KiB | Csw 374520</li>
+<li><b>Gin (Go)</b>: 154801 req/s | Latency 4.18ms (P90 10.95ms, P99 25.91ms, P99.999 55.74ms) | RSS 28308KiB | Csw 553532</li>
+<li><b>Spring Boot</b>: 127470 req/s | Latency 3.14ms (P90 4.65ms, P99 7.20ms, P99.999 50.83ms) | RSS 1307948KiB | Csw 446887</li>
 </ul>
 <p><em>Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in <a class="el" href="d9/d15/cooperative-queuing_8md.html">docs/cooperative-queuing.md</a> and benchmarks/webserver.json; they are no longer rendered as comparison rows.</em></p>
 <p><b>Spring runtime environment</b></p>
