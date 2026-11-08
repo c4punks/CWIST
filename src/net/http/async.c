@@ -29,6 +29,7 @@
 #include <stdatomic.h>
 #include <fcntl.h>
 #include <sched.h>
+#include <stdlib.h>
 #include <string.h>
 #include <cwist/sys/platform.h>
 #ifndef CWIST_BAREMETAL
@@ -65,6 +66,9 @@ struct cwist_async {
     void *https_conn;             /* cwist_https_connection * on TLS path. */
     cwist_h2_async_queue *h2_queue; /* Per-connection queue on the H2 path. */
     uint32_t h2_stream_id;
+    cwist_http_carry *carry;      /* Classic-pool pipelined surplus (malloc). */
+    struct cwist_h3_async_queue *h3_queue; /* Engine queue on the HTTP/3 path. */
+    struct cwist_h3_pending *h3_pending;   /* Stream token on the HTTP/3 path. */
     cwist_reactor_post_t post;
 };
 
@@ -94,6 +98,29 @@ static const char *cwist_async_reason(cwist_http_status_t status) {
 
 static __thread bool t_https_deferred = false;
 
+#ifdef CWIST_HTTP3
+static __thread struct {
+    cwist_http_request *req;
+    struct cwist_h3_async_queue *q;
+    struct cwist_h3_pending *p;
+    bool deferred;
+} t_h3_target;
+
+void cwist_async_h3_begin(cwist_http_request *req, struct cwist_h3_async_queue *q,
+                          struct cwist_h3_pending *p) {
+    t_h3_target.req = req;
+    t_h3_target.q = q;
+    t_h3_target.p = p;
+    t_h3_target.deferred = false;
+}
+
+bool cwist_async_h3_end(void) {
+    bool deferred = t_h3_target.deferred;
+    memset(&t_h3_target, 0, sizeof(t_h3_target));
+    return deferred;
+}
+#endif
+
 bool cwist_async_https_take_deferred(void) {
     bool deferred = t_https_deferred;
     t_https_deferred = false;
@@ -102,6 +129,12 @@ bool cwist_async_https_take_deferred(void) {
 
 cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res) {
     if (!req || !res || res->deferred) return NULL;
+#ifdef CWIST_HTTP3
+    /* An HTTP/3 stream with no engine queue has no completion path: refuse,
+     * so the handler answers inline instead of a completion writing to a
+     * descriptor that is not this stream's. */
+    if (t_h3_target.req == req && (!t_h3_target.q || !t_h3_target.p)) return NULL;
+#endif
     cwist_async *a = cwist_alloc(sizeof(*a));
     if (!a) return NULL;
     memset(a, 0, sizeof(*a));
@@ -132,6 +165,15 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
          * completion goes through h2_queue and the h2 loop keeps the conn. */
         if (!req->h2_queue) t_https_deferred = true;
     }
+#ifdef CWIST_HTTP3
+    if (t_h3_target.req == req && t_h3_target.q && t_h3_target.p) {
+        /* Both references outlive the engine loop and the stream; the
+         * completion hands them to the queue. */
+        a->h3_queue = cwist_h3_async_queue_acquire(t_h3_target.q);
+        a->h3_pending = cwist_h3_pending_acquire(t_h3_target.p);
+        t_h3_target.deferred = true;
+    }
+#endif
     if (req->h2_queue) {
         /* Keep the queue alive until the completion has been enqueued, even
          * if the connection tears down first (teardown closes the queue and
@@ -160,8 +202,35 @@ void cwist_async_release(cwist_async *a) {
     if (a && atomic_fetch_sub_explicit(&a->refs, 1, memory_order_acq_rel) == 1) {
         cwist_async_forget_handle(a);
         pthread_mutex_destroy(&a->mu);
+        free(a->carry);
+#ifdef CWIST_HTTP3
+        /* A handle released without completing (cannot happen through the
+         * public API, which always completes once) still drops its refs. */
+        cwist_h3_pending_release(a->h3_pending);
+        cwist_h3_async_queue_release(a->h3_queue);
+#endif
         cwist_free(a);
     }
+}
+
+void cwist_async_set_carry(cwist_async *a, const char *bytes, size_t len) {
+    if (!a || !bytes || len == 0) return;
+    /* malloc, not cwist_alloc: the completion thread frees it, so it must not
+     * belong to the dispatch thread's GC scope. */
+    cwist_http_carry *c = (cwist_http_carry *)malloc(sizeof(*c) + len);
+    if (!c) {
+        pthread_mutex_lock(&a->mu);
+        a->keep_alive = false;
+        pthread_mutex_unlock(&a->mu);
+        return;
+    }
+    c->app = a->app;
+    c->len = len;
+    memcpy(c->bytes, bytes, len);
+    pthread_mutex_lock(&a->mu);
+    free(a->carry);
+    a->carry = c;
+    pthread_mutex_unlock(&a->mu);
 }
 
 void cwist_async_dispatch_ack(cwist_async *a) {
@@ -216,6 +285,22 @@ static void cwist_async_complete(cwist_async *a) {
         return;
     }
 
+#ifdef CWIST_HTTP3
+    if (a->h3_queue) {
+        /* Same rule as HTTP/2: the engine thread alone writes the stream.
+         * Enqueueing transfers req/res, legal only after the ack. */
+        while (!atomic_load_explicit(&a->ack, memory_order_acquire)) sched_yield();
+        struct cwist_h3_pending *p = a->h3_pending;
+        a->h3_pending = NULL;
+        cwist_h3_async_queue_enqueue(a->h3_queue, p, a->req, a->final_res, a->res,
+                                     a->final_res_owned);
+        cwist_h3_async_queue_release(a->h3_queue);
+        a->h3_queue = NULL;
+        cwist_async_release(a);
+        return;
+    }
+#endif
+
     if (a->https_conn) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
         cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
@@ -247,7 +332,14 @@ static void cwist_async_complete(cwist_async *a) {
         bool ok = err.error.err_i16 == 0;
 
         if (keep && ok && a->app) {
-            cwist_http_pool_rearm_current(a->client_fd, cwist_app_http_handler, a->app);
+            if (a->carry) {
+                /* Pipelined requests read before the defer resume first. */
+                cwist_http_carry *carry = a->carry;
+                a->carry = NULL;
+                cwist_http_pool_rearm_current(a->client_fd, cwist_app_http_handler_resume, carry);
+            } else {
+                cwist_http_pool_rearm_current(a->client_fd, cwist_app_http_handler, a->app);
+            }
         } else {
             close(a->client_fd);
         }
