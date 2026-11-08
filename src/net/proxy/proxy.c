@@ -1156,7 +1156,7 @@ static void proxy_tunnel_free(proxy_tunnel *t) {
     if (t->client_fd >= 0) close(t->client_fd);
     if (t->curl) curl_easy_cleanup(t->curl);
     cwist_curl_global_release();
-    free(t);
+    cwist_free(t);
 }
 
 /* curl_easy_send the whole buffer (TLS-aware), waiting on EAGAIN. */
@@ -1311,13 +1311,14 @@ static void proxy_tunnel_start(cwist_http_request *req, cwist_http_response *res
         }
     }
 
-    proxy_tunnel *t = (proxy_tunnel *)malloc(sizeof(*t));
+    proxy_tunnel *t = (proxy_tunnel *)cwist_alloc(sizeof(*t));
     if (!t) {
         curl_easy_cleanup(curl);
         cwist_curl_global_release();
         proxy_set_text(res, CWIST_HTTP_INTERNAL_ERROR, "500 Internal Server Error");
         return;
     }
+    cwist_gc_scope_disown(t);
     t->client_fd = req->client_fd;
     t->curl = curl;
     t->up_fd = up_fd;
@@ -1555,6 +1556,10 @@ static void proxy_handler(cwist_http_request *req, cwist_http_response *res) {
             proxy_connect_passthrough(req, res);
         } else {
             proxy_set_text(res, CWIST_HTTP_NOT_IMPLEMENTED, "501 Not Implemented");
+        }
+        if (!req->ws_async_handoff) {
+            req->keep_alive = false;
+            res->keep_alive = false;
         }
         return;
     }
