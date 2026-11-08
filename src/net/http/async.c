@@ -65,6 +65,8 @@ struct cwist_async {
     /* Claim winner only until PUBLISHED. */
     cwist_http_response *final_res;
     bool final_res_owned;         /* final_res came from respond_with. */
+    bool streamed;                /* Response streamed incrementally by winner. */
+    bool stream_ok;               /* Stream completed without write errors. */
     bool r_apply;                 /* Apply r_* onto res at delivery. */
     cwist_http_status_t r_status;
     const char *r_body;           /* NULL keeps the handler's body. */
@@ -352,10 +354,15 @@ static void cwist_async_complete(cwist_async *a) {
 
     if (a->https_conn) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
-        cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
-                                ? cwist_https_send_response_head(conn, res)
-                                : cwist_https_send_response(conn, res);
-        bool ok = cwist_error_is_ok(&err);
+        bool ok;
+        if (a->streamed) {
+            ok = a->stream_ok;
+        } else {
+            cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
+                                    ? cwist_https_send_response_head(conn, res)
+                                    : cwist_https_send_response(conn, res);
+            ok = cwist_error_is_ok(&err);
+        }
 
         if (keep && ok && a->app && a->app->ssl_ctx && a->app->https_request_handler) {
             conn->deferred = false;
@@ -369,16 +376,26 @@ static void cwist_async_complete(cwist_async *a) {
          * more, so close it. */
         cwist_http_async_close_orphan(a->client_fd, a->conn);
     } else if (a->reactor) {
-        /* Resumable write: on a partial send the remainder is parked on a
-         * POLLOUT slot and the reactor thread is freed immediately; the
-         * parked callback performs the rearm/close when the drain ends. */
-        cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn, keep,
-                                       a->req && a->req->method == CWIST_HTTP_HEAD);
+        if (a->streamed) {
+            cwist_http_async_finish_stream(a->client_fd, a->reactor, a->conn,
+                                           keep && a->stream_ok);
+        } else {
+            /* Resumable write: on a partial send the remainder is parked on a
+             * POLLOUT slot and the reactor thread is freed immediately; the
+             * parked callback performs the rearm/close when the drain ends. */
+            cwist_http_async_send_response(a->client_fd, res, a->reactor, a->conn, keep,
+                                           a->req && a->req->method == CWIST_HTTP_HEAD);
+        }
     } else {
-        cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
-                                ? cwist_http_send_response_head(a->client_fd, res)
-                                : cwist_http_send_response(a->client_fd, res);
-        bool ok = err.error.err_i16 == 0;
+        bool ok;
+        if (a->streamed) {
+            ok = a->stream_ok;
+        } else {
+            cwist_error_t err = (a->req && a->req->method == CWIST_HTTP_HEAD)
+                                    ? cwist_http_send_response_head(a->client_fd, res)
+                                    : cwist_http_send_response(a->client_fd, res);
+            ok = err.error.err_i16 == 0;
+        }
 
         if (keep && ok && a->app) {
             if (a->carry) {
@@ -502,4 +519,90 @@ bool cwist_async_abort(cwist_async *a, cwist_http_status_t status) {
     cwist_async_set_result(a, status, reason, strlen(reason), "text/plain", NULL);
     if (cwist_async_publish(a, false)) cwist_async_deliver(a);
     return true;
+}
+
+bool cwist_async_can_stream(const cwist_async *a) {
+    if (!a || a->h2_queue) return false;
+#ifdef CWIST_HTTP3
+    if (a->h3_queue) return false;
+#endif
+    return a->https_conn != NULL || a->client_fd >= 0;
+}
+
+bool cwist_async_is_streamed(const cwist_async *a) {
+    return a && a->streamed;
+}
+
+bool cwist_async_stream_start(cwist_async *a, cwist_http_response *res, bool chunked) {
+    if (!cwist_async_can_stream(a) || !res) return false;
+    cwist_async_wait_dispatched(a);
+    if (!cwist_async_claim(a)) return false;
+    a->streamed = true;
+    a->stream_ok = false;
+    a->final_res = res;
+    a->final_res_owned = res != a->res;
+    cwist_http_async_disown_response(res);
+
+    bool keep = a->keep_alive && atomic_load(&g_cwist_running);
+    res->keep_alive = keep;
+    res->stream_mode = chunked;
+
+    if (a->https_conn) {
+        cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
+        cwist_error_t err = cwist_https_send_response_head(conn, res);
+        a->stream_ok = cwist_error_is_ok(&err);
+    } else {
+        cwist_error_t err = cwist_http_send_response_head(a->client_fd, res);
+        a->stream_ok = (err.error.err_i16 == 0);
+    }
+    return a->stream_ok;
+}
+
+bool cwist_async_stream_write(cwist_async *a, const void *data, size_t len, bool chunked) {
+    if (!a || !a->streamed || !a->stream_ok) return false;
+    if (len == 0) return true;
+    if (!data) {
+        a->stream_ok = false;
+        return false;
+    }
+    if (a->https_conn) {
+        cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
+        if (chunked) {
+            char hdr[24];
+            int hlen = snprintf(hdr, sizeof(hdr), "%zx\r\n", len);
+            if (hlen <= 0 || (size_t)hlen >= sizeof(hdr) ||
+                cwist_https_write_raw(conn, hdr, (size_t)hlen) != 0 ||
+                cwist_https_write_raw(conn, data, len) != 0 ||
+                cwist_https_write_raw(conn, "\r\n", 2) != 0) {
+                a->stream_ok = false;
+                return false;
+            }
+        } else if (cwist_https_write_raw(conn, data, len) != 0) {
+            a->stream_ok = false;
+            return false;
+        }
+    } else {
+        int rc = chunked ? cwist_http_write_chunk(a->client_fd, data, len)
+                         : cwist_http_write_raw(a->client_fd, data, len);
+        if (rc != 0) {
+            a->stream_ok = false;
+            return false;
+        }
+    }
+    return true;
+}
+
+void cwist_async_stream_finish(cwist_async *a, bool ok, bool chunked) {
+    if (!a || !a->streamed) return;
+    bool final_ok = ok && a->stream_ok;
+    if (final_ok && chunked) {
+        if (a->https_conn) {
+            cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
+            if (cwist_https_write_raw(conn, "0\r\n\r\n", 5) != 0) final_ok = false;
+        } else {
+            if (cwist_http_write_raw(a->client_fd, "0\r\n\r\n", 5) != 0) final_ok = false;
+        }
+    }
+    a->stream_ok = final_ok;
+    if (cwist_async_publish(a, final_ok)) cwist_async_deliver(a);
 }

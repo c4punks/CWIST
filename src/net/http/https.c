@@ -2275,6 +2275,15 @@ cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
     return err;
 }
 
+int cwist_https_write_raw(cwist_https_connection *conn, const void *buf, size_t len) {
+    if (!conn || !conn->ssl) return -1;
+    if (len == 0) return 0;
+    if (!buf) return -1;
+    cwist_ssl_write_budget write_budget;
+    cwist_ssl_write_budget_init(&write_budget);
+    return cwist_ssl_write_all(conn, (const char *)buf, len, &write_budget);
+}
+
 /**
  * @brief Worker entry point that performs the TLS handshake before dispatching.
  * @param arg Thread payload containing the accepted socket and dispatch callback.
