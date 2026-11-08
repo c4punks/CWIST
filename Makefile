@@ -30,7 +30,7 @@ CURL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libcurl 2>/dev/null)
 NGHTTP2_CFLAGS := $(shell $(PKG_CONFIG) --cflags libnghttp2 2>/dev/null)
 BROTLI_CFLAGS := $(shell $(PKG_CONFIG) --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 
-INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS) $(ZSTD_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
 COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
@@ -140,6 +140,7 @@ NGHTTP2_LIBS := $(shell $(PKG_CONFIG) --libs libnghttp2 2>/dev/null)
 BROTLI_LIBS := $(shell $(PKG_CONFIG) --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 # zstd via pkg-config so Homebrew's non-standard lib path (-L/opt/homebrew/...)
 # is picked up on macOS; fall back to a bare -lzstd elsewhere.
+ZSTD_CFLAGS := $(shell $(PKG_CONFIG) --cflags libzstd 2>/dev/null)
 ZSTD_LIBS := $(shell $(PKG_CONFIG) --libs libzstd 2>/dev/null)
 ifeq ($(strip $(ZSTD_LIBS)),)
 ZSTD_LIBS = -lzstd
