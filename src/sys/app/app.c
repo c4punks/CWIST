@@ -4149,14 +4149,43 @@ cwist_app *cwist_multiport_get_app(cwist_app **app_ref, unsigned short port) {
 typedef struct cwist_multiport_http_client {
     int client_fd;
     cwist_app *app;
+    pthread_t tid;
+    _Atomic bool done;
+    struct cwist_multiport_http_client *next;
 } cwist_multiport_http_client;
+
+static pthread_mutex_t g_multiport_clients_mu = PTHREAD_MUTEX_INITIALIZER;
+static cwist_multiport_http_client *g_multiport_clients = NULL;
 
 static void *cwist_multiport_http_client_thread(void *arg) {
     cwist_multiport_http_client *client = (cwist_multiport_http_client *)arg;
     if (!client) return NULL;
     cwist_app_http_handler(client->client_fd, client->app);
-    free(client);
+    atomic_store_explicit(&client->done, true, memory_order_release);
     return NULL;
+}
+
+static void cwist_multiport_reap_clear_clients(bool join_all) {
+    pthread_mutex_lock(&g_multiport_clients_mu);
+    cwist_multiport_http_client **pp = &g_multiport_clients;
+    while (*pp) {
+        cwist_multiport_http_client *c = *pp;
+        bool done = atomic_load_explicit(&c->done, memory_order_acquire);
+        if (!done && !join_all) {
+            pp = &c->next;
+            continue;
+        }
+        *pp = c->next;
+        if (!done && c->client_fd >= 0) {
+            shutdown(c->client_fd, SHUT_RDWR);
+        }
+        pthread_mutex_unlock(&g_multiport_clients_mu);
+        pthread_join(c->tid, NULL);
+        free(c);
+        pthread_mutex_lock(&g_multiport_clients_mu);
+        pp = &g_multiport_clients;
+    }
+    pthread_mutex_unlock(&g_multiport_clients_mu);
 }
 
 static int cwist_multiport_add_port(unsigned short *ports, size_t *count, unsigned short port) {
@@ -4187,6 +4216,8 @@ static void cwist_multiport_close_all(struct pollfd *pfds, size_t count) {
 }
 
 static int cwist_multiport_start_clear_client(int client_fd, cwist_app *app) {
+    cwist_multiport_reap_clear_clients(false);
+
     cwist_multiport_http_client *payload = malloc(sizeof(*payload));
     if (!payload) {
         close(client_fd);
@@ -4195,14 +4226,19 @@ static int cwist_multiport_start_clear_client(int client_fd, cwist_app *app) {
 
     payload->client_fd = client_fd;
     payload->app = app;
+    atomic_store_explicit(&payload->done, false, memory_order_relaxed);
+    payload->next = NULL;
 
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, cwist_multiport_http_client_thread, payload) != 0) {
+    pthread_mutex_lock(&g_multiport_clients_mu);
+    if (pthread_create(&payload->tid, NULL, cwist_multiport_http_client_thread, payload) != 0) {
+        pthread_mutex_unlock(&g_multiport_clients_mu);
         close(client_fd);
         free(payload);
         return -1;
     }
-    pthread_detach(tid);
+    payload->next = g_multiport_clients;
+    g_multiport_clients = payload;
+    pthread_mutex_unlock(&g_multiport_clients_mu);
     return 0;
 }
 
@@ -4628,6 +4664,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
         }
     }
 
+    cwist_multiport_reap_clear_clients(true);
+    cwist_http_pool_destroy();
     if (needs_https_pool) {
         https_pool_destroy();
     }

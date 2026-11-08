@@ -17,6 +17,7 @@
 #include <cwist/sys/job/scheduler.h>
 
 #include "proxy_internal.h"
+#include "../http/async_internal.h"
 #include "../http/curl_global.h"
 #include "../http/tls_info.h"
 #include "../../sys/app/app_route_internal.h"
@@ -546,7 +547,7 @@ typedef struct proxy_job {
     const char *method; /* static string */
     bool head;
     struct curl_slist *headers;
-    char *body;
+    const char *body; /* borrowed from req->body->data; req outlives proxy_execute */
     size_t body_len;
     unsigned short front_port;
     bool front_h3;
@@ -559,8 +560,24 @@ static void proxy_job_free(proxy_job *job) {
     if (!job) return;
     cwist_free(job->url);
     curl_slist_free_all(job->headers);
-    cwist_free(job->body);
     cwist_free(job);
+}
+
+typedef struct proxy_req_stream {
+    const char *data;
+    size_t len;
+    size_t off;
+} proxy_req_stream;
+
+static size_t proxy_upstream_read_cb(char *buffer, size_t size, size_t nitems, void *instream) {
+    proxy_req_stream *s = (proxy_req_stream *)instream;
+    size_t cap = size * nitems;
+    size_t rem = s->len - s->off;
+    if (rem == 0 || cap == 0) return 0;
+    size_t n = rem < cap ? rem : cap;
+    memcpy(buffer, s->data + s->off, n);
+    s->off += n;
+    return n;
 }
 
 typedef struct proxy_upstream_res {
@@ -572,18 +589,85 @@ typedef struct proxy_upstream_res {
     size_t max;
     bool too_big;
     bool bad_header;
+    bool has_clen;
+    size_t clen;
+    bool has_te;
+    bool can_stream;
+    bool stream_started;
+    bool stream_chunked;
+    bool stream_error;
+    bool bodyless;
+    proxy_job *job;
+    cwist_http_response *res;
 } proxy_upstream_res;
+
+static void proxy_apply_alt_svc(cwist_http_response *res, unsigned short port, bool front_h3);
+
+static bool proxy_parse_clen(const char *s, size_t *out) {
+    if (!s || !s[0]) return false;
+    size_t v = 0;
+    for (size_t i = 0; s[i]; i++) {
+        if (s[i] < '0' || s[i] > '9') return false;
+        size_t d = (size_t)(s[i] - '0');
+        if (v > (SIZE_MAX - d) / 10) return false;
+        v = v * 10 + d;
+    }
+    *out = v;
+    return true;
+}
+
+static bool proxy_prepare_response(proxy_upstream_res *u, proxy_job *job, cwist_http_response *res,
+                                   bool keep_clen) {
+    proxy_conn_tokens tokens;
+    if (!proxy_collect_connection_tokens(u->headers, &tokens)) return false;
+
+    cwist_http_header_free_all(res->headers);
+    res->headers = NULL;
+    res->status_code = (cwist_http_status_t)u->status;
+    for (cwist_http_header_node *h = u->headers; h; h = h->next) {
+        const char *k = h->key->data;
+        if (proxy_in_list(k_proxy_hop_by_hop, k) || proxy_in_tokens(&tokens, k)) continue;
+        if (strcasecmp(k, "alt-svc") == 0) continue;
+        if (!keep_clen && strcasecmp(k, "content-length") == 0) continue;
+        cwist_http_header_add(&res->headers, k, h->value->data);
+    }
+    cwist_http_header_free_all(u->headers);
+    u->headers = NULL;
+    proxy_apply_alt_svc(res, job->front_port, job->front_h3);
+    return true;
+}
 
 static size_t proxy_upstream_header_cb(char *ptr, size_t size, size_t nmemb, void *userp) {
     proxy_upstream_res *u = (proxy_upstream_res *)userp;
     size_t n = size * nmemb;
     size_t len = n;
     while (len > 0 && (ptr[len - 1] == '\n' || ptr[len - 1] == '\r')) len--;
-    if (len == 0) return n;
+    if (len == 0) {
+        if (u->can_stream && !u->stream_started && !u->bad_header && !u->too_big &&
+            u->status >= 200 && u->status <= 999) {
+            u->bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(u->status) || u->job->head;
+            bool fixed_clen = !u->bodyless && u->has_clen && !u->has_te;
+            u->stream_chunked = !u->bodyless && !fixed_clen;
+            bool keep_clen = u->job->head || u->status == 304 || fixed_clen;
+            if (!proxy_prepare_response(u, u->job, u->res, keep_clen)) {
+                u->bad_header = true;
+                return 0;
+            }
+            if (!cwist_async_stream_start(u->job->async, u->res, u->stream_chunked)) {
+                u->stream_error = true;
+                return 0;
+            }
+            u->stream_started = true;
+        }
+        return n;
+    }
     if (len > 5 && strncmp(ptr, "HTTP/", 5) == 0) {
         /* New status line (interim 1xx or the final one): restart the block. */
         cwist_http_header_free_all(u->headers);
         u->headers = NULL;
+        u->has_clen = false;
+        u->clen = 0;
+        u->has_te = false;
         const char *sp = memchr(ptr, ' ', len);
         if (!sp || (size_t)(sp - ptr) + 4 > len) {
             u->bad_header = true;
@@ -625,7 +709,22 @@ static size_t proxy_upstream_header_cb(char *ptr, size_t size, size_t nmemb, voi
     if (!cwist_proxy_header_name_ok(name) || !cwist_proxy_header_value_ok(value)) {
         u->bad_header = true;
     } else {
-        cwist_http_header_add(&u->headers, name, value);
+        if (strcasecmp(name, "content-length") == 0) {
+            size_t clen = 0;
+            if (!proxy_parse_clen(value, &clen) || (u->has_clen && u->clen != clen)) {
+                u->bad_header = true;
+            } else if (clen > u->max) {
+                u->too_big = true;
+                cwist_free(value);
+                return 0;
+            } else {
+                u->has_clen = true;
+                u->clen = clen;
+            }
+        } else if (strcasecmp(name, "transfer-encoding") == 0) {
+            u->has_te = true;
+        }
+        if (!u->bad_header) cwist_http_header_add(&u->headers, name, value);
     }
     cwist_free(value);
     return n;
@@ -658,9 +757,23 @@ size_t cwist_proxy_body_grow(size_t cap, size_t need, size_t max) {
 static size_t proxy_upstream_write_cb(void *data, size_t size, size_t nmemb, void *userp) {
     proxy_upstream_res *u = (proxy_upstream_res *)userp;
     size_t n = size * nmemb;
+    if (n == 0) return 0;
     if (n > u->max - u->len) {
         u->too_big = true;
         return 0; /* aborts the transfer */
+    }
+    if (u->stream_started) {
+        if (!u->bodyless && !u->stream_chunked && u->len + n > u->clen) {
+            u->stream_error = true;
+            return 0;
+        }
+        u->len += n;
+        if (u->bodyless) return n;
+        if (!cwist_async_stream_write(u->job->async, data, n, u->stream_chunked)) {
+            u->stream_error = true;
+            return 0;
+        }
+        return n;
     }
     if (u->len + n > u->cap) {
         size_t cap = cwist_proxy_body_grow(u->cap, u->len + n, u->max);
@@ -716,6 +829,15 @@ static void proxy_execute(proxy_job *job, cwist_http_response *res) {
     proxy_upstream_res u;
     memset(&u, 0, sizeof(u));
     u.max = g_proxy_cfg.max_response_bytes;
+    u.can_stream = cwist_async_can_stream(job->async);
+    u.job = job;
+    u.res = res;
+
+    proxy_req_stream rstream = {
+        .data = job->body ? job->body : "",
+        .len = job->body_len,
+        .off = 0,
+    };
 
     curl_easy_setopt(curl, CURLOPT_URL, job->url);
 #if LIBCURL_VERSION_NUM >= 0x075500 /* CURLOPT_PROTOCOLS_STR is an enum, not a macro */
@@ -750,8 +872,10 @@ static void proxy_execute(proxy_job *job, cwist_http_response *res) {
         curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
     } else if (job->body_len > 0 || strcmp(job->method, "POST") == 0 ||
                strcmp(job->method, "PUT") == 0 || strcmp(job->method, "PATCH") == 0) {
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, job->body ? job->body : "");
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)job->body_len);
+        curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+        curl_easy_setopt(curl, CURLOPT_READFUNCTION, proxy_upstream_read_cb);
+        curl_easy_setopt(curl, CURLOPT_READDATA, &rstream);
+        curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)job->body_len);
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, job->method);
     } else if (strcmp(job->method, "GET") != 0) {
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, job->method);
@@ -760,6 +884,18 @@ static void proxy_execute(proxy_job *job, cwist_http_response *res) {
     CURLcode cc = curl_easy_perform(curl);
     /* Drop references to job/stack state before the handle is reused. */
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, NULL);
+    curl_easy_setopt(curl, CURLOPT_READDATA, NULL);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, NULL);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, NULL);
+
+    if (cwist_async_is_streamed(job->async)) {
+        bool ok = (cc == CURLE_OK) && !u.too_big && !u.bad_header && !u.stream_error &&
+                  u.stream_started && (u.bodyless || u.stream_chunked || u.len == u.clen);
+        cwist_http_header_free_all(u.headers);
+        cwist_free(u.body);
+        cwist_async_stream_finish(job->async, ok, ok && u.stream_chunked);
+        return;
+    }
 
     if (cc != CURLE_OK || u.too_big || u.bad_header || u.status < 200 || u.status > 999) {
         bool timeout = (cc == CURLE_OPERATION_TIMEDOUT);
@@ -773,31 +909,15 @@ static void proxy_execute(proxy_job *job, cwist_http_response *res) {
         return;
     }
 
-    proxy_conn_tokens tokens;
-    bool tokens_ok = proxy_collect_connection_tokens(u.headers, &tokens);
-    if (!tokens_ok) {
+    /* Keep Content-Length where no body follows it, so HEAD and 304 stay
+     * truthful; elsewhere the front writer computes it from the body. */
+    bool keep_clen = job->head || u.status == 304;
+    if (!proxy_prepare_response(&u, job, res, keep_clen)) {
         cwist_http_header_free_all(u.headers);
         cwist_free(u.body);
         proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
         return;
     }
-
-    cwist_http_header_free_all(res->headers);
-    res->headers = NULL;
-    res->status_code = (cwist_http_status_t)u.status;
-    /* Keep Content-Length where no body follows it, so HEAD and 304 stay
-     * truthful; elsewhere the front writer computes it from the body. */
-    bool keep_clen = job->head || u.status == 304;
-    for (cwist_http_header_node *h = u.headers; h; h = h->next) {
-        const char *k = h->key->data;
-        if (proxy_in_list(k_proxy_hop_by_hop, k) || proxy_in_tokens(&tokens, k)) continue;
-        if (strcasecmp(k, "alt-svc") == 0) continue;
-        if (!keep_clen && strcasecmp(k, "content-length") == 0) continue;
-        cwist_http_header_add(&res->headers, k, h->value->data);
-    }
-    cwist_http_header_free_all(u.headers);
-
-    proxy_apply_alt_svc(res, job->front_port, job->front_h3);
 
     if (u.len > 0 && !job->head) {
         cwist_gc_scope_disown(u.body);
@@ -834,7 +954,9 @@ static void proxy_job_run(void *arg) {
         cwist_async_abort(a, CWIST_HTTP_BAD_GATEWAY);
     } else {
         proxy_execute(job, res);
-        if (!cwist_async_respond_with(a, res)) cwist_http_response_destroy(res);
+        if (!cwist_async_is_streamed(a)) {
+            if (!cwist_async_respond_with(a, res)) cwist_http_response_destroy(res);
+        }
     }
     cwist_async_release(a);
     proxy_job_free(job);
@@ -1005,24 +1127,23 @@ static int proxy_build_job(cwist_http_request *req, proxy_job *job) {
     }
 
     if (req->body && req->body->data && req->body->size > 0) {
-        job->body = (char *)cwist_alloc(req->body->size);
-        if (!job->body) return CWIST_HTTP_INTERNAL_ERROR;
-        memcpy(job->body, req->body->data, req->body->size);
+        job->body = req->body->data;
         job->body_len = req->body->size;
     }
     return 0;
 }
 
-/* --- WebSocket passthrough (raw tunnel, cleartext HTTP/1.1 front only) ------
+/* --- WebSocket & CONNECT passthrough (raw tunnel, cleartext HTTP/1.1 front) --
  *
- * A WebSocket upgrade cannot go through the buffered curl exchange: once the
- * handshake completes the connection is a bidirectional byte stream for the
- * life of the session. We dial the rule-resolved upstream with curl in
- * CONNECT_ONLY mode (which also performs TLS for wss://), replay the client's
- * handshake request, then hand the client fd to a relay thread that pumps
- * bytes both ways until either side closes. This only applies to a cleartext
- * HTTP/1.1 front: a TLS/HTTP-2/HTTP-3 front fd is not a raw byte stream, so
- * those keep returning 501 (handled in proxy_build_job). */
+ * A WebSocket upgrade or CONNECT tunnel cannot go through the curl HTTP
+ * exchange: once established the connection is a bidirectional byte stream for
+ * the life of the session. We dial the rule-resolved upstream with curl in
+ * CONNECT_ONLY mode (which also performs TLS for https:// targets), complete
+ * the handshake (replay the upgrade for WebSocket, or send 200 Connection
+ * Established for CONNECT), then hand the client fd to a relay thread that
+ * pumps bytes both ways until either side closes. This only applies to a
+ * cleartext HTTP/1.1 front: a TLS/HTTP-2/HTTP-3 front fd is not a raw byte
+ * stream, so those return 501. */
 
 typedef struct proxy_tunnel {
     int client_fd; /* owned by the relay once started */
@@ -1123,6 +1244,97 @@ static void *proxy_tunnel_run(void *arg) {
     }
     proxy_tunnel_free(t);
     return NULL;
+}
+
+/* Dial @p url in CONNECT_ONLY mode, taking ownership of @p url. On success
+ * holds one cwist_curl_global_acquire() reference owned by the caller. */
+static bool proxy_tunnel_dial(cwist_http_request *req, char *url, CURL **curl_out,
+                              curl_socket_t *up_fd_out) {
+    proxy_job tls_probe;
+    memset(&tls_probe, 0, sizeof(tls_probe));
+    tls_probe.url = url;
+    proxy_set_upstream_tls(req, &tls_probe);
+
+    cwist_curl_global_acquire();
+    CURL *curl = curl_easy_init();
+    if (!curl) {
+        cwist_curl_global_release();
+        cwist_free(url);
+        return false;
+    }
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, (long)g_proxy_cfg.connect_timeout_ms);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    if (tls_probe.upstream_tls_min != CURL_SSLVERSION_DEFAULT) {
+        curl_easy_setopt(curl, CURLOPT_SSLVERSION, tls_probe.upstream_tls_min);
+    }
+    if (tls_probe.upstream_pq_only) {
+        curl_easy_setopt(curl, CURLOPT_SSL_EC_CURVES, PROXY_PQ_GROUPS);
+    }
+    if (g_proxy_cfg.upstream_ca_path) {
+        curl_easy_setopt(curl, CURLOPT_CAINFO, g_proxy_cfg.upstream_ca_path);
+    }
+    cwist_free(url); /* curl copied CURLOPT_URL */
+
+    if (curl_easy_perform(curl) != CURLE_OK) {
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        return false;
+    }
+    curl_socket_t up_fd = CURL_SOCKET_BAD;
+    if (curl_easy_getinfo(curl, CURLINFO_ACTIVESOCKET, &up_fd) != CURLE_OK ||
+        up_fd == CURL_SOCKET_BAD) {
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        return false;
+    }
+    *curl_out = curl;
+    *up_fd_out = up_fd;
+    return true;
+}
+
+/* Hand @p req->client_fd and @p curl over to a detached relay thread. */
+static void proxy_tunnel_start(cwist_http_request *req, cwist_http_response *res, CURL *curl,
+                               curl_socket_t up_fd) {
+    /* Flush any bytes the C1M recv stash already read past the request head. */
+    cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
+    if (aconn && aconn->rbuf && aconn->len > 0) {
+        bool sent = proxy_tunnel_up_send(curl, up_fd, aconn->rbuf, aconn->len);
+        aconn->len = 0;
+        aconn->rbuf[0] = '\0';
+        if (!sent) {
+            curl_easy_cleanup(curl);
+            cwist_curl_global_release();
+            proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
+            return;
+        }
+    }
+
+    proxy_tunnel *t = (proxy_tunnel *)malloc(sizeof(*t));
+    if (!t) {
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        proxy_set_text(res, CWIST_HTTP_INTERNAL_ERROR, "500 Internal Server Error");
+        return;
+    }
+    t->client_fd = req->client_fd;
+    t->curl = curl;
+    t->up_fd = up_fd;
+    int fl = fcntl(t->client_fd, F_GETFL, 0);
+    if (fl >= 0) fcntl(t->client_fd, F_SETFL, fl | O_NONBLOCK);
+
+    pthread_t tid;
+    if (pthread_create(&tid, NULL, proxy_tunnel_run, t) != 0) {
+        t->client_fd = -1; /* fd still owned by the HTTP layer on failure */
+        proxy_tunnel_free(t);
+        proxy_set_text(res, CWIST_HTTP_SERVICE_UNAVAILABLE, "503 Service Unavailable");
+        return;
+    }
+    pthread_detach(tid);
+
+    /* The relay owns the fd now. Signal the serve loop to detach. */
+    req->ws_async_handoff = true;
 }
 
 /* True when @p req arrived as a WebSocket upgrade. */
@@ -1227,12 +1439,6 @@ static void proxy_ws_passthrough(cwist_http_request *req, cwist_http_response *r
         return;
     }
 
-    /* TLS floor mirroring, reusing the buffered path's policy. */
-    proxy_job tls_probe;
-    memset(&tls_probe, 0, sizeof(tls_probe));
-    tls_probe.url = url;
-    proxy_set_upstream_tls(req, &tls_probe);
-
     char xff[INET6_ADDRSTRLEN];
     if (!proxy_peer_ip(req->client_fd, xff, sizeof(xff))) xff[0] = '\0';
 
@@ -1245,40 +1451,9 @@ static void proxy_ws_passthrough(cwist_http_request *req, cwist_http_response *r
         return;
     }
 
-    cwist_curl_global_acquire();
-    CURL *curl = curl_easy_init();
-    if (!curl) {
-        cwist_curl_global_release();
-        cwist_free(url);
-        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
-        return;
-    }
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_CONNECT_ONLY, 1L);
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, (long)g_proxy_cfg.connect_timeout_ms);
-    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-    if (tls_probe.upstream_tls_min != CURL_SSLVERSION_DEFAULT) {
-        curl_easy_setopt(curl, CURLOPT_SSLVERSION, tls_probe.upstream_tls_min);
-    }
-    if (tls_probe.upstream_pq_only) {
-        curl_easy_setopt(curl, CURLOPT_SSL_EC_CURVES, PROXY_PQ_GROUPS);
-    }
-    if (g_proxy_cfg.upstream_ca_path) {
-        curl_easy_setopt(curl, CURLOPT_CAINFO, g_proxy_cfg.upstream_ca_path);
-    }
-    cwist_free(url); /* curl copied CURLOPT_URL */
-
-    if (curl_easy_perform(curl) != CURLE_OK) {
-        curl_easy_cleanup(curl);
-        cwist_curl_global_release();
-        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
-        return;
-    }
+    CURL *curl = NULL;
     curl_socket_t up_fd = CURL_SOCKET_BAD;
-    if (curl_easy_getinfo(curl, CURLINFO_ACTIVESOCKET, &up_fd) != CURLE_OK ||
-        up_fd == CURL_SOCKET_BAD) {
-        curl_easy_cleanup(curl);
-        cwist_curl_global_release();
+    if (!proxy_tunnel_dial(req, url, &curl, &up_fd)) {
         proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
         return;
     }
@@ -1288,35 +1463,101 @@ static void proxy_ws_passthrough(cwist_http_request *req, cwist_http_response *r
         proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
         return;
     }
+    proxy_tunnel_start(req, res, curl, up_fd);
+}
 
-    proxy_tunnel *t = (proxy_tunnel *)malloc(sizeof(*t));
-    if (!t) {
+/* Attempt a CONNECT tunnel passthrough for @p req. The upstream is resolved
+ * strictly from the registered rule table (never from the client's target). */
+static void proxy_connect_passthrough(cwist_http_request *req, cwist_http_response *res) {
+    const char *host = cwist_http_header_get(req->headers, "host");
+    if (!host || !cwist_proxy_header_value_ok(host)) {
+        proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+        return;
+    }
+    char hk[256];
+    unsigned short hport = 0;
+    if (!proxy_host_key(host, req->app->use_ssl, hk, sizeof(hk), &hport) || hk[0] == '\0') {
+        proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+        return;
+    }
+
+    const char *target = (req->path && req->path->data) ? req->path->data : "";
+    const char *query =
+        (req->query && req->query->data && req->query->size > 0) ? req->query->data : NULL;
+    const char *route_path = "/";
+    if (target[0] == '/') {
+        if (!cwist_proxy_path_is_safe(target) || !cwist_proxy_query_is_safe(query)) {
+            proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+            return;
+        }
+        route_path = target;
+    } else {
+        /* RFC 9110 section 9.3.6 authority-form "host:port", matching Host. */
+        size_t tlen = strlen(target);
+        if (tlen == 0 || target[tlen - 1] == '/' || query != NULL || strstr(target, "://")) {
+            proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+            return;
+        }
+        char *ahost = NULL;
+        unsigned short aport = 0;
+        size_t alen = 0;
+        const char *abegin = NULL;
+        if (!proxy_parse_authority(target, false, NULL, &ahost, &aport, &alen, &abegin)) {
+            proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+            return;
+        }
+        bool has_port = false;
+        if (abegin[0] == '[') {
+            const char *close = memchr(abegin, ']', alen);
+            has_port = close && (size_t)(close - abegin) + 1 < alen && close[1] == ':';
+        } else {
+            has_port = memchr(abegin, ':', alen) != NULL;
+        }
+        bool match = has_port && strcmp(ahost, hk) == 0 && aport == hport;
+        cwist_free(ahost);
+        if (!match) {
+            proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+            return;
+        }
+    }
+
+    int miss = CWIST_HTTP_NOT_FOUND;
+    char *url =
+        cwist_proxy_resolve_url((unsigned short)req->app->port, host, route_path, query, &miss);
+    if (!url) {
+        char msg[48];
+        snprintf(msg, sizeof(msg), "%d %s", miss, cwist_http_status_reason(miss));
+        proxy_set_text(res, miss, msg);
+        return;
+    }
+
+    CURL *curl = NULL;
+    curl_socket_t up_fd = CURL_SOCKET_BAD;
+    if (!proxy_tunnel_dial(req, url, &curl, &up_fd)) {
+        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
+        return;
+    }
+
+    static const char k_established[] = "HTTP/1.1 200 Connection Established\r\n\r\n";
+    if (!proxy_fd_write_all(req->client_fd, k_established, sizeof(k_established) - 1)) {
         curl_easy_cleanup(curl);
         cwist_curl_global_release();
-        proxy_set_text(res, CWIST_HTTP_INTERNAL_ERROR, "500 Internal Server Error");
+        proxy_set_text(res, CWIST_HTTP_BAD_GATEWAY, "502 Bad Gateway");
         return;
     }
-    t->client_fd = req->client_fd;
-    t->curl = curl;
-    t->up_fd = up_fd;
-    int fl = fcntl(t->client_fd, F_GETFL, 0);
-    if (fl >= 0) fcntl(t->client_fd, F_SETFL, fl | O_NONBLOCK);
 
-    pthread_t tid;
-    if (pthread_create(&tid, NULL, proxy_tunnel_run, t) != 0) {
-        t->client_fd = -1; /* fd still owned by the HTTP layer on failure */
-        proxy_tunnel_free(t);
-        proxy_set_text(res, CWIST_HTTP_SERVICE_UNAVAILABLE, "503 Service Unavailable");
-        return;
-    }
-    pthread_detach(tid);
-
-    /* The relay owns the fd now. Signal the serve loop to detach: the upstream
-     * 101 reaches the client through the relay, so no response is sent here. */
-    req->ws_async_handoff = true;
+    proxy_tunnel_start(req, res, curl, up_fd);
 }
 
 static void proxy_handler(cwist_http_request *req, cwist_http_response *res) {
+    if (req->method == CWIST_HTTP_CONNECT) {
+        if (proxy_front_is_plain_h1(req)) {
+            proxy_connect_passthrough(req, res);
+        } else {
+            proxy_set_text(res, CWIST_HTTP_NOT_IMPLEMENTED, "501 Not Implemented");
+        }
+        return;
+    }
     if (proxy_req_is_ws_upgrade(req)) {
         if (proxy_front_is_plain_h1(req)) {
             proxy_ws_passthrough(req, res);
@@ -1359,9 +1600,8 @@ static void proxy_handler(cwist_http_request *req, cwist_http_response *res) {
     }
     job->async = cwist_async_retain(a);
     /* The job is released on a scheduler thread; keep this thread's full-GC
-     * sweep away from it, and from the url and body it frees with it. */
+     * sweep away from it, and from the url it frees with it. */
     cwist_gc_scope_disown(job->url);
-    cwist_gc_scope_disown(job->body);
     cwist_gc_scope_disown(job);
     if (!cwist_scheduler_submit(sched, proxy_job_run, job)) {
         cwist_async_release(a);
