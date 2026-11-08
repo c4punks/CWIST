@@ -99,6 +99,27 @@ void cwist_async_set_carry(struct cwist_async *a, const char *bytes, size_t len)
 /** Classic pool handler that first serves a cwist_http_carry (app.c); takes ownership of @p ctx. */
 void cwist_app_http_handler_resume(int client_fd, void *ctx);
 
+/* --- Streaming deferred responses (HTTP/1.1 cleartext and TLS) ------------ */
+
+struct cwist_https_connection;
+
+int cwist_http_write_raw(int client_fd, const void *buf, size_t len);
+int cwist_http_write_chunk(int client_fd, const void *buf, size_t len);
+void cwist_http_async_finish_stream(int client_fd, cwist_reactor_t *reactor,
+                                    cwist_http_async_conn_t *conn, bool keep_alive);
+int cwist_https_write_raw(struct cwist_https_connection *conn, const void *buf, size_t len);
+
+/** True when @p a is an HTTP/1.1 exchange whose body can be streamed incrementally. */
+bool cwist_async_can_stream(const struct cwist_async *a);
+/** True once cwist_async_stream_start() has claimed @p a for streaming. */
+bool cwist_async_is_streamed(const struct cwist_async *a);
+/** Claim @p a and send the status line and headers of @p res immediately. */
+bool cwist_async_stream_start(struct cwist_async *a, cwist_http_response *res, bool chunked);
+/** Write one body chunk (chunk-framed when @p chunked is true, raw otherwise). */
+bool cwist_async_stream_write(struct cwist_async *a, const void *data, size_t len, bool chunked);
+/** Emit the terminating chunk (when @p ok && @p chunked) and finish/release @p a. */
+void cwist_async_stream_finish(struct cwist_async *a, bool ok, bool chunked);
+
 /* --- HTTP/3 deferred responses ------------------------------------------
  *
  * lsquic runs every HTTP/3 connection of a server loop on one engine thread
