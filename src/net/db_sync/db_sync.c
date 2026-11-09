@@ -6,13 +6,16 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <inttypes.h>
+#include <poll.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -23,6 +26,62 @@
 
 static const unsigned char SYNC_MAGIC[4] = {0x43, 0x57, 0x53, 0x59}; /* "CWSY" */
 
+#ifndef CWIST_DB_SYNC_MAX_BLOB_SIZE
+/* The v4 LTS line keeps its 4 GiB snapshot ceiling (v4.2 lowered the
+ * default to 512 MiB). */
+#define CWIST_DB_SYNC_MAX_BLOB_SIZE ((uint64_t)4 * 1024 * 1024 * 1024)
+#endif
+#ifndef CWIST_DB_SYNC_TIMEOUT_SEC
+#define CWIST_DB_SYNC_TIMEOUT_SEC 30
+#endif
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0
+#endif
+
+static int db_sync_configure_socket(int fd) {
+#ifdef SO_NOSIGPIPE
+    int one = 1;
+    (void)setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
+#endif
+    struct timeval timeout = {.tv_sec = CWIST_DB_SYNC_TIMEOUT_SEC, .tv_usec = 0};
+    return setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) == 0 &&
+                   setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == 0
+               ? 0
+               : -1;
+}
+
+static int db_sync_connect(const struct addrinfo *addresses) {
+    for (const struct addrinfo *ai = addresses; ai; ai = ai->ai_next) {
+        int fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+        if (fd < 0) continue;
+        int flags = fcntl(fd, F_GETFL, 0);
+        if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
+            close(fd);
+            continue;
+        }
+        int rc = connect(fd, ai->ai_addr, ai->ai_addrlen);
+        if (rc != 0 && (errno == EINPROGRESS || errno == EINTR)) {
+            struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+            do {
+                rc = poll(&pfd, 1, CWIST_DB_SYNC_TIMEOUT_SEC * 1000);
+            } while (rc < 0 && errno == EINTR);
+            if (rc > 0) {
+                int error = 0;
+                socklen_t len = sizeof(error);
+                rc = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error == 0 ? 0 : -1;
+            } else {
+                rc = -1;
+            }
+        }
+        if (rc != 0 || fcntl(fd, F_SETFL, flags) != 0 || db_sync_configure_socket(fd) != 0) {
+            close(fd);
+            continue;
+        }
+        return fd;
+    }
+    return -1;
+}
+
 /**
  * @brief Write exactly the requested number of bytes to a socket.
  * @param fd Connected socket descriptor.
@@ -30,10 +89,11 @@ static const unsigned char SYNC_MAGIC[4] = {0x43, 0x57, 0x53, 0x59}; /* "CWSY" *
  * @param len Number of bytes to send.
  * @return 0 on success, or -1 on short/failed writes.
  */
-static int write_all(int fd, const void *buf, size_t len) {
+static int db_sync_write_all(int fd, const void *buf, size_t len) {
     const unsigned char *p = (const unsigned char *)buf;
     while (len > 0) {
-        ssize_t n = write(fd, p, len);
+        ssize_t n = send(fd, p, len, MSG_NOSIGNAL);
+        if (n < 0 && errno == EINTR) continue;
         if (n <= 0) return -1;
         p += (size_t)n;
         len -= (size_t)n;
@@ -52,6 +112,7 @@ static int read_all(int fd, void *buf, size_t len) {
     unsigned char *p = (unsigned char *)buf;
     while (len > 0) {
         ssize_t n = read(fd, p, len);
+        if (n < 0 && errno == EINTR) continue;
         if (n <= 0) return -1;
         p += (size_t)n;
         len -= (size_t)n;
@@ -127,6 +188,11 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
         free(blob);
         return CWIST_DB_SYNC_ERR_NET;
     }
+    if (db_sync_configure_socket(cli_fd) != 0) {
+        close(cli_fd);
+        free(blob);
+        return CWIST_DB_SYNC_ERR_NET;
+    }
 
     /* 5. Read client magic. */
     unsigned char magic_buf[4];
@@ -140,7 +206,8 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
     /* 6. Send length (little-endian uint64) then blob. */
     unsigned char len_buf[8];
     for (int i = 0; i < 8; i++) len_buf[i] = (unsigned char)((uint64_t)blob_len >> (8 * i));
-    if (write_all(cli_fd, len_buf, 8) < 0 || write_all(cli_fd, blob, blob_len) < 0) {
+    if (db_sync_write_all(cli_fd, len_buf, 8) < 0 ||
+        db_sync_write_all(cli_fd, blob, blob_len) < 0) {
         close(cli_fd);
         free(blob);
         return CWIST_DB_SYNC_ERR_NET;
@@ -180,22 +247,15 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
     }
 
     /* 2. Connect. */
-    int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (fd < 0) {
-        freeaddrinfo(res);
-        return CWIST_DB_SYNC_ERR_NET;
-    }
-
-    if (connect(fd, res->ai_addr, res->ai_addrlen) < 0) {
-        fprintf(stderr, "[db_sync] connect to %s:%d failed: %s\n", host, port, strerror(errno));
-        close(fd);
-        freeaddrinfo(res);
-        return CWIST_DB_SYNC_ERR_NET;
-    }
+    int fd = db_sync_connect(res);
     freeaddrinfo(res);
+    if (fd < 0) {
+        fprintf(stderr, "[db_sync] connect to %s:%d failed\n", host, port);
+        return CWIST_DB_SYNC_ERR_NET;
+    }
 
     /* 3. Send magic. */
-    if (write_all(fd, SYNC_MAGIC, 4) < 0) {
+    if (db_sync_write_all(fd, SYNC_MAGIC, 4) < 0) {
         close(fd);
         return CWIST_DB_SYNC_ERR_NET;
     }
@@ -213,13 +273,7 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
         return CWIST_DB_SYNC_ERR_PROTO;
     }
 
-    /* Reject unreasonably large blobs before allocating to prevent OOM from a
-     * rogue or malicious sync server.  4 GiB is well above any realistic
-     * SQLite snapshot; adjust CWIST_DB_SYNC_MAX_BLOB_SIZE if needed. */
-#ifndef CWIST_DB_SYNC_MAX_BLOB_SIZE
-#define CWIST_DB_SYNC_MAX_BLOB_SIZE ((uint64_t)4 * 1024 * 1024 * 1024)
-#endif
-    if (blob_len_u64 > CWIST_DB_SYNC_MAX_BLOB_SIZE) {
+    if (blob_len_u64 > CWIST_DB_SYNC_MAX_BLOB_SIZE || blob_len_u64 > (uint64_t)SIZE_MAX) {
         fprintf(stderr, "[db_sync] blob_len %" PRIu64 " exceeds limit\n", blob_len_u64);
         close(fd);
         return CWIST_DB_SYNC_ERR_PROTO;
