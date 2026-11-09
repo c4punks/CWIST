@@ -7,7 +7,7 @@ var searchData=
   ['target_5fsize_4',['target_size',['../df/d21/structcwist__bind__field.html#a0b46be239f1e7a5d1ce44e514b7e7957',1,'cwist_bind_field']]],
   ['target_5ftype_5',['target_type',['../df/d21/structcwist__bind__field.html#a0a05e69235df384fd8f2cb79e7d25d7a',1,'cwist_bind_field']]],
   ['target_5fwindow_6',['target_window',['../d0/d2d/structcwist__http2__stream__flow__control.html#a4599d62bea70e879cc8642b9f13151a8',1,'cwist_http2_stream_flow_control::target_window'],['../d1/d92/structcwist__http2__flow__control.html#abcd175d42487fa57b50a369b5c18e218',1,'cwist_http2_flow_control::target_window']]],
-  ['targets_7',['targets',['../index.html#autotoc_md5',1,'One app, four targets'],['../d6/d26/md_docs_2api_2wasi.html',1,'WASI targets']]],
+  ['targets_7',['targets',['../index.html#autotoc_md5',1,'Same routes and handlers across four targets'],['../d6/d26/md_docs_2api_2wasi.html',1,'WASI targets']]],
   ['targets_20and_20validation_8',['Supported targets and validation',['../de/d87/md_docs_2embedded_2stm32.html#autotoc_md309',1,'']]],
   ['task_20oriented_20guides_9',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md781',1,'']]],
   ['task_20queue_3a_20static_20ring_20vs_20growable_20ring_10',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]],
