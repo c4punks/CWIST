@@ -1618,6 +1618,7 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
         if (memcmp(str, "DELETE", 6) == 0) return CWIST_HTTP_DELETE;
     } else if (len == 7) {
         if (memcmp(str, "OPTIONS", 7) == 0) return CWIST_HTTP_OPTIONS;
+        if (memcmp(str, "CONNECT", 7) == 0) return CWIST_HTTP_CONNECT;
     }
     return CWIST_HTTP_UNKNOWN;
 }
@@ -3008,6 +3009,52 @@ cwist_error_t cwist_http_send_response_head(int client_fd, cwist_http_response *
     cwist_http_response_release_ptr_body(res);
     cwist_http_response_release_file_stream(res);
     return err;
+}
+
+int cwist_http_write_raw(int client_fd, const void *buf, size_t len) {
+    if (client_fd < 0) return -1;
+    if (len == 0) return 0;
+    if (!buf) return -1;
+    struct iovec iov = {.iov_base = (void *)buf, .iov_len = len};
+    int flags = 0;
+#if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+#endif
+    return cwist_http_sendmsg_all(client_fd, &iov, 1, flags);
+}
+
+int cwist_http_write_chunk(int client_fd, const void *buf, size_t len) {
+    if (client_fd < 0) return -1;
+    if (len == 0) return 0;
+    if (!buf) return -1;
+    char hdr[24];
+    int hlen = snprintf(hdr, sizeof(hdr), "%zx\r\n", len);
+    if (hlen <= 0 || (size_t)hlen >= sizeof(hdr)) return -1;
+    struct iovec iov[3] = {
+        {.iov_base = hdr, .iov_len = (size_t)hlen},
+        {.iov_base = (void *)buf, .iov_len = len},
+        {.iov_base = (void *)"\r\n", .iov_len = 2},
+    };
+    int flags = 0;
+#if defined(MSG_NOSIGNAL)
+    flags |= MSG_NOSIGNAL;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= MSG_DONTWAIT;
+#endif
+    return cwist_http_sendmsg_all(client_fd, iov, 3, flags);
+}
+
+void cwist_http_async_finish_stream(int client_fd, cwist_reactor_t *reactor,
+                                    cwist_http_async_conn_t *conn, bool keep_alive) {
+    if (keep_alive && atomic_load(&g_cwist_running)) {
+        cwist_http_async_rearm(client_fd, reactor, conn);
+    } else {
+        http_async_close(client_fd, conn);
+    }
 }
 
 /* --- Parked (POLLOUT-resumable) deferred-response writer --------------------

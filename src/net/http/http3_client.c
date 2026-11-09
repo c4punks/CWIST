@@ -563,7 +563,18 @@ static void h3c_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_hdr_out_add_str(&hdrs, ":path", st->req_path ? st->req_path : "/");
     cwist_http3_client *client =
         (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
-    h3_hdr_out_add_str(&hdrs, ":authority", client && client->host ? client->host : "localhost");
+    /* RFC 9110 section 7.2: the authority carries the port unless it is the
+     * scheme default, as browsers send it; servers routing by Host need it. */
+    char authority[300];
+    const char *ahost = client && client->host ? client->host : "localhost";
+    bool v6 = strchr(ahost, ':') != NULL && ahost[0] != '[';
+    if (client && client->port && client->port != 443) {
+        snprintf(authority, sizeof(authority), v6 ? "[%s]:%u" : "%s:%u", ahost,
+                 (unsigned)client->port);
+    } else {
+        snprintf(authority, sizeof(authority), v6 ? "[%s]" : "%s", ahost);
+    }
+    h3_hdr_out_add_str(&hdrs, ":authority", authority);
     h3_hdr_out_add_str(&hdrs, ":scheme", "https");
 
     cwist_http_header_node *node = st->req_headers;

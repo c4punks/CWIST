@@ -10,14 +10,12 @@ cwist_app_http_handler
 cwist_app_multiport
 cwist_app_register_error_handler
 cwist_app_set_max_memspace
-cwist_app_set_tls_groups
 cwist_app_static_with_cache
 cwist_app_use_db
 cwist_app_use_db_pool
 cwist_app_use_ech
 cwist_app_use_http2
 cwist_app_use_nuke_db
-cwist_app_use_pqc_layer
 cwist_app_use_redis
 cwist_app_ws
 cwist_app_ws_async

@@ -53,8 +53,8 @@ static void accept_cb(void *ctx, int fd) {
     (void)ctx;
     assert(pthread_equal(pthread_self(), run_tid));
     if (fd < 0) {
-        atomic_fetch_add(&terminals, 1);
         atomic_store(&last_terminal_err, fd);
+        atomic_fetch_add(&terminals, 1);
         return;
     }
     /* accept_flags must have produced a non-blocking socket. */

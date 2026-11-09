@@ -27,9 +27,13 @@
 #include "tls_chain.h"
 #include "h3_hdr_out.h"
 #include "http3_global.h"
+#include "async_internal.h"
+#include "tls_info.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdatomic.h>
+#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -43,6 +47,7 @@
 #include <pthread.h>
 #ifdef __linux__
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #endif
 #include <ctype.h>
 #include <strings.h>
@@ -169,6 +174,7 @@ typedef struct h3_stream_ctx {
     struct cwist_wt_handle *wt_session; /* CONNECT stream: accepted session */
     struct cwist_wt_handle *wt_stream;  /* stream is a peer-opened WT bidi */
 #endif
+    struct cwist_h3_pending *pending; /* set while the handler's response is deferred */
 } h3_stream_ctx_t;
 
 /* ------------------------------------------------------------------ */
@@ -199,7 +205,203 @@ typedef struct h3_conn_ctx {
 #ifdef CWIST_WT_STOCK_LSQUIC
     struct cwist_wt_handle *wt_sessions; /* accepted sessions, engine thread only */
 #endif
+    uint16_t tls_group; /* key-exchange group, recorded at handshake done (0 = unknown) */
 } h3_conn_ctx_t;
+
+/* ------------------------------------------------------------------ */
+/* Deferred responses (cwist_async_defer on the HTTP/3 path)          */
+/* ------------------------------------------------------------------ */
+
+/* Names a deferred stream across threads. refs: one held by the stream while
+ * it waits, one by the in-flight cwist_async/queue node. st is read and
+ * written on the engine thread only; on_close clears it when the stream dies
+ * first, and the drain then discards the late completion. */
+struct cwist_h3_pending {
+    _Atomic int refs;
+    h3_stream_ctx_t *st;
+};
+
+typedef struct h3_async_node {
+    struct cwist_h3_pending *p;
+    cwist_http_request *req;
+    cwist_http_response *send; /* response to transmit (final_res) */
+    cwist_http_response *res;  /* handler's response */
+    bool send_owned;           /* send came from respond_with */
+    struct h3_async_node *next;
+} h3_async_node;
+
+/* One per server loop (engine thread). refs: one held by the loop, one per
+ * in-flight cwist_async handle.
+ *
+ * Lock-free MPSC: producers push onto @c head with a CAS (a Treiber stack);
+ * the engine thread takes the whole stack with one exchange and reverses it
+ * into arrival order. Only a push onto an empty stack writes the wake fd, and
+ * the drain reads the fd before taking the stack, so a push that lands after
+ * the take always finds it empty and wakes the loop again. There is no
+ * single-node pop, so no ABA. Close swaps in H3_ASYNC_CLOSED, which makes
+ * every later push discard its node. The fds live until the last reference
+ * goes, and every producer holds one, so waking needs no lock either. */
+#define H3_ASYNC_CLOSED ((h3_async_node *)(uintptr_t)1)
+
+struct cwist_h3_async_queue {
+    int wake_rd;
+    int wake_wr;
+    _Atomic(h3_async_node *) head; /* newest first; H3_ASYNC_CLOSED after close */
+    _Atomic int refs;
+};
+
+static struct cwist_h3_pending *h3_pending_new(h3_stream_ctx_t *st) {
+    struct cwist_h3_pending *p = (struct cwist_h3_pending *)calloc(1, sizeof(*p));
+    if (!p) return NULL;
+    atomic_init(&p->refs, 1);
+    p->st = st;
+    return p;
+}
+
+struct cwist_h3_pending *cwist_h3_pending_acquire(struct cwist_h3_pending *p) {
+    if (p) atomic_fetch_add_explicit(&p->refs, 1, memory_order_relaxed);
+    return p;
+}
+
+void cwist_h3_pending_release(struct cwist_h3_pending *p) {
+    if (p && atomic_fetch_sub_explicit(&p->refs, 1, memory_order_acq_rel) == 1) free(p);
+}
+
+static void h3_async_node_discard(h3_async_node *n) {
+    if (n->send_owned && n->send && n->send != n->res) cwist_http_response_destroy(n->send);
+    if (n->res) cwist_http_response_destroy(n->res);
+    if (n->req) cwist_http_request_destroy(n->req);
+    cwist_h3_pending_release(n->p);
+    free(n);
+}
+
+static struct cwist_h3_async_queue *h3_async_queue_create(void) {
+    struct cwist_h3_async_queue *q = (struct cwist_h3_async_queue *)calloc(1, sizeof(*q));
+    if (!q) return NULL;
+    q->wake_rd = -1;
+    q->wake_wr = -1;
+    atomic_init(&q->head, NULL);
+    atomic_init(&q->refs, 1);
+#ifdef __linux__
+    q->wake_rd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    q->wake_wr = q->wake_rd;
+#else
+    int pfds[2];
+    if (pipe(pfds) == 0) {
+        for (int i = 0; i < 2; i++) {
+            int fl = fcntl(pfds[i], F_GETFL, 0);
+            if (fl >= 0) fcntl(pfds[i], F_SETFL, fl | O_NONBLOCK);
+        }
+        q->wake_rd = pfds[0];
+        q->wake_wr = pfds[1];
+    }
+#endif
+    if (q->wake_rd < 0) {
+        free(q);
+        return NULL;
+    }
+    return q;
+}
+
+struct cwist_h3_async_queue *cwist_h3_async_queue_acquire(struct cwist_h3_async_queue *q) {
+    if (q) atomic_fetch_add_explicit(&q->refs, 1, memory_order_relaxed);
+    return q;
+}
+
+void cwist_h3_async_queue_release(struct cwist_h3_async_queue *q) {
+    if (!q || atomic_fetch_sub_explicit(&q->refs, 1, memory_order_acq_rel) != 1) return;
+    if (q->wake_rd >= 0) close(q->wake_rd);
+    if (q->wake_wr >= 0 && q->wake_wr != q->wake_rd) close(q->wake_wr);
+    free(q);
+}
+
+int cwist_h3_async_queue_enqueue(struct cwist_h3_async_queue *q, struct cwist_h3_pending *p,
+                                 cwist_http_request *req, cwist_http_response *send,
+                                 cwist_http_response *res, bool send_owned) {
+    h3_async_node *n = (h3_async_node *)calloc(1, sizeof(*n));
+    if (!n) {
+        if (send_owned && send && send != res) cwist_http_response_destroy(send);
+        cwist_http_response_destroy(res);
+        cwist_http_request_destroy(req);
+        cwist_h3_pending_release(p);
+        return -1;
+    }
+    n->p = p;
+    n->req = req;
+    n->send = send;
+    n->res = res;
+    n->send_owned = send_owned;
+    if (!q) {
+        h3_async_node_discard(n);
+        return -1;
+    }
+    h3_async_node *old = atomic_load_explicit(&q->head, memory_order_relaxed);
+    do {
+        if (old == H3_ASYNC_CLOSED) {
+            h3_async_node_discard(n);
+            return -1;
+        }
+        n->next = old;
+    } while (!atomic_compare_exchange_weak_explicit(&q->head, &old, n, memory_order_release,
+                                                    memory_order_relaxed));
+    if (!old) {
+        /* First node since the last drain: the loop may be asleep. */
+        uint64_t one = 1;
+        ssize_t w = write(q->wake_wr, &one, sizeof(one));
+        (void)w; /* EAGAIN: already readable */
+    }
+    return 0;
+}
+
+/* Loop exit: refuse later completions and drop everything still queued. */
+static void h3_async_queue_close(struct cwist_h3_async_queue *q) {
+    h3_async_node *list = atomic_exchange_explicit(&q->head, H3_ASYNC_CLOSED, memory_order_acq_rel);
+    if (list == H3_ASYNC_CLOSED) return;
+    while (list) {
+        h3_async_node *next = list->next;
+        h3_async_node_discard(list);
+        list = next;
+    }
+}
+
+/* Engine thread: attach finished responses to their streams and ask lsquic
+ * to write them. Streams that closed meanwhile drop their completion. */
+static void h3_async_drain(struct cwist_h3_async_queue *q) {
+    uint64_t junk;
+    while (read(q->wake_rd, &junk, sizeof(junk)) > 0) {
+    }
+    /* Take the stack after the read: a push that misses this take sees an
+     * empty stack and writes the fd again. Only this (engine) thread closes,
+     * never concurrently with a drain. */
+    if (atomic_load_explicit(&q->head, memory_order_relaxed) == H3_ASYNC_CLOSED) return;
+    h3_async_node *stack = atomic_exchange_explicit(&q->head, NULL, memory_order_acquire);
+    h3_async_node *list = NULL; /* oldest first */
+    while (stack) {
+        h3_async_node *next = stack->next;
+        stack->next = list;
+        list = stack;
+        stack = next;
+    }
+    while (list) {
+        h3_async_node *n = list;
+        list = n->next;
+        h3_stream_ctx_t *st = n->p ? n->p->st : NULL;
+        if (!st || !st->stream) {
+            h3_async_node_discard(n);
+            continue;
+        }
+        st->req = n->req;
+        st->res = n->send;
+        if (n->send_owned && n->send != n->res) cwist_http_response_destroy(n->res);
+        n->p->st = NULL;
+        cwist_h3_pending_release(st->pending); /* the stream's own ref */
+        st->pending = NULL;
+        cwist_h3_pending_release(n->p);        /* the completion's ref */
+        free(n);
+        st->response_ready = 1;
+        lsquic_stream_wantwrite(st->stream, 1);
+    }
+}
 
 /* Every lsquic_conn_get_ctx(conn) callsite below reads this wrapper's
  * ->h3_ctx instead of casting the raw ctx pointer directly. */
@@ -1262,6 +1464,7 @@ static int h3_apply_header(h3_stream_ctx_t *st, const char *name, size_t name_le
  * TASFA-style ARQ assembler.
  */
 static int h3_seq_append_and_feed(h3_stream_ctx_t *st, const unsigned char *data, size_t len) {
+    if (len == 0) return 0;
     if (len > SIZE_MAX - st->seq_len) return -1;
     size_t need = st->seq_len + len;
     if (need > st->seq_cap) {
@@ -1880,7 +2083,27 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                     h3_json_error(st->res, 425 /* Too Early */,
                                   "{\"error\":\"too early, retry after handshake\"}");
                 } else {
+                    struct cwist_h3_async_queue *aq =
+                        (struct cwist_h3_async_queue *)h3_ctx->async_queue;
+                    struct cwist_h3_pending *pending = aq ? h3_pending_new(st) : NULL;
+                    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
+                    cwist_tls_info_h3_set(st->req, cc ? cc->tls_group : 0);
+                    cwist_async_h3_begin(st->req, aq, pending);
                     h3_ctx->handler(h3_ctx->user_ctx, st->req, st->res);
+                    bool deferred = cwist_async_h3_end();
+                    cwist_tls_info_h3_clear();
+                    if (deferred) {
+                        /* req/res now belong to the cwist_async; the drain
+                         * reattaches the finished pair. Keep reading off. */
+                        st->req = NULL;
+                        st->res = NULL;
+                        st->pending = pending;
+                        lsquic_stream_wantread(stream, 0);
+                        lsquic_stream_shutdown(stream, 0);
+                        lsquic_stream_wantwrite(stream, 0);
+                        return;
+                    }
+                    cwist_h3_pending_release(pending);
                 }
             }
         }
@@ -2278,6 +2501,12 @@ static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         }
         cwist_wt_handle_free(st->wt_stream);
 #endif
+        if (st->pending) {
+            /* A completion still in flight finds the stream gone. */
+            st->pending->st = NULL;
+            cwist_h3_pending_release(st->pending);
+            st->pending = NULL;
+        }
         cwist_http_request_destroy(st->req);
         cwist_http_response_destroy(st->res);
         free(st->body);
@@ -2653,7 +2882,18 @@ static void cwist_h3_setup_session_tickets(SSL_CTX *ssl_ctx, cwist_h3_ticket_key
  * Pins TLS 1.3, installs default verify paths, the ALPN selection callback,
  * and the shared session-ticket key machinery.
  */
+/* Record the negotiated key-exchange group on the connection's context once
+ * the handshake completes (lsquic exposes no SSL accessor for its conns). */
+static void cwist_h3_tls_info_cb(const SSL *ssl, int where, int ret) {
+    (void)ret;
+    if (!(where & SSL_CB_HANDSHAKE_DONE)) return;
+    lsquic_conn_t *conn = lsquic_ssl_to_conn(ssl);
+    h3_conn_ctx_t *cc = conn ? (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn) : NULL;
+    if (cc) cc->tls_group = SSL_get_group_id(ssl);
+}
+
 static int cwist_h3_ssl_ctx_init(SSL_CTX *ssl_ctx, int early_data, cwist_h3_ticket_key **key_io) {
+    SSL_CTX_set_info_callback(ssl_ctx, cwist_h3_tls_info_cb);
     SSL_CTX_set_min_proto_version(ssl_ctx, TLS1_3_VERSION);
     SSL_CTX_set_max_proto_version(ssl_ctx, TLS1_3_VERSION);
     SSL_CTX_set_default_verify_paths(ssl_ctx);
@@ -2937,9 +3177,25 @@ void cwist_http3_destroy_context(cwist_http3_context *ctx) {
          * closed by the engine destroy above. */
         cwist_h3_free_ticket_key((cwist_h3_ticket_key *)ctx->ticket_key);
         ctx->ticket_key = NULL;
+        cwist_free(ctx->tls_groups);
         cwist_free(ctx);
         cwist_h3_global_release();
     }
+}
+
+int cwist_http3_internal_set_tls_groups(cwist_http3_context *ctx, const char *groups) {
+    if (!ctx || !groups) return -1;
+    char *copy = cwist_strdup(groups);
+    if (!copy) return -1;
+    pthread_rwlock_wrlock(&ctx->ssl_ctx_lock);
+    int ok = ctx->ssl_ctx && SSL_CTX_set1_groups_list(ctx->ssl_ctx, groups) == 1;
+    if (ok) {
+        cwist_free(ctx->tls_groups);
+        ctx->tls_groups = copy;
+    }
+    pthread_rwlock_unlock(&ctx->ssl_ctx_lock);
+    if (!ok) cwist_free(copy);
+    return ok ? 0 : -1;
 }
 
 /**
@@ -2960,6 +3216,12 @@ cwist_error_t cwist_http3_reload_context(cwist_http3_context *ctx, const char *c
     err = cwist_h3_build_ssl_ctx(&new_ctx, cert_path, key_path, ctx->early_data_enabled,
                                  (cwist_h3_ticket_key **)&ctx->ticket_key);
     if (!cwist_error_is_ok(&err)) {
+        return err;
+    }
+    /* Key-exchange policy (PQC layer) survives the certificate swap. */
+    if (ctx->tls_groups && SSL_CTX_set1_groups_list(new_ctx, ctx->tls_groups) != 1) {
+        SSL_CTX_free(new_ctx);
+        err.error.err_i16 = -1;
         return err;
     }
 
@@ -3230,6 +3492,21 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
     }
 #endif
 
+    /* Deferred-response queue, created after every early-return path above.
+     * Without one (fd exhaustion) cwist_async_defer() fails on this loop's
+     * streams and handlers answer inline. */
+    struct cwist_h3_async_queue *async_q = h3_async_queue_create();
+#ifdef __linux__
+    if (async_q) {
+        struct epoll_event wev = {.events = EPOLLIN, .data.fd = async_q->wake_rd};
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, async_q->wake_rd, &wev) < 0) {
+            cwist_h3_async_queue_release(async_q);
+            async_q = NULL;
+        }
+    }
+#endif
+    __atomic_store_n(&ctx->async_queue, async_q, __ATOMIC_RELEASE);
+
     /* running is a public volatile int another thread clears to stop the
      * loop; access it atomically (#351). */
     while (ctx && __atomic_load_n(&ctx->running, __ATOMIC_ACQUIRE) &&
@@ -3252,20 +3529,28 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         }
 
 #ifdef __linux__
-        struct epoll_event events[1];
-        int pret = epoll_wait(epoll_fd, events, 1, timeout_ms);
+        struct epoll_event events[2];
+        int pret = epoll_wait(epoll_fd, events, 2, timeout_ms);
         if (pret < 0) {
             if (errno == EINTR) continue;
             break;
         }
-        if (pret > 0 && (events[0].events & (EPOLLERR | EPOLLHUP))) {
+        bool can_read = false;
+        bool udp_failed = false;
+        for (int ei = 0; ei < pret; ei++) {
+            if (events[ei].data.fd != udp_fd) continue; /* wake fd: drained below */
+            if (events[ei].events & (EPOLLERR | EPOLLHUP)) udp_failed = true;
+            if (events[ei].events & EPOLLIN) can_read = true;
+        }
+        if (udp_failed) {
             fprintf(stderr, "[HTTP/3] UDP socket error, exiting loop.\n");
             break;
         }
-        bool can_read = (pret > 0 && (events[0].events & EPOLLIN));
 #else
-        struct pollfd pfd = {.fd = udp_fd, .events = POLLIN};
-        int pret = poll(&pfd, 1, timeout_ms);
+        struct pollfd pfds[2] = {{.fd = udp_fd, .events = POLLIN},
+                                 {.fd = async_q ? async_q->wake_rd : -1, .events = POLLIN}};
+        int pret = poll(pfds, 2, timeout_ms);
+        struct pollfd pfd = pfds[0];
 
         if (pret < 0) {
             if (errno == EINTR) continue;
@@ -3466,6 +3751,10 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         }
 #endif
 
+        /* Completions from producer threads: attach before processing so
+         * their writes go out in this iteration. Cheap when empty. */
+        if (async_q) h3_async_drain(async_q);
+
         lsquic_engine_process_conns(engine);
         if (lsquic_engine_has_unsent_packets(engine)) {
             lsquic_engine_send_unsent_packets(engine);
@@ -3490,6 +3779,12 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         lsquic_engine_destroy((lsquic_engine_t *)ctx->engine);
         ctx->engine = NULL;
         cwist_h3_hset_sweep(ctx);
+    }
+    if (async_q) {
+        /* Streams are gone with the engine: later completions are dropped. */
+        __atomic_store_n(&ctx->async_queue, NULL, __ATOMIC_RELEASE);
+        h3_async_queue_close(async_q);
+        cwist_h3_async_queue_release(async_q);
     }
     err.error.err_i16 = 0;
     return err;

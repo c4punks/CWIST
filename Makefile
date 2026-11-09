@@ -30,7 +30,7 @@ CURL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libcurl 2>/dev/null)
 NGHTTP2_CFLAGS := $(shell $(PKG_CONFIG) --cflags libnghttp2 2>/dev/null)
 BROTLI_CFLAGS := $(shell $(PKG_CONFIG) --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 
-INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS)
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS) $(ZSTD_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
 COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
@@ -140,6 +140,7 @@ NGHTTP2_LIBS := $(shell $(PKG_CONFIG) --libs libnghttp2 2>/dev/null)
 BROTLI_LIBS := $(shell $(PKG_CONFIG) --libs libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 # zstd via pkg-config so Homebrew's non-standard lib path (-L/opt/homebrew/...)
 # is picked up on macOS; fall back to a bare -lzstd elsewhere.
+ZSTD_CFLAGS := $(shell $(PKG_CONFIG) --cflags libzstd 2>/dev/null)
 ZSTD_LIBS := $(shell $(PKG_CONFIG) --libs libzstd 2>/dev/null)
 ifeq ($(strip $(ZSTD_LIBS)),)
 ZSTD_LIBS = -lzstd
@@ -364,6 +365,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http2_flow_control.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
+       src/net/proxy/proxy.c \
        src/net/http/https.c \
        src/net/http/https_upgrade_hook.c \
        src/net/http/tls_chain.c \
@@ -1429,6 +1431,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http2 \
                test_http2_prebuffer \
                test_http3 \
+               test_http3_defer \
                test_http3_client_datagram \
                test_shutdown \
                test_listen_signal_restore \
@@ -1468,6 +1471,7 @@ TEST_TARGETS = test_worker_affinity \
                test_redis \
                test_scheduler \
                test_async_defer \
+               test_proxy \
                test_async_after_shutdown \
                test_async_listener_rearm \
                test_async_file_park \
@@ -1509,7 +1513,9 @@ TEST_TARGETS = test_worker_affinity \
                test_css_composer \
                test_multipart
 
-.PHONY: all test tsan-test $(TEST_TARGETS) fuzz_seq install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 baremetal baremetal-smoke baremetal-size-gate clean-baremetal wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
+FUZZ_TARGETS = fuzz_seq fuzz_http1 fuzz_http2 fuzz_http3 fuzz_websocket fuzz_proxy
+
+.PHONY: all test tsan-test $(TEST_TARGETS) fuzz $(FUZZ_TARGETS) install uninstall dist clean rebuild examples clean-examples micro-examples examples-check wasm-abi-layout wasm-sw-example wasm-sw-smoke wasm-sw-browser-test wasm-dist wasip2-smoke clean-wasip2 baremetal baremetal-smoke baremetal-size-gate clean-baremetal wit-check jco-transpile wit-bindings component-guest component-smoke clean-component api-baseline api-check env-check
 
 # Regenerate docs/api/v4.0-api-baseline.txt (the recorded v4.0 public API
 # symbol surface). See CONTRIBUTING.md "Releases and patch releases".
@@ -1526,15 +1532,64 @@ api-check:
 env-check:
 	python3 scripts/ci/check_env_knobs.py
 
-# Run with e.g. `make fuzz_seq FUZZ_RUNS=100000`.  The target intentionally
-# uses a dedicated clang/libFuzzer toolchain and is not part of `make test`.
+# Run with e.g. `make fuzz FUZZ_RUNS=100000` or `make fuzz_http1 FUZZ_RUNS=50000`.
+# These targets use a dedicated clang/libFuzzer toolchain and are not part of
+# `make test`. On Linux, FUZZ_SYSINC skips /usr/local/include so a stale
+# portable stdatomic.h never shadows Clang's native C11 <stdatomic.h>.
 FUZZ_RUNS ?= 10000
-fuzz_seq: $(LIBTTAK_LIB) $(CJSON_LIB) tests/fuzz_seq.c src/core/seq/seq.c src/core/seq/seq_auth.c src/core/mem/alloc.c
-	$(FUZZ_CC) $(INCLUDE_PATHS) $(COMMON_DEFINES) -std=c17 -g -O1 \
-		-fsanitize=fuzzer,address,undefined -o $@ tests/fuzz_seq.c \
+FUZZ_SYSINC = $(if $(filter Linux,$(UNAME_S)),-nostdinc -isystem $(shell $(FUZZ_CC) -print-resource-dir)/include -isystem /usr/include/$(shell $(FUZZ_CC) -dumpmachine) -isystem /usr/include)
+FUZZ_FEATURE_DEFINES = $(filter -D%,$(CFLAGS))
+FUZZ_CFLAGS = $(FUZZ_SYSINC) $(INCLUDE_PATHS) $(COMMON_DEFINES) $(FUZZ_FEATURE_DEFINES) -std=c17 -g -O1 -fsanitize=fuzzer,address,undefined
+
+fuzz: $(FUZZ_TARGETS)
+
+fuzz_seq: $(LIB_NAME) tests/fuzz_seq.c src/core/seq/seq.c src/core/seq/seq_auth.c src/core/mem/alloc.c
+	$(FUZZ_CC) $(FUZZ_CFLAGS) -o $@ tests/fuzz_seq.c \
 		src/core/seq/seq.c src/core/seq/seq_auth.c src/core/mem/alloc.c \
-		$(if $(filter mbedtls,$(CWIST_TLS)),src/security/tls/backend_mbedtls.c) \
-		$(LIBTTAK_LIB) $(CJSON_LIB) $(TLS_VENDOR_LIBS) -pthread
+		$(LIB_NAME) $(LIBS)
+	./$@ -runs=$(FUZZ_RUNS)
+
+fuzz_http1: $(LIB_NAME) tests/fuzz_http1.c src/net/http/http.c src/net/http/query.c src/net/http/cookie.c src/net/http/multipart.c src/core/sstring/sstring.c src/core/mem/alloc.c
+	$(FUZZ_CC) $(FUZZ_CFLAGS) -o $@ tests/fuzz_http1.c \
+		src/net/http/http.c src/net/http/query.c src/net/http/cookie.c \
+		src/net/http/multipart.c lib/multipart-parser-c/multipart_parser.c \
+		src/core/sstring/sstring.c src/core/mem/alloc.c \
+		$(LIB_NAME) $(LIBS)
+	./$@ -runs=$(FUZZ_RUNS)
+
+fuzz_http2: $(LIB_NAME) tests/fuzz_http2.c src/net/http/http2.c src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c
+	$(FUZZ_CC) $(FUZZ_CFLAGS) -o $@ tests/fuzz_http2.c \
+		src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c \
+		$(LIB_NAME) $(LIBS)
+	./$@ -runs=$(FUZZ_RUNS)
+
+ifeq ($(CWIST_HTTP3),1)
+fuzz_http3: $(LIB_NAME) tests/fuzz_http3.c src/net/http/http3.c src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c
+	$(FUZZ_CC) $(FUZZ_CFLAGS) -o $@ tests/fuzz_http3.c \
+		src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c \
+		$(LIB_NAME) $(LIBS)
+	./$@ -runs=$(FUZZ_RUNS)
+else
+fuzz_http3:
+	@echo "CWIST_HTTP3=0: skipping $@"
+endif
+
+ifeq ($(CWIST_WS),1)
+fuzz_websocket: $(LIB_NAME) tests/fuzz_websocket.c src/net/websocket/websocket_async.c src/net/websocket/websocket.c src/net/websocket/ws_utils.c src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c
+	$(FUZZ_CC) $(FUZZ_CFLAGS) -o $@ tests/fuzz_websocket.c \
+		src/net/websocket/websocket.c src/net/websocket/ws_utils.c \
+		src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c \
+		$(LIB_NAME) $(LIBS)
+	./$@ -runs=$(FUZZ_RUNS)
+else
+fuzz_websocket:
+	@echo "CWIST_WS=0: skipping $@"
+endif
+
+fuzz_proxy: $(LIB_NAME) tests/fuzz_proxy.c src/net/proxy/proxy.c src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c
+	$(FUZZ_CC) $(FUZZ_CFLAGS) -o $@ tests/fuzz_proxy.c \
+		src/net/http/http.c src/core/sstring/sstring.c src/core/mem/alloc.c \
+		$(LIB_NAME) $(LIBS)
 	./$@ -runs=$(FUZZ_RUNS)
 
 bench_security_pool: $(LIB_NAME) tests/bench_security_pool.c
@@ -1940,6 +1995,11 @@ ifeq ($(CWIST_HTTP3),1)
 test_http3: $(LIB_NAME) tests/test_http3.c
 	$(CC) $(CFLAGS) -o test_http3 tests/test_http3.c $(LIB_NAME) $(LIBS)
 	./test_http3
+
+test_http3_defer: $(LIB_NAME) tests/test_http3_defer.c
+	$(CC) $(CFLAGS) -o test_http3_defer tests/test_http3_defer.c $(LIB_NAME) $(LIBS)
+	./test_http3_defer
+	CWIST_C1M_MODE=0 ./test_http3_defer
 
 test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_datagram.c $(LIB_NAME) $(LIBS)
@@ -2518,6 +2578,11 @@ test_http_fairness: $(LIB_NAME) tests/test_http_fairness.c
 	CWIST_TEST_HALF_CLOSE=1 ./$@
 	CWIST_TEST_HALF_CLOSE=1 CWIST_TEST_TRUNCATED=1 ./$@
 	CWIST_TEST_DESTROY_PENDING=1 ./$@
+
+test_proxy: $(LIB_NAME) tests/test_proxy.c
+	$(CC) $(CFLAGS) -o test_proxy tests/test_proxy.c $(LIB_NAME) $(LIBS)
+	./test_proxy
+	CWIST_C1M_MODE=0 ./test_proxy
 
 test_async_defer: $(LIB_NAME) tests/test_async_defer.c
 	$(CC) $(CFLAGS) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
