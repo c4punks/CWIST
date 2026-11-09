@@ -28,7 +28,7 @@ var NAVTREE =
     [ "CWIST API Reference", "d1/d7e/md_docs_2api-quickref.html", [
       [ "Supported platforms", "index.html#autotoc_md3", null ],
       [ "Quick start", "index.html#autotoc_md4", null ],
-      [ "One app, four targets", "index.html#autotoc_md5", null ],
+      [ "Same routes and handlers across four targets", "index.html#autotoc_md5", null ],
       [ "What CWIST includes", "index.html#autotoc_md6", null ],
       [ "Performance, including where it loses", "index.html#autotoc_md7", [
         [ "Two server modes", "index.html#autotoc_md8", null ],
