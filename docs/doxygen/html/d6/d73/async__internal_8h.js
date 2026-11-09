@@ -1,12 +1,32 @@
 var async__internal_8h =
 [
+    [ "cwist_http_carry", "d1/d6f/structcwist__http__carry.html", "d1/d6f/structcwist__http__carry" ],
+    [ "cwist_http_carry", "d6/d73/async__internal_8h.html#aa11076d2660471436c36b099dc7afd7f", null ],
+    [ "cwist_app_http_handler_resume", "d6/d73/async__internal_8h.html#a70497c0210773e077d1294a17026427d", null ],
+    [ "cwist_async_can_stream", "d6/d73/async__internal_8h.html#ac9a90667cf28d11c4a12bbf6598e7d00", null ],
     [ "cwist_async_dispatch_take", "d6/d73/async__internal_8h.html#a78a38e16122ebfeac99f75ee5ad0523a", null ],
     [ "cwist_async_forget_handle", "d6/d73/async__internal_8h.html#ac18dbc06e0fd4adf751239bd5b9d1875", null ],
     [ "cwist_async_forget_response", "d6/d73/async__internal_8h.html#a6840135ac516b43ef0ac7dc4d4283a00", null ],
+    [ "cwist_async_h3_begin", "d6/d73/async__internal_8h.html#ade82589dc0915d697e200ece226b0883", null ],
+    [ "cwist_async_h3_end", "d6/d73/async__internal_8h.html#a01e1bc01915e8bebe92b518ec831f99f", null ],
     [ "cwist_async_https_take_deferred", "d6/d73/async__internal_8h.html#a399c36abe1fca2dbdeb931c66fdcdabf", null ],
+    [ "cwist_async_is_streamed", "d6/d73/async__internal_8h.html#acee7913211fbb60e1c171c9d10faf242", null ],
     [ "cwist_async_record_pending", "d6/d73/async__internal_8h.html#a07f4289d2cf0b129fa2c3ceb3bd28063", null ],
     [ "cwist_async_res_deferred", "d6/d73/async__internal_8h.html#a566f936ffa5db743344af9e792fb70f5", null ],
+    [ "cwist_async_set_carry", "d6/d73/async__internal_8h.html#a2f8ce45dacb320be4ddda004bf238397", null ],
+    [ "cwist_async_stream_finish", "d6/d73/async__internal_8h.html#acbc4b4a89a3104c35bd7322ce4125414", null ],
+    [ "cwist_async_stream_start", "d6/d73/async__internal_8h.html#a1edc5b15bd3729a7975027ebd1760eb2", null ],
+    [ "cwist_async_stream_write", "d6/d73/async__internal_8h.html#a25695dd2cb24ac6c9d427db5e344297b", null ],
+    [ "cwist_h3_async_queue_acquire", "d6/d73/async__internal_8h.html#a9a70142cb52b4a8515ce70731e0bcc23", null ],
+    [ "cwist_h3_async_queue_enqueue", "d6/d73/async__internal_8h.html#af77b557d3d30761e31f93a719761abd8", null ],
+    [ "cwist_h3_async_queue_release", "d6/d73/async__internal_8h.html#a37ad9e2e4eddb4a237f5ce481ed2ebab", null ],
+    [ "cwist_h3_pending_acquire", "d6/d73/async__internal_8h.html#a4db6b3f4c7f36b855cbe0c99fe622e88", null ],
+    [ "cwist_h3_pending_release", "d6/d73/async__internal_8h.html#adca7e68f317a617762866eff17e82f5b", null ],
     [ "cwist_http_async_close_orphan", "d6/d73/async__internal_8h.html#ab5d519d4fe569356efe9a73671d8f38d", null ],
+    [ "cwist_http_async_finish_stream", "d6/d73/async__internal_8h.html#a65225d39f297752d32576dacf3bfcfab", null ],
     [ "cwist_http_reactor_generation", "d6/d73/async__internal_8h.html#a4212369d5a88e570c7c231df1f26e36c", null ],
-    [ "cwist_http_reactor_post_live", "d6/d73/async__internal_8h.html#af3261ed92180c369e2b52cbcfb0e174f", null ]
+    [ "cwist_http_reactor_post_live", "d6/d73/async__internal_8h.html#af3261ed92180c369e2b52cbcfb0e174f", null ],
+    [ "cwist_http_write_chunk", "d6/d73/async__internal_8h.html#aac7afd67b78f558b56a93458b836b754", null ],
+    [ "cwist_http_write_raw", "d6/d73/async__internal_8h.html#af3514667216917594e87d46831f84d1f", null ],
+    [ "cwist_https_write_raw", "d6/d73/async__internal_8h.html#a4e59492fa528be80eb501a660c7d90fe", null ]
 ];

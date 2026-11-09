@@ -6,5 +6,8 @@ var searchData=
   ['port_2eh_3',['port.h',['../da/d00/port_8h.html',1,'']]],
   ['pqc_5flayer_2ec_4',['pqc_layer.c',['../d6/d18/pqc__layer_8c.html',1,'']]],
   ['protobuf_2ec_5',['protobuf.c',['../d5/da8/protobuf_8c.html',1,'']]],
-  ['protobuf_2eh_6',['protobuf.h',['../db/d5b/protobuf_8h.html',1,'']]]
+  ['protobuf_2eh_6',['protobuf.h',['../db/d5b/protobuf_8h.html',1,'']]],
+  ['proxy_2ec_7',['proxy.c',['../dc/da0/proxy_8c.html',1,'']]],
+  ['proxy_2eh_8',['proxy.h',['../d9/d76/proxy_8h.html',1,'']]],
+  ['proxy_5finternal_2eh_9',['proxy_internal.h',['../db/d7d/proxy__internal_8h.html',1,'']]]
 ];

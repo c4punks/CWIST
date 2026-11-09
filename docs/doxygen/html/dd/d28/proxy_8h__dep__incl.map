@@ -1,0 +1,8 @@
+<map id="include/cwist/net/proxy/proxy.h" name="include/cwist/net/proxy/proxy.h">
+<area shape="rect" id="Node000001" title="Reverse proxy: forward HTTP/1.1, HTTP/2 and HTTP/3 requests to HTTP/1.1 upstreams." alt="" coords="5,5,179,45"/>
+<area shape="rect" id="Node000002" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="13,181,171,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="77,59,65,94,62,113,65,133,75,158,87,180,82,182,70,161,60,134,57,113,60,93,72,57"/>
+<area shape="rect" id="Node000003" href="$db/d7d/proxy__internal_8h.html" title="Reverse proxy internals exposed to the in&#45;tree unit tests." alt="" coords="74,93,222,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="114,56,138,92,133,95,110,58"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="129,146,103,183,98,179,124,143"/>
+</map>
