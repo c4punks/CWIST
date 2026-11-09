@@ -717,6 +717,8 @@ static void test_target_schemes(uint16_t port_a) {
     assert(cwist_grpc_channel_connect("unix:///tmp/cwist-test.sock", NULL) == NULL);
     assert(cwist_grpc_channel_connect("vsock:2:1234", NULL) == NULL);
     assert(cwist_grpc_channel_connect("ipv4:999.999.999.999:1", NULL) == NULL);
+    assert(cwist_grpc_channel_connect("ipv4:127.0.0.1:8080junk", NULL) == NULL);
+    assert(cwist_grpc_channel_connect("ipv6:[::1]:443junk", NULL) == NULL);
 }
 
 int main(void) {

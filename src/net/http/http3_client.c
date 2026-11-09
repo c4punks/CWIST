@@ -734,6 +734,15 @@ static const struct lsquic_stream_if h3c_stream_if = {
 /* I/O loop helper                                                    */
 /* ------------------------------------------------------------------ */
 
+static int h3c_retry_backoff_ms(int base_ms, unsigned int attempt) {
+    if (base_ms <= 0) return 0;
+    unsigned int shift = attempt - 1;
+    if (base_ms >= 30000 || shift >= 15) return 30000;
+    unsigned int factor = 1u << shift;
+    if ((unsigned int)base_ms > 30000u / factor) return 30000;
+    return (int)((unsigned int)base_ms * factor);
+}
+
 /**
  * @brief Run one iteration of the QUIC I/O loop.
  *
@@ -1032,8 +1041,8 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
     /* ---------------------------------------------------------------- */
     /* Retry loop with exponential backoff                               */
     /* ---------------------------------------------------------------- */
-    int attempt = 0;
-    int max_attempts = 1 + client->max_retries;
+    unsigned int attempt = 0;
+    unsigned int max_attempts = (unsigned int)client->max_retries + 1u;
     while (attempt < max_attempts) {
         /* Ensure connection is healthy */
         if (client->conn) {
@@ -1184,8 +1193,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
     retry_backoff:
         attempt++;
         if (attempt < max_attempts && client->retry_delay_ms > 0) {
-            int backoff = client->retry_delay_ms * (1 << (attempt - 1));
-            if (backoff > 30000) backoff = 30000; /* cap at 30s */
+            int backoff = h3c_retry_backoff_ms(client->retry_delay_ms, attempt);
             usleep((useconds_t)backoff * 1000);
         }
     }
