@@ -215,7 +215,16 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     g_accept_rearm_pending = false;
     cwist_reactor_timer_init(&g_accept_rearm_timer, async_accept_rearm_cb, app);
 
-    cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app));
+    if (!cwist_reactor_add(g_reactor, server_fd, async_accept_cb, &app, sizeof(app))) {
+        fprintf(stderr, "[async] Failed to register listener\n");
+        cwist_reactor_destroy(g_reactor);
+        g_reactor = NULL;
+        if (use_https)
+            https_pool_destroy();
+        else
+            cwist_http_pool_destroy();
+        return err;
+    }
 #if defined(__linux__)
     cwist_sqpoll_ring_t sq_probe;
     if (cwist_io_uring_init_sqpoll(&sq_probe, 64, 1000) == 0) {
