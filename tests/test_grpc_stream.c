@@ -324,7 +324,7 @@ static void test_streaming_incremental(cwist_app *app, live_state *st) {
     int cfd = start_server(app, &ctx, &tid);
 
     const char *extra[][2] = {
-        {"X-Meta-Echo", "live-meta"}, /* mixed case on purpose */
+        {"x-meta-echo", "live-meta"}, /* mixed case on purpose */
         {"trace-bin", "qrs="},        /* base64 of 0xaa 0xbb */
     };
     uint8_t block[4096];
