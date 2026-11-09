@@ -99,7 +99,6 @@ typedef struct {
     char *dead_subject; /* <base>.dead */
     char *dead_stream;  /* <base>_DEAD */
 } jq_nats_t;
-#endif
 
 struct cwist_job_queue {
     int backend; /* 0 = redis, 1 = nats */
