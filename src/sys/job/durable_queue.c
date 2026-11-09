@@ -99,6 +99,7 @@ typedef struct {
     char *dead_subject; /* <base>.dead */
     char *dead_stream;  /* <base>_DEAD */
 } jq_nats_t;
+#endif
 
 struct cwist_job_queue {
     int backend; /* 0 = redis, 1 = nats */
@@ -347,25 +348,26 @@ static bool jq_redis_run(cwist_redis_t *conn, size_t argc, const void *const *ar
     return cwist_error_is_ok(&err);
 }
 
-/** Dead-letter a stream entry: park its blob and drop all bookkeeping. */
-static void jq_redis_dead_letter(cwist_job_queue_t *q, const char *id, size_t id_len,
+/** Dead-letter a stream entry only after its blob is stored successfully. */
+static bool jq_redis_dead_letter(cwist_job_queue_t *q, const char *id, size_t id_len,
                                  const char *type, const void *payload, size_t payload_len,
                                  uint32_t attempts) {
     jq_redis_t *rs = &q->u.redis;
     size_t blob_len = 0;
     char *blob = jq_blob(type, attempts, payload, payload_len, &blob_len);
-    if (blob) {
-        const void *argv[] = {"RPUSH", rs->dead, blob};
-        size_t lens[] = {5, strlen(rs->dead), blob_len};
-        jq_redis_run(rs->conn, 3, argv, lens);
-        cwist_free(blob);
-    }
-    const void *argv[] = {"XACK", rs->stream, CWIST_JQ_GROUP, id};
-    size_t lens[] = {4, strlen(rs->stream), strlen(CWIST_JQ_GROUP), id_len};
-    jq_redis_run(rs->conn, 4, argv, lens);
+    if (!blob) return false;
+    const void *argv[] = {"RPUSH", rs->dead, blob};
+    size_t lens[] = {5, strlen(rs->dead), blob_len};
+    bool stored = jq_redis_run(rs->conn, 3, argv, lens);
+    cwist_free(blob);
+    if (!stored) return false;
+
+    const void *ack_argv[] = {"XACK", rs->stream, CWIST_JQ_GROUP, id};
+    size_t ack_lens[] = {4, strlen(rs->stream), strlen(CWIST_JQ_GROUP), id_len};
+    if (!jq_redis_run(rs->conn, 4, ack_argv, ack_lens)) return false;
     const void *dargv[] = {"HDEL", rs->attempts, id};
     size_t dlens[] = {4, strlen(rs->attempts), id_len};
-    jq_redis_run(rs->conn, 3, dargv, dlens);
+    return jq_redis_run(rs->conn, 3, dargv, dlens);
 }
 
 /** Reclaim entries whose visibility timeout expired; may dead-letter some. */
@@ -395,7 +397,11 @@ static cwist_job_t *jq_redis_autoclaim(cwist_job_queue_t *q) {
             uint32_t attempts = 0;
             cwist_error_t derr =
                 jq_redis_delivery_count(q, candidate->id, strlen(candidate->id), &attempts);
-            if (!cwist_error_is_ok(&derr) || attempts <= q->max_retries) {
+            if (!cwist_error_is_ok(&derr)) {
+                cwist_job_free(candidate);
+                continue;
+            }
+            if (attempts <= q->max_retries) {
                 candidate->attempts = attempts;
                 job = candidate;
             } else {
@@ -777,20 +783,22 @@ static cwist_error_t jq_nats_enqueue(cwist_job_queue_t *q, const void *payload, 
     return s == NATS_OK ? jq_err(0) : jq_err(CWIST_FAILURE);
 }
 
-/** Terminate an exhausted delivery and park it in the dead stream. */
-static void jq_nats_dead_letter(jq_nats_t *ns, natsMsg *msg) {
+/** Terminate an exhausted delivery only after its dead-stream copy is stored. */
+static bool jq_nats_dead_letter(jq_nats_t *ns, natsMsg *msg) {
     natsMsg *dm = NULL;
     if (natsMsg_Create(&dm, ns->dead_subject, NULL, natsMsg_GetData(msg),
-                       natsMsg_GetDataLength(msg)) == NATS_OK) {
-        const char *type = NULL;
-        if (natsMsgHeader_Get(msg, "Cwist-Type", &type) == NATS_OK && type)
-            natsMsgHeader_Set(dm, "Cwist-Type", type);
-        jsErrCode jerr = 0;
-        jsPubAck *pa = NULL;
-        if (js_PublishMsg(&pa, ns->js, dm, NULL, &jerr) == NATS_OK && pa) jsPubAck_Destroy(pa);
-        natsMsg_Destroy(dm);
-    }
-    natsMsg_Term(msg, NULL);
+                       natsMsg_GetDataLength(msg)) != NATS_OK)
+        return false;
+    const char *type = NULL;
+    if (natsMsgHeader_Get(msg, "Cwist-Type", &type) == NATS_OK && type)
+        natsMsgHeader_Set(dm, "Cwist-Type", type);
+    jsErrCode jerr = 0;
+    jsPubAck *pa = NULL;
+    natsStatus status = js_PublishMsg(&pa, ns->js, dm, NULL, &jerr);
+    if (pa) jsPubAck_Destroy(pa);
+    natsMsg_Destroy(dm);
+    if (status != NATS_OK) return false;
+    return natsMsg_Term(msg, NULL) == NATS_OK;
 }
 
 /**
