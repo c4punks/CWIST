@@ -130,6 +130,12 @@ test_scheduler
 test_secure_headers
 test_seq
 test_seq_auth
+fuzz_seq
+fuzz_http1
+fuzz_http2
+fuzz_http3
+fuzz_websocket
+fuzz_proxy
 test_session
 test_shutdown
 test_listen_signal_restore

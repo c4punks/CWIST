@@ -368,11 +368,15 @@ def render() -> None:
     WEBSERVER_LATENCY_SVG.write_text(render_latency_kde_svg(ws_latest))
 
     def get_lat_part(prefix):
+        p50 = ws_latest.get(f"{prefix}_p50_ms")
         p90 = ws_latest.get(f"{prefix}_p90_ms")
         p99 = ws_latest.get(f"{prefix}_p99_ms")
         p99_999 = ws_latest.get(f"{prefix}_p99_999_ms")
         if p90 is not None and p99 is not None:
-            tail = f" (P90 {p90:.2f}ms, P99 {p99:.2f}ms"
+            tail = " ("
+            if p50 is not None:
+                tail += f"P50 {p50:.2f}ms, "
+            tail += f"P90 {p90:.2f}ms, P99 {p99:.2f}ms"
             if p99_999 is not None:
                 tail += f", P99.999 {p99_999:.2f}ms"
             tail += ")"
