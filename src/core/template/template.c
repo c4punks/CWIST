@@ -12,11 +12,86 @@
  */
 
 /** @brief Forward declarations for recursive block and file rendering. */
-static cwist_sstring *render_internal(const char **template_str, const cJSON *context, int depth);
+static cwist_sstring *render_internal(const char **template_str, const cJSON *context,
+                                      const char *base_dir, int depth);
 static cwist_sstring *render_file_internal(const char *file_path, const cJSON *context, int depth);
 
 /** @brief Maximum nesting depth for includes/control structures. */
 #define CWIST_TEMPLATE_MAX_DEPTH 32
+
+/**
+ * @brief Extract the directory component of a file path into a caller-supplied buffer.
+ *
+ * The result always ends without a trailing separator and is never empty: a
+ * path with no directory component (e.g. "file.html") produces ".".  The
+ * buffer is always NUL-terminated even when the path is longer than buf_len.
+ *
+ * @param path   Source file path.
+ * @param buf    Output buffer to write the directory into.
+ * @param buf_len Size of buf, including the NUL terminator slot.
+ */
+static void path_dirname(const char *path, char *buf, size_t buf_len) {
+    if (!path || buf_len == 0) return;
+
+    const char *last = NULL;
+    for (const char *p = path; *p; p++) {
+        if (*p == '/' || *p == '\\') last = p;
+    }
+
+    if (!last) {
+        /* No separator found - directory is the current directory. */
+        if (buf_len >= 2) {
+            buf[0] = '.';
+            buf[1] = '\0';
+        } else {
+            buf[0] = '\0';
+        }
+        return;
+    }
+
+    size_t len = (size_t)(last - path);
+    if (len == 0) {
+        /* Path starts with a separator, e.g. "/file.html". */
+        len = 1;
+    }
+    if (len >= buf_len) len = buf_len - 1;
+    memcpy(buf, path, len);
+    buf[len] = '\0';
+}
+
+/**
+ * @brief Resolve an include path against a base directory.
+ *
+ * Absolute paths (starting with '/' or a drive letter on Windows) are
+ * returned unchanged.  Relative paths are prefixed with base_dir.  The
+ * resulting path is written into buf and is always NUL-terminated.
+ *
+ * @param base_dir Directory of the including file (may be NULL or empty).
+ * @param include_path The path token from the {% include "..." %} tag.
+ * @param buf    Output buffer for the resolved path.
+ * @param buf_len Size of buf.
+ */
+static void resolve_include_path(const char *base_dir, const char *include_path,
+                                  char *buf, size_t buf_len) {
+    if (!include_path || buf_len == 0) {
+        if (buf_len > 0) buf[0] = '\0';
+        return;
+    }
+
+    /* Absolute path: use as-is. */
+    if (include_path[0] == '/' || include_path[0] == '\\' ||
+        (include_path[0] != '\0' && include_path[1] == ':')) {
+        snprintf(buf, buf_len, "%s", include_path);
+        return;
+    }
+
+    /* Relative path: prepend base_dir when available. */
+    if (base_dir && base_dir[0] != '\0' && !(base_dir[0] == '.' && base_dir[1] == '\0')) {
+        snprintf(buf, buf_len, "%s/%s", base_dir, include_path);
+    } else {
+        snprintf(buf, buf_len, "%s", include_path);
+    }
+}
 
 /**
  * @brief HTML-escape a string into an output buffer.
@@ -151,9 +226,12 @@ static const cJSON *get_value_from_context(const cJSON *context, const char *key
  * @brief Recursively render a template string until the current control block ends.
  * @param template_str Cursor into the template source; advanced as tags are consumed.
  * @param context JSON context used for variable lookups and loop bindings.
+ * @param base_dir Directory of the file being rendered, used to resolve relative includes.
+ *                 May be NULL when rendering an in-memory string with no file origin.
  * @return Newly allocated rendered string fragment, or NULL on invalid input.
  */
-static cwist_sstring *render_internal(const char **template_str, const cJSON *context, int depth) {
+static cwist_sstring *render_internal(const char **template_str, const cJSON *context,
+                                      const char *base_dir, int depth) {
     if (!template_str || !*template_str || depth > CWIST_TEMPLATE_MAX_DEPTH) return NULL;
 
     cwist_sstring *output = cwist_sstring_create();
@@ -303,7 +381,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                     if (cond) {
                         const char *block_p = block_start;
                         cwist_sstring *rendered_block =
-                            render_internal(&block_p, context, depth + 1);
+                            render_internal(&block_p, context, base_dir, depth + 1);
                         if (rendered_block) {
                             cwist_sstring_append(output, rendered_block->data);
                             cwist_sstring_destroy(rendered_block);
@@ -313,7 +391,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         const char *else_p =
                             else_close ? else_close + 2 : else_pos + strlen("{% else %}");
                         cwist_sstring *rendered_block =
-                            render_internal(&else_p, context, depth + 1);
+                            render_internal(&else_p, context, base_dir, depth + 1);
                         if (rendered_block) {
                             cwist_sstring_append(output, rendered_block->data);
                             cwist_sstring_destroy(rendered_block);
@@ -375,7 +453,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
 
                             const char *loop_p = block_start;
                             cwist_sstring *rendered_block =
-                                render_internal(&loop_p, loop_context, depth + 1);
+                                render_internal(&loop_p, loop_context, base_dir, depth + 1);
                             if (rendered_block) {
                                 cwist_sstring_append(output, rendered_block->data);
                                 cwist_sstring_destroy(rendered_block);
@@ -402,7 +480,12 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                             *--end = '\0';
                         if (path[0] == '"') path++;
                         if (path[0]) {
-                            cwist_sstring *included = render_file_internal(path, context, depth + 1);
+                            /* Resolve the include path against the directory of
+                             * the including file so that relative paths work
+                             * regardless of the process working directory. */
+                            char resolved[4096];
+                            resolve_include_path(base_dir, path, resolved, sizeof(resolved));
+                            cwist_sstring *included = render_file_internal(resolved, context, depth + 1);
                             if (!included) {
                                 cwist_sstring_destroy(output);
                                 return NULL;
@@ -435,17 +518,29 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
 
 /**
  * @brief Render an in-memory template string against a JSON context object.
+ *
+ * Include paths in an in-memory template have no directory origin, so relative
+ * includes resolve against the process working directory (same as before this
+ * change).  Use cwist_template_render_file() when file-relative includes are
+ * needed.
+ *
  * @param template_str Template source to render.
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL on failure.
  */
 cwist_sstring *cwist_template_render(const char *template_str, const cJSON *context) {
     const char *p = template_str;
-    return render_internal(&p, context, 0);
+    return render_internal(&p, context, NULL, 0);
 }
 
 /**
  * @brief Load a template file from disk and render it against a JSON context.
+ *
+ * The directory of file_path is used as the base for resolving relative
+ * {% include "..." %} paths inside the template, so partials can be placed
+ * next to the template that includes them without depending on the process
+ * working directory.
+ *
  * @param file_path Path to the template file to open.
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL when file IO or rendering fails.
@@ -476,8 +571,13 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
     template_str[read_len] = '\0';
     fclose(f);
 
+    /* Extract the directory of this file so nested includes resolve relative
+     * to it, not to the process working directory. */
+    char dir_buf[4096];
+    path_dirname(file_path, dir_buf, sizeof(dir_buf));
+
     const char *p = template_str;
-    return render_internal(&p, context, depth);
+    return render_internal(&p, context, dir_buf, depth);
 }
 
 cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *context) {
