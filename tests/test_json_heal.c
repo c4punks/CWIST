@@ -340,6 +340,9 @@ static void test_zod_missing_required(void) {
     assert(r.error_count > 0);
     assert(out == NULL);
 
+    cwist_zod_print_errors(&r);
+    cwist_zod_print_errors(NULL);
+
     bool found = false;
     for (int i = 0; i < r.error_count; i++) {
         if (strcmp(r.errors[i].field, "name") == 0) {
@@ -378,6 +381,9 @@ static void test_zod_invalid_json_syntax(void) {
     assert(r.valid == false);
     assert(r.error_count > 0);
     assert(out == NULL);
+
+    cwist_zod_print_errors(&r);
+    cwist_zod_print_errors(NULL);
     printf("  Passed.\n");
 }
 
