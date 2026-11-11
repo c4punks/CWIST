@@ -1,5 +1,9 @@
 var NAVTREEINDEX18 =
 {
+"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md533":[47,3],
+"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md534":[47,4],
+"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md535":[47,5],
+"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md536":[47,6],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md537":[47,7],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md538":[47,8],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md539":[47,9],
@@ -245,9 +249,5 @@ var NAVTREEINDEX18 =
 "dd/d6c/scheduler_8c.html#ac55dd12761ee804a6a7c49d2782d9b47":[94,0,2,4,4,1,2],
 "dd/d6c/scheduler_8c.html#ae0f1c3ad3074a69d79ea27d641ac2294":[94,0,2,4,4,1,3],
 "dd/d6c/scheduler_8c.html#af7b55ac300905012fb3b0824af3c3b14":[94,0,2,4,4,1,1],
-"dd/d6c/scheduler_8c_source.html":[94,0,2,4,4,1],
-"dd/d6e/query_8h.html":[94,0,1,0,16],
-"dd/d6e/query_8h_source.html":[94,0,1,0,16],
-"dd/d71/structcwist__zod__result.html":[93,0,111],
-"dd/d71/structcwist__zod__result.html#a64957bfbb985f62c2eae22dd084f98a0":[93,0,111,1]
+"dd/d6c/scheduler_8c_source.html":[94,0,2,4,4,1]
 };

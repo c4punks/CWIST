@@ -1,5 +1,9 @@
 var NAVTREEINDEX16 =
 {
+"db/dc5/md_docs_2api_2websocket.html#autotoc_md243":[16,4],
+"db/dcb/structcwist__config.html":[93,0,16],
+"db/dcb/structcwist__config.html#a70ab087bf211e583844f52e6c31fe598":[93,0,16,0],
+"db/dcb/structcwist__config.html#abba4cac1c44315aad94eaa3fd249c880":[93,0,16,1],
 "db/dcc/error_8c.html":[94,0,2,4,1,0],
 "db/dcc/error_8c.html#a685c1a8878ff4ee80d80314800d2b82e":[94,0,2,4,1,0,1],
 "db/dcc/error_8c.html#acafffea2368d859053b87d99f7e77aaf":[94,0,2,4,1,0,0],
@@ -245,9 +249,5 @@ var NAVTREEINDEX16 =
 "dc/d97/rate__limit__redis_8c.html#aa5b999ab0e2586db3679f1adfa10b410":[94,0,2,4,0,14,3],
 "dc/d97/rate__limit__redis_8c.html#abcda5fb35baad215d5ea4c82fdad09a9":[94,0,2,4,0,14,1],
 "dc/d97/rate__limit__redis_8c.html#af3f8d777ee87ccbedcea4949700e4078":[94,0,2,4,0,14,2],
-"dc/d97/rate__limit__redis_8c_source.html":[94,0,2,4,0,14],
-"dc/da0/proxy_8c.html":[94,0,2,2,5,0],
-"dc/da0/proxy_8c.html#a0aa3c299712f7f44b7290cdb378ca799":[94,0,2,2,5,0,8],
-"dc/da0/proxy_8c.html#a120dc7b094b122c9866a82692142bfe4":[94,0,2,2,5,0,9],
-"dc/da0/proxy_8c.html#a18bbce491fb59ab489d2c8542695b98f":[94,0,2,2,5,0,16]
+"dc/d97/rate__limit__redis_8c_source.html":[94,0,2,4,0,14]
 };
