@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (803) ==
+== functions (805) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -763,7 +763,9 @@ cwist_stream_req_feed
 cwist_strndup
 cwist_tcp_cork_enabled
 cwist_template_render
+cwist_template_render_ex
 cwist_template_render_file
+cwist_template_render_file_ex
 cwist_test_client_clear_cookies
 cwist_test_client_create
 cwist_test_client_delete
@@ -809,7 +811,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (804) ==
+== function signatures (806) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1569,7 +1571,9 @@ cwist_stream_req_feed: int (cwist_stream_req_t *, const char *, size_t)
 cwist_strndup: char * (const char *, size_t)
 cwist_tcp_cork_enabled: bool (void)
 cwist_template_render: cwist_sstring * (const char *, const cJSON *)
+cwist_template_render_ex: cwist_sstring * (const char *, const cJSON *, cwist_template_error_t *)
 cwist_template_render_file: cwist_sstring * (const char *, const cJSON *)
+cwist_template_render_file_ex: cwist_sstring * (const char *, const cJSON *, cwist_template_error_t *)
 cwist_test_client_clear_cookies: void (cwist_test_client *)
 cwist_test_client_create: cwist_test_client * (cwist_app *)
 cwist_test_client_delete: cwist_http_response * (cwist_test_client *, const char *)
@@ -1802,7 +1806,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (216) ==
+== typedefs (218) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1994,6 +1998,8 @@ cwist_sstring
 cwist_static_dir
 cwist_stream_req_t
 cwist_stream_write_fn
+cwist_template_error_code_t
+cwist_template_error_t
 cwist_test_client
 cwist_test_client_cookie
 cwist_test_client_kv
@@ -2020,7 +2026,7 @@ quic_conn_fc_t
 quic_net_quality_t
 quic_stream_fc_t
 
-== enum constants (234) ==
+== enum constants (241) ==
 CWIST_ASYNC_CLOSE
 CWIST_ASYNC_DEFER
 CWIST_ASYNC_DETACH
@@ -2244,6 +2250,13 @@ CWIST_RDBMS_POSTGRES
 CWIST_RECV_FATAL
 CWIST_RECV_NEED_MORE
 CWIST_RECV_OK
+CWIST_TEMPLATE_ERROR_DEPTH
+CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT
+CWIST_TEMPLATE_ERROR_IO
+CWIST_TEMPLATE_ERROR_NONE
+CWIST_TEMPLATE_ERROR_NO_MEMORY
+CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK
+CWIST_TEMPLATE_ERROR_UNCLOSED_TAG
 CWIST_WEBRTC_DATA_BINARY
 CWIST_WEBRTC_DATA_STRING
 CWIST_WRITE_DONE
@@ -2259,7 +2272,7 @@ CWIST_WS_FRAME_TEXT
 == globals (extern) (1) ==
 cwist_proxy
 
-== layouts (84) ==
+== layouts (86) ==
 enum cwist_async_action_t [0] CWIST_ASYNC_CLOSE = 0
 enum cwist_async_action_t [1] CWIST_ASYNC_REARM
 enum cwist_async_action_t [2] CWIST_ASYNC_DETACH
@@ -2401,6 +2414,13 @@ enum cwist_sstring_error_t [3] ERR_SSTRING_CONSTANT
 enum cwist_sstring_error_t [4] ERR_SSTRING_RESIZE_TOO_SMALL
 enum cwist_sstring_error_t [5] ERR_SSTRING_RESIZE_TOO_LARGE
 enum cwist_sstring_error_t [6] ERR_SSTRING_OUTOFBOUND
+enum cwist_template_error_code_t [0] CWIST_TEMPLATE_ERROR_NONE = 0
+enum cwist_template_error_code_t [1] CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT
+enum cwist_template_error_code_t [2] CWIST_TEMPLATE_ERROR_UNCLOSED_TAG
+enum cwist_template_error_code_t [3] CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK
+enum cwist_template_error_code_t [4] CWIST_TEMPLATE_ERROR_DEPTH
+enum cwist_template_error_code_t [5] CWIST_TEMPLATE_ERROR_IO
+enum cwist_template_error_code_t [6] CWIST_TEMPLATE_ERROR_NO_MEMORY
 enum cwist_webrtc_data_type [0] CWIST_WEBRTC_DATA_BINARY = 0
 enum cwist_webrtc_data_type [1] CWIST_WEBRTC_DATA_STRING = 1
 enum cwist_ws_opcode_t [0] CWIST_WS_FRAME_CONTINUATION = 0x0
@@ -2808,6 +2828,10 @@ struct cwist_sstring [7] size_t (*get_size)(struct cwist_sstring *str)
 struct cwist_sstring [8] int (*compare)(struct cwist_sstring *left, const struct cwist_sstring *right)
 struct cwist_sstring [9] cwist_error_t (*copy)(struct cwist_sstring *str, const struct cwist_sstring *from)
 struct cwist_sstring [10] cwist_error_t (*append)(struct cwist_sstring *str, const struct cwist_sstring *from)
+struct cwist_template_error_t [0] cwist_template_error_code_t code
+struct cwist_template_error_t [1] size_t byte_offset
+struct cwist_template_error_t [2] const char *tag_type
+struct cwist_template_error_t [3] char file_path[4096]
 struct cwist_test_client [0] cwist_app *app
 struct cwist_test_client [1] cwist_test_client_cookie *cookies
 struct cwist_test_client_cookie [0] char *name
