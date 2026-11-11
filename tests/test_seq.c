@@ -47,14 +47,17 @@ static void test_split_and_reassemble(void) {
     cwist_seq_message_free(&split);
 
     /* Test raw chunk header construction and parsing */
-    uint8_t hdr[CWIST_SEQ_HEADER_SIZE];
-    cwist_seq_chunk_build_header(hdr, 1, 5, 100, 100);
+    uint8_t raw[CWIST_SEQ_HEADER_SIZE + 100] = {0};
+    cwist_seq_chunk_build_header(raw, 1, 5, 100, 100);
     cwist_seq_chunk_t raw_chunk;
-    assert(cwist_seq_chunk_parse(hdr, CWIST_SEQ_HEADER_SIZE, &raw_chunk));
+    assert(cwist_seq_chunk_parse(raw, sizeof(raw), &raw_chunk));
     assert(raw_chunk.seq == 1);
     assert(raw_chunk.total == 5);
     assert(raw_chunk.payload_len == 100);
     assert(raw_chunk.chunk_size == 100);
+    assert(raw_chunk.payload == raw + CWIST_SEQ_HEADER_SIZE);
+    /* The header alone is rejected: it promises 100 payload bytes. */
+    assert(!cwist_seq_chunk_parse(raw, CWIST_SEQ_HEADER_SIZE, &raw_chunk));
 
     printf("  Passed split/reassemble.\n");
 }
