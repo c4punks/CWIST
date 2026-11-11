@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (807) ==
+== functions (808) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -806,6 +806,7 @@ cwist_websocket_frame_destroy
 cwist_websocket_receive
 cwist_websocket_receive_sequenced
 cwist_websocket_send
+cwist_websocket_send_fragments
 cwist_websocket_send_sequenced
 cwist_websocket_upgrade
 cwist_websocket_upgrade_response
@@ -813,7 +814,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (808) ==
+== function signatures (809) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1616,6 +1617,7 @@ cwist_websocket_frame_destroy: void (cwist_ws_frame *)
 cwist_websocket_receive: cwist_ws_frame * (cwist_websocket *)
 cwist_websocket_receive_sequenced: uint8_t * (cwist_websocket *, size_t *)
 cwist_websocket_send: int (cwist_websocket *, cwist_ws_opcode_t, const uint8_t *, size_t)
+cwist_websocket_send_fragments: int (cwist_websocket *, cwist_ws_opcode_t, const cwist_ws_fragment *, size_t)
 cwist_websocket_send_sequenced: int (cwist_websocket *, const uint8_t *, size_t, uint16_t)
 cwist_websocket_upgrade: cwist_websocket * (cwist_http_request *, int)
 cwist_websocket_upgrade_response: bool (cwist_http_request *, cwist_http_response *)
@@ -1647,7 +1649,7 @@ cwist_wasm_component_dispose: void (void *)
 cwist_wasm_dispatch_memory: const char * (cwist_app *, const char *, size_t, size_t *)
 cwist_wasm_free: void (void *)
 
-== types (struct/union/enum names) (161) ==
+== types (struct/union/enum names) (162) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -1804,13 +1806,14 @@ cwist_webrtc_conn
 cwist_webrtc_ctx
 cwist_websocket
 cwist_websocket_async
+cwist_ws_fragment
 cwist_ws_frame
 cwist_zod_error
 cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (218) ==
+== typedefs (219) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -2017,6 +2020,7 @@ cwist_webrtc_message_cb
 cwist_websocket
 cwist_websocket_async
 cwist_write_status_t
+cwist_ws_fragment
 cwist_ws_frame
 cwist_ws_handler_func
 cwist_ws_on_close_t
@@ -2277,7 +2281,7 @@ CWIST_WS_FRAME_TEXT
 == globals (extern) (1) ==
 cwist_proxy
 
-== layouts (86) ==
+== layouts (87) ==
 enum cwist_async_action_t [0] CWIST_ASYNC_CLOSE = 0
 enum cwist_async_action_t [1] CWIST_ASYNC_REARM
 enum cwist_async_action_t [2] CWIST_ASYNC_DETACH
@@ -2856,6 +2860,8 @@ struct cwist_test_client_request_options [6] size_t cookie_count
 struct cwist_test_client_request_options [7] const char *query_string
 struct cwist_websocket [0] int fd
 struct cwist_websocket [1] bool is_closed
+struct cwist_ws_fragment [0] const uint8_t *data
+struct cwist_ws_fragment [1] size_t len
 struct cwist_ws_frame [0] bool fin
 struct cwist_ws_frame [1] cwist_ws_opcode_t opcode
 struct cwist_ws_frame [2] uint8_t *payload
