@@ -12,13 +12,11 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 #include <cwist/net/http/http3_client.h>
-#include <cwist/net/http/http3.h> /* CWIST_HTTP3_DATAGRAM_PROTOCOL */
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/err/cwist_err.h>
 #include "h3_hdr_out.h"
 #include "http3_global.h"
 
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +29,6 @@
 #include <sys/uio.h>
 #include <poll.h>
 #include <pthread.h>
-#include <stdatomic.h>
 #include <ctype.h>
 #include <strings.h>
 
@@ -56,14 +53,6 @@
 /* ------------------------------------------------------------------ */
 
 typedef struct h3c_stream_ctx {
-    /* Must stay the first member and NULL. Once a WebTransport session
-     * exists on a connection, lsquic's WT layer installs a connection-wide
-     * "stream committed" hook (wt_on_stream_committed in lsquic_wt.c) that
-     * reads every stream's context as its own struct wt_stream_ctx, whose
-     * first member is the session pointer, and follows it when non-NULL.
-     * Any ordinary request stream whose FIN is acked after the session
-     * opened would otherwise be dereferenced as a session (SIGSEGV). */
-    void *wt_ctx_guard;
     lsquic_stream_t *stream;
     cwist_http_response *res;
     char *req_path;
@@ -83,10 +72,8 @@ typedef struct h3c_stream_ctx {
     int write_done;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     int is_webtransport_connect;
-    int is_dgram_channel; /* extended CONNECT with :protocol cwist-datagram */
 #endif
 } h3c_stream_ctx_t;
-_Static_assert(offsetof(h3c_stream_ctx_t, wt_ctx_guard) == 0, "wt_ctx_guard must be first");
 
 #ifdef CWIST_WEBTRANSPORT_CLIENT
 struct cwist_webtransport_client_session {
@@ -137,19 +124,10 @@ struct cwist_http3_client {
         uint64_t enqueued;
         uint64_t dequeued;
         uint64_t dropped_full;
-        _Atomic uint64_t dropped_alloc;
+        uint64_t dropped_alloc;
     } in_dgram;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     cwist_webtransport_client_session *wt_connecting;
-    /* Raw datagrams next to WebTransport (enable_datagram_channel). When the
-     * peer's SETTINGS enable HTTP Datagrams, raw payloads go through the
-     * channel stream @c dgc as HTTP Datagrams; otherwise as DATAGRAM frames. */
-    int dgc_enabled;
-    int caps_known;      /* peer SETTINGS processed (on_http_caps) */
-    uint32_t caps;       /* LSQUIC_HTTP_CAP_* of the current connection */
-    h3c_stream_ctx_t *dgc; /* open channel stream, or NULL */
-    h3c_dgram_node *dgc_out_head; /* guarded by dgram_mtx */
-    h3c_dgram_node *dgc_out_tail;
 #endif
 };
 
@@ -211,21 +189,14 @@ typedef struct h3c_hset {
 
 /**
  * @brief lsquic header-set callback: allocate a new header set for a stream.
- * @return Newly allocated h3c_hset_t, or NULL on allocation failure
+ * @return Newly calloc'ed h3c_hset_t, or NULL on allocation failure
  *         (ownership passes to lsquic and later h3c_hsi_discard()).
  */
 static void *h3c_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_promise) {
     (void)hsi_ctx;
     (void)stream;
     (void)is_push_promise;
-    /* Only the counters need initializing: header slots are prepared one
-     * by one in h3c_hsi_prepare(), and zeroing the 64 KiB decode buffer on
-     * every response was pure overhead. */
-    h3c_hset_t *hset = malloc(sizeof(*hset));
-    if (hset) {
-        hset->count = 0;
-        hset->decode_off = 0;
-    }
+    h3c_hset_t *hset = calloc(1, sizeof(*hset));
     return hset;
 }
 
@@ -328,79 +299,8 @@ static void h3c_on_conn_closed(lsquic_conn_t *conn) {
     cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
     if (client && client->conn == conn) {
         client->conn = NULL;
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-        client->caps_known = 0;
-        client->caps = 0;
-#endif
     }
 }
-
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-/**
- * @brief lsquic callback: the peer's SETTINGS are processed. Records whether
- *        HTTP Datagrams and extended CONNECT are in effect on this connection.
- */
-static void h3c_on_http_caps(lsquic_conn_t *conn, const struct lsquic_http_caps *caps) {
-    cwist_http3_client *client = (cwist_http3_client *)lsquic_conn_get_ctx(conn);
-    if (!client || !caps) return;
-    client->caps = caps->lhc_flags;
-    client->caps_known = 1;
-}
-
-static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_t len);
-
-/** @brief HTTP Datagram on the channel stream: queue it for recv_datagram(). */
-static void h3c_dgc_on_dg_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *h, const void *buf,
-                               size_t len) {
-    (void)h;
-    cwist_http3_client *client =
-        (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
-    if (client && buf && len > 0) h3c_dgram_enqueue(client, buf, len);
-}
-
-/** @brief Channel ready to send: emit the oldest queued raw payload. */
-static int h3c_dgc_on_dg_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *h,
-                               size_t max_payload, lsquic_http_dg_consume_f consume) {
-    (void)h;
-    cwist_http3_client *client =
-        (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
-    if (!client) return -1;
-    pthread_mutex_lock(&client->dgram_mtx);
-    h3c_dgram_node *n = client->dgc_out_head;
-    if (n) {
-        client->dgc_out_head = n->next;
-        if (!client->dgc_out_head) client->dgc_out_tail = NULL;
-    }
-    if (!client->dgc_out_head) lsquic_stream_want_http_dg_write(stream, 0);
-    pthread_mutex_unlock(&client->dgram_mtx);
-    if (!n) return -1;
-    /* Raw datagram semantics: unreliable, never re-framed as a capsule; a
-     * payload that no longer fits (path MTU shrank) is dropped whole. */
-    int rc = n->len <= max_payload ? consume(stream, n->data, n->len, LSQUIC_HTTP_DG_SEND_DATAGRAM)
-                                   : -1;
-    free(n->data);
-    free(n);
-    return rc;
-}
-
-static const struct lsquic_http_dg_if h3c_dgc_if = {
-    .on_http_dg_write = h3c_dgc_on_dg_write,
-    .on_http_dg_read = h3c_dgc_on_dg_read,
-};
-
-static void h3c_dgc_free_out(cwist_http3_client *client) {
-    pthread_mutex_lock(&client->dgram_mtx);
-    h3c_dgram_node *n = client->dgc_out_head;
-    client->dgc_out_head = client->dgc_out_tail = NULL;
-    pthread_mutex_unlock(&client->dgram_mtx);
-    while (n) {
-        h3c_dgram_node *next = n->next;
-        free(n->data);
-        free(n);
-        n = next;
-    }
-}
-#endif
 
 /**
  * @brief lsquic stream-iface callback: a new stream was created.
@@ -502,26 +402,10 @@ h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_session_ctx_t *ct
     }
 }
 
-/**
- * @brief WebTransport data stream readable.
- *
- * Applications read WebTransport streams by polling
- * cwist_webtransport_client_stream_read(), which reads the lsquic stream
- * directly, so the callback only stops lsquic from re-dispatching a stream
- * whose data is waiting for that poll. lsquic_wt_accept() refuses an
- * interface without this callback, which left every client session
- * unopenable once lsquic required it.
- */
-static void h3c_wt_on_stream_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *h) {
-    (void)h;
-    lsquic_stream_wantread(stream, 0);
-}
-
 static const struct lsquic_webtransport_if h3c_wt_if = {
     .wti_on_session_open = h3c_wt_on_session_open,
     .wti_on_session_rejected = h3c_wt_on_session_rejected,
     .wti_on_session_close = h3c_wt_on_session_close,
-    .wti_on_stream_read = h3c_wt_on_stream_read,
 };
 #endif
 
@@ -589,20 +473,6 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
             h3c_hsi_discard(hset);
             st->headers_done = 1;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
-            if (st->is_dgram_channel) {
-                cwist_http3_client *client =
-                    (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
-                if (client && st->res && st->res->status_code >= 200 &&
-                    st->res->status_code < 300) {
-                    lsquic_stream_set_http_dg_if(stream, &h3c_dgc_if);
-                    client->dgc = st;
-                }
-                /* The CONNECT "response" is just its header block; the
-                 * stream stays open as the channel. */
-                st->response_complete = 1;
-                st->response_ready = 1;
-                return;
-            }
             if (st->is_webtransport_connect) {
                 cwist_http3_client *client =
                     (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
@@ -633,18 +503,6 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
         }
     }
 
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-    if (st->is_dgram_channel && st->headers_done) {
-        /* The channel carries no body; discard and watch for FIN. */
-        while ((nread = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
-        }
-        if (nread == 0) {
-            lsquic_stream_wantread(stream, 0);
-            lsquic_stream_shutdown(stream, 1);
-        }
-        return;
-    }
-#endif
     while ((nread = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
         if (st->resp_body_len > CWIST_HTTP_MAX_BODY_SIZE ||
             (size_t)nread > CWIST_HTTP_MAX_BODY_SIZE - st->resp_body_len) {
@@ -773,14 +631,8 @@ static void h3c_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
         st->write_done = 1;
         /* lsquic ignores the eos argument of lsquic_stream_send_headers()
          * for IETF QUIC; shut down the write side explicitly so the server
-         * sees FIN on a bodyless request.  A datagram channel stays open:
-         * closing its request would end the channel (RFC 9297 Section 3). */
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-        if (st->is_dgram_channel)
-            lsquic_stream_flush(stream); /* no FIN to push the HEADERS out */
-        else
-#endif
-            lsquic_stream_shutdown(stream, 1);
+         * sees FIN on a bodyless request. */
+        lsquic_stream_shutdown(stream, 1);
         lsquic_stream_wantwrite(stream, 0);
         lsquic_stream_wantread(stream, 1);
     }
@@ -814,18 +666,12 @@ static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     if (!st) return;
     cwist_http3_client *client =
         (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
-    /* lsquic's WebTransport layer may still read the stream context after
-     * on_close (see wt_ctx_guard); never leave it pointing at freed memory. */
-    lsquic_stream_set_ctx(stream, NULL);
     pthread_mutex_lock(&client->mtx);
     st->stream_closed = 1;
     st->response_ready = 1;
     if (client->active_stream == st) {
         client->active_stream = NULL;
     }
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-    if (client->dgc == st) client->dgc = NULL;
-#endif
     pthread_cond_broadcast(&client->cond);
     int defer_free = st->request_waiting;
     pthread_mutex_unlock(&client->mtx);
@@ -873,15 +719,18 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
 
 static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_t len) {
     h3c_dgram_node *node = malloc(sizeof(*node));
-    if (node) {
-        node->data = malloc(len);
-        if (!node->data) {
-            free(node);
-            node = NULL;
-        }
-    }
     if (!node) {
-        atomic_fetch_add_explicit(&client->in_dgram.dropped_alloc, 1, memory_order_relaxed);
+        pthread_mutex_lock(&client->dgram_mtx);
+        client->in_dgram.dropped_alloc++;
+        pthread_mutex_unlock(&client->dgram_mtx);
+        return;
+    }
+    node->data = malloc(len);
+    if (!node->data) {
+        pthread_mutex_lock(&client->dgram_mtx);
+        client->in_dgram.dropped_alloc++;
+        pthread_mutex_unlock(&client->dgram_mtx);
+        free(node);
         return;
     }
     memcpy(node->data, buf, len);
@@ -921,9 +770,6 @@ static const struct lsquic_stream_if h3c_stream_if = {
     .on_close = h3c_on_close,
     .on_dg_write = h3c_on_dg_write,
     .on_datagram = h3c_on_datagram,
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-    .on_http_caps = h3c_on_http_caps,
-#endif
 };
 
 /* ------------------------------------------------------------------ */
@@ -957,30 +803,27 @@ static int h3c_retry_backoff_ms(int base_ms, unsigned int attempt) {
  * @param timeout_ms  Desired poll timeout in milliseconds; values <= 0
  *                    fall back to 1 ms.
  */
-/* Datagrams read per wakeup before the engine processes them. */
-#define H3C_RECV_BATCH 64
-
 static void h3c_process_io(cwist_http3_client *client, int timeout_ms) {
     lsquic_engine_t *engine = client->engine;
-
     int diff = h3c_timeout_to_poll_us(timeout_ms);
-    int tick;
-    if (lsquic_engine_earliest_adv_tick(engine, &tick) && tick < diff) diff = tick < 0 ? 0 : tick;
-    /* Round up: truncating a sub-millisecond deadline to 0 turned the
-     * caller's wait loop into a busy spin until the deadline passed. */
-    int wait_ms = (diff + 999) / 1000;
+
+    if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
+        if (diff <= 0)
+            diff = 0;
+        else if (diff > 1000000)
+            diff = 1000000;
+    }
 
     struct pollfd pfd = {.fd = client->udp_fd, .events = POLLIN};
-    int pret = poll(&pfd, 1, wait_ms);
+    int pret = poll(&pfd, 1, diff / 1000);
 
     if (pret > 0 && (pfd.revents & POLLIN)) {
         unsigned char buf[65535];
-        for (int i = 0; i < H3C_RECV_BATCH; i++) {
-            struct sockaddr_storage peer_addr;
-            socklen_t peer_addr_len = sizeof(peer_addr);
-            ssize_t nr = recvfrom(client->udp_fd, buf, sizeof(buf), MSG_DONTWAIT,
-                                  (struct sockaddr *)&peer_addr, &peer_addr_len);
-            if (nr <= 0) break;
+        struct sockaddr_storage peer_addr;
+        socklen_t peer_addr_len = sizeof(peer_addr);
+        ssize_t nr = recvfrom(client->udp_fd, buf, sizeof(buf), 0, (struct sockaddr *)&peer_addr,
+                              &peer_addr_len);
+        if (nr > 0) {
             lsquic_engine_packet_in(engine, buf, (size_t)nr,
                                     client->local_addr_len ? (struct sockaddr *)&client->local_addr
                                                            : NULL,
@@ -1022,12 +865,9 @@ static lsquic_engine_t *h3c_engine_new(cwist_http3_client *client) {
     settings.es_optimistic_nat = 1;
     settings.es_datagrams = client->datagram_enabled ? 1 : 0;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
-    /* Raw-only mode leaves HTTP Datagrams off so DATAGRAM frames stay raw;
-     * the datagram channel mode offers both and decides per connection. */
-    bool http_dg = !client->datagram_enabled || client->dgc_enabled;
-    settings.es_webtransport = http_dg ? 1 : 0;
+    settings.es_webtransport = client->datagram_enabled ? 0 : 1;
     settings.es_max_webtransport_sessions = 1;
-    settings.es_http_datagrams = http_dg ? 1 : 0;
+    settings.es_http_datagrams = client->datagram_enabled ? 0 : 1;
     settings.es_reset_stream_at = 1;
 #endif
 
@@ -1131,7 +971,6 @@ void cwist_http3_client_destroy(cwist_http3_client *client) {
     }
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     free(client->wt_connecting);
-    h3c_dgc_free_out(client);
 #endif
     pthread_mutex_destroy(&client->dgram_mtx);
     pthread_mutex_destroy(&client->mtx);
@@ -1201,43 +1040,13 @@ void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled
 
     int previous = client->datagram_enabled;
     client->datagram_enabled = !!enabled;
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-    int previous_dgc = client->dgc_enabled;
-    if (!enabled) client->dgc_enabled = 0;
-#endif
     lsquic_engine_t *engine = h3c_engine_new(client);
     if (!engine) {
         client->datagram_enabled = previous;
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-        client->dgc_enabled = previous_dgc;
-#endif
         return;
     }
     lsquic_engine_destroy(client->engine);
     client->engine = engine;
-}
-
-int cwist_http3_client_enable_datagram_channel(cwist_http3_client *client, int enabled) {
-#ifndef CWIST_WEBTRANSPORT_CLIENT
-    (void)client;
-    (void)enabled;
-    return -1;
-#else
-    if (!client || client->conn) return -1;
-    if (client->dgc_enabled == !!enabled && (!enabled || client->datagram_enabled)) return 0;
-    int prev_dg = client->datagram_enabled, prev_dgc = client->dgc_enabled;
-    client->dgc_enabled = !!enabled;
-    if (enabled) client->datagram_enabled = 1;
-    lsquic_engine_t *engine = h3c_engine_new(client);
-    if (!engine) {
-        client->datagram_enabled = prev_dg;
-        client->dgc_enabled = prev_dgc;
-        return -1;
-    }
-    lsquic_engine_destroy(client->engine);
-    client->engine = engine;
-    return 0;
-#endif
 }
 
 /* ------------------------------------------------------------------ */
@@ -1345,13 +1154,6 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
         h3c_stream_ctx_t *st = NULL;
         while (!st) {
-            /* On an established connection lsquic_conn_make_stream() creates
-             * the stream synchronously: look before waiting, or every
-             * request first sat out an I/O wait (about 1 ms). */
-            pthread_mutex_lock(&client->mtx);
-            st = client->active_stream;
-            pthread_mutex_unlock(&client->mtx);
-            if (st) break;
             h3c_process_io(client, 100);
             pthread_mutex_lock(&client->mtx);
             st = client->active_stream;
@@ -1392,11 +1194,9 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 #ifdef CWIST_WEBTRANSPORT_CLIENT
         for (cwist_http_header_node *header = headers; header; header = header->next) {
             if (header->key && header->value && header->key->data && header->value->data &&
-                strcasecmp(header->key->data, ":protocol") == 0) {
-                if (strcasecmp(header->value->data, "webtransport") == 0)
-                    st->is_webtransport_connect = 1;
-                else if (strcmp(header->value->data, CWIST_HTTP3_DATAGRAM_PROTOCOL) == 0)
-                    st->is_dgram_channel = 1;
+                strcasecmp(header->key->data, ":protocol") == 0 &&
+                strcasecmp(header->value->data, "webtransport") == 0) {
+                st->is_webtransport_connect = 1;
                 break;
             }
         }
@@ -1413,10 +1213,8 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             st->req_body_len = body_len;
         }
 
-        /* All request fields are in place: arm the write side and send the
-         * request now, not at the next advisory tick. */
+        /* All request fields are in place: arm the write side now. */
         lsquic_stream_wantwrite(st->stream, 1);
-        lsquic_engine_process_conns(client->engine);
 
         /* I/O loop until response is ready or timeout */
         struct timespec deadline;
@@ -1496,81 +1294,9 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 /* Datagram API (RFC 9221)                                            */
 /* ------------------------------------------------------------------ */
 
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-static bool h3c_header_add(cwist_http_header_node **headers, const char *key, const char *value);
-
-/**
- * @brief Decide how a raw datagram travels in datagram channel mode.
- *
- * Waits (pumping I/O, up to the connect timeout) for the peer's SETTINGS.
- * Without HTTP Datagrams on the connection, DATAGRAM frames are raw RFC 9221
- * payloads. With them, every DATAGRAM frame carries a quarter stream ID, so
- * the payload must ride on the datagram channel stream, which is opened here
- * on first use with an extended CONNECT.
- *
- * @return 0 use raw DATAGRAM frames, 1 use the channel, -1 neither works.
- */
-static int h3c_dgc_route(cwist_http3_client *client) {
-    for (int waited = 0; !client->caps_known && client->conn; waited += 20) {
-        if (waited >= client->conn_timeout_ms) return -1;
-        h3c_process_io(client, 20);
-    }
-    if (!client->conn) return -1;
-    if (!(client->caps & LSQUIC_HTTP_CAP_DATAGRAMS)) return 0;
-    if (client->dgc) return 1;
-    if (!(client->caps & LSQUIC_HTTP_CAP_CONNECT_PROTOCOL)) return -1;
-
-    cwist_http_header_node *headers = NULL;
-    if (!h3c_header_add(&headers, ":protocol", CWIST_HTTP3_DATAGRAM_PROTOCOL)) {
-        cwist_http_header_free_all(headers);
-        return -1;
-    }
-    cwist_http_response *response = NULL;
-    cwist_error_t err =
-        cwist_http3_client_request(client, "/", CWIST_HTTP_CONNECT, headers, NULL, 0, &response);
-    cwist_http_header_free_all(headers);
-    if (response) cwist_http_response_destroy(response);
-    (void)err;
-    return client->dgc ? 1 : -1;
-}
-
-/** @brief Queue @p data on the open datagram channel. Raw malloc like the
- *         client's other datagram queues, which lsquic callbacks drain. */
-static int h3c_dgc_queue(cwist_http3_client *client, const void *data, size_t len) {
-    lsquic_stream_t *stream = client->dgc->stream;
-    if (len > lsquic_stream_get_max_http_dg_size(stream)) return -1;
-    h3c_dgram_node *node = malloc(sizeof(*node));
-    if (!node) return -1;
-    node->data = malloc(len);
-    if (!node->data) {
-        free(node);
-        return -1;
-    }
-    memcpy(node->data, data, len);
-    node->len = len;
-    node->next = NULL;
-    pthread_mutex_lock(&client->dgram_mtx);
-    if (client->dgc_out_tail)
-        client->dgc_out_tail->next = node;
-    else
-        client->dgc_out_head = node;
-    client->dgc_out_tail = node;
-    pthread_mutex_unlock(&client->dgram_mtx);
-    lsquic_stream_want_http_dg_write(stream, 1);
-    return 0;
-}
-#endif
-
 int cwist_http3_client_send_datagram(cwist_http3_client *client, const void *data, size_t len) {
     if (!client || !client->conn || !data || len == 0) return -1;
     if (!client->datagram_enabled) return -1;
-#ifdef CWIST_WEBTRANSPORT_CLIENT
-    if (client->dgc_enabled) {
-        int route = h3c_dgc_route(client);
-        if (route < 0) return -1;
-        if (route == 1) return h3c_dgc_queue(client, data, len);
-    }
-#endif
 
     pthread_mutex_lock(&client->dgram_mtx);
     if (client->out_dgram.pending) {
@@ -1631,8 +1357,7 @@ void cwist_http3_client_get_datagram_stats(cwist_http3_client *client,
     stats->enqueued = client->in_dgram.enqueued;
     stats->dequeued = client->in_dgram.dequeued;
     stats->dropped_full = client->in_dgram.dropped_full;
-    stats->dropped_alloc =
-        atomic_load_explicit(&client->in_dgram.dropped_alloc, memory_order_relaxed);
+    stats->dropped_alloc = client->in_dgram.dropped_alloc;
     stats->queue_depth = client->in_dgram.count;
     pthread_mutex_unlock(&client->dgram_mtx);
 }
