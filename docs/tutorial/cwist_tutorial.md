@@ -388,8 +388,17 @@ confine includes to a directory with `cwist_template_render_file_rooted` or
 `cwist_template_render_rooted`:
 
 ```c
-cwist_sstring *output =
-    cwist_template_render_file_rooted("views/index.html", context, "views", &error);
+#include <cwist/core/template/template.h>
+
+cwist_sstring *render_theme(const cJSON *context) {
+    cwist_template_error_t error;
+    cwist_sstring *output =
+        cwist_template_render_file_rooted("views/index.html", context, "views", &error);
+    if (!output && error.code == CWIST_TEMPLATE_ERROR_FORBIDDEN) {
+        /* An include tried to leave views/; error.file_path names the file. */
+    }
+    return output;
+}
 ```
 
 Every `{% include %}` is canonicalized, and an include outside the root fails
