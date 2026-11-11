@@ -71,7 +71,6 @@ cwist_http_coalesce_append
 cwist_http_coalesce_error_response
 cwist_http_coalesce_flush
 cwist_http_coalesce_flush_blocking
-cwist_http_header_remove
 cwist_http_inflight_count
 cwist_http_parse_request_len
 cwist_http_pool_rearm_current
@@ -80,8 +79,6 @@ cwist_http_send_response_async
 cwist_http_send_response_coalesced
 cwist_http_sendmsg_speculative
 cwist_http_server_loop
-cwist_http_status_reason
-cwist_http_string_to_method_len
 cwist_https_conn_idle
 cwist_https_connection_uses_http2
 cwist_https_dispatch
@@ -131,13 +128,7 @@ cwist_redis_subscribe
 cwist_reg_ptr
 cwist_reg_ptr_sized
 cwist_seq_auth_random
-cwist_seq_chunk_build_header
-cwist_session_delete
-cwist_session_invalidate
-cwist_sse_stream_comment
 cwist_tcp_cork_enabled
-cwist_test_client_clear_cookies
 cwist_webrtc_conn_retain
 cwist_websocket_async_close
 cwist_websocket_close
-cwist_zod_print_errors

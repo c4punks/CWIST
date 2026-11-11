@@ -49,6 +49,13 @@ static void test_session_create_and_commit(void) {
     assert(header_contains(secure_res->headers, "Set-Cookie", "Secure"));
     cwist_http_response_destroy(secure_res);
 
+    /* Test delete and invalidate */
+    cwist_session_set(session, "to_delete", "val");
+    cwist_session_delete(session, "to_delete");
+    assert(cwist_session_get(session, "to_delete") == NULL);
+    cwist_session_invalidate(session);
+    assert(cwist_session_get(session, "user_id") == NULL);
+
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
     cwist_app_destroy(app);
