@@ -1,9 +1,11 @@
 <map id="include/cwist/core/template/template.h" name="include/cwist/core/template/template.h">
-<area shape="rect" id="Node000001" title="Simple template engine." alt="" coords="238,5,398,45"/>
+<area shape="rect" id="Node000001" title="Simple template engine." alt="" coords="347,5,507,45"/>
 <area shape="rect" id="Node000002" href="$d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="141,93,277,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="295,48,245,87,242,83,292,44"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="380,48,270,91,268,86,378,43"/>
 <area shape="rect" id="Node000008" title=" " alt="" coords="372,269,483,295"/>
-<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="332,44,367,104,403,180,425,255,420,256,398,182,362,106,328,47"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="430,45,430,255,425,255,425,45"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="465,101,539,126"/>
+<area shape="poly" id="edge10_Node000001_Node000009" title=" " alt="" coords="446,44,485,88,481,92,442,47"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,189,76,214"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="173,136,76,185,74,180,171,131"/>
 <area shape="rect" id="Node000004" title=" " alt="" coords="100,189,171,214"/>
