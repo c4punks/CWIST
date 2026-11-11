@@ -1,5 +1,9 @@
 var NAVTREEINDEX15 =
 {
+"db/d2e/backend__mbedtls_8c.html#a6e7208bcdc7c05ae1180e7a432a2c61c":[94,0,2,3,2,1,62],
+"db/d2e/backend__mbedtls_8c.html#a70dee28c559d99a3dc353c3c9fb8207c":[94,0,2,3,2,1,67],
+"db/d2e/backend__mbedtls_8c.html#a730998c09bb85bb51c93143bf34edbf2":[94,0,2,3,2,1,32],
+"db/d2e/backend__mbedtls_8c.html#a75a747e1fe208f5777b19565e95cfff1":[94,0,2,3,2,1,6],
 "db/d2e/backend__mbedtls_8c.html#a7b02a7a805804a419ca90dd13b831fab":[94,0,2,3,2,1,54],
 "db/d2e/backend__mbedtls_8c.html#a7d9f5829d4efd93fff737c9254510ebc":[94,0,2,3,2,1,52],
 "db/d2e/backend__mbedtls_8c.html#a80003c6388f703cbecd311c7304f051f":[94,0,2,3,2,1,15],
@@ -245,9 +249,5 @@ var NAVTREEINDEX15 =
 "db/dc5/md_docs_2api_2websocket.html#autotoc_md239":[16,3,0],
 "db/dc5/md_docs_2api_2websocket.html#autotoc_md240":[16,3,1],
 "db/dc5/md_docs_2api_2websocket.html#autotoc_md241":[16,3,2],
-"db/dc5/md_docs_2api_2websocket.html#autotoc_md242":[16,3,3],
-"db/dc5/md_docs_2api_2websocket.html#autotoc_md243":[16,4],
-"db/dcb/structcwist__config.html":[93,0,16],
-"db/dcb/structcwist__config.html#a70ab087bf211e583844f52e6c31fe598":[93,0,16,0],
-"db/dcb/structcwist__config.html#abba4cac1c44315aad94eaa3fd249c880":[93,0,16,1]
+"db/dc5/md_docs_2api_2websocket.html#autotoc_md242":[16,3,3]
 };
