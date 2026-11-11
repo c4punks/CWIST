@@ -106,6 +106,8 @@ $(document).ready(function(){initNavTree('de/db8/template_8h.html','../../'); in
 
 <div class="header">
   <div class="summary">
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">template.h File Reference</div></div>
 </div><!--header-->
@@ -115,16 +117,19 @@ $(document).ready(function(){initNavTree('de/db8/template_8h.html','../../'); in
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html">cwist/core/sstring/sstring.h</a>&gt;</code><br />
 <code>#include &lt;cjson/cJSON.h&gt;</code><br />
+<code>#include &lt;stddef.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for template.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../dc/d84/template_8h__incl.png" border="0" usemap="#ainclude_2cwist_2core_2template_2template_8h" alt=""/></div>
 <map name="ainclude_2cwist_2core_2template_2template_8h" id="ainclude_2cwist_2core_2template_2template_8h">
-<area shape="rect" title="Simple template engine." alt="" coords="238,5,398,45"/>
+<area shape="rect" title="Simple template engine." alt="" coords="347,5,507,45"/>
 <area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="141,93,277,133"/>
-<area shape="poly" title=" " alt="" coords="295,48,245,87,242,83,292,44"/>
+<area shape="poly" title=" " alt="" coords="380,48,270,91,268,86,378,43"/>
 <area shape="rect" title=" " alt="" coords="372,269,483,295"/>
-<area shape="poly" title=" " alt="" coords="332,44,367,104,403,180,425,255,420,256,398,182,362,106,328,47"/>
+<area shape="poly" title=" " alt="" coords="430,45,430,255,425,255,425,45"/>
+<area shape="rect" title=" " alt="" coords="465,101,539,126"/>
+<area shape="poly" title=" " alt="" coords="446,44,485,88,481,92,442,47"/>
 <area shape="rect" title=" " alt="" coords="5,189,76,214"/>
 <area shape="poly" title=" " alt="" coords="173,136,76,185,74,180,171,131"/>
 <area shape="rect" title=" " alt="" coords="100,189,171,214"/>
@@ -152,20 +157,76 @@ This graph shows which files directly or indirectly include this file:</div>
 </div>
 <p><a href="../../de/db8/template_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/d8b/structcwist__template__error__t.html">cwist_template_error_t</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional render diagnostic, owned entirely by the caller.  <a href="../../d9/d8b/structcwist__template__error__t.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a359176508aa6d0ea909c39860d382d45" id="r_a359176508aa6d0ea909c39860d382d45"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45">cwist_template_error_code_t</a> { <br />
+&#160;&#160;<a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45aeff9605cb61385938529bb3ed7e3d695">CWIST_TEMPLATE_ERROR_NONE</a> = 0
+, <a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45a2afb0ba80b7978e1861ea68f5208435f">CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT</a>
+, <a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45a49ad8950a509cdf96660fb51ce1b1bdb">CWIST_TEMPLATE_ERROR_UNCLOSED_TAG</a>
+, <a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45af7a6f1ca9b3686668418e28039eccbfe">CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK</a>
+, <br />
+&#160;&#160;<a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45a3e737dbe76474679632075904617076f">CWIST_TEMPLATE_ERROR_DEPTH</a>
+, <a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45ae5d193b519643bb59aafe05a95d54fd5">CWIST_TEMPLATE_ERROR_IO</a>
+, <a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45aa217c91b66e699806ba71e3c0a18fda9">CWIST_TEMPLATE_ERROR_NO_MEMORY</a>
+<br />
+ }</td></tr>
+<tr class="memdesc:a359176508aa6d0ea909c39860d382d45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Reason a template could not be rendered.  <a href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45">More...</a><br /></td></tr>
+<tr class="separator:a359176508aa6d0ea909c39860d382d45"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:aa5369dcdc8385ec6eff42a490b55bed2" id="r_aa5369dcdc8385ec6eff42a490b55bed2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/db8/template_8h.html#aa5369dcdc8385ec6eff42a490b55bed2">cwist_template_render</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">template_str</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">context</a>)</td></tr>
 <tr class="memdesc:aa5369dcdc8385ec6eff42a490b55bed2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renders a template string with the given cJSON context.  <br /></td></tr>
 <tr class="separator:aa5369dcdc8385ec6eff42a490b55bed2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac506fb8f038486882fc9f0e4757d4b4e" id="r_ac506fb8f038486882fc9f0e4757d4b4e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e">cwist_template_render_file</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">file_path</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">context</a>)</td></tr>
+<tr class="memitem:ac506fb8f038486882fc9f0e4757d4b4e" id="r_ac506fb8f038486882fc9f0e4757d4b4e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e">cwist_template_render_file</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *file_path, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">context</a>)</td></tr>
 <tr class="memdesc:ac506fb8f038486882fc9f0e4757d4b4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Renders a template from a file with the given cJSON context.  <br /></td></tr>
 <tr class="separator:ac506fb8f038486882fc9f0e4757d4b4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa4e56a8c9cc91fcfa3fccb665eccbad9" id="r_aa4e56a8c9cc91fcfa3fccb665eccbad9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/db8/template_8h.html#aa4e56a8c9cc91fcfa3fccb665eccbad9">cwist_template_render_ex</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">template_str</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">context</a>, <a class="el" href="../../d9/d8b/structcwist__template__error__t.html">cwist_template_error_t</a> *error)</td></tr>
+<tr class="memdesc:aa4e56a8c9cc91fcfa3fccb665eccbad9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Render a string with optional diagnostics.  <br /></td></tr>
+<tr class="separator:aa4e56a8c9cc91fcfa3fccb665eccbad9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abb5a54375acab0262e7350cebb9a8b9e" id="r_abb5a54375acab0262e7350cebb9a8b9e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/db8/template_8h.html#abb5a54375acab0262e7350cebb9a8b9e">cwist_template_render_file_ex</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *file_path, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> *<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">context</a>, <a class="el" href="../../d9/d8b/structcwist__template__error__t.html">cwist_template_error_t</a> *error)</td></tr>
+<tr class="memdesc:abb5a54375acab0262e7350cebb9a8b9e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Render a file with optional diagnostics, including nested includes.  <br /></td></tr>
+<tr class="separator:abb5a54375acab0262e7350cebb9a8b9e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Simple template engine. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../de/db8/template_8h_source.html">template.h</a>.</p>
-</div><h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a359176508aa6d0ea909c39860d382d45" name="a359176508aa6d0ea909c39860d382d45"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a359176508aa6d0ea909c39860d382d45">&#9670;&#160;</a></span>cwist_template_error_code_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">enum</a> <a class="el" href="../../de/db8/template_8h.html#a359176508aa6d0ea909c39860d382d45">cwist_template_error_code_t</a></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Reason a template could not be rendered. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a359176508aa6d0ea909c39860d382d45aeff9605cb61385938529bb3ed7e3d695" name="a359176508aa6d0ea909c39860d382d45aeff9605cb61385938529bb3ed7e3d695"></a>CWIST_TEMPLATE_ERROR_NONE&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a359176508aa6d0ea909c39860d382d45a2afb0ba80b7978e1861ea68f5208435f" name="a359176508aa6d0ea909c39860d382d45a2afb0ba80b7978e1861ea68f5208435f"></a>CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a359176508aa6d0ea909c39860d382d45a49ad8950a509cdf96660fb51ce1b1bdb" name="a359176508aa6d0ea909c39860d382d45a49ad8950a509cdf96660fb51ce1b1bdb"></a>CWIST_TEMPLATE_ERROR_UNCLOSED_TAG&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a359176508aa6d0ea909c39860d382d45af7a6f1ca9b3686668418e28039eccbfe" name="a359176508aa6d0ea909c39860d382d45af7a6f1ca9b3686668418e28039eccbfe"></a>CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a359176508aa6d0ea909c39860d382d45a3e737dbe76474679632075904617076f" name="a359176508aa6d0ea909c39860d382d45a3e737dbe76474679632075904617076f"></a>CWIST_TEMPLATE_ERROR_DEPTH&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a359176508aa6d0ea909c39860d382d45ae5d193b519643bb59aafe05a95d54fd5" name="a359176508aa6d0ea909c39860d382d45ae5d193b519643bb59aafe05a95d54fd5"></a>CWIST_TEMPLATE_ERROR_IO&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a359176508aa6d0ea909c39860d382d45aa217c91b66e699806ba71e3c0a18fda9" name="a359176508aa6d0ea909c39860d382d45aa217c91b66e699806ba71e3c0a18fda9"></a>CWIST_TEMPLATE_ERROR_NO_MEMORY&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+<p class="definition">Definition at line <a class="el" href="../../de/db8/template_8h_source.html#l00014">14</a> of file <a class="el" href="../../de/db8/template_8h_source.html">template.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="aa5369dcdc8385ec6eff42a490b55bed2" name="aa5369dcdc8385ec6eff42a490b55bed2"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa5369dcdc8385ec6eff42a490b55bed2">&#9670;&#160;</a></span>cwist_template_render()</h2>
 
@@ -213,7 +274,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A new <a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> containing the rendered output. The caller is responsible for destroying the returned string. Returns NULL on failure.</dd></dl>
 <p>Renders a template string with the given cJSON context.</p>
-<p>Include paths in an in-memory template have no directory origin, so relative includes resolve against the process working directory (same as before this change). Use <a class="el" href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e" title="Renders a template from a file with the given cJSON context.">cwist_template_render_file()</a> when file-relative includes are needed.</p>
+<p>Include paths in an in-memory template have no directory origin, so relative includes resolve against the process working directory. Use <a class="el" href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e" title="Renders a template from a file with the given cJSON context.">cwist_template_render_file()</a> when file-relative includes are needed.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">template_str</td><td>Template source to render. </td></tr>
@@ -223,9 +284,60 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated rendered output, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00531">531</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00609">609</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d6/d06/template_8c_source.html#l00613">cwist_template_render_ex()</a>.</p>
+
+</div>
+</div>
+<a id="aa4e56a8c9cc91fcfa3fccb665eccbad9" name="aa4e56a8c9cc91fcfa3fccb665eccbad9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa4e56a8c9cc91fcfa3fccb665eccbad9">&#9670;&#160;</a></span>cwist_template_render_ex()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> * cwist_template_render_ex </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramname"><em>template_str</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> *&#160;</td>
+          <td class="paramname"><em>context</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d9/d8b/structcwist__template__error__t.html">cwist_template_error_t</a> *&#160;</td>
+          <td class="paramname"><em>error</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Render a string with optional diagnostics. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">template_str</td><td>Template source, as for <a class="el" href="../../de/db8/template_8h.html#aa5369dcdc8385ec6eff42a490b55bed2" title="Renders a template string with the given cJSON context.">cwist_template_render()</a>. </td></tr>
+    <tr><td class="paramname">context</td><td>JSON rendering context; may be NULL. </td></tr>
+    <tr><td class="paramname">error</td><td>Optional output diagnostic; may be NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Rendered string owned by the caller, or NULL on failure. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00613">613</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l00609">cwist_template_render()</a>.</p>
 
 </div>
 </div>
@@ -266,9 +378,60 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A new <a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> containing the rendered output. The caller is responsible for destroying the returned string. Returns NULL if the file cannot be read or on rendering failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00583">583</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00682">682</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d6/d06/template_8c_source.html#l00686">cwist_template_render_file_ex()</a>.</p>
+
+</div>
+</div>
+<a id="abb5a54375acab0262e7350cebb9a8b9e" name="abb5a54375acab0262e7350cebb9a8b9e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abb5a54375acab0262e7350cebb9a8b9e">&#9670;&#160;</a></span>cwist_template_render_file_ex()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> * cwist_template_render_file_ex </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramname"><em>file_path</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cJSON</a> *&#160;</td>
+          <td class="paramname"><em>context</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d9/d8b/structcwist__template__error__t.html">cwist_template_error_t</a> *&#160;</td>
+          <td class="paramname"><em>error</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Render a file with optional diagnostics, including nested includes. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">file_path</td><td>Template path, as for <a class="el" href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e" title="Renders a template from a file with the given cJSON context.">cwist_template_render_file()</a>. </td></tr>
+    <tr><td class="paramname">context</td><td>JSON rendering context; may be NULL. </td></tr>
+    <tr><td class="paramname">error</td><td>Optional output diagnostic; may be NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Rendered string owned by the caller, or NULL on failure. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00686">686</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l00682">cwist_template_render_file()</a>.</p>
 
 </div>
 </div>

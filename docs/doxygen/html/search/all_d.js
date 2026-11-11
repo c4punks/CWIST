@@ -21,7 +21,7 @@ var searchData=
   ['batch_20drain_20issue_2025_18',['Cooperative queuing in the C1M reactor&apos;s batch drain (issue #25)',['../d1/ddd/md_docs_2cooperative-queuing.html',1,'']]],
   ['batch_5fsize_19',['batch_size',['../d9/da9/structcwist__otel__cfg__t.html#a9a4d00a0b480372e543030043673227a',1,'cwist_otel_cfg_t']]],
   ['batches_20fewer_20io_5furing_5fenter_20—_20already_20implemented_20blocked_20',['1.2 Larger SQE batches / fewer io_uring_enter — ALREADY IMPLEMENTED / BLOCKED',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md761',1,'']]],
-  ['bdr_21',['bdr',['../da/dca/md_docs_2REFERENCE.html#autotoc_md795',1,'8. Big Dumb Reply (BDR)'],['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md680',1,'8. Big Dumb Reply (BDR)']]],
+  ['bdr_21',['bdr',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md680',1,'8. Big Dumb Reply (BDR)'],['../da/dca/md_docs_2REFERENCE.html#autotoc_md795',1,'8. Big Dumb Reply (BDR)']]],
   ['bdr_5fblob_5ft_22',['bdr_blob_t',['../da/d2c/big__dumb__reply_8h.html#a31b00c7156cbbbc3b57e3f745100a89f',1,'bdr_blob_t:&#160;big_dumb_reply.h'],['../d3/dac/structbdr__blob__t.html',1,'bdr_blob_t']]],
   ['bdr_5fbuckets_23',['BDR_BUCKETS',['../dc/da3/big__dumb__reply_8c.html#a952c6798134f4cf5cf2ce25d299824f2',1,'big_dumb_reply.c']]],
   ['bdr_5fctx_24',['bdr_ctx',['../dc/da0/structcwist__app.html#a7478192ae027eeb0783d4d254499ea05',1,'cwist_app']]],
@@ -53,7 +53,7 @@ var searchData=
   ['block_20is_20not_20simply_20moved_50',['Why the learning block is not simply moved',['../d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md322',1,'']]],
   ['blocked_51',['1.2 Larger SQE batches / fewer io_uring_enter — ALREADY IMPLEMENTED / BLOCKED',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md761',1,'']]],
   ['blog_20with_20cwist_52',['Build a CRUD blog with CWIST',['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'']]],
-  ['blog_2dcrud_2emd_53',['blog-crud.md',['../d7/d7d/tutorials_2blog-crud_8md.html',1,'(Global Namespace)'],['../d3/d58/ko_2tutorials_2blog-crud_8md.html',1,'(Global Namespace)']]],
+  ['blog_2dcrud_2emd_53',['blog-crud.md',['../d3/d58/ko_2tutorials_2blog-crud_8md.html',1,'(Global Namespace)'],['../d7/d7d/tutorials_2blog-crud_8md.html',1,'(Global Namespace)']]],
   ['body_54',['body',['../dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1',1,'cwist_http_request::body'],['../dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e',1,'cwist_http_response::body'],['../d1/de3/structcwist__test__client__request__options.html#a881eb0586bc1175b0c878bdbc28dc8c3',1,'cwist_test_client_request_options::body']]],
   ['body_20chunk_20by_20chunk_55',['Streaming producer (handlers generate the body chunk-by-chunk)',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md230',1,'']]],
   ['body_5flen_56',['body_len',['../d1/de3/structcwist__test__client__request__options.html#a928b1ed60c6310bbae9e4f6737b61539',1,'cwist_test_client_request_options']]],
@@ -66,7 +66,7 @@ var searchData=
   ['boundary_63',['boundary',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md272',1,'1. One parsed eligibility boundary'],['../d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md340',1,'Performance claim boundary'],['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md227',1,'Streaming through the boundary'],['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md210',1,'The boundary']]],
   ['branch_20policy_64',['Release branch policy',['../d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md286',1,'']]],
   ['browser_20runtime_20gate_20wasi_200_202_65',['Browser runtime gate (WASI 0.2)',['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md216',1,'']]],
-  ['bucket_5fcount_66',['bucket_count',['../d0/d0c/structcwist__mux__router.html#a196b8a62cae0bb2bea8d857216d76862',1,'cwist_mux_router::bucket_count'],['../db/dcb/structcwist__config.html#a70ab087bf211e583844f52e6c31fe598',1,'cwist_config::bucket_count'],['../d9/d90/structcwist__bdr__t.html#a4f1aa5843af0997611b11cc20982253f',1,'cwist_bdr_t::bucket_count']]],
+  ['bucket_5fcount_66',['bucket_count',['../d0/d0c/structcwist__mux__router.html#a196b8a62cae0bb2bea8d857216d76862',1,'cwist_mux_router::bucket_count'],['../d9/d90/structcwist__bdr__t.html#a4f1aa5843af0997611b11cc20982253f',1,'cwist_bdr_t::bucket_count'],['../db/dcb/structcwist__config.html#a70ab087bf211e583844f52e6c31fe598',1,'cwist_config::bucket_count']]],
   ['bucket_5fnext_67',['bucket_next',['../dc/d91/structcwist__mux__route.html#ab7addefd2f3fd44753eecc866af67801',1,'cwist_mux_route']]],
   ['buckets_68',['buckets',['../db/dcb/structcwist__config.html#abba4cac1c44315aad94eaa3fd249c880',1,'cwist_config::buckets'],['../dc/d88/structcwist__webrtc__ctx.html#aa92bbad29e9f40cec72f2369b40009f3',1,'cwist_webrtc_ctx::buckets'],['../dd/d72/structcwist__query__map.html#acdea670cfb1bb29bc2de3e59dcd6350e',1,'cwist_query_map::buckets'],['../d0/d0c/structcwist__mux__router.html#a5b3095e133e59fb2451f6d747fb65e83',1,'cwist_mux_router::buckets']]],
   ['buf_69',['buf',['../dc/dda/structh3__hdr__out.html#adb0fbaa9cc7dd278cafa0e450deeb042',1,'h3_hdr_out']]],
@@ -94,5 +94,6 @@ var searchData=
   ['burst_20starvation_2025_20follow_20up_91',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
   ['by_20chunk_92',['Streaming producer (handlers generate the body chunk-by-chunk)',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md230',1,'']]],
   ['by_20cwist_5fdb_5fcrypt_5fseal_93',['Version 2 wire format produced by cwist_db_crypt_seal()',['../d9/df9/db__crypt_8h.html#autotoc_md2',1,'']]],
-  ['bytes_94',['bytes',['../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d',1,'cwist_pb_field::bytes'],['../d1/d6f/structcwist__http__carry.html#abccd4a7495f3ec5004238dc3de26ceda',1,'cwist_http_carry::bytes']]]
+  ['byte_5foffset_94',['byte_offset',['../d9/d8b/structcwist__template__error__t.html#a694b474e10af5d150f7e8f50d4aadf96',1,'cwist_template_error_t']]],
+  ['bytes_95',['bytes',['../d0/de5/structcwist__pb__field.html#a8241dc71db68b3af68e26d4957e0e48d',1,'cwist_pb_field::bytes'],['../d1/d6f/structcwist__http__carry.html#abccd4a7495f3ec5004238dc3de26ceda',1,'cwist_http_carry::bytes']]]
 ];
