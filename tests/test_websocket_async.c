@@ -182,6 +182,8 @@ static void run_idle_timeout_child(void) {
             batch_reaped_count++;
         }
     }
+    if (batch_reaped_count != IDLE_BATCH)
+        fprintf(stderr, "idle batch reaped %d/%d connections\n", batch_reaped_count, IDLE_BATCH);
     assert(batch_reaped_count == IDLE_BATCH);
     for (int i = 0; i < IDLE_BATCH; i++) close(idle_batch[i][1]);
     printf("7a. simultaneous idle connections reaped together: ok\n");

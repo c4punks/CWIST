@@ -2408,3 +2408,58 @@ cwist_error_t cwist_https_server_loop(int server_fd, cwist_https_context *ctx,
     https_pool_destroy();
     return err;
 }
+
+/* --- Negotiated TLS parameters (tls_info.h) -------------------------------- */
+
+#include "tls_info.h"
+
+static __thread const cwist_http_request *t_h3_tls_req;
+static __thread uint16_t t_h3_tls_group;
+
+void cwist_tls_info_h3_set(const cwist_http_request *req, uint16_t group) {
+    t_h3_tls_req = req;
+    t_h3_tls_group = group;
+}
+
+void cwist_tls_info_h3_clear(void) {
+    t_h3_tls_req = NULL;
+    t_h3_tls_group = 0;
+}
+
+bool cwist_tls_group_is_pq(uint16_t group) {
+    switch (group) {
+#ifdef SSL_GROUP_X25519_MLKEM768
+        case SSL_GROUP_X25519_MLKEM768: return true;
+#endif
+#ifdef SSL_GROUP_X25519_KYBER768_DRAFT00
+        case SSL_GROUP_X25519_KYBER768_DRAFT00: return true;
+#endif
+#ifdef SSL_GROUP_MLKEM1024
+        case SSL_GROUP_MLKEM1024: return true;
+#endif
+        case 0x11eb: /* SecP256r1MLKEM768 */
+        case 0x11ed: /* SecP384r1MLKEM1024 */
+            return true;
+        default: return false;
+    }
+}
+
+bool cwist_http_request_tls_info(const cwist_http_request *req, cwist_tls_info *out) {
+    if (!req || !out) return false;
+    memset(out, 0, sizeof(*out));
+    if (req->https_conn) {
+        const cwist_https_connection *conn = (const cwist_https_connection *)req->https_conn;
+        if (!conn->ssl) return false;
+        out->version = (uint16_t)SSL_version(conn->ssl);
+#ifndef CWIST_TLS_MBEDTLS
+        out->group = SSL_get_group_id(conn->ssl);
+#endif
+        return true;
+    }
+    if (t_h3_tls_req == req) {
+        out->version = TLS1_3_VERSION; /* QUIC mandates TLS 1.3 */
+        out->group = t_h3_tls_group;
+        return true;
+    }
+    return false;
+}
