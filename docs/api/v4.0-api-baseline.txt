@@ -41,6 +41,7 @@ cwist_app_grpc_health_watchers
 cwist_app_grpc_reflection
 cwist_app_grpc_stream
 cwist_app_grpc_unary
+cwist_app_grpc_unregister
 cwist_app_healthz
 cwist_app_http_handler
 cwist_app_http_handler_async
@@ -852,6 +853,7 @@ cwist_app_grpc_health_watchers: int (struct cwist_app *)
 cwist_app_grpc_reflection: int (struct cwist_app *)
 cwist_app_grpc_stream: int (struct cwist_app *, const char *, const char *, cwist_grpc_stream_handler_func, void *)
 cwist_app_grpc_unary: int (struct cwist_app *, const char *, const char *, cwist_grpc_unary_handler_func, void *)
+cwist_app_grpc_unregister: int (struct cwist_app *, const char *, const char *, cwist_grpc_release_func)
 cwist_app_healthz: void (cwist_http_response *)
 cwist_app_http_handler: void (int, void *)
 cwist_app_http_handler_async: cwist_async_action_t (int, cwist_http_async_conn_t *)
@@ -1871,6 +1873,7 @@ cwist_grpc_decoder
 cwist_grpc_lb_policy
 cwist_grpc_message
 cwist_grpc_message_callback
+cwist_grpc_release_func
 cwist_grpc_retry_policy
 cwist_grpc_retry_throttle
 cwist_grpc_status_t
