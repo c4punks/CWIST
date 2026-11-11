@@ -201,7 +201,7 @@ Functions</h2></td></tr>
 
 <p>Maximum nesting depth for includes/control structures. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00019">19</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00020">20</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 </div>
 </div>
@@ -234,6 +234,7 @@ Functions</h2></td></tr>
 
 <p>Render an in-memory template string against a JSON context object. </p>
 <p>Renders a template string with the given cJSON context.</p>
+<p>Include paths in an in-memory template have no directory origin, so relative includes resolve against the process working directory (same as before this change). Use <a class="el" href="../../de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e" title="Renders a template from a file with the given cJSON context.">cwist_template_render_file()</a> when file-relative includes are needed.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">template_str</td><td>Template source to render. </td></tr>
@@ -243,7 +244,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated rendered output, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00442">442</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00531">531</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
@@ -286,7 +287,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A new <a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> containing the rendered output. The caller is responsible for destroying the returned string. Returns NULL if the file cannot be read or on rendering failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00483">483</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00583">583</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
