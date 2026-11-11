@@ -15,8 +15,20 @@
 typedef struct {
     const char *text;
     const char *file_path;
+    const char *base_dir; /**< Directory used to resolve relative includes; may be NULL. */
     cwist_template_error_t *error;
 } template_source;
+
+/** @brief Command named by a {% ... %} tag. */
+typedef enum {
+    TAG_NONE,
+    TAG_IF,
+    TAG_ELSE,
+    TAG_ENDIF,
+    TAG_FOR,
+    TAG_ENDFOR,
+    TAG_INCLUDE
+} template_tag_kind;
 
 /** @brief Forward declarations for recursive block and file rendering. */
 static cwist_sstring *render_internal(const char **template_str, const cJSON *context, int depth,
@@ -27,17 +39,117 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
 /** @brief Maximum nesting depth for includes/control structures. */
 #define CWIST_TEMPLATE_MAX_DEPTH 32
 
+/** @brief Separators between the words of a {% ... %} tag. */
+#define TAG_DELIMS " \t\n"
+
+/**
+ * @brief Extract the directory component of a file path into a caller-supplied buffer.
+ *
+ * The result always ends without a trailing separator and is never empty: a
+ * path with no directory component (e.g. "file.html") produces ".".  The
+ * buffer is always NUL-terminated even when the path is longer than buf_len.
+ *
+ * @param path   Source file path.
+ * @param buf    Output buffer to write the directory into.
+ * @param buf_len Size of buf, including the NUL terminator slot.
+ */
+static void path_dirname(const char *path, char *buf, size_t buf_len) {
+    if (!path || buf_len == 0) return;
+
+    const char *last = NULL;
+    for (const char *p = path; *p; p++) {
+        if (*p == '/' || *p == '\\') last = p;
+    }
+
+    if (!last) {
+        /* No separator found - directory is the current directory. */
+        if (buf_len >= 2) {
+            buf[0] = '.';
+            buf[1] = '\0';
+        } else {
+            buf[0] = '\0';
+        }
+        return;
+    }
+
+    size_t len = (size_t)(last - path);
+    if (len == 0) {
+        /* Path starts with a separator, e.g. "/file.html". */
+        len = 1;
+    }
+    if (len >= buf_len) len = buf_len - 1;
+    memcpy(buf, path, len);
+    buf[len] = '\0';
+}
+
+/**
+ * @brief Resolve an include path against a base directory.
+ *
+ * Absolute paths (starting with '/' or a drive letter on Windows) are
+ * returned unchanged.  Relative paths are prefixed with base_dir.  The
+ * resulting path is written into buf and is always NUL-terminated.
+ *
+ * @param base_dir Directory of the including file (may be NULL or empty).
+ * @param include_path The path token from the {% include "..." %} tag.
+ * @param buf    Output buffer for the resolved path.
+ * @param buf_len Size of buf.
+ */
+static void resolve_include_path(const char *base_dir, const char *include_path, char *buf,
+                                 size_t buf_len) {
+    if (!include_path || buf_len == 0) {
+        if (buf_len > 0) buf[0] = '\0';
+        return;
+    }
+
+    /* Absolute path: use as-is. */
+    if (include_path[0] == '/' || include_path[0] == '\\' ||
+        (include_path[0] != '\0' && include_path[1] == ':')) {
+        snprintf(buf, buf_len, "%s", include_path);
+        return;
+    }
+
+    /* Relative path: prepend base_dir when available. */
+    if (base_dir && base_dir[0] != '\0' && !(base_dir[0] == '.' && base_dir[1] == '\0')) {
+        snprintf(buf, buf_len, "%s/%s", base_dir, include_path);
+    } else {
+        snprintf(buf, buf_len, "%s", include_path);
+    }
+}
+
+static template_tag_kind classify_command(const char *cmd, size_t len) {
+    static const struct {
+        const char *name;
+        template_tag_kind kind;
+    } commands[] = {
+        {"if", TAG_IF},   {"else", TAG_ELSE},     {"endif", TAG_ENDIF},
+        {"for", TAG_FOR}, {"endfor", TAG_ENDFOR}, {"include", TAG_INCLUDE},
+    };
+    for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
+        if (strlen(commands[i].name) == len && strncmp(cmd, commands[i].name, len) == 0)
+            return commands[i].kind;
+    }
+    return TAG_NONE;
+}
+
+/** @brief Classify the command of a tag body (the text right after "{%"). */
+static template_tag_kind tag_command(const char *body) {
+    while (isspace((unsigned char)*body)) body++;
+    return classify_command(body, strcspn(body, " \t\r\n%}"));
+}
+
 static const char *tag_type(const char *tag) {
     if (!tag || tag[0] != '{') return NULL;
-    if (tag[1] == '{') return "variable";
-    if (tag[1] != '%') return NULL;
-    const char *command = tag + 2;
-    while (isspace((unsigned char)*command)) command++;
-    size_t len = strcspn(command, " \t\r\n%}");
-    if (len == 2 && strncmp(command, "if", len) == 0) return "if";
-    if (len == 3 && strncmp(command, "for", len) == 0) return "for";
-    if (len == 7 && strncmp(command, "include", len) == 0) return "include";
-    return "control";
+    switch (tag[1]) {
+        case '{': return "variable";
+        case '%':
+            switch (tag_command(tag + 2)) {
+                case TAG_IF: return "if";
+                case TAG_FOR: return "for";
+                case TAG_INCLUDE: return "include";
+                default: return "control";
+            }
+        default: return NULL;
+    }
 }
 
 static void report_error(const template_source *source, const char *position,
@@ -52,48 +164,78 @@ static void report_error(const template_source *source, const char *position,
 }
 
 /** @brief Locate a matching control terminator without reading tags inside comments/variables. */
-static const char *find_block_end(const char *start, const char *opening, const char *command,
-                                  const char **else_pos, const template_source *source) {
-    const char *closing = strcmp(command, "if") == 0 ? "endif" : "endfor";
+static const char *find_block_end(const char *start, const char *opening,
+                                  template_tag_kind open_kind, const char **else_pos,
+                                  const template_source *source) {
+    const template_tag_kind close_kind = open_kind == TAG_IF ? TAG_ENDIF : TAG_ENDFOR;
     int nested = 0;
     const char *scan = start;
+    const char *end;
     while (*scan) {
-        if (scan[0] == '{' && scan[1] == '#') {
-            const char *end = strstr(scan + 2, "#}");
-            if (!end) break;
-            scan = end + 2;
-        } else if (scan[0] == '{' && scan[1] == '{') {
-            const char *end = strstr(scan + 2, "}}");
-            if (!end) {
-                report_error(source, scan, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
-                return NULL;
-            }
-            scan = end + 2;
-        } else if (scan[0] == '{' && scan[1] == '%') {
-            const char *end = strstr(scan + 2, "%}");
-            if (!end) {
-                report_error(source, scan, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
-                return NULL;
-            }
-            const char *inner = scan + 2;
-            while (isspace((unsigned char)*inner)) inner++;
-            size_t len = strcspn(inner, " \t\r\n%}");
-            if (len == strlen(command) && strncmp(inner, command, len) == 0) {
-                nested++;
-            } else if (len == strlen(closing) && strncmp(inner, closing, len) == 0) {
-                if (nested == 0) return scan;
-                nested--;
-            } else if (else_pos && !*else_pos && nested == 0 && len == 4 &&
-                       strncmp(inner, "else", len) == 0) {
-                *else_pos = scan;
-            }
-            scan = end + 2;
-        } else {
+        if (scan[0] != '{') {
             scan++;
+            continue;
+        }
+        switch (scan[1]) {
+            case '#':
+                end = strstr(scan + 2, "#}");
+                if (!end) goto unclosed_block;
+                scan = end + 2;
+                break;
+            case '{':
+                end = strstr(scan + 2, "}}");
+                if (!end) goto unclosed_tag;
+                scan = end + 2;
+                break;
+            case '%': {
+                end = strstr(scan + 2, "%}");
+                if (!end) goto unclosed_tag;
+                template_tag_kind kind = tag_command(scan + 2);
+                if (kind == open_kind) {
+                    nested++;
+                } else if (kind == close_kind) {
+                    if (nested == 0) return scan;
+                    nested--;
+                } else if (kind == TAG_ELSE && else_pos && !*else_pos && nested == 0) {
+                    *else_pos = scan;
+                }
+                scan = end + 2;
+                break;
+            }
+            default: scan++; break;
         }
     }
+
+unclosed_block:
     report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK);
     return NULL;
+unclosed_tag:
+    report_error(source, scan, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
+    return NULL;
+}
+
+/** @brief Truthiness used by {% if %}: non-empty strings/containers, non-zero numbers, true. */
+static bool json_truthy(const cJSON *value) {
+    if (!value) return false;
+    switch (value->type & 0xFF) {
+        case cJSON_True: return true;
+        case cJSON_String: return value->valuestring && value->valuestring[0] != '\0';
+        case cJSON_Object:
+        case cJSON_Array: return cJSON_GetArraySize(value) > 0;
+        case cJSON_Number: return value->valuedouble != 0;
+        default: return false;
+    }
+}
+
+/** @brief Text form of a scalar value for {{ }} output, or NULL when it prints nothing. */
+static const char *json_scalar_text(const cJSON *value, char *buf, size_t buf_len) {
+    switch (value->type & 0xFF) {
+        case cJSON_String: return value->valuestring;
+        case cJSON_Number: snprintf(buf, buf_len, "%g", value->valuedouble); return buf;
+        case cJSON_True: return "true";
+        case cJSON_False: return "false";
+        default: return NULL;
+    }
 }
 
 /**
@@ -225,6 +367,16 @@ static const cJSON *get_value_from_context(const cJSON *context, const char *key
     return current;
 }
 
+/** @brief Render @p block one level deeper and append it to @p output. */
+static bool append_block(cwist_sstring *output, const char *block, const cJSON *context, int depth,
+                         const template_source *source) {
+    cwist_sstring *rendered = render_internal(&block, context, depth, source);
+    if (!rendered) return false;
+    cwist_sstring_append(output, rendered->data);
+    cwist_sstring_destroy(rendered);
+    return true;
+}
+
 /**
  * @brief Recursively render a template string until the current control block ends.
  * @param template_str Cursor into the template source; advanced as tags are consumed.
@@ -247,28 +399,29 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
     const char *start = p;
 
     while (*p) {
-        if (p[0] == '{' && p[1] == '#') {
-            /* Comment: {# ... #} -- skip silently. */
-            cwist_sstring_append_len(output, start, p - start);
-            p += 2;
-            while (*p && !(p[0] == '#' && p[1] == '}')) p++;
-            if (p[0] == '#' && p[1] == '}') p += 2;
-            start = p;
+        if (p[0] != '{') {
+            p++;
             continue;
         }
-        if (p[0] == '{' && (p[1] == '{' || p[1] == '%')) {
-            const char *opening = p;
-            /* Append text since last tag */
-            cwist_sstring_append_len(output, start, p - start);
+        const char *opening = p;
 
-            if (p[1] == '{') { /* Variable: {{ key [| filter] }} */
+        switch (p[1]) {
+            case '#': /* Comment: {# ... #} -- skip silently. */
+                cwist_sstring_append_len(output, start, p - start);
+                p += 2;
+                while (*p && !(p[0] == '#' && p[1] == '}')) p++;
+                if (*p) p += 2;
+                start = p;
+                break;
+
+            case '{': { /* Variable: {{ key [| filter] }} */
+                cwist_sstring_append_len(output, start, p - start);
                 p += 2;
                 const char *var_start = p;
                 while (*p && (p[0] != '}' || p[1] != '}')) p++;
-                if (p[0] != '}' || p[1] != '}') {
+                if (!*p) {
                     report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
-                    cwist_sstring_destroy(output);
-                    return NULL;
+                    goto fail;
                 }
 
                 char var_buf[256] = {0};
@@ -294,207 +447,160 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 }
 
                 const cJSON *value = get_value_from_context(context, trimmed_var);
-                if (value) {
-                    char num_str[64] = {0};
-                    const char *raw = NULL;
-                    if (cJSON_IsString(value)) {
-                        raw = value->valuestring;
-                    } else if (cJSON_IsNumber(value)) {
-                        snprintf(num_str, sizeof(num_str), "%g", value->valuedouble);
-                        raw = num_str;
-                    } else if (cJSON_IsTrue(value)) {
-                        raw = "true";
-                    } else if (cJSON_IsFalse(value)) {
-                        raw = "false";
-                    }
-                    if (raw) {
-                        if (filter) {
-                            char filtered[512] = {0};
-                            apply_filter(raw, filter, filtered, sizeof(filtered));
-                            cwist_sstring_append(output, filtered);
-                        } else {
-                            cwist_sstring_append(output, raw);
-                        }
-                    }
+                char num_str[64] = {0};
+                const char *raw = value ? json_scalar_text(value, num_str, sizeof(num_str)) : NULL;
+                if (raw && filter) {
+                    char filtered[512] = {0};
+                    apply_filter(raw, filter, filtered, sizeof(filtered));
+                    cwist_sstring_append(output, filtered);
+                } else if (raw) {
+                    cwist_sstring_append(output, raw);
                 }
                 p += 2;
                 start = p;
+                break;
+            }
 
-            } else if (p[1] == '%') { /* Tag: {% ... %} */
+            case '%': { /* Tag: {% ... %} */
+                cwist_sstring_append_len(output, start, p - start);
                 p += 2;
                 const char *tag_start = p;
                 while (*p && (p[0] != '%' || p[1] != '}')) p++;
-                if (p[0] != '%' || p[1] != '}') {
+                if (!*p) {
                     report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
-                    cwist_sstring_destroy(output);
-                    return NULL;
+                    goto fail;
                 }
 
                 char tag[256] = {0};
                 size_t tag_len = (size_t)(p - tag_start);
                 if (tag_len >= sizeof(tag)) tag_len = sizeof(tag) - 1;
                 memcpy(tag, tag_start, tag_len);
+                p += 2; /* past "%}": start of a block body, or of the text after the tag */
 
                 char *tag_saveptr = NULL;
-                char *cmd = strtok_r(tag, " \t\n", &tag_saveptr);
-                if (!cmd) {
-                    p += 2;
-                    start = p;
-                    continue;
-                }
+                char *cmd = strtok_r(tag, TAG_DELIMS, &tag_saveptr);
+                template_tag_kind kind = cmd ? classify_command(cmd, strlen(cmd)) : TAG_NONE;
 
-                if (strcmp(cmd, "if") == 0) {
-                    char *tok = strtok_r(NULL, " \t\n", &tag_saveptr);
-                    bool negate = false;
-                    if (tok && strcmp(tok, "not") == 0) {
-                        negate = true;
-                        tok = strtok_r(NULL, " \t\n", &tag_saveptr);
-                    }
-                    const cJSON *val = tok ? get_value_from_context(context, tok) : NULL;
-                    bool cond = false;
-                    if (val) {
-                        cond = cJSON_IsTrue(val) ||
-                               (cJSON_IsString(val) && strlen(val->valuestring) > 0) ||
-                               (cJSON_IsObject(val) && cJSON_GetArraySize(val) > 0) ||
-                               (cJSON_IsArray(val) && cJSON_GetArraySize(val) > 0) ||
-                               (cJSON_IsNumber(val) && val->valuedouble != 0);
-                    }
-                    if (negate) cond = !cond;
+                switch (kind) {
+                    case TAG_IF: {
+                        char *tok = strtok_r(NULL, TAG_DELIMS, &tag_saveptr);
+                        bool negate = tok && strcmp(tok, "not") == 0;
+                        if (negate) tok = strtok_r(NULL, TAG_DELIMS, &tag_saveptr);
+                        bool cond = json_truthy(tok ? get_value_from_context(context, tok) : NULL);
+                        if (negate) cond = !cond;
 
-                    const char *block_start = p + 2;
-                    const char *else_pos = NULL;
-                    const char *block_end =
-                        find_block_end(block_start, opening, cmd, &else_pos, source);
-                    if (!block_end) {
-                        cwist_sstring_destroy(output);
-                        return NULL;
-                    }
-                    if ((cond || else_pos) && depth >= CWIST_TEMPLATE_MAX_DEPTH) {
-                        report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
-                        cwist_sstring_destroy(output);
-                        return NULL;
-                    }
+                        const char *else_pos = NULL;
+                        const char *block_end =
+                            find_block_end(p, opening, TAG_IF, &else_pos, source);
+                        if (!block_end) goto fail;
 
-                    if (cond) {
-                        const char *block_p = block_start;
-                        cwist_sstring *rendered_block =
-                            render_internal(&block_p, context, depth + 1, source);
-                        if (!rendered_block) {
-                            cwist_sstring_destroy(output);
-                            return NULL;
+                        const char *branch = NULL;
+                        if (cond)
+                            branch = p;
+                        else if (else_pos)
+                            branch = strstr(else_pos, "%}") + 2;
+                        if (branch) {
+                            if (depth >= CWIST_TEMPLATE_MAX_DEPTH) {
+                                report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
+                                goto fail;
+                            }
+                            if (!append_block(output, branch, context, depth + 1, source))
+                                goto fail;
                         }
-                        cwist_sstring_append(output, rendered_block->data);
-                        cwist_sstring_destroy(rendered_block);
-                    } else if (else_pos) {
-                        const char *else_p = strstr(else_pos, "%}") + 2;
-                        cwist_sstring *rendered_block =
-                            render_internal(&else_p, context, depth + 1, source);
-                        if (!rendered_block) {
-                            cwist_sstring_destroy(output);
-                            return NULL;
-                        }
-                        cwist_sstring_append(output, rendered_block->data);
-                        cwist_sstring_destroy(rendered_block);
+                        p = strstr(block_end, "%}") + 2;
+                        break;
                     }
 
-                    p = strstr(block_end, "%}") + 2;
-                    start = p;
+                    case TAG_FOR: {
+                        char *item_name = strtok_r(NULL, TAG_DELIMS, &tag_saveptr);
+                        strtok_r(NULL, TAG_DELIMS, &tag_saveptr); /* "in" */
+                        char *array_name = strtok_r(NULL, TAG_DELIMS, &tag_saveptr);
+                        const cJSON *array = (array_name && context)
+                                                 ? get_value_from_context(context, array_name)
+                                                 : NULL;
 
-                } else if (strcmp(cmd, "for") == 0) {
-                    char *item_name = strtok_r(NULL, " \t\n", &tag_saveptr);
-                    strtok_r(NULL, " \t\n", &tag_saveptr); /* "in" */
-                    char *array_name = strtok_r(NULL, " \t\n", &tag_saveptr);
+                        const char *block_end = find_block_end(p, opening, TAG_FOR, NULL, source);
+                        if (!block_end) goto fail;
 
-                    const cJSON *array = (array_name && context)
-                                             ? get_value_from_context(context, array_name)
-                                             : NULL;
-
-                    const char *block_start = p + 2;
-                    const char *block_end = find_block_end(block_start, opening, cmd, NULL, source);
-                    if (!block_end) {
-                        cwist_sstring_destroy(output);
-                        return NULL;
-                    }
-
-                    if (item_name && cJSON_IsArray(array)) {
-                        if (cJSON_GetArraySize(array) > 0 && depth >= CWIST_TEMPLATE_MAX_DEPTH) {
-                            report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
-                            cwist_sstring_destroy(output);
-                            return NULL;
-                        }
-                        cJSON *item;
-                        cJSON_ArrayForEach(item, array) {
-                            cJSON *loop_context = cJSON_Duplicate(context, 1);
-                            cJSON *loop_item = cJSON_Duplicate(item, 1);
-                            if (!loop_context || !loop_item ||
-                                !cJSON_AddItemToObject(loop_context, item_name, loop_item)) {
-                                report_error(source, opening, CWIST_TEMPLATE_ERROR_NO_MEMORY);
-                                cJSON_Delete(loop_item);
+                        if (item_name && cJSON_IsArray(array)) {
+                            if (cJSON_GetArraySize(array) > 0 &&
+                                depth >= CWIST_TEMPLATE_MAX_DEPTH) {
+                                report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
+                                goto fail;
+                            }
+                            cJSON *item;
+                            cJSON_ArrayForEach(item, array) {
+                                cJSON *loop_context = cJSON_Duplicate(context, 1);
+                                cJSON *loop_item = cJSON_Duplicate(item, 1);
+                                if (!loop_context || !loop_item ||
+                                    !cJSON_AddItemToObject(loop_context, item_name, loop_item)) {
+                                    report_error(source, opening, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                                    cJSON_Delete(loop_item);
+                                    cJSON_Delete(loop_context);
+                                    goto fail;
+                                }
+                                bool ok = append_block(output, p, loop_context, depth + 1, source);
                                 cJSON_Delete(loop_context);
-                                cwist_sstring_destroy(output);
-                                return NULL;
+                                if (!ok) goto fail;
                             }
-
-                            const char *loop_p = block_start;
-                            cwist_sstring *rendered_block =
-                                render_internal(&loop_p, loop_context, depth + 1, source);
-                            cJSON_Delete(loop_context);
-                            if (!rendered_block) {
-                                cwist_sstring_destroy(output);
-                                return NULL;
-                            }
-                            cwist_sstring_append(output, rendered_block->data);
-                            cwist_sstring_destroy(rendered_block);
                         }
+                        p = strstr(block_end, "%}") + 2;
+                        break;
                     }
-                    p = strstr(block_end, "%}") + 2;
-                    start = p;
 
-                } else if (strcmp(cmd, "include") == 0) {
-                    char *path = strtok_r(NULL, " \t\n", &tag_saveptr);
-                    if (path) {
+                    case TAG_INCLUDE: {
+                        char *path = strtok_r(NULL, TAG_DELIMS, &tag_saveptr);
+                        if (!path) break;
                         while (*path == ' ' || *path == '\t' || *path == '\n') path++;
                         char *end = path + strlen(path);
-                        while (end > path &&
-                               (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\n' ||
-                                end[-1] == '"'))
+                        while (end > path && (end[-1] == ' ' || end[-1] == '\t' ||
+                                              end[-1] == '\n' || end[-1] == '"'))
                             *--end = '\0';
                         if (path[0] == '"') path++;
-                        if (path[0]) {
-                            cwist_sstring *included =
-                                render_file_internal(path, context, depth + 1, source, opening);
-                            if (!included) {
-                                cwist_sstring_destroy(output);
-                                return NULL;
-                            }
-                            cwist_sstring_append(output, included->data);
-                            cwist_sstring_destroy(included);
-                        }
-                    }
-                    p += 2;
-                    start = p;
+                        if (!path[0]) break;
 
-                } else if (strcmp(cmd, "endif") == 0 || strcmp(cmd, "endfor") == 0 ||
-                           strcmp(cmd, "else") == 0) {
-                    *template_str = p + 2;
-                    return output;
-                } else {
-                    p += 2;
-                    start = p;
+                        /* Resolve against the including file's directory so relative
+                         * includes do not depend on the process working directory. */
+                        char resolved[4096];
+                        resolve_include_path(source->base_dir, path, resolved, sizeof(resolved));
+                        cwist_sstring *included =
+                            render_file_internal(resolved, context, depth + 1, source, opening);
+                        if (!included) goto fail;
+                        cwist_sstring_append(output, included->data);
+                        cwist_sstring_destroy(included);
+                        break;
+                    }
+
+                    case TAG_ELSE:
+                    case TAG_ENDIF:
+                    case TAG_ENDFOR: *template_str = p; return output;
+
+                    case TAG_NONE: break;
                 }
+                start = p;
+                break;
             }
-        } else {
-            p++;
+
+            default: p++; break;
         }
     }
 
     cwist_sstring_append_len(output, start, p - start);
     *template_str = p;
     return output;
+
+fail:
+    cwist_sstring_destroy(output);
+    return NULL;
 }
 
 /**
  * @brief Render an in-memory template string against a JSON context object.
+ *
+ * Include paths in an in-memory template have no directory origin, so relative
+ * includes resolve against the process working directory. Use
+ * cwist_template_render_file() when file-relative includes are needed.
+ *
  * @param template_str Template source to render.
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL on failure.
@@ -506,13 +612,19 @@ cwist_sstring *cwist_template_render(const char *template_str, const cJSON *cont
 cwist_sstring *cwist_template_render_ex(const char *template_str, const cJSON *context,
                                         cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {template_str, NULL, error};
+    const template_source source = {template_str, NULL, NULL, error};
     const char *p = template_str;
     return render_internal(&p, context, 0, &source);
 }
 
 /**
  * @brief Load a template file from disk and render it against a JSON context.
+ *
+ * The directory of file_path is used as the base for resolving relative
+ * {% include "..." %} paths inside the template, so partials can be placed
+ * next to the template that includes them without depending on the process
+ * working directory.
+ *
  * @param file_path Path to the template file to open.
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL when file IO or rendering fails.
@@ -532,35 +644,38 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
         return NULL;
     }
 
+    cwist_template_error_code_t code = CWIST_TEMPLATE_ERROR_IO;
+    char *template_str = NULL;
     long len;
-    if (fseek(f, 0, SEEK_END) != 0 || (len = ftell(f)) < 0 || fseek(f, 0, SEEK_SET) != 0) {
-        report_error(parent, include_tag, CWIST_TEMPLATE_ERROR_IO);
-        fclose(f);
-        return NULL;
-    }
+    if (fseek(f, 0, SEEK_END) != 0 || (len = ftell(f)) < 0 || fseek(f, 0, SEEK_SET) != 0)
+        goto fail_close;
 
-    char *template_str = cwist_alloc((size_t)len + 1);
+    template_str = cwist_alloc((size_t)len + 1);
     if (!template_str) {
-        report_error(parent, include_tag, CWIST_TEMPLATE_ERROR_NO_MEMORY);
-        fclose(f);
-        return NULL;
+        code = CWIST_TEMPLATE_ERROR_NO_MEMORY;
+        goto fail_close;
     }
 
     size_t read_len = fread(template_str, 1, (size_t)len, f);
     bool read_failed = read_len != (size_t)len || ferror(f);
-    if (fclose(f) != 0) read_failed = true;
-    if (read_failed) {
-        report_error(parent, include_tag, CWIST_TEMPLATE_ERROR_IO);
-        cwist_free(template_str);
-        return NULL;
-    }
+    if (fclose(f) != 0 || read_failed) goto fail;
     template_str[read_len] = '\0';
 
-    const template_source source = {template_str, file_path, parent->error};
+    char dir_buf[4096];
+    path_dirname(file_path, dir_buf, sizeof(dir_buf));
+
+    const template_source source = {template_str, file_path, dir_buf, parent->error};
     const char *p = template_str;
     cwist_sstring *rendered = render_internal(&p, context, depth, &source);
     cwist_free(template_str);
     return rendered;
+
+fail_close:
+    fclose(f);
+fail:
+    report_error(parent, include_tag, code);
+    cwist_free(template_str);
+    return NULL;
 }
 
 cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *context) {
@@ -570,6 +685,6 @@ cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *co
 cwist_sstring *cwist_template_render_file_ex(const char *file_path, const cJSON *context,
                                              cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {NULL, file_path, error};
+    const template_source source = {NULL, file_path, NULL, error};
     return render_file_internal(file_path, context, 0, &source, NULL);
 }
