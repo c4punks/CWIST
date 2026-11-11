@@ -175,6 +175,11 @@ int main(void) {
     FAIL_IF(strstr(res->body->data, "manual=mv") == NULL, "manual cookie sent");
     cwist_http_response_destroy(res);
 
+    /* Test clearing cookie jar */
+    cwist_test_client_clear_cookies(client);
+    FAIL_IF(cwist_test_client_get_cookie(client, "manual") != NULL, "manual cookie cleared");
+    FAIL_IF(cwist_test_client_get_cookie(client, "tc") != NULL, "jar cookie cleared");
+
     /* Test adhoc cookies with NULL key/value safety */
     cwist_test_client_kv safe_cookies[] = {{NULL, "none"}, {"valid", "val"}, {"nullval", NULL}};
     cwist_test_client_request_options safe_opts = {.cookies = safe_cookies, .cookie_count = 3};

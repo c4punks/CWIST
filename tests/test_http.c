@@ -14,6 +14,11 @@ void test_methods() {
     printf("Testing HTTP methods...\n");
     assert(strcmp(cwist_http_method_to_string(CWIST_HTTP_GET), "GET") == 0);
     assert(cwist_http_string_to_method("POST") == CWIST_HTTP_POST);
+    assert(cwist_http_string_to_method_len("POST", 4) == CWIST_HTTP_POST);
+    assert(cwist_http_string_to_method_len("GET /", 3) == CWIST_HTTP_GET);
+    assert(strcmp(cwist_http_status_reason(200), "OK") == 0);
+    assert(strcmp(cwist_http_status_reason(404), "Not Found") == 0);
+    assert(strcmp(cwist_http_status_reason(500), "Internal Server Error") == 0);
     printf("Passed methods.\n");
 }
 
@@ -32,6 +37,10 @@ void test_request_lifecycle() {
     assert(strcmp(cwist_http_header_get(req->headers, "host"), "example.com") == 0);
     assert(strcmp(cwist_http_header_get(req->headers, "Content-Type"), "application/json") == 0);
     assert(cwist_http_header_get(req->headers, "Invalid") == NULL);
+
+    assert(cwist_http_header_remove(&req->headers, "Host") == 1);
+    assert(cwist_http_header_get(req->headers, "Host") == NULL);
+    assert(cwist_http_header_remove(&req->headers, "Non-Existent") == 0);
 
     cwist_sstring_assign(req->body, "{\"key\": \"value\"}");
     assert(strcmp(req->body->data, "{\"key\": \"value\"}") == 0);
