@@ -720,8 +720,14 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
 
 static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_t len) {
     h3c_dgram_node *node = malloc(sizeof(*node));
-    if (!node || !(node->data = malloc(len))) {
-        free(node);
+    if (node) {
+        node->data = malloc(len);
+        if (!node->data) {
+            free(node);
+            node = NULL;
+        }
+    }
+    if (!node) {
         atomic_fetch_add_explicit(&client->in_dgram.dropped_alloc, 1, memory_order_relaxed);
         return;
     }
