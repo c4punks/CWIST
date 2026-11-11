@@ -49,12 +49,18 @@ static void test_session_create_and_commit(void) {
     assert(header_contains(secure_res->headers, "Set-Cookie", "Secure"));
     cwist_http_response_destroy(secure_res);
 
-    /* Test delete and invalidate */
-    cwist_session_set(session, "to_delete", "val");
-    cwist_session_delete(session, "to_delete");
-    assert(cwist_session_get(session, "to_delete") == NULL);
-    cwist_session_invalidate(session);
-    assert(cwist_session_get(session, "user_id") == NULL);
+    /* Delete removes one key; invalidate clears the cookie on the next commit. */
+    assert(cwist_session_set(secure_session, "to_delete", "val") == 0);
+    cwist_session_delete(secure_session, "to_delete");
+    assert(cwist_session_get(secure_session, "to_delete") == NULL);
+    assert(strcmp(cwist_session_get(secure_session, "user_id"), "42") == 0);
+    cwist_session_invalidate(secure_session);
+    cwist_http_response *cleared_res = cwist_http_response_create();
+    assert(cleared_res != NULL);
+    assert(cwist_session_commit(secure_session, cleared_res) == 0);
+    assert(header_contains(cleared_res->headers, "Set-Cookie", "cwist_session=;"));
+    assert(header_contains(cleared_res->headers, "Set-Cookie", "Max-Age=0"));
+    cwist_http_response_destroy(cleared_res);
 
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
