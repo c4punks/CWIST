@@ -36,6 +36,7 @@ int main(void) {
     assert(strstr(received, "id:7\nevent:message\ndata:ok\n\n") != NULL);
     cwist_sse_event_t live_event = CWIST_SSE_EVENT("typed payload");
     assert(cwist_sse_stream_write(stream, &live_event).error.err_i16 == 0);
+    assert(cwist_sse_stream_comment(stream, "keepalive").error.err_i16 == 0);
     cwist_sse_stream_close(stream);
     cwist_http_request_destroy(req);
     close(pair[0]);
