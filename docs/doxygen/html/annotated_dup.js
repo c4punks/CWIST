@@ -45,6 +45,7 @@ var annotated_dup =
     [ "cwist_http2_stream_flow_control", "d0/d2d/structcwist__http2__stream__flow__control.html", "d0/d2d/structcwist__http2__stream__flow__control" ],
     [ "cwist_http2_stream_hooks", "d6/d48/structcwist__http2__stream__hooks.html", "d6/d48/structcwist__http2__stream__hooks" ],
     [ "cwist_http3_context", "d9/dae/structcwist__http3__context.html", "d9/dae/structcwist__http3__context" ],
+    [ "cwist_http3_datagram_stats", "d2/d6b/structcwist__http3__datagram__stats.html", "d2/d6b/structcwist__http3__datagram__stats" ],
     [ "cwist_http_async_conn", "db/d8a/structcwist__http__async__conn.html", "db/d8a/structcwist__http__async__conn" ],
     [ "cwist_http_carry", "d1/d6f/structcwist__http__carry.html", "d1/d6f/structcwist__http__carry" ],
     [ "cwist_http_header_node", "d3/d72/structcwist__http__header__node.html", "d3/d72/structcwist__http__header__node" ],
