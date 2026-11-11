@@ -99,6 +99,7 @@ var annotated_dup =
     [ "cwist_sha256_ctx", "df/dc3/structcwist__sha256__ctx.html", "df/dc3/structcwist__sha256__ctx" ],
     [ "cwist_sse_event", "d8/d63/structcwist__sse__event.html", "d8/d63/structcwist__sse__event" ],
     [ "cwist_sstring", "d5/ddc/structcwist__sstring.html", "d5/ddc/structcwist__sstring" ],
+    [ "cwist_template_error_t", "d9/d8b/structcwist__template__error__t.html", "d9/d8b/structcwist__template__error__t" ],
     [ "cwist_test_client", "d7/d17/structcwist__test__client.html", "d7/d17/structcwist__test__client" ],
     [ "cwist_test_client_cookie", "d0/d82/structcwist__test__client__cookie.html", "d0/d82/structcwist__test__client__cookie" ],
     [ "cwist_test_client_kv", "df/d38/structcwist__test__client__kv.html", "df/d38/structcwist__test__client__kv" ],
