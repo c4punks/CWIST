@@ -121,6 +121,10 @@ struct cwist_http3_client {
         h3c_dgram_node *head;
         h3c_dgram_node *tail;
         size_t count;
+        uint64_t enqueued;
+        uint64_t dequeued;
+        uint64_t dropped_full;
+        uint64_t dropped_alloc;
     } in_dgram;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     cwist_webtransport_client_session *wt_connecting;
@@ -715,9 +719,17 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
 
 static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_t len) {
     h3c_dgram_node *node = malloc(sizeof(*node));
-    if (!node) return;
+    if (!node) {
+        pthread_mutex_lock(&client->dgram_mtx);
+        client->in_dgram.dropped_alloc++;
+        pthread_mutex_unlock(&client->dgram_mtx);
+        return;
+    }
     node->data = malloc(len);
     if (!node->data) {
+        pthread_mutex_lock(&client->dgram_mtx);
+        client->in_dgram.dropped_alloc++;
+        pthread_mutex_unlock(&client->dgram_mtx);
         free(node);
         return;
     }
@@ -727,6 +739,7 @@ static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_
 
     pthread_mutex_lock(&client->dgram_mtx);
     if (client->in_dgram.count >= H3C_DGRAM_QUEUE_LIMIT) {
+        client->in_dgram.dropped_full++;
         pthread_mutex_unlock(&client->dgram_mtx);
         free(node->data);
         free(node);
@@ -738,6 +751,7 @@ static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_
         client->in_dgram.head = node;
     client->in_dgram.tail = node;
     client->in_dgram.count++;
+    client->in_dgram.enqueued++;
     pthread_mutex_unlock(&client->dgram_mtx);
 }
 
@@ -1329,10 +1343,23 @@ ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, 
     client->in_dgram.head = node->next;
     if (!client->in_dgram.head) client->in_dgram.tail = NULL;
     client->in_dgram.count--;
+    client->in_dgram.dequeued++;
     pthread_mutex_unlock(&client->dgram_mtx);
     free(node->data);
     free(node);
     return (ssize_t)to_copy;
+}
+
+void cwist_http3_client_get_datagram_stats(cwist_http3_client *client,
+                                           cwist_http3_datagram_stats *stats) {
+    if (!client || !stats) return;
+    pthread_mutex_lock(&client->dgram_mtx);
+    stats->enqueued = client->in_dgram.enqueued;
+    stats->dequeued = client->in_dgram.dequeued;
+    stats->dropped_full = client->in_dgram.dropped_full;
+    stats->dropped_alloc = client->in_dgram.dropped_alloc;
+    stats->queue_depth = client->in_dgram.count;
+    pthread_mutex_unlock(&client->dgram_mtx);
 }
 
 /* ------------------------------------------------------------------ */

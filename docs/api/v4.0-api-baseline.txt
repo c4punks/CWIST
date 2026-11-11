@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (802) ==
+== functions (803) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -319,6 +319,7 @@ cwist_http3_client_create
 cwist_http3_client_destroy
 cwist_http3_client_enable_0rtt
 cwist_http3_client_enable_datagrams
+cwist_http3_client_get_datagram_stats
 cwist_http3_client_recv_datagram
 cwist_http3_client_request
 cwist_http3_client_send_datagram
@@ -808,7 +809,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (803) ==
+== function signatures (804) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1124,6 +1125,7 @@ cwist_http3_client_create: cwist_http3_client * (void)
 cwist_http3_client_destroy: void (cwist_http3_client *)
 cwist_http3_client_enable_0rtt: void (cwist_http3_client *, int)
 cwist_http3_client_enable_datagrams: void (cwist_http3_client *, int)
+cwist_http3_client_get_datagram_stats: void (cwist_http3_client *, cwist_http3_datagram_stats *)
 cwist_http3_client_recv_datagram: ssize_t (cwist_http3_client *, void *, size_t)
 cwist_http3_client_request: cwist_error_t (cwist_http3_client *, const char *, cwist_http_method_t, cwist_http_header_node *, const char *, size_t, cwist_http_response **)
 cwist_http3_client_send_datagram: int (cwist_http3_client *, const void *, size_t)
@@ -1637,7 +1639,7 @@ cwist_wasm_component_dispose: void (void *)
 cwist_wasm_dispatch_memory: const char * (cwist_app *, const char *, size_t, size_t *)
 cwist_wasm_free: void (void *)
 
-== types (struct/union/enum names) (160) ==
+== types (struct/union/enum names) (161) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -1705,6 +1707,7 @@ cwist_http2_stream_flow_control
 cwist_http2_stream_hooks
 cwist_http3_client
 cwist_http3_context
+cwist_http3_datagram_stats
 cwist_http_async_conn
 cwist_http_client
 cwist_http_header_node
@@ -1799,7 +1802,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (215) ==
+== typedefs (216) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -1885,6 +1888,7 @@ cwist_http2_stream_flow_control
 cwist_http2_stream_hooks
 cwist_http3_client
 cwist_http3_context
+cwist_http3_datagram_stats
 cwist_http3_request_handler_func
 cwist_http_async_conn_t
 cwist_http_body_cleanup_fn

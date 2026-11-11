@@ -13,6 +13,7 @@
 #include <cwist/net/http/http.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -192,6 +193,28 @@ int cwist_http3_client_send_datagram(cwist_http3_client *client, const void *dat
  * @return Number of bytes received, or -1 on error.
  */
 ssize_t cwist_http3_client_recv_datagram(cwist_http3_client *client, void *buf, size_t len);
+
+/**
+ * @brief Incoming DATAGRAM queue counters and depth.
+ */
+typedef struct cwist_http3_datagram_stats {
+    uint64_t enqueued;      /**< Total datagrams successfully enqueued. */
+    uint64_t dequeued;      /**< Total datagrams consumed by recv_datagram. */
+    uint64_t dropped_full;  /**< Incoming datagrams dropped because queue was full. */
+    uint64_t dropped_alloc; /**< Incoming datagrams dropped due to allocation failure. */
+    size_t queue_depth;     /**< Current number of pending datagrams in the FIFO queue. */
+} cwist_http3_datagram_stats;
+
+/**
+ * @brief Query DATAGRAM queue statistics.
+ *
+ * Copies the current queue counters and depth into @p stats under the client
+ * datagram lock.
+ *
+ * @param client Client handle.
+ * @param stats  Output buffer for statistics.
+ */
+void cwist_http3_client_get_datagram_stats(cwist_http3_client *client, cwist_http3_datagram_stats *stats);
 
 /** @} */
 
