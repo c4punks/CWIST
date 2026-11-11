@@ -29,6 +29,7 @@
 #include <sys/uio.h>
 #include <poll.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <ctype.h>
 #include <strings.h>
 
@@ -124,7 +125,7 @@ struct cwist_http3_client {
         uint64_t enqueued;
         uint64_t dequeued;
         uint64_t dropped_full;
-        uint64_t dropped_alloc;
+        _Atomic uint64_t dropped_alloc;
     } in_dgram;
 #ifdef CWIST_WEBTRANSPORT_CLIENT
     cwist_webtransport_client_session *wt_connecting;
@@ -719,18 +720,9 @@ static ssize_t h3c_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) {
 
 static void h3c_dgram_enqueue(cwist_http3_client *client, const void *buf, size_t len) {
     h3c_dgram_node *node = malloc(sizeof(*node));
-    if (!node) {
-        pthread_mutex_lock(&client->dgram_mtx);
-        client->in_dgram.dropped_alloc++;
-        pthread_mutex_unlock(&client->dgram_mtx);
-        return;
-    }
-    node->data = malloc(len);
-    if (!node->data) {
-        pthread_mutex_lock(&client->dgram_mtx);
-        client->in_dgram.dropped_alloc++;
-        pthread_mutex_unlock(&client->dgram_mtx);
+    if (!node || !(node->data = malloc(len))) {
         free(node);
+        atomic_fetch_add_explicit(&client->in_dgram.dropped_alloc, 1, memory_order_relaxed);
         return;
     }
     memcpy(node->data, buf, len);
@@ -1357,7 +1349,8 @@ void cwist_http3_client_get_datagram_stats(cwist_http3_client *client,
     stats->enqueued = client->in_dgram.enqueued;
     stats->dequeued = client->in_dgram.dequeued;
     stats->dropped_full = client->in_dgram.dropped_full;
-    stats->dropped_alloc = client->in_dgram.dropped_alloc;
+    stats->dropped_alloc =
+        atomic_load_explicit(&client->in_dgram.dropped_alloc, memory_order_relaxed);
     stats->queue_depth = client->in_dgram.count;
     pthread_mutex_unlock(&client->dgram_mtx);
 }
