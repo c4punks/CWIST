@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (805) ==
+== functions (807) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -766,6 +766,8 @@ cwist_template_render
 cwist_template_render_ex
 cwist_template_render_file
 cwist_template_render_file_ex
+cwist_template_render_file_rooted
+cwist_template_render_rooted
 cwist_test_client_clear_cookies
 cwist_test_client_create
 cwist_test_client_delete
@@ -811,7 +813,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (806) ==
+== function signatures (808) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1574,6 +1576,8 @@ cwist_template_render: cwist_sstring * (const char *, const cJSON *)
 cwist_template_render_ex: cwist_sstring * (const char *, const cJSON *, cwist_template_error_t *)
 cwist_template_render_file: cwist_sstring * (const char *, const cJSON *)
 cwist_template_render_file_ex: cwist_sstring * (const char *, const cJSON *, cwist_template_error_t *)
+cwist_template_render_file_rooted: cwist_sstring * (const char *, const cJSON *, const char *, cwist_template_error_t *)
+cwist_template_render_rooted: cwist_sstring * (const char *, const cJSON *, const char *, cwist_template_error_t *)
 cwist_test_client_clear_cookies: void (cwist_test_client *)
 cwist_test_client_create: cwist_test_client * (cwist_app *)
 cwist_test_client_delete: cwist_http_response * (cwist_test_client *, const char *)
@@ -2026,7 +2030,7 @@ quic_conn_fc_t
 quic_net_quality_t
 quic_stream_fc_t
 
-== enum constants (241) ==
+== enum constants (242) ==
 CWIST_ASYNC_CLOSE
 CWIST_ASYNC_DEFER
 CWIST_ASYNC_DETACH
@@ -2251,6 +2255,7 @@ CWIST_RECV_FATAL
 CWIST_RECV_NEED_MORE
 CWIST_RECV_OK
 CWIST_TEMPLATE_ERROR_DEPTH
+CWIST_TEMPLATE_ERROR_FORBIDDEN
 CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT
 CWIST_TEMPLATE_ERROR_IO
 CWIST_TEMPLATE_ERROR_NONE
@@ -2421,6 +2426,7 @@ enum cwist_template_error_code_t [3] CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK
 enum cwist_template_error_code_t [4] CWIST_TEMPLATE_ERROR_DEPTH
 enum cwist_template_error_code_t [5] CWIST_TEMPLATE_ERROR_IO
 enum cwist_template_error_code_t [6] CWIST_TEMPLATE_ERROR_NO_MEMORY
+enum cwist_template_error_code_t [7] CWIST_TEMPLATE_ERROR_FORBIDDEN
 enum cwist_webrtc_data_type [0] CWIST_WEBRTC_DATA_BINARY = 0
 enum cwist_webrtc_data_type [1] CWIST_WEBRTC_DATA_STRING = 1
 enum cwist_ws_opcode_t [0] CWIST_WS_FRAME_CONTINUATION = 0x0
