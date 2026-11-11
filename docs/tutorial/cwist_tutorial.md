@@ -383,6 +383,22 @@ source path, and tag type. Errors inside included files identify that file;
 include I/O and depth errors identify the include tag in its parent source.
 The diagnostic owns a copy of the path and needs no initialization or cleanup.
 
+When templates come from a less-trusted source, such as user-editable themes,
+confine includes to a directory with `cwist_template_render_file_rooted` or
+`cwist_template_render_rooted`:
+
+```c
+cwist_sstring *output =
+    cwist_template_render_file_rooted("views/index.html", context, "views", &error);
+```
+
+Every `{% include %}` is canonicalized, and an include outside the root fails
+with `CWIST_TEMPLATE_ERROR_FORBIDDEN`. This covers `..` segments, absolute
+paths, and symlinks that point outside. The root never changes which file an
+include names; it only rejects files outside it. For an in-memory template,
+relative includes resolve against the root. Bare-metal builds have no
+`realpath()`, so they reject every root.
+
 ```c
 #include <cwist/app.h>
 #include <cwist/core/template/template.h>
