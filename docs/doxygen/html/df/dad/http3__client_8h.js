@@ -1,11 +1,14 @@
 var http3__client_8h =
 [
+    [ "cwist_http3_datagram_stats", "d2/d6b/structcwist__http3__datagram__stats.html", "d2/d6b/structcwist__http3__datagram__stats" ],
     [ "cwist_http3_client", "df/dad/http3__client_8h.html#ad64de19673a1ea35b3eb1ee9636e1845", null ],
+    [ "cwist_http3_datagram_stats", "df/dad/http3__client_8h.html#aa1d340de2bbd28818a84029643edc888", null ],
     [ "cwist_webtransport_client_session", "df/dad/http3__client_8h.html#aea8a8ef27095585cd01b5fd290098e4e", null ],
     [ "cwist_http3_client_create", "df/dad/http3__client_8h.html#abe7533eacceb1cc102b6a080895f42c5", null ],
     [ "cwist_http3_client_destroy", "df/dad/http3__client_8h.html#ad8d8dca1705ea3cbec5a18788338158c", null ],
     [ "cwist_http3_client_enable_0rtt", "df/dad/http3__client_8h.html#a86b9d00f817e3b072e6d3abfb72479a6", null ],
     [ "cwist_http3_client_enable_datagrams", "df/dad/http3__client_8h.html#a3c2b697641812cf3867fd89d504b19c6", null ],
+    [ "cwist_http3_client_get_datagram_stats", "df/dad/http3__client_8h.html#ab4604320b7c65342adf655118f3b0328", null ],
     [ "cwist_http3_client_recv_datagram", "df/dad/http3__client_8h.html#a03516b78e233ff5f770ea7f78d16f12d", null ],
     [ "cwist_http3_client_request", "df/dad/http3__client_8h.html#a1cebceb867dbe446f274df968cb30cdd", null ],
     [ "cwist_http3_client_send_datagram", "df/dad/http3__client_8h.html#a1a558af1f6551d6c6d42e83575c90c6a", null ],
