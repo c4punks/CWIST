@@ -152,8 +152,8 @@ static const char *tag_type(const char *tag) {
     }
 }
 
-static void report_error(const template_source *source, const char *position,
-                         cwist_template_error_code_t code) {
+static void template_report_error(const template_source *source, const char *position,
+                                  cwist_template_error_code_t code) {
     cwist_template_error_t *error = source->error;
     if (!error || error->code != CWIST_TEMPLATE_ERROR_NONE) return;
     error->code = code;
@@ -207,10 +207,10 @@ static const char *find_block_end(const char *start, const char *opening,
     }
 
 unclosed_block:
-    report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK);
+    template_report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK);
     return NULL;
 unclosed_tag:
-    report_error(source, scan, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
+    template_report_error(source, scan, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
     return NULL;
 }
 
@@ -386,13 +386,13 @@ static bool append_block(cwist_sstring *output, const char *block, const cJSON *
 static cwist_sstring *render_internal(const char **template_str, const cJSON *context, int depth,
                                       const template_source *source) {
     if (!template_str || !*template_str) {
-        report_error(source, NULL, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
+        template_report_error(source, NULL, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
         return NULL;
     }
 
     cwist_sstring *output = cwist_sstring_create();
     if (!output) {
-        report_error(source, *template_str, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+        template_report_error(source, *template_str, CWIST_TEMPLATE_ERROR_NO_MEMORY);
         return NULL;
     }
     const char *p = *template_str;
@@ -420,7 +420,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 const char *var_start = p;
                 while (*p && (p[0] != '}' || p[1] != '}')) p++;
                 if (!*p) {
-                    report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
+                    template_report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
                     goto fail;
                 }
 
@@ -467,7 +467,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 const char *tag_start = p;
                 while (*p && (p[0] != '%' || p[1] != '}')) p++;
                 if (!*p) {
-                    report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
+                    template_report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
                     goto fail;
                 }
 
@@ -501,7 +501,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                             branch = strstr(else_pos, "%}") + 2;
                         if (branch) {
                             if (depth >= CWIST_TEMPLATE_MAX_DEPTH) {
-                                report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
+                                template_report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
                                 goto fail;
                             }
                             if (!append_block(output, branch, context, depth + 1, source))
@@ -525,7 +525,7 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         if (item_name && cJSON_IsArray(array)) {
                             if (cJSON_GetArraySize(array) > 0 &&
                                 depth >= CWIST_TEMPLATE_MAX_DEPTH) {
-                                report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
+                                template_report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
                                 goto fail;
                             }
                             cJSON *item;
@@ -534,7 +534,8 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                                 cJSON *loop_item = cJSON_Duplicate(item, 1);
                                 if (!loop_context || !loop_item ||
                                     !cJSON_AddItemToObject(loop_context, item_name, loop_item)) {
-                                    report_error(source, opening, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                                    template_report_error(source, opening,
+                                                          CWIST_TEMPLATE_ERROR_NO_MEMORY);
                                     cJSON_Delete(loop_item);
                                     cJSON_Delete(loop_context);
                                     goto fail;
@@ -632,14 +633,14 @@ cwist_sstring *cwist_template_render_ex(const char *template_str, const cJSON *c
 static cwist_sstring *render_file_internal(const char *file_path, const cJSON *context, int depth,
                                            const template_source *parent, const char *include_tag) {
     if (!file_path || depth > CWIST_TEMPLATE_MAX_DEPTH) {
-        report_error(parent, include_tag,
-                     file_path ? CWIST_TEMPLATE_ERROR_DEPTH
-                               : CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
+        template_report_error(parent, include_tag,
+                              file_path ? CWIST_TEMPLATE_ERROR_DEPTH
+                                        : CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
         return NULL;
     }
     FILE *f = fopen(file_path, "rb");
     if (!f) {
-        report_error(parent, include_tag, CWIST_TEMPLATE_ERROR_IO);
+        template_report_error(parent, include_tag, CWIST_TEMPLATE_ERROR_IO);
         perror("Failed to open template file");
         return NULL;
     }
@@ -673,7 +674,7 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
 fail_close:
     fclose(f);
 fail:
-    report_error(parent, include_tag, code);
+    template_report_error(parent, include_tag, code);
     cwist_free(template_str);
     return NULL;
 }
