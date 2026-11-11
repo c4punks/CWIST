@@ -361,6 +361,126 @@ static void test_fragmentation_state(void) {
     printf("WebSocket blocking fragmentation state tests passed.\n");
 }
 
+/* Read one unmasked server frame from @p fd. */
+static void read_server_frame(int fd, uint8_t *head0, uint8_t *payload, size_t cap, size_t *len) {
+    uint8_t head[2];
+    assert(read(fd, head, 2) == 2);
+    assert((head[1] & 0x80) == 0); /* server frames are not masked */
+    size_t plen = head[1] & 0x7f;
+    if (plen == 126) {
+        uint8_t ext[2];
+        assert(read(fd, ext, 2) == 2);
+        plen = (size_t)ext[0] << 8 | ext[1];
+    }
+    assert(plen <= cap);
+    size_t got = 0;
+    while (got < plen) {
+        ssize_t n = read(fd, payload + got, plen - got);
+        assert(n > 0);
+        got += (size_t)n;
+    }
+    *head0 = head[0];
+    *len = plen;
+}
+
+static bool fd_has_pending_bytes(int fd) {
+    int flags = fcntl(fd, F_GETFL);
+    assert(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0);
+    uint8_t byte;
+    ssize_t n = read(fd, &byte, 1);
+    bool pending = n > 0;
+    assert(pending || errno == EAGAIN || errno == EWOULDBLOCK);
+    assert(fcntl(fd, F_SETFL, flags) == 0);
+    return pending;
+}
+
+static void test_websocket_send_fragments(void) {
+    int sv[2];
+    cwist_http_request *req;
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    cwist_websocket *ws = upgrade_for_frames(sv, &req);
+
+    uint8_t head0;
+    uint8_t payload[512];
+    size_t len;
+
+    /* Multi-fragment TEXT: first keeps the opcode, the rest are CONTINUATION,
+     * only the last has FIN. The middle fragment splits a UTF-8 sequence. */
+    const char *text = "caf\xc3\xa9!";
+    cwist_ws_fragment parts[] = {
+        {(const uint8_t *)text, 4}, {(const uint8_t *)text + 4, 0}, {(const uint8_t *)text + 4, 2}};
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_TEXT, parts, 3) == 0);
+    read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+    assert(head0 == 0x01 && len == 4 && memcmp(payload, "caf\xc3", 4) == 0);
+    read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+    assert(head0 == 0x00 && len == 0);
+    read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+    assert(head0 == 0x80 && len == 2 && memcmp(payload, "\xa9!", 2) == 0);
+
+    /* BINARY keeps its opcode; a 300-byte fragment uses the 16-bit length. */
+    uint8_t big[300];
+    for (size_t i = 0; i < sizeof(big); i++) big[i] = (uint8_t)i;
+    cwist_ws_fragment bin[] = {{big, 300}, {big, 1}};
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_BINARY, bin, 2) == 0);
+    read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+    assert(head0 == 0x02 && len == 300 && memcmp(payload, big, 300) == 0);
+    read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+    assert(head0 == 0x80 && len == 1 && payload[0] == 0);
+
+    /* One fragment is an ordinary FIN frame; zero fragments send an empty message. */
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_BINARY, bin + 1, 1) == 0);
+    read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+    assert(head0 == 0x82 && len == 1);
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_TEXT, NULL, 0) == 0);
+    read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+    assert(head0 == 0x81 && len == 0);
+
+    /* Invalid sequencing and arguments are rejected before anything is written. */
+    assert(cwist_websocket_send_fragments(NULL, CWIST_WS_FRAME_TEXT, parts, 3) == -1);
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_CONTINUATION, parts, 3) == -1);
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_PING, parts, 1) == -1);
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_CLOSE, NULL, 0) == -1);
+    assert(cwist_websocket_send_fragments(ws, (cwist_ws_opcode_t)0x3, parts, 1) == -1);
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_TEXT, NULL, 2) == -1);
+    cwist_ws_fragment bad[] = {{(const uint8_t *)"ok", 2}, {NULL, 5}};
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_BINARY, bad, 2) == -1);
+    assert(!fd_has_pending_bytes(sv[1]));
+
+    /* A peer that reassembles the frames gets the original message back. */
+    int peer[2];
+    cwist_http_request *peer_req;
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, peer) == 0);
+    cwist_websocket *receiver = upgrade_for_frames(peer, &peer_req);
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_TEXT, parts, 3) == 0);
+    for (int i = 0; i < 3; i++) {
+        read_server_frame(sv[1], &head0, payload, sizeof(payload), &len);
+        send_masked_frame(peer[1], head0, payload, len);
+        if (i == 1) send_masked_frame(peer[1], 0x89, (const uint8_t *)"p", 1);
+    }
+    cwist_ws_frame *frame = cwist_websocket_receive(receiver);
+    assert(frame && frame->opcode == CWIST_WS_FRAME_PING);
+    cwist_websocket_frame_destroy(frame);
+    frame = cwist_websocket_receive(receiver);
+    assert(frame && frame->opcode == CWIST_WS_FRAME_TEXT && frame->fin);
+    assert(frame->payload_len == 6 && memcmp(frame->payload, text, 6) == 0);
+    cwist_websocket_frame_destroy(frame);
+    cwist_websocket_destroy(receiver);
+    cwist_http_request_destroy(peer_req);
+    close(peer[0]);
+    close(peer[1]);
+
+    /* Send failures are reported, and a closed wrapper refuses to send. */
+    close(sv[1]);
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_BINARY, bin, 2) == -1);
+    ws->is_closed = true;
+    assert(cwist_websocket_send_fragments(ws, CWIST_WS_FRAME_BINARY, bin, 2) == -1);
+
+    cwist_websocket_destroy(ws);
+    cwist_http_request_destroy(req);
+    close(sv[0]);
+    printf("WebSocket fragmented send tests passed.\n");
+}
+
 static void test_websocket_sequenced(void) {
     printf("Testing WebSocket sequenced send/receive...\n");
 
@@ -523,6 +643,7 @@ int main() {
     test_orphan_continuation_rejected();
     test_reserved_opcodes_rejected();
     test_fragmentation_state();
+    test_websocket_send_fragments();
     test_frame_validation();
     return 0;
 }
