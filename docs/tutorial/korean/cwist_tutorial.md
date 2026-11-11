@@ -383,17 +383,8 @@ HTML 기반의 SSR(Server-Side Rendering) 프로젝트를 구축하거나, React
 특정 디렉터리 안으로 제한하세요.
 
 ```c
-#include <cwist/core/template/template.h>
-
-cwist_sstring *render_theme(const cJSON *context) {
-    cwist_template_error_t error;
-    cwist_sstring *output =
-        cwist_template_render_file_rooted("views/index.html", context, "views", &error);
-    if (!output && error.code == CWIST_TEMPLATE_ERROR_FORBIDDEN) {
-        /* An include tried to leave views/; error.file_path names the file. */
-    }
-    return output;
-}
+cwist_sstring *output =
+    cwist_template_render_file_rooted("views/index.html", context, "views", &error);
 ```
 
 모든 `{% include %}` 경로는 정규화되고, root 밖을 가리키면

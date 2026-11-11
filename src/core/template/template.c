@@ -1,10 +1,22 @@
 #include "cwist/core/template/template.h"
 #include <cwist/core/mem/alloc.h>
+#include <cwist/sys/platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
 #include <stdbool.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define TEMPLATE_NOINLINE __attribute__((noinline))
+#else
+#define TEMPLATE_NOINLINE
+#endif
 
 /**
  * @file template.c
@@ -16,6 +28,7 @@ typedef struct {
     const char *text;
     const char *file_path;
     const char *base_dir; /**< Directory used to resolve relative includes; may be NULL. */
+    const char *include_root; /**< Canonical directory includes must stay in; NULL = any. */
     cwist_template_error_t *error;
 } template_source;
 
@@ -613,7 +626,37 @@ cwist_sstring *cwist_template_render(const char *template_str, const cJSON *cont
 cwist_sstring *cwist_template_render_ex(const char *template_str, const cJSON *context,
                                         cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {template_str, NULL, NULL, error};
+    const template_source source = {template_str, NULL, NULL, NULL, error};
+    const char *p = template_str;
+    return render_internal(&p, context, 0, &source);
+}
+
+/**
+ * @brief Canonicalize @p include_root into @p out, reporting a bad root.
+ *
+ * Bare-metal builds have no realpath(), so they cannot enforce a root and
+ * refuse every one instead of rendering unconfined.
+ */
+static bool canonical_root(const char *include_root, char out[PATH_MAX],
+                           cwist_template_error_t *error) {
+#if defined(CWIST_BAREMETAL)
+    (void)include_root;
+    (void)out;
+#else
+    if (include_root && realpath(include_root, out)) return true;
+#endif
+    const template_source source = {NULL, NULL, NULL, NULL, error};
+    template_report_error(&source, NULL, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
+    return false;
+}
+
+cwist_sstring *cwist_template_render_rooted(const char *template_str, const cJSON *context,
+                                            const char *include_root,
+                                            cwist_template_error_t *error) {
+    if (error) memset(error, 0, sizeof(*error));
+    char root[PATH_MAX];
+    if (!canonical_root(include_root, root, error)) return NULL;
+    const template_source source = {template_str, NULL, root, root, error};
     const char *p = template_str;
     return render_internal(&p, context, 0, &source);
 }
@@ -630,6 +673,41 @@ cwist_sstring *cwist_template_render_ex(const char *template_str, const cJSON *c
  * @param context JSON object supplying values for substitutions and control flow.
  * @return Heap-allocated rendered output, or NULL when file IO or rendering fails.
  */
+/**
+ * @brief Open an included file only if its canonical path lies inside @p root.
+ *
+ * Kept out of line so the PATH_MAX buffer is not part of every recursive
+ * render frame. The canonical path is what gets opened, so the file checked
+ * is the file read.
+ */
+static TEMPLATE_NOINLINE FILE *open_confined(const char *root, const char *path,
+                                             cwist_template_error_code_t *code) {
+#if defined(CWIST_BAREMETAL)
+    /* No realpath() in newlib; canonical_root() already refused the root. */
+    (void)root;
+    (void)path;
+    *code = CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT;
+    return NULL;
+#else
+    char canonical[PATH_MAX];
+    if (!realpath(path, canonical)) {
+        *code = CWIST_TEMPLATE_ERROR_IO;
+        return NULL;
+    }
+    size_t root_len = strlen(root);
+    bool inside = root_len == 1 || /* the root is "/" */
+                  (strncmp(canonical, root, root_len) == 0 &&
+                   (canonical[root_len] == '/' || canonical[root_len] == '\0'));
+    if (!inside) {
+        *code = CWIST_TEMPLATE_ERROR_FORBIDDEN;
+        return NULL;
+    }
+    FILE *f = fopen(canonical, "rb");
+    if (!f) *code = CWIST_TEMPLATE_ERROR_IO;
+    return f;
+#endif
+}
+
 static cwist_sstring *render_file_internal(const char *file_path, const cJSON *context, int depth,
                                            const template_source *parent, const char *include_tag) {
     if (!file_path || depth > CWIST_TEMPLATE_MAX_DEPTH) {
@@ -638,14 +716,16 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
                                         : CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
         return NULL;
     }
-    FILE *f = fopen(file_path, "rb");
+    cwist_template_error_code_t code = CWIST_TEMPLATE_ERROR_IO;
+    FILE *f = include_tag && parent->include_root
+                  ? open_confined(parent->include_root, file_path, &code)
+                  : fopen(file_path, "rb");
     if (!f) {
-        template_report_error(parent, include_tag, CWIST_TEMPLATE_ERROR_IO);
-        perror("Failed to open template file");
+        template_report_error(parent, include_tag, code);
+        if (code == CWIST_TEMPLATE_ERROR_IO) perror("Failed to open template file");
         return NULL;
     }
 
-    cwist_template_error_code_t code = CWIST_TEMPLATE_ERROR_IO;
     char *template_str = NULL;
     long len;
     if (fseek(f, 0, SEEK_END) != 0 || (len = ftell(f)) < 0 || fseek(f, 0, SEEK_SET) != 0)
@@ -665,7 +745,8 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
     char dir_buf[4096];
     path_dirname(file_path, dir_buf, sizeof(dir_buf));
 
-    const template_source source = {template_str, file_path, dir_buf, parent->error};
+    const template_source source = {template_str, file_path, dir_buf, parent->include_root,
+                                    parent->error};
     const char *p = template_str;
     cwist_sstring *rendered = render_internal(&p, context, depth, &source);
     cwist_free(template_str);
@@ -686,6 +767,16 @@ cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *co
 cwist_sstring *cwist_template_render_file_ex(const char *file_path, const cJSON *context,
                                              cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {NULL, file_path, NULL, error};
+    const template_source source = {NULL, file_path, NULL, NULL, error};
+    return render_file_internal(file_path, context, 0, &source, NULL);
+}
+
+cwist_sstring *cwist_template_render_file_rooted(const char *file_path, const cJSON *context,
+                                                 const char *include_root,
+                                                 cwist_template_error_t *error) {
+    if (error) memset(error, 0, sizeof(*error));
+    char root[PATH_MAX];
+    if (!canonical_root(include_root, root, error)) return NULL;
+    const template_source source = {NULL, file_path, NULL, root, error};
     return render_file_internal(file_path, context, 0, &source, NULL);
 }
