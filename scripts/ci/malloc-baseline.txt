@@ -146,7 +146,7 @@
 1	src/net/http/http3_client.c:free(st->req_path);
 1	src/net/http/http3_client.c:free(st->resp_body);
 2	src/net/http/http3_client.c:free(value);
-1	src/net/http/http3_client.c:h3c_hset_t *hset = calloc(1, sizeof(*hset));
+1	src/net/http/http3_client.c:h3c_hset_t *hset = malloc(sizeof(*hset));
 1	src/net/http/http3_client.c:h3c_stream_ctx_t *st = calloc(1, sizeof(*st));
 1	src/net/http/http3_client.c:if (client->in_dgram.data) free(client->in_dgram.data);
 1	src/net/http/http3_client.c:st->req_body = malloc(body_len);
