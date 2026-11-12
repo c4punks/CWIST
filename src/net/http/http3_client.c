@@ -219,14 +219,21 @@ typedef struct h3c_hset {
 
 /**
  * @brief lsquic header-set callback: allocate a new header set for a stream.
- * @return Newly calloc'ed h3c_hset_t, or NULL on allocation failure
+ * @return Newly allocated h3c_hset_t, or NULL on allocation failure
  *         (ownership passes to lsquic and later h3c_hsi_discard()).
  */
 static void *h3c_hsi_create(void *hsi_ctx, lsquic_stream_t *stream, int is_push_promise) {
     (void)hsi_ctx;
     (void)stream;
     (void)is_push_promise;
-    h3c_hset_t *hset = calloc(1, sizeof(*hset));
+    /* Only the counters need initializing: header slots are prepared one
+     * by one in h3c_hsi_prepare(), and zeroing the 64 KiB decode buffer on
+     * every response was pure overhead. */
+    h3c_hset_t *hset = malloc(sizeof(*hset));
+    if (hset) {
+        hset->count = 0;
+        hset->decode_off = 0;
+    }
     return hset;
 }
 
@@ -779,28 +786,30 @@ static int h3c_retry_backoff_ms(int base_ms, unsigned int attempt) {
  * @param timeout_ms  Desired poll timeout in milliseconds; values <= 0
  *                    fall back to 1 ms.
  */
+/* Datagrams read per wakeup before the engine processes them. */
+#define H3C_RECV_BATCH 64
+
 static void h3c_process_io(cwist_http3_client *client, int timeout_ms) {
     lsquic_engine_t *engine = client->engine;
     int diff = timeout_ms * 1000; /* microseconds */
     if (diff <= 0) diff = 1000;
-
-    if (lsquic_engine_earliest_adv_tick(engine, &diff)) {
-        if (diff <= 0)
-            diff = 0;
-        else if (diff > 1000000)
-            diff = 1000000;
-    }
+    int tick;
+    if (lsquic_engine_earliest_adv_tick(engine, &tick) && tick < diff) diff = tick < 0 ? 0 : tick;
+    /* Round up: truncating a sub-millisecond deadline to 0 turned the
+     * caller's wait loop into a busy spin until the deadline passed. */
+    int wait_ms = (diff + 999) / 1000;
 
     struct pollfd pfd = {.fd = client->udp_fd, .events = POLLIN};
-    int pret = poll(&pfd, 1, diff / 1000);
+    int pret = poll(&pfd, 1, wait_ms);
 
     if (pret > 0 && (pfd.revents & POLLIN)) {
         unsigned char buf[65535];
-        struct sockaddr_storage peer_addr;
-        socklen_t peer_addr_len = sizeof(peer_addr);
-        ssize_t nr = recvfrom(client->udp_fd, buf, sizeof(buf), 0, (struct sockaddr *)&peer_addr,
-                              &peer_addr_len);
-        if (nr > 0) {
+        for (int i = 0; i < H3C_RECV_BATCH; i++) {
+            struct sockaddr_storage peer_addr;
+            socklen_t peer_addr_len = sizeof(peer_addr);
+            ssize_t nr = recvfrom(client->udp_fd, buf, sizeof(buf), MSG_DONTWAIT,
+                                  (struct sockaddr *)&peer_addr, &peer_addr_len);
+            if (nr <= 0) break;
             lsquic_engine_packet_in(engine, buf, (size_t)nr,
                                     client->local_addr_len ? (struct sockaddr *)&client->local_addr
                                                            : NULL,
@@ -1106,6 +1115,13 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
         h3c_stream_ctx_t *st = NULL;
         while (!st) {
+            /* On an established connection lsquic_conn_make_stream() creates
+             * the stream synchronously: look before waiting, or every
+             * request first sat out an I/O wait (about 1 ms). */
+            pthread_mutex_lock(&client->mtx);
+            st = client->active_stream;
+            pthread_mutex_unlock(&client->mtx);
+            if (st) break;
             h3c_process_io(client, 100);
             pthread_mutex_lock(&client->mtx);
             st = client->active_stream;
@@ -1165,8 +1181,10 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             st->req_body_len = body_len;
         }
 
-        /* All request fields are in place: arm the write side now. */
+        /* All request fields are in place: arm the write side and send the
+         * request now, not at the next advisory tick. */
         lsquic_stream_wantwrite(st->stream, 1);
+        lsquic_engine_process_conns(client->engine);
 
         /* I/O loop until response is ready or timeout */
         struct timespec deadline;

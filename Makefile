@@ -929,6 +929,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http2_prebuffer \
                test_http3 \
                test_webtransport \
+               test_http3_client_latency \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
@@ -1300,6 +1301,11 @@ test_webtransport: $(LIB_NAME) tests/test_webtransport.c
 	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
 	./test_webtransport
 
+test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
+	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	./$@
+
+ifeq ($(CWIST_DB),1)
 test_rdbms_auto_mount: $(LIB_NAME) tests/test_rdbms_auto_mount.c
 	$(CC) $(CFLAGS) -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
 	./test_rdbms_auto_mount
