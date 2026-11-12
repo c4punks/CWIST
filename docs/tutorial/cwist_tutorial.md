@@ -376,10 +376,43 @@ int main() {
 
 Useful when building an HTML-based SSR (Server-Side Rendering) project or serving a React build output (static files).
 
+The existing rendering functions return NULL on failure. Use
+`cwist_template_render_ex` or `cwist_template_render_file_ex` with an optional
+`cwist_template_error_t` to also get the error code, zero-based byte offset,
+source path, and tag type. Errors inside included files identify that file;
+include I/O and depth errors identify the include tag in its parent source.
+The diagnostic owns a copy of the path and needs no initialization or cleanup.
+
+When templates come from a less-trusted source, such as user-editable themes,
+confine includes to a directory with `cwist_template_render_file_rooted` or
+`cwist_template_render_rooted`:
+
+```c
+#include <cwist/core/template/template.h>
+
+cwist_sstring *render_theme(const cJSON *context) {
+    cwist_template_error_t error;
+    cwist_sstring *output =
+        cwist_template_render_file_rooted("views/index.html", context, "views", &error);
+    if (!output && error.code == CWIST_TEMPLATE_ERROR_FORBIDDEN) {
+        /* An include tried to leave views/; error.file_path names the file. */
+    }
+    return output;
+}
+```
+
+Every `{% include %}` is canonicalized, and an include outside the root fails
+with `CWIST_TEMPLATE_ERROR_FORBIDDEN`. This covers `..` segments, absolute
+paths, and symlinks that point outside. The root never changes which file an
+include names; it only rejects files outside it. For an in-memory template,
+relative includes resolve against the root. Bare-metal builds have no
+`realpath()`, so they reject every root.
+
 ```c
 #include <cwist/app.h>
 #include <cwist/core/template/template.h>
 #include <cjson/cJSON.h>
+#include <stdio.h>
 
 void render_home_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
@@ -390,7 +423,8 @@ void render_home_handler(cwist_http_request *req, cwist_http_response *res) {
     cJSON_AddStringToObject(context, "user", "Developer");
 
     // Read the template file + render it
-    cwist_sstring *output = cwist_template_render_file("views/index.html", context);
+    cwist_template_error_t error;
+    cwist_sstring *output = cwist_template_render_file_ex("views/index.html", context, &error);
     cJSON_Delete(context);
 
     // Respond after rendering
@@ -398,6 +432,8 @@ void render_home_handler(cwist_http_request *req, cwist_http_response *res) {
         cwist_sstring_assign(res->body, output->data);
         cwist_sstring_destroy(output);
     } else {
+        fprintf(stderr, "Template error %d at %s:%zu (%s)\n", (int)error.code,
+                error.file_path, error.byte_offset, error.tag_type ? error.tag_type : "file");
         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
         cwist_sstring_assign(res->body, "Failed to render template");
     }

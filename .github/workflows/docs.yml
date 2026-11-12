@@ -118,9 +118,11 @@ jobs:
 
   deploy:
     needs: [tags, main-docs, tag-docs]
+    # Deploy only on main pushes and manual runs. Each deploy already rebuilds
+    # every v* tag's docs, so a tag push would redeploy the same site, and the
+    # github-pages environment only permits deployments from main anyway.
     if: >-
       github.ref == 'refs/heads/main' ||
-      startsWith(github.ref, 'refs/tags/') ||
       github.event_name == 'workflow_dispatch'
     environment:
       name: github-pages

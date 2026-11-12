@@ -15,7 +15,8 @@ static int route_seen;
 static int handler_calls;
 
 void *__wrap_cwist_alloc(size_t size) {
-    if (fail_http_route && !route_seen && size == 5 * sizeof(void *) + 2 * sizeof(int)) {
+    /* sizeof(cwist_grpc_route) */
+    if (fail_http_route && !route_seen && size == 6 * sizeof(void *) + 4 * sizeof(int)) {
         route_seen = 1;
         return __real_cwist_alloc(size);
     }

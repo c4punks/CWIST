@@ -445,24 +445,12 @@ static int ws_send_all(int fd, const uint8_t *buf, size_t len) {
     return 0;
 }
 
-/**
- * @brief Send a single FIN-terminated WebSocket frame to the peer.
- * @param ws Active WebSocket connection wrapper.
- * @param opcode WebSocket opcode describing the payload semantics.
- * @param data Optional payload buffer. May be NULL when @p len is zero.
- * @param len Number of payload bytes to transmit.
- * @return 0 on success, or -1 when the socket write fails.
- */
-int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
-                         size_t len) {
-    if (!ws || ws->is_closed || (!data && len > 0) ||
-        !cwist_ws_internal_send_args_valid(opcode, len))
-        return -1;
-
+/** @brief Write one unmasked frame whose first header byte is @p head0. */
+static int ws_send_frame(cwist_websocket *ws, uint8_t head0, const uint8_t *data, size_t len) {
     uint8_t head[10]; // Max header size (2 + 8)
     size_t head_len = 2;
 
-    head[0] = 0x80 | (opcode & 0x0F); // FIN=1
+    head[0] = head0;
 
     if (len < 126) {
         head[1] = len;
@@ -486,6 +474,45 @@ int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const ui
         if (ws_send_all(ws->fd, data, len) != 0) return -1;
     }
 
+    return 0;
+}
+
+/**
+ * @brief Send a single FIN-terminated WebSocket frame to the peer.
+ * @param ws Active WebSocket connection wrapper.
+ * @param opcode WebSocket opcode describing the payload semantics.
+ * @param data Optional payload buffer. May be NULL when @p len is zero.
+ * @param len Number of payload bytes to transmit.
+ * @return 0 on success, or -1 when the socket write fails.
+ */
+int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
+                         size_t len) {
+    if (!ws || ws->is_closed || (!data && len > 0) ||
+        !cwist_ws_internal_send_args_valid(opcode, len))
+        return -1;
+
+    return ws_send_frame(ws, (uint8_t)(0x80 | (opcode & 0x0F)), data, len); // FIN=1
+}
+
+/**
+ * @brief Send one message as RFC 6455 fragments chosen by the application.
+ */
+int cwist_websocket_send_fragments(cwist_websocket *ws, cwist_ws_opcode_t opcode,
+                                   const cwist_ws_fragment *fragments, size_t count) {
+    if (!ws || ws->is_closed || (opcode != CWIST_WS_FRAME_TEXT && opcode != CWIST_WS_FRAME_BINARY) ||
+        (!fragments && count > 0))
+        return -1;
+    for (size_t i = 0; i < count; i++) {
+        if (!fragments[i].data && fragments[i].len > 0) return -1;
+    }
+
+    if (count == 0) return ws_send_frame(ws, (uint8_t)(0x80 | opcode), NULL, 0);
+
+    for (size_t i = 0; i < count; i++) {
+        uint8_t head0 = i == 0 ? (uint8_t)opcode : (uint8_t)CWIST_WS_FRAME_CONTINUATION;
+        if (i + 1 == count) head0 |= 0x80; // FIN on the last fragment only
+        if (ws_send_frame(ws, head0, fragments[i].data, fragments[i].len) != 0) return -1;
+    }
     return 0;
 }
 

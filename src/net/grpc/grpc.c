@@ -27,7 +27,19 @@ typedef struct cwist_grpc_route {
     cwist_grpc_stream_handler_func stream_handler;
     void *user_ctx;
     struct cwist_grpc_route *next;
+    cwist_grpc_release_func release; /* set by unregister; runs when refs drop to 0 */
+    atomic_int refs;                 /* 1 while registered + 1 per in-flight call */
 } cwist_grpc_route;
+
+/* Copy of a route's dispatch fields, taken under grpc_routes_lock so a call
+ * never reads a route that a concurrent registration is rewriting. */
+typedef struct grpc_route_view {
+    int streaming;
+    int builtin;
+    cwist_grpc_unary_handler_func handler;
+    cwist_grpc_stream_handler_func stream_handler;
+    void *user_ctx;
+} grpc_route_view;
 
 typedef struct cwist_grpc_health_state {
     char *service;
@@ -43,11 +55,18 @@ typedef struct cwist_grpc_health_registry {
     cwist_grpc_health_state *states;
     uint64_t generation;          /* bumped on every status change */
     atomic_int watchers;          /* active streaming Watch calls */
+    atomic_int refs;              /* creator + each Check/Watch route */
+    int shutdown;                 /* set under mu when the service is unregistered */
 } cwist_grpc_health_registry;
+
+/* Guards every app's grpc_routes list. Lookups take it shared; registration
+ * and unregistration take it exclusive. Handlers never run under it. */
+static pthread_rwlock_t grpc_routes_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 static int grpc_register_route(cwist_app *app, const char *service, const char *method,
                                int streaming, cwist_grpc_unary_handler_func unary_handler,
-                               cwist_grpc_stream_handler_func stream_handler, void *user_ctx);
+                               cwist_grpc_stream_handler_func stream_handler, void *user_ctx,
+                               int builtin);
 
 /* --- Incremental HTTP/2 streaming sessions --- */
 
@@ -79,6 +98,7 @@ struct cwist_grpc_session {
     uint8_t *recv_buf;        /* backing store for the last recv message */
     cwist_grpc_stream_handler_func handler;
     void *user_ctx;
+    struct cwist_grpc_route *route; /* pinned until the handler thread finishes */
     atomic_int refs;          /* transport side + handler thread */
     struct cwist_grpc_session *next;
 };
@@ -111,19 +131,77 @@ static cwist_grpc_route *grpc_find_route(cwist_app *app, const char *path) {
     return NULL;
 }
 
-static void grpc_remove_route(cwist_app *app, const char *path) {
-    if (!app || !path) return;
+static void grpc_health_registry_unref(cwist_grpc_health_registry *reg) {
+    if (atomic_fetch_sub(&reg->refs, 1) != 1) return;
+    cwist_grpc_health_state *state = reg->states;
+    while (state) {
+        cwist_grpc_health_state *next = state->next;
+        cwist_free(state->service);
+        cwist_free(state);
+        state = next;
+    }
+    pthread_mutex_destroy(&reg->mu);
+    pthread_cond_destroy(&reg->cond);
+    cwist_free(reg);
+}
+
+/** @brief Free a route and whatever its handler context owns. */
+static void grpc_route_free(cwist_grpc_route *route) {
+    if (route->builtin == 1 || route->builtin == 2)
+        grpc_health_registry_unref(route->user_ctx);
+    else if (!route->builtin && route->release)
+        route->release(route->user_ctx);
+    cwist_free(route->path);
+    cwist_free(route);
+}
+
+/** @brief Drop one reference; the last one frees the route. NULL is ignored. */
+static void grpc_route_release(cwist_grpc_route *route) {
+    if (route && atomic_fetch_sub(&route->refs, 1) == 1) grpc_route_free(route);
+}
+
+/** @brief Find a route and pin it for one call.
+ *
+ * @param view Receives a copy of the dispatch fields.
+ * @return The pinned route (release it with grpc_route_release()), or NULL. */
+static cwist_grpc_route *grpc_route_acquire(cwist_app *app, const char *path,
+                                            grpc_route_view *view) {
+    pthread_rwlock_rdlock(&grpc_routes_lock);
+    cwist_grpc_route *route = grpc_find_route(app, path);
+    if (route) {
+        atomic_fetch_add(&route->refs, 1);
+        view->streaming = route->streaming;
+        view->builtin = route->builtin;
+        view->handler = route->handler;
+        view->stream_handler = route->stream_handler;
+        view->user_ctx = route->user_ctx;
+    }
+    pthread_rwlock_unlock(&grpc_routes_lock);
+    return route;
+}
+
+/** @brief Unlink a route from @p app. Caller holds grpc_routes_lock exclusively.
+ * @return The unlinked route, still holding its registration reference. */
+static cwist_grpc_route *grpc_unlink_route_locked(cwist_app *app, const char *path) {
     cwist_grpc_route **link = (cwist_grpc_route **)&app->grpc_routes;
     while (*link) {
         cwist_grpc_route *route = *link;
         if (route->path && strcmp(route->path, path) == 0) {
             *link = route->next;
-            cwist_free(route->path);
-            cwist_free(route);
-            return;
+            route->next = NULL;
+            return route;
         }
         link = &route->next;
     }
+    return NULL;
+}
+
+static void grpc_remove_route(cwist_app *app, const char *path) {
+    if (!app || !path) return;
+    pthread_rwlock_wrlock(&grpc_routes_lock);
+    cwist_grpc_route *route = grpc_unlink_route_locked(app, path);
+    pthread_rwlock_unlock(&grpc_routes_lock);
+    grpc_route_release(route);
 }
 
 /** @brief Current monotonic clock in milliseconds.
@@ -435,11 +513,9 @@ int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key, uin
  *
  * @param req Incoming unary request.
  * @param res Response object the handler fills in. */
-static void grpc_dispatch_unary(cwist_http_request *req, cwist_http_response *res) {
-    if (!req || !res || !req->app || !req->path || !req->path->data) return;
-
-    cwist_grpc_route *route = grpc_find_route(req->app, req->path->data);
-    if (!route || !route->handler) {
+static void grpc_dispatch_unary_route(cwist_http_request *req, cwist_http_response *res,
+                                      const grpc_route_view *route) {
+    if (!route->handler) {
         cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "gRPC method not registered");
         return;
     }
@@ -504,6 +580,19 @@ static void grpc_dispatch_unary(cwist_http_request *req, cwist_http_response *re
     }
 }
 
+/** @brief Buffered unary dispatch; pins the route for the duration of the call. */
+static void grpc_dispatch_unary(cwist_http_request *req, cwist_http_response *res) {
+    if (!req || !res || !req->app || !req->path || !req->path->data) return;
+    grpc_route_view view;
+    cwist_grpc_route *route = grpc_route_acquire(req->app, req->path->data, &view);
+    if (!route) {
+        cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "gRPC method not registered");
+        return;
+    }
+    grpc_dispatch_unary_route(req, res, &view);
+    grpc_route_release(route);
+}
+
 /** @brief Validate the gRPC framing of a request before buffered dispatch.
  *
  * On failure a matching gRPC error (INVALID_ARGUMENT or UNIMPLEMENTED) is
@@ -543,11 +632,9 @@ static int grpc_validate_request(cwist_http_request *req, cwist_http_response *r
  * @param req Incoming request whose body holds concatenated length-prefixed
  *        messages.
  * @param res Response object filled from the handler's stream state. */
-static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *res) {
-    if (!req || !res || !req->app || !req->path || !req->path->data) return;
-
-    cwist_grpc_route *route = grpc_find_route(req->app, req->path->data);
-    if (!route || !route->stream_handler) {
+static void grpc_dispatch_stream_route(cwist_http_request *req, cwist_http_response *res,
+                                       const grpc_route_view *route) {
+    if (!route->stream_handler) {
         cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "gRPC stream method not registered");
         return;
     }
@@ -652,6 +739,19 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
         for (size_t i = 0; i < count; i++) cwist_free(owned[i]);
     }
     cwist_free(messages);
+}
+
+/** @brief Buffered streaming dispatch; pins the route for the duration of the call. */
+static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *res) {
+    if (!req || !res || !req->app || !req->path || !req->path->data) return;
+    grpc_route_view view;
+    cwist_grpc_route *route = grpc_route_acquire(req->app, req->path->data, &view);
+    if (!route) {
+        cwist_grpc_set_error(res, CWIST_GRPC_UNIMPLEMENTED, "gRPC stream method not registered");
+        return;
+    }
+    grpc_dispatch_stream_route(req, res, &view);
+    grpc_route_release(route);
 }
 
 /** @brief Decode a single gRPC length-prefixed message frame.
@@ -1161,7 +1261,7 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
         int changed = 0;
         pthread_mutex_lock(&reg->mu);
         uint64_t gen = reg->generation;
-        while (reg->generation == gen && !cwist_grpc_stream_cancelled(stream) &&
+        while (reg->generation == gen && !reg->shutdown && !cwist_grpc_stream_cancelled(stream) &&
                cwist_grpc_stream_deadline_remaining_ms(stream) > 0) {
             /* Poll cancellation/deadline on a short tick; status changes
              * wake us immediately through the registry condvar. */
@@ -1175,7 +1275,13 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
             pthread_cond_timedwait(&reg->cond, &reg->mu, &ts);
         }
         changed = reg->generation != gen;
+        int shutdown = reg->shutdown;
         pthread_mutex_unlock(&reg->mu);
+        if (shutdown) {
+            stream->status = CWIST_GRPC_UNAVAILABLE;
+            stream->status_message = "health service unregistered";
+            break;
+        }
         if (!changed) break; /* cancelled or deadline expired */
         if (grpc_health_send_status(stream, reg, service) != 0) break;
     }
@@ -1194,34 +1300,32 @@ out:
  * @retval 0 Both routes registered.
  * @retval -1 NULL app, allocation failure, or route registration failure. */
 int cwist_app_grpc_health(cwist_app *app) {
-    if (!app || grpc_find_route(app, "/grpc.health.v1.Health/Check") ||
-        grpc_find_route(app, "/grpc.health.v1.Health/Watch"))
-        return -1;
+    if (!app) return -1;
+    pthread_rwlock_rdlock(&grpc_routes_lock);
+    int exists = grpc_find_route(app, "/grpc.health.v1.Health/Check") ||
+                 grpc_find_route(app, "/grpc.health.v1.Health/Watch");
+    pthread_rwlock_unlock(&grpc_routes_lock);
+    if (exists) return -1;
     cwist_grpc_health_registry *reg = cwist_alloc(sizeof(*reg));
     if (!reg) return -1;
     memset(reg, 0, sizeof(*reg));
     pthread_mutex_init(&reg->mu, NULL);
     pthread_cond_init(&reg->cond, NULL);
     atomic_store(&reg->watchers, 0);
+    atomic_store(&reg->refs, 1); /* dropped below; each route adds its own */
+    int rc = -1;
     if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0, grpc_health_check, NULL,
-                            reg) != 0)
-        goto fail;
+                            reg, 1) != 0)
+        goto out;
     if (grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1, NULL, grpc_health_watch,
-                            reg) != 0) {
+                            reg, 2) != 0) {
         grpc_remove_route(app, "/grpc.health.v1.Health/Check");
-        goto fail;
+        goto out;
     }
-    cwist_grpc_route *route = grpc_find_route(app, "/grpc.health.v1.Health/Check");
-    if (route) route->builtin = 1;
-    route = grpc_find_route(app, "/grpc.health.v1.Health/Watch");
-    if (route) route->builtin = 2;
-    return 0;
-
-fail:
-    pthread_mutex_destroy(&reg->mu);
-    pthread_cond_destroy(&reg->cond);
-    cwist_free(reg);
-    return -1;
+    rc = 0;
+out:
+    grpc_health_registry_unref(reg);
+    return rc;
 }
 
 /** @brief Set or update the serving status of a named service.
@@ -1236,10 +1340,21 @@ fail:
  * @retval 0 Status recorded.
  * @retval -1 No health service registered, NULL arguments, or allocation
  *         failure. */
+static int grpc_health_registry_set_status(cwist_grpc_health_registry *reg, const char *service,
+                                           int serving);
+
 int cwist_app_grpc_health_set_status(cwist_app *app, const char *service, int serving) {
-    cwist_grpc_route *route = grpc_find_route(app, "/grpc.health.v1.Health/Check");
-    if (!route || !route->user_ctx || !service) return -1;
-    cwist_grpc_health_registry *reg = route->user_ctx;
+    if (!app || !service) return -1;
+    grpc_route_view view;
+    cwist_grpc_route *route = grpc_route_acquire(app, "/grpc.health.v1.Health/Check", &view);
+    if (!route) return -1;
+    int rc = view.builtin == 1 ? grpc_health_registry_set_status(view.user_ctx, service, serving) : -1;
+    grpc_route_release(route);
+    return rc;
+}
+
+static int grpc_health_registry_set_status(cwist_grpc_health_registry *reg, const char *service,
+                                         int serving) {
     pthread_mutex_lock(&reg->mu);
     for (cwist_grpc_health_state *it = reg->states; it; it = it->next)
         if (it->service && strcmp(it->service, service) == 0) {
@@ -1276,10 +1391,17 @@ int cwist_app_grpc_health_set_status(cwist_app *app, const char *service, int se
  * @return Number of active watchers (atomic snapshot).
  * @retval -1 No health Watch route registered on @p app. */
 int cwist_app_grpc_health_watchers(cwist_app *app) {
-    cwist_grpc_route *route = grpc_find_route(app, "/grpc.health.v1.Health/Watch");
-    if (!route || !route->user_ctx) return -1;
-    cwist_grpc_health_registry *reg = route->user_ctx;
-    return atomic_load(&reg->watchers);
+    if (!app) return -1;
+    grpc_route_view view;
+    cwist_grpc_route *route = grpc_route_acquire(app, "/grpc.health.v1.Health/Watch", &view);
+    if (!route) return -1;
+    int watchers = -1;
+    if (view.builtin == 2) {
+        cwist_grpc_health_registry *reg = view.user_ctx;
+        watchers = atomic_load(&reg->watchers);
+    }
+    grpc_route_release(route);
+    return watchers;
 }
 
 /** @brief Append one service entry to a ServerReflectionResponse writer.
@@ -1314,6 +1436,7 @@ static void grpc_reflection_info(cwist_grpc_stream *stream, void *ctx) {
     (void)ctx;
     cwist_pb_writer response;
     cwist_pb_writer_init(&response);
+    pthread_rwlock_rdlock(&grpc_routes_lock);
     cwist_grpc_route *route = (cwist_grpc_route *)stream->req->app->grpc_routes;
     for (; route; route = route->next) {
         if (!route->path || route->path[0] != '/') continue;
@@ -1332,6 +1455,7 @@ static void grpc_reflection_info(cwist_grpc_stream *stream, void *ctx) {
             stream->status = CWIST_GRPC_INTERNAL;
         if (stream->status != CWIST_GRPC_OK) break;
     }
+    pthread_rwlock_unlock(&grpc_routes_lock);
     if (stream->status == CWIST_GRPC_OK)
         cwist_grpc_stream_send(stream, response.data, response.len);
     cwist_pb_writer_free(&response);
@@ -1345,13 +1469,8 @@ static void grpc_reflection_info(cwist_grpc_stream *stream, void *ctx) {
  * @retval 0 Route registered.
  * @retval -1 Route registration failed. */
 int cwist_app_grpc_reflection(cwist_app *app) {
-    if (grpc_register_route(app, "grpc.reflection.v1alpha.ServerReflection", "ServerReflectionInfo",
-                            1, NULL, grpc_reflection_info, NULL) != 0)
-        return -1;
-    cwist_grpc_route *route =
-        grpc_find_route(app, "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo");
-    if (route) route->builtin = 3;
-    return 0;
+    return grpc_register_route(app, "grpc.reflection.v1alpha.ServerReflection",
+                               "ServerReflectionInfo", 1, NULL, grpc_reflection_info, NULL, 3);
 }
 
 /** @brief Register a gRPC route and its HTTP POST dispatch handler.
@@ -1368,11 +1487,16 @@ int cwist_app_grpc_reflection(cwist_app *app) {
  * @param unary_handler Handler for unary routes; NULL for streaming routes.
  * @param stream_handler Handler for streaming routes; NULL for unary routes.
  * @param user_ctx Opaque pointer passed to the handler.
+ * @param builtin 0 for application methods; 1/2 health Check/Watch (user_ctx
+ *        is the shared registry, which the route then references); 3
+ *        reflection.
  * @retval 0 Route registered or replaced.
- * @retval -1 NULL/empty arguments or allocation failure. */
+ * @retval -1 NULL/empty arguments, allocation failure, or an attempt to
+ *         replace a route of a different kind (e.g. a built-in). */
 static int grpc_register_route(cwist_app *app, const char *service, const char *method,
                                int streaming, cwist_grpc_unary_handler_func unary_handler,
-                               cwist_grpc_stream_handler_func stream_handler, void *user_ctx) {
+                               cwist_grpc_stream_handler_func stream_handler, void *user_ctx,
+                               int builtin) {
     if (!app || !service || !method) return -1;
     if ((!streaming && !unary_handler) || (streaming && !stream_handler)) return -1;
     size_t service_len = strlen(service);
@@ -1384,38 +1508,48 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
     if (!path) return -1;
     snprintf(path, path_len, "/%s/%s", service, method);
 
+    cwist_handler_func dispatch = streaming ? grpc_dispatch_stream : grpc_dispatch_unary;
+    int rc = -1;
+    pthread_rwlock_wrlock(&grpc_routes_lock);
     cwist_grpc_route *existing = grpc_find_route(app, path);
     if (existing) {
-        if (!cwist_app_post_checked(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary)) {
-            cwist_free(path);
-            return -1;
-        }
+        /* A built-in owns its context; it must be unregistered, not overwritten. */
+        if (existing->builtin != builtin || !cwist_app_post_checked(app, path, dispatch))
+            goto out;
         existing->streaming = streaming;
         existing->handler = unary_handler;
         existing->stream_handler = stream_handler;
         existing->user_ctx = user_ctx;
-        cwist_free(path);
-        return 0;
+        rc = 0;
+        goto out;
     }
 
     cwist_grpc_route *route = (cwist_grpc_route *)cwist_alloc(sizeof(*route));
-    if (!route) {
-        cwist_free(path);
-        return -1;
-    }
+    if (!route) goto out;
+    memset(route, 0, sizeof(*route));
     route->path = path;
     route->streaming = streaming;
+    route->builtin = builtin;
     route->handler = unary_handler;
     route->stream_handler = stream_handler;
     route->user_ctx = user_ctx;
-    if (!cwist_app_post_checked(app, path, streaming ? grpc_dispatch_stream : grpc_dispatch_unary)) {
-        cwist_free(route->path);
+    atomic_store(&route->refs, 1);
+    if (!cwist_app_post_checked(app, path, dispatch)) {
         cwist_free(route);
-        return -1;
+        goto out;
+    }
+    if (builtin == 1 || builtin == 2) {
+        cwist_grpc_health_registry *reg = user_ctx;
+        atomic_fetch_add(&reg->refs, 1);
     }
     route->next = (cwist_grpc_route *)app->grpc_routes;
     app->grpc_routes = route;
-    return 0;
+    path = NULL; /* owned by the route */
+    rc = 0;
+out:
+    pthread_rwlock_unlock(&grpc_routes_lock);
+    cwist_free(path);
+    return rc;
 }
 
 /** @brief Register a unary gRPC method on an app.
@@ -1429,7 +1563,7 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
  * @retval -1 See grpc_register_route(). */
 int cwist_app_grpc_unary(cwist_app *app, const char *service, const char *method,
                          cwist_grpc_unary_handler_func handler, void *user_ctx) {
-    return grpc_register_route(app, service, method, 0, handler, NULL, user_ctx);
+    return grpc_register_route(app, service, method, 0, handler, NULL, user_ctx, 0);
 }
 
 /** @brief Register a client-streaming gRPC method on an app.
@@ -1443,7 +1577,7 @@ int cwist_app_grpc_unary(cwist_app *app, const char *service, const char *method
  * @retval -1 See grpc_register_route(). */
 int cwist_app_grpc_stream(cwist_app *app, const char *service, const char *method,
                           cwist_grpc_stream_handler_func handler, void *user_ctx) {
-    return grpc_register_route(app, service, method, 1, NULL, handler, user_ctx);
+    return grpc_register_route(app, service, method, 1, NULL, handler, user_ctx, 0);
 }
 
 /** @brief Free all gRPC routes and per-route resources on an app.
@@ -1454,27 +1588,46 @@ int cwist_app_grpc_stream(cwist_app *app, const char *service, const char *metho
  * @param app App to clean up; may be NULL (no-op). */
 void cwist_grpc_routes_destroy(cwist_app *app) {
     if (!app) return;
+    pthread_rwlock_wrlock(&grpc_routes_lock);
     cwist_grpc_route *route = (cwist_grpc_route *)app->grpc_routes;
+    app->grpc_routes = NULL;
+    pthread_rwlock_unlock(&grpc_routes_lock);
     while (route) {
         cwist_grpc_route *next = route->next;
-        if (route->builtin == 1 && route->user_ctx) {
-            cwist_grpc_health_registry *reg = route->user_ctx;
-            cwist_grpc_health_state *state = reg->states;
-            while (state) {
-                cwist_grpc_health_state *state_next = state->next;
-                cwist_free(state->service);
-                cwist_free(state);
-                state = state_next;
-            }
-            pthread_mutex_destroy(&reg->mu);
-            pthread_cond_destroy(&reg->cond);
-            cwist_free(reg);
-        }
-        cwist_free(route->path);
-        cwist_free(route);
+        grpc_route_release(route);
         route = next;
     }
-    app->grpc_routes = NULL;
+}
+
+int cwist_app_grpc_unregister(cwist_app *app, const char *service, const char *method,
+                              cwist_grpc_release_func release) {
+    if (!app || !service || !method || !service[0] || !method[0]) return -1;
+    size_t path_len = strlen(service) + strlen(method) + 3;
+    char *path CWIST_DEFER_FREE = (char *)cwist_alloc(path_len);
+    if (!path) return -1;
+    snprintf(path, path_len, "/%s/%s", service, method);
+
+    pthread_rwlock_wrlock(&grpc_routes_lock);
+    cwist_grpc_route *route = grpc_unlink_route_locked(app, path);
+    cwist_grpc_route *sibling = NULL;
+    if (route && (route->builtin == 1 || route->builtin == 2)) {
+        /* Check and Watch share one registry: the health service goes as a unit. */
+        sibling = grpc_unlink_route_locked(app, route->builtin == 1
+                                                    ? "/grpc.health.v1.Health/Watch"
+                                                    : "/grpc.health.v1.Health/Check");
+        cwist_grpc_health_registry *reg = route->user_ctx;
+        pthread_mutex_lock(&reg->mu);
+        reg->shutdown = 1;
+        pthread_cond_broadcast(&reg->cond);
+        pthread_mutex_unlock(&reg->mu);
+    } else if (route && !route->builtin) {
+        route->release = release;
+    }
+    pthread_rwlock_unlock(&grpc_routes_lock);
+    if (!route) return -1;
+    grpc_route_release(sibling);
+    grpc_route_release(route);
+    return 0;
 }
 
 /** @brief Copy all gRPC routes (and built-in service state) to another app.
@@ -1793,6 +1946,7 @@ static void *grpc_session_thread(void *arg) {
         cwist_grpc_stream_close(&session->stream, session->stream.status,
                                 session->stream.status_message);
     }
+    grpc_route_release(session->route);
     grpc_session_release(session);
     return NULL;
 }
@@ -1952,19 +2106,21 @@ static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req, cwist_h
     cwist_grpc_h2_conn_ctx *ctx = conn_ctx;
     if (!ctx || !ctx->app || !req || !req->path || !req->path->data) return NULL;
 
-    cwist_grpc_route *route = grpc_find_route(ctx->app, req->path->data);
+    grpc_route_view view;
+    cwist_grpc_route *route = grpc_route_acquire(ctx->app, req->path->data, &view);
     /* Unary-only builtins (health Check) and reflection stay on the buffered
      * dispatch path; the health Watch builtin streams live. */
-    if (!route || !route->stream_handler || (route->builtin && route->builtin != 2)) return NULL;
+    if (!route) return NULL;
+    if (!view.stream_handler || (view.builtin && view.builtin != 2)) goto not_live;
 
     const char *ct = grpc_header_get(req, "content-type");
-    if (!grpc_content_type_is_grpc(ct)) return NULL;
+    if (!grpc_content_type_is_grpc(ct)) goto not_live;
 
     int encoding = grpc_request_encoding(req);
-    if (encoding < 0) return NULL; /* buffered dispatch replies UNIMPLEMENTED */
+    if (encoding < 0) goto not_live; /* buffered dispatch replies UNIMPLEMENTED */
 
     cwist_grpc_session *session = (cwist_grpc_session *)cwist_alloc(sizeof(*session));
-    if (!session) return NULL;
+    if (!session) goto not_live;
     memset(session, 0, sizeof(*session));
     pthread_mutex_init(&session->mu, NULL);
     pthread_cond_init(&session->cond, NULL);
@@ -1993,8 +2149,9 @@ static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req, cwist_h
         if (cwist_grpc_parse_timeout(timeout, &timeout_ms) == 0)
             session->stream.deadline_ms = grpc_now_ms() + timeout_ms;
     }
-    session->handler = route->stream_handler;
-    session->user_ctx = route->user_ctx;
+    session->handler = view.stream_handler;
+    session->user_ctx = view.user_ctx;
+    session->route = route; /* released by the handler thread */
     session->resp_encoding = grpc_client_accepts_gzip(req) ? 1 : 0;
 
     /* Response-Headers are deliberately not sent yet (gRFC A6): they go out
@@ -2020,10 +2177,14 @@ static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req, cwist_h
         pthread_mutex_destroy(&session->wmu);
         cwist_grpc_decoder_destroy(&session->decoder);
         cwist_free(session);
-        return NULL;
+        goto not_live;
     }
     pthread_detach(tid);
     return session;
+
+not_live:
+    grpc_route_release(route);
+    return NULL;
 }
 
 /** @brief on_data hook: feed DATA frames into the session's decoder.

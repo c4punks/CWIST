@@ -374,6 +374,34 @@ int main() {
 
 HTML 기반의 SSR(Server-Side Rendering) 프로젝트를 구축하거나, React의 빌드 결과물(정적 파일)을 서비스할 때 유용합니다.
 
+기존 렌더링 함수는 실패하면 NULL만 반환합니다. `cwist_template_render_ex` 또는
+`cwist_template_render_file_ex`에 `cwist_template_error_t`를 넘기면 에러 코드,
+0부터 시작하는 바이트 오프셋, 소스 경로, 태그 종류도 함께 받을 수 있습니다.
+
+사용자가 수정할 수 있는 테마처럼 신뢰도가 낮은 곳에서 템플릿을 가져온다면,
+`cwist_template_render_file_rooted` 또는 `cwist_template_render_rooted`로 include를
+특정 디렉터리 안으로 제한하세요.
+
+```c
+#include <cwist/core/template/template.h>
+
+cwist_sstring *render_theme(const cJSON *context) {
+    cwist_template_error_t error;
+    cwist_sstring *output =
+        cwist_template_render_file_rooted("views/index.html", context, "views", &error);
+    if (!output && error.code == CWIST_TEMPLATE_ERROR_FORBIDDEN) {
+        /* An include tried to leave views/; error.file_path names the file. */
+    }
+    return output;
+}
+```
+
+모든 `{% include %}` 경로는 정규화되고, root 밖을 가리키면
+`CWIST_TEMPLATE_ERROR_FORBIDDEN`으로 실패합니다. `..`, 절대경로, root 밖을 가리키는
+심볼릭 링크가 모두 해당됩니다. root는 include가 가리키는 파일을 바꾸지 않고, root 밖의
+파일을 거부하기만 합니다. 문자열 템플릿에서는 상대경로 include를 root 기준으로 해석합니다.
+베어메탈 빌드에는 `realpath()`가 없어서 모든 root를 거부합니다.
+
 ```c
 #include <cwist/app.h>
 #include <cwist/core/template/template.h>
