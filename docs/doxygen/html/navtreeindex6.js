@@ -1,5 +1,8 @@
 var NAVTREEINDEX6 =
 {
+"d4/d54/grpc__client_8c.html#ac36b0c87fd7beb99465f842ebebd3ff7":[96,0,2,2,2,2,22],
+"d4/d54/grpc__client_8c.html#acc3275ede6828445a3f50fcb652e6a3f":[96,0,2,2,2,2,12],
+"d4/d54/grpc__client_8c.html#ad5db76f8a96e35b7b42ec327845b6184":[96,0,2,2,2,2,16],
 "d4/d54/grpc__client_8c.html#ad684e83a72ea7c5ec5e86ba367f3d618":[96,0,2,2,2,2,13],
 "d4/d54/grpc__client_8c.html#adc76ee18f14c9e7e7eec22dbfa38f745":[96,0,2,2,2,2,1],
 "d4/d54/grpc__client_8c_source.html":[96,0,2,2,2,2],
@@ -246,8 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d11/md_docs_2api_2sql.html#autotoc_md172":[10,0,6],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md173":[10,0,7],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md174":[10,0,8],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md175":[10,0,9],
-"d5/d16/structcwist__multiport__t.html":[95,0,67],
-"d5/d16/structcwist__multiport__t.html#a34b24bf2e2818b98a582709f1e02cdca":[95,0,67,2],
-"d5/d16/structcwist__multiport__t.html#a577cb0362dc36c443351adac2bbd571f":[95,0,67,1]
+"d5/d11/md_docs_2api_2sql.html#autotoc_md175":[10,0,9]
 };

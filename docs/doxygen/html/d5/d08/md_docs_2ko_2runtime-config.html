@@ -201,10 +201,12 @@ HTTP/2</h1>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_HTTP2_GOAWAY_GRACE_MS</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">밀리초, 0 이상   </td><td class="markdownTableBodyNone"><code>2000</code>   </td><td class="markdownTableBodyNone">GOAWAY를 보낸 뒤 연결을 닫기까지의 시간. 클라이언트가 이미 시작한 스트림을 끝낼 수 있게 합니다.    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><code>CWIST_HTTP2_MAX_RST_BURST</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">0보다 큰 정수   </td><td class="markdownTableBodyNone"><code>100</code>   </td><td class="markdownTableBodyNone">연결을 닫기 전에 클라이언트가 한꺼번에 보낼 수 있는 스트림 리셋 수(rapid reset 방어, CVE-2023-44487).    </td></tr>
+<td class="markdownTableBodyNone"><code>CWIST_HTTP2_YIELD_US</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">마이크로초, 0 이상   </td><td class="markdownTableBodyNone"><code>250</code>   </td><td class="markdownTableBodyNone">바쁜 HTTP/2 연결이 스트림 사이에서 자리를 내주기 전까지 스레드를 잡고 있는 시간. TLS 연결은 HTTPS 풀 스레드를 기다리는 연결 뒤로 대기열에 다시 들어가고, 평문 h2c 연결은 CPU를 양보합니다. <code>0</code>이면 끕니다.    </td></tr>
 <tr class="markdownTableRowEven">
-<td class="markdownTableBodyNone"><code>CWIST_HTTP2_MAX_RST_RATE</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">초당 리셋 수, 0보다 큼   </td><td class="markdownTableBodyNone"><code>100</code>   </td><td class="markdownTableBodyNone">그 리셋 예산이 다시 차는 속도.    </td></tr>
+<td class="markdownTableBodyNone"><code>CWIST_HTTP2_MAX_RST_BURST</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">0보다 큰 정수   </td><td class="markdownTableBodyNone"><code>100</code>   </td><td class="markdownTableBodyNone">연결을 닫기 전에 클라이언트가 한꺼번에 보낼 수 있는 스트림 리셋 수(rapid reset 방어, CVE-2023-44487).    </td></tr>
 <tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone"><code>CWIST_HTTP2_MAX_RST_RATE</code>   </td><td class="markdownTableBodyNone">supported   </td><td class="markdownTableBodyNone">초당 리셋 수, 0보다 큼   </td><td class="markdownTableBodyNone"><code>100</code>   </td><td class="markdownTableBodyNone">그 리셋 예산이 다시 차는 속도.    </td></tr>
+<tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><code>CWIST_H2_BATCH_BYTES</code>   </td><td class="markdownTableBodyNone">tuning   </td><td class="markdownTableBodyNone">바이트, 4096 이상   </td><td class="markdownTableBodyNone"><code>65536</code>   </td><td class="markdownTableBodyNone">보낼 프레임을 모았다가 이만큼 쌓이면(또는 블로킹 대기 전에) 한 번에 씁니다.   </td></tr>
 </table>
 <h1><a class="anchor" id="autotoc_md708"></a>
