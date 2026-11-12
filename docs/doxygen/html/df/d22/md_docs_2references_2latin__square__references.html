@@ -108,9 +108,9 @@ $(document).ready(function(){initNavTree('df/d22/md_docs_2references_2latin__squ
   <div class="headertitle"><div class="title">Latin Square References</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md809"></a> This page records what <code><a class="el" href="../../d3/da8/latin__square_8c.html" title="Internal: mutually orthogonal Latin squares of any order up to 2^31, built as a MacNeish product of f...">src/core/design/latin_square.c</a></code> computes, the standard results it relies on, and where its one historical table comes from. Source comments describe the computation first; historical names appear only as a marked origin note that points here (see <a href="https://github.com/c4punks/CWIST/discussions/705">discussion #705</a>). Historical works are cited by their romanized titles.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md810"></a> This page records what <code><a class="el" href="../../d3/da8/latin__square_8c.html" title="Internal: mutually orthogonal Latin squares of any order up to 2^31, built as a MacNeish product of f...">src/core/design/latin_square.c</a></code> computes, the standard results it relies on, and where its one historical table comes from. Source comments describe the computation first; historical names appear only as a marked origin note that points here (see <a href="https://github.com/c4punks/CWIST/discussions/705">discussion #705</a>). Historical works are cited by their romanized titles.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md810"></a>
+<h1><a class="anchor" id="autotoc_md811"></a>
 1. Definitions</h1>
 <ul>
 <li>A <b>Latin square</b> of order n is an n x n array over n symbols in which every row and every column holds each symbol exactly once.</li>
@@ -119,9 +119,9 @@ $(document).ready(function(){initNavTree('df/d22/md_docs_2references_2latin__squ
 </ul>
 <p><b>References:</b> C. J. Colbourn and J. H. Dinitz (eds.), <em>Handbook of Combinatorial Designs</em>, 2nd ed., Chapman &amp; Hall/CRC, 2007 (the chapters on Latin squares, MOLS and orthogonal arrays). A. S. Hedayat, N. J. A. Sloane and J. Stufken, <em>Orthogonal Arrays: Theory and Applications</em>, Springer, 1999.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md811"></a>
+<h1><a class="anchor" id="autotoc_md812"></a>
 2. Constructions used in the code</h1>
-<h2><a class="anchor" id="autotoc_md812"></a>
+<h2><a class="anchor" id="autotoc_md813"></a>
 2.1 Finite fields (prime powers)</h2>
 <p>For a field GF(q), the squares L_a(r, c) = a*r + c with a != 0 are q - 1 MOLS of order q. Rows are permutations because adding c is a bijection; columns because multiplying by a non-zero a is; two squares a != b are orthogonal because (a - b)*r is a bijection.</p>
 <ul>
@@ -131,28 +131,28 @@ $(document).ready(function(){initNavTree('df/d22/md_docs_2references_2latin__squ
 <p><b>References:</b> R. C. Bose, "On the application of the properties of Galois
 fields to the problem of construction of hyper-Graeco-Latin squares", <em>Sankhya</em> 3 (1938), 323-338. M. O. Rabin, "Probabilistic algorithms in
 finite fields", <em>SIAM Journal on Computing</em> 9(2) (1980), 273-280.</p>
-<h2><a class="anchor" id="autotoc_md813"></a>
+<h2><a class="anchor" id="autotoc_md814"></a>
 2.2 Odd prime powers p^e, e &gt;= 2</h2>
 <p>The code applies the prime-order rule to each base-p digit, i.e. it takes the direct product of e copies of the order-p family. This yields p - 1 MOLS, fewer than the p^e - 1 a full GF(p^e) would give; the module reports the smaller count rather than claiming more. Order 9 uses the historical table in section 3 instead, which also holds two squares.</p>
-<h2><a class="anchor" id="autotoc_md814"></a>
+<h2><a class="anchor" id="autotoc_md815"></a>
 2.3 Composite orders: MacNeish's product</h2>
 <p>If n = n_1 * n_2 and there are k MOLS of each order, their direct product gives k MOLS of order n. Writing n as a product of prime powers q_i, the code therefore provides min(q_i - 1) squares (with p - 1 for the factors of section 2.2).</p>
 <p><b>Reference:</b> H. F. MacNeish, "Euler squares", <em>Annals of Mathematics</em> 23(3) (1922), 221-227.</p>
-<h2><a class="anchor" id="autotoc_md815"></a>
+<h2><a class="anchor" id="autotoc_md816"></a>
 2.4 What the code does not construct</h2>
 <p>Orders n = 2 mod 4 have a single factor 2, so the product gives one square. Orthogonal pairs exist for every order except 2 and 6, but their constructions for n = 2 mod 4 are not product constructions, and the module does not implement them: <code>cwist_latin_family_create(n, 2)</code> returns <code>NULL</code> for these orders instead of a family without the property.</p>
 <p><b>References:</b> L. Euler, "Recherches sur une nouvelle espece de quarres
 magiques", 1782 (conjectured that no pair exists for n = 2 mod 4). G. Tarry, 1900 (no pair of order 6). R. C. Bose, S. S. Shrikhande and E. T. Parker, "Further results on the construction of mutually orthogonal
 Latin squares and the falsity of Euler's conjecture", <em>Canadian Journal of Mathematics</em> 12 (1960), 189-203 (pairs exist for every n other than 2 and 6).</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md816"></a>
+<h1><a class="anchor" id="autotoc_md817"></a>
 3. Historical table: the Gusuryak order-9 pair</h1>
 <p><b>What the code uses:</b> <code>k_choi9_a</code> / <code>k_choi9_b</code>, an orthogonal pair of Latin squares of order 9 stored as printed (symbols 1-9), used as the order-9 factor of the product in section 2.3.</p>
 <p><b>Origin:</b> the figure <em>Gugu mosu byeongung yangdo</em> in <b>Choi Seok-jeong (1646-1715)</b>, <em>Gusuryak</em>, c. 1700. Each cell is a pair (a, b); the a and b entries each form a Latin square and the 81 pairs are all different. It is the earliest known orthogonal pair of order 9, some eighty years before Euler's 1782 study.</p>
 <p>The companion figure <em>Gugu mosu byeongung eumdo</em> is <b>not</b> used: its 81 pairs are all different and every 3 x 3 block holds 1-9 in each coordinate, but its rows and columns are not permutations, so it is not a pair of Latin squares.</p>
 <p><code>tests/test_latin_square.c</code> checks that the stored table is Latin and orthogonal, so a transcription error fails the tests rather than silently weakening the guarantee.</p>
 <hr  />
-<h1><a class="anchor" id="autotoc_md817"></a>
+<h1><a class="anchor" id="autotoc_md818"></a>
 4. Use in CWIST: covering runtime knob pairs in tests</h1>
 <p><b>What the code does:</b> <code>tests/test_bdr_privacy.c</code> runs its server once per run of OA(16, 5, 4, 2), built from the three MOLS of order 4 over GF(4). The five factors are runtime knobs that choose different serving paths (<code>CWIST_C1M_MODE</code>, <code>CWIST_WORKER_THREADS</code> up to 64, <code>CWIST_REACTOR_BACKEND</code>, <code>CWIST_HTTP_BATCH</code>, <code>CWIST_RX_URING</code>). Two-valued knobs repeat their values across the four levels, which keeps every pair of values covered. Every pair of knob settings therefore meets in at least one run, in 16 runs instead of the 4^5 = 1024 of the full product.</p>
 <p><b>Why:</b> a security check that exists on one serving path and not another is exposed only when the right pair of settings meets. Issue #706 was such a case: caller-specific replies leaked through the cache on the classic path only. On the unfixed tree the eight classic runs fail and the eight C1M runs pass.</p>

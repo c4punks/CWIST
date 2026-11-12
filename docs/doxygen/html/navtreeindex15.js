@@ -1,5 +1,9 @@
 var NAVTREEINDEX15 =
 {
+"db/d11/structcwist__cookie__options.html#adb82f6607a952bd8372f96833e4d7770":[95,0,18,4],
+"db/d14/md_docs_2api_2sstring.html":[12],
+"db/d16/config_8h.html":[96,0,1,0,4,0,4],
+"db/d16/config_8h.html#a30b090377dfd1a1cf5628d625d4b4c97":[96,0,1,0,4,0,4,8],
 "db/d16/config_8h.html#a438170d182ee20247735b3869c7905bf":[96,0,1,0,4,0,4,10],
 "db/d16/config_8h.html#a4ea984510af4527950e237b29b604d0f":[96,0,1,0,4,0,4,2],
 "db/d16/config_8h.html#a65cb03dd1203b4c1a33bf4aed3a6eb1b":[96,0,1,0,4,0,4,9],
@@ -245,9 +249,5 @@ var NAVTREEINDEX15 =
 "db/db7/pool_8h.html#a64f8b2613447724d5d3c25ce06c58d28":[96,0,1,0,0,1,2,9],
 "db/db7/pool_8h.html#a6abf2b34d8ed1af895e6a675adb41b95":[96,0,1,0,0,1,2,3],
 "db/db7/pool_8h.html#a82f72f2eb13a9072b25351856152839e":[96,0,1,0,0,1,2,5],
-"db/db7/pool_8h.html#aa1e09018ceaf9e09828563d70e26a5fa":[96,0,1,0,0,1,2,4],
-"db/db7/pool_8h.html#aa275c4ab7cebcdb99d53be64c0cd3dc2":[96,0,1,0,0,1,2,8],
-"db/db7/pool_8h.html#ac514a17cb5ebe045e1a57b8d6a636dd5":[96,0,1,0,0,1,2,0],
-"db/db7/pool_8h.html#acb2f785c8fb40817c2b713590adba0f6":[96,0,1,0,0,1,2,7],
-"db/db7/pool_8h_source.html":[96,0,1,0,0,1,2]
+"db/db7/pool_8h.html#aa1e09018ceaf9e09828563d70e26a5fa":[96,0,1,0,0,1,2,4]
 };

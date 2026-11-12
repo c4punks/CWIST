@@ -52,8 +52,8 @@
 <area shape="poly" id="edge44_Node000002_Node000062" title=" " alt="" coords="3081,118,2674,125,2042,148,1673,167,1286,194,895,228,512,272,494,275,493,269,512,267,895,223,1286,188,1673,162,2041,142,2674,120,3081,113"/>
 <area shape="rect" id="Node000064" href="$dd/dff/http3_8h.html" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="43,357,205,397"/>
 <area shape="poly" id="edge49_Node000002_Node000064" title=" " alt="" coords="3080,117,2593,117,1879,124,1503,132,1149,144,844,161,614,184,516,198,440,211,366,233,276,272,239,292,203,315,147,359,144,355,200,311,236,287,274,267,365,228,439,206,515,192,613,179,843,156,1148,139,1502,127,1879,119,2593,112,3080,112"/>
-<area shape="rect" id="Node000065" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="4033,181,4196,221"/>
-<area shape="poly" id="edge51_Node000002_Node000065" title=" " alt="" coords="3271,131,3385,143,3483,150,3648,155,3813,159,3909,166,4022,179,4034,180,4033,186,4021,184,3908,171,3813,164,3648,160,3482,155,3385,149,3271,136"/>
+<area shape="rect" id="Node000066" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="4033,181,4196,221"/>
+<area shape="poly" id="edge51_Node000002_Node000066" title=" " alt="" coords="3271,131,3385,143,3483,150,3648,155,3813,159,3909,166,4022,179,4034,180,4033,186,4021,184,3908,171,3813,164,3648,160,3482,155,3385,149,3271,136"/>
 <area shape="rect" id="Node000067" href="$d9/df2/http__client_8h.html" title="Unified HTTP/1.1 and HTTP/2 client using libcurl." alt="" coords="5143,357,5305,397"/>
 <area shape="poly" id="edge52_Node000002_Node000067" title=" " alt="" coords="3271,130,3630,135,4238,139,4552,143,4826,150,5028,162,5092,170,5125,179,5148,197,5167,219,5196,268,5214,318,5223,357,5218,358,5209,319,5191,270,5163,222,5144,201,5123,184,5091,175,5028,167,4826,155,4551,148,4238,144,3630,140,3271,136"/>
 <area shape="rect" id="Node000069" href="$d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="1719,181,1881,221"/>
