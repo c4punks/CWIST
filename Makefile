@@ -265,6 +265,7 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/csrf.c \
        src/sys/app/waf.c \
        src/core/siphash/siphash.c \
+       src/core/design/latin_square.c \
        src/core/db/db.c \
        src/core/db/pool.c \
        src/core/db/nuke_db.c \
@@ -902,6 +903,7 @@ TEST_TARGETS = test_worker_affinity \
                test_html_component \
                test_html_response \
                test_bdr_privacy \
+               test_latin_square \
                test_assets \
                test_html_parity \
                test_http \
@@ -1943,7 +1945,11 @@ test_html_response: $(LIB_NAME) tests/test_html_response.c
 	$(CC) $(CFLAGS) -o test_html_response tests/test_html_response.c $(LIB_NAME) $(LIBS)
 	./test_html_response
 
-test_bdr_privacy: $(LIB_NAME) tests/test_bdr_privacy.c
+test_latin_square: $(LIB_NAME) tests/test_latin_square.c src/core/design/latin_square.c src/core/design/latin_square.h
+	$(CC) $(CFLAGS) -o $@ tests/test_latin_square.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_bdr_privacy: $(LIB_NAME) tests/test_bdr_privacy.c src/core/design/latin_square.h
 	$(CC) $(CFLAGS) -o $@ tests/test_bdr_privacy.c $(LIB_NAME) $(LIBS)
 	./$@
 
