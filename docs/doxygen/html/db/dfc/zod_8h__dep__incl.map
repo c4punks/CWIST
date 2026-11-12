@@ -95,8 +95,8 @@
 <area shape="poly" id="edge41_Node000044_Node000065" title=" " alt="" coords="2110,218,2379,231,2525,244,2576,254,2604,267,2612,279,2614,292,2605,316,2587,339,2567,359,2563,355,2583,336,2601,314,2608,291,2607,281,2601,271,2575,259,2524,249,2379,236,2109,223"/>
 <area shape="rect" id="Node000067" href="$dd/dff/http3_8h.html" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="2645,357,2808,397"/>
 <area shape="poly" id="edge45_Node000044_Node000067" title=" " alt="" coords="2110,218,2233,226,2380,230,2522,241,2581,251,2626,267,2656,286,2681,309,2717,355,2713,359,2677,313,2652,290,2624,272,2579,257,2521,246,2380,235,2233,231,2110,224"/>
-<area shape="rect" id="Node000068" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="1469,269,1632,309"/>
-<area shape="poly" id="edge47_Node000044_Node000068" title=" " alt="" coords="1921,222,1644,272,1633,274,1632,269,1644,267,1920,217"/>
+<area shape="rect" id="Node000069" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="1469,269,1632,309"/>
+<area shape="poly" id="edge47_Node000044_Node000069" title=" " alt="" coords="1921,222,1644,272,1633,274,1632,269,1644,267,1920,217"/>
 <area shape="rect" id="Node000070" href="$d9/df2/http__client_8h.html" title="Unified HTTP/1.1 and HTTP/2 client using libcurl." alt="" coords="3624,445,3787,485"/>
 <area shape="poly" id="edge48_Node000044_Node000070" title=" " alt="" coords="2110,218,2406,224,2896,230,3367,242,3529,253,3580,259,3607,267,3629,285,3648,306,3677,356,3695,405,3705,444,3699,445,3690,407,3672,358,3644,310,3626,289,3604,272,3579,264,3528,258,3367,248,2896,235,2406,229,2110,223"/>
 <area shape="rect" id="Node000072" href="$d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="2384,269,2547,309"/>

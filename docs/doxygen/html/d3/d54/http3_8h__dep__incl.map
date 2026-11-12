@@ -1,7 +1,9 @@
 <map id="include/cwist/net/http/http3.h" name="include/cwist/net/http/http3.h">
-<area shape="rect" id="Node000001" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="78,5,241,45"/>
-<area shape="rect" id="Node000002" href="$de/daf/http3_8c.html" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="5,93,151,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="132,57,92,95,88,91,128,53"/>
-<area shape="rect" id="Node000003" href="$df/d7f/app_8c.html" title=" " alt="" coords="175,93,309,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="191,53,231,91,228,95,187,57"/>
+<area shape="rect" id="Node000001" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="161,5,323,45"/>
+<area shape="rect" id="Node000002" href="$de/daf/http3_8c.html" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="5,101,151,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="195,54,101,103,99,98,193,49"/>
+<area shape="rect" id="Node000003" href="$d1/d88/http3__client_8c.html" title="lsquic/BoringSSL&#45;based HTTP/3 client for CWIST." alt="" coords="175,93,309,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="245,59,245,93,239,93,239,59"/>
+<area shape="rect" id="Node000004" href="$df/d7f/app_8c.html" title=" " alt="" coords="333,101,468,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="290,49,381,98,378,103,288,54"/>
 </map>

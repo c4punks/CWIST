@@ -1,5 +1,7 @@
 var NAVTREEINDEX6 =
 {
+"d4/d54/grpc__client_8c.html#ad684e83a72ea7c5ec5e86ba367f3d618":[96,0,2,2,2,2,13],
+"d4/d54/grpc__client_8c.html#adc76ee18f14c9e7e7eec22dbfa38f745":[96,0,2,2,2,2,1],
 "d4/d54/grpc__client_8c_source.html":[96,0,2,2,2,2],
 "d4/d57/websocket__async_8c.html":[96,0,2,2,8,1],
 "d4/d57/websocket__async_8c.html#a0b4951dfba578f6e4fd07502f75549b1":[96,0,2,2,8,1,7],
@@ -64,10 +66,10 @@ var NAVTREEINDEX6 =
 "d4/d9a/lwip_8h.html#af90b0a575595f192c8024c626eccd62a":[96,0,1,0,4,6,0,10],
 "d4/d9a/lwip_8h_source.html":[96,0,1,0,4,6,0],
 "d4/db0/md_docs_2tutorials_2blog-crud.html":[88],
-"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md875":[88,0],
-"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md876":[88,1],
-"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md877":[88,2],
-"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md878":[88,3],
+"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md876":[88,0],
+"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md877":[88,1],
+"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md878":[88,2],
+"d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md879":[88,3],
 "d4/db3/session__manager_8c.html":[96,0,2,4,7,1],
 "d4/db3/session__manager_8c.html#a2a5d881373cbf7beb360b73523916516":[96,0,2,4,7,1,1],
 "d4/db3/session__manager_8c.html#a362a4383acec3e35d726ff7ba772fb48":[96,0,2,4,7,1,7],
@@ -247,7 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d11/md_docs_2api_2sql.html#autotoc_md175":[10,0,9],
 "d5/d16/structcwist__multiport__t.html":[95,0,67],
 "d5/d16/structcwist__multiport__t.html#a34b24bf2e2818b98a582709f1e02cdca":[95,0,67,2],
-"d5/d16/structcwist__multiport__t.html#a577cb0362dc36c443351adac2bbd571f":[95,0,67,1],
-"d5/d16/structcwist__multiport__t.html#ae06754a8e9d7fd38b46c56f4d83dcac0":[95,0,67,0],
-"d5/d23/writer__fast_8c.html":[96,0,2,2,3,31]
+"d5/d16/structcwist__multiport__t.html#a577cb0362dc36c443351adac2bbd571f":[95,0,67,1]
 };
