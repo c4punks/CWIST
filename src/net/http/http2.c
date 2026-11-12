@@ -16,7 +16,6 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <sched.h>
 #include <ctype.h>
 #include <stdatomic.h>
 #include <sys/socket.h>
@@ -140,12 +139,10 @@ static inline long h2_env_long(const char *env, long fallback, long min) {
  * @return Idle timeout in milliseconds.
  */
 /**
- * @brief Longest stretch, in microseconds, a busy connection keeps its thread
- * before stepping aside. Past it, at the next point with no stream in
- * flight, a TLS session is re-queued behind connections waiting for an
- * HTTPS pool thread, and a cleartext (h2c) connection, which has a thread
- * of its own, yields the CPU. CWIST_HTTP2_YIELD_US overrides the default;
- * 0 disables both.
+ * @brief Longest stretch, in microseconds, a busy connection keeps an HTTPS
+ * pool thread while other connections wait for one. Past it the session is
+ * re-queued behind them at the next point with no stream in flight.
+ * CWIST_HTTP2_YIELD_US overrides the default; 0 disables yielding.
  */
 #define CWIST_HTTP2_YIELD_US_DEFAULT 250
 static long h2_yield_us(void) {
@@ -3476,7 +3473,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
     h2_session *st = (h2_session *)conn->proto_state;
     bool resumed = st != NULL;
     /* Start of this thread's turn on the connection (see h2_yield_us). */
-    uint64_t turn_start_us = h2_now_us();
+    const uint64_t turn_start_us = h2_now_us();
     if (!st) {
         st = (h2_session *)cwist_alloc(sizeof(*st));
         if (!st) {
@@ -3611,12 +3608,6 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     result.error.err_i16 = 0;
                     return result;
                 }
-                /* Cleartext h2c runs on its own thread, and pinned workers
-                 * put every such thread on one CPU: hand the CPU to the
-                 * next runnable connection instead of running out the
-                 * scheduler's time slice. */
-                if (!conn->pool_handler) sched_yield();
-                turn_start_us = h2_now_us();
             }
         }
         /* Bound the wait for the next frame with the idle deadline so an
