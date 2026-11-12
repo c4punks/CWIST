@@ -10,9 +10,7 @@
  * server must now be well under a tick; before the fix it was about 1.1 ms.
  * The limit leaves room for sanitizer builds.
  */
-#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#endif
 #include <cwist/net/http/http3.h>
 #include <cwist/net/http/http3_client.h>
 
