@@ -68,6 +68,27 @@ monotonic sequence number and discard stale updates. For reliable stream data,
 CWIST's sequence helpers can reassemble application-level fragmented payloads
 when a protocol intentionally splits large messages.
 
+### Raw datagrams next to WebTransport
+
+Once both sides enable HTTP Datagrams (RFC 9297), which WebTransport needs,
+every QUIC DATAGRAM frame on the connection starts with a quarter stream ID,
+so plain RFC 9221 payloads cannot share it. CWIST keeps the two apart:
+
+- Server: register `cwist_http3_set_datagram_conn_callback()`. It receives raw
+  payloads with their connection, so you can answer with
+  `cwist_http3_send_datagram(conn, ...)`; WebTransport session datagrams keep
+  going to `cwist_http3_set_datagram_callback()`.
+- Client: call `cwist_http3_client_enable_datagram_channel(client, 1)` before
+  connecting. Against a server with WebTransport, the first
+  `cwist_http3_client_send_datagram()` opens a datagram channel, an extended
+  CONNECT stream with `:protocol` `cwist-datagram`, and raw payloads travel
+  both ways as HTTP Datagrams on it. Against a server without HTTP Datagrams,
+  plain DATAGRAM frames are used.
+
+The channel token is CWIST-specific; a different server that enables HTTP
+Datagrams rejects it, and the send call then fails rather than emitting
+frames the peer would misread.
+
 ## 3. Operate safely
 
 Set per-session limits for concurrent streams, buffered bytes, and idle time.
