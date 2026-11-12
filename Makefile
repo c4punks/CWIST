@@ -1310,7 +1310,6 @@ test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
 	./$@
 
-ifeq ($(CWIST_DB),1)
 test_rdbms_auto_mount: $(LIB_NAME) tests/test_rdbms_auto_mount.c
 	$(CC) $(CFLAGS) -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
 	./test_rdbms_auto_mount
