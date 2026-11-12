@@ -118,7 +118,7 @@ $(document).ready(function(){initNavTree('index.html',''); initResizable(); });
 <p align="center"></p>
 <p><b>Write your routes and handlers once in C. Serve them from a native server, a WASI 0.2 edge runtime, a browser Service Worker, or bare-metal MCU firmware.</b> </p>
 <p align="center"></p>
-<p><b>Bare-metal embedded support:</b> STM32F769I-DISCO and NUCLEO-H743ZI2, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, and bounded response streaming on Cortex-M. </p>
+<p><b>Bare-metal embedded support:</b> raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, and bounded response streaming on Cortex-M, validated on a physical STM32F769I-DISCO board. </p>
 <p align="center"></p>
 <p>CWIST is a C17 web framework and application server: routing, middleware, templates, sessions, validation and an embedded SQLite ORM on top of HTTP/1.1, HTTP/2, HTTP/3, WebSocket and WebTransport, with an io_uring/epoll/kqueue reactor. </p>
 <p align="center"></p>
@@ -135,7 +135,7 @@ Supported platforms</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>WASI 0.2 and browser Service Worker</b>   </td><td class="markdownTableBodyNone">The same routes and handlers on Wasmtime or in the browser   </td><td class="markdownTableBodyNone"><a href="example/wasip2-kv">wasip2-kv</a>, <a href="example/wasm-service-worker">wasm-service-worker</a>    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>, <a href="example/stm32f769-fortress">STM32F769I-DISCO fortress</a>, <a href="example/stm32">NUCLEO-H743ZI2</a>   </td></tr>
+<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>; STM32F769I-DISCO <a href="example/stm32f769-fortress">fortress</a> (physical-board validated); NUCLEO-H743ZI2 <a href="example/stm32">example</a> (reference integration: cross-build / QEMU)   </td></tr>
 </table>
 <h2><a class="anchor" id="autotoc_md4"></a>
 Quick start</h2>
@@ -191,7 +191,7 @@ What CWIST includes</h2>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Layer   </th><th class="markdownTableHeadNone">What you get    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds, STM32F769I-DISCO and NUCLEO-H743ZI2 integrations, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
+<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds, STM32F769I-DISCO (physical-board validated) and NUCLEO-H743ZI2 (reference integration) examples, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>Protocols</b>   </td><td class="markdownTableBodyNone">HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -299,10 +299,22 @@ Platform support</h2>
 <h2><a class="anchor" id="autotoc_md15"></a>
 Bare-metal STM32</h2>
 <p>CWIST also provides a socket-free Cortex-M path for firmware that uses <code><a class="el" href="d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> or the raw-lwIP adapter. The same routing, middleware, handlers, JSON helpers, and HTTP/1.1 parser are available without <code><a class="el" href="d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthreads, epoll, or the C1M reactor.</p>
+<p>Each board carries exactly one of three labels:</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Board   </th><th class="markdownTableHeadNone">Status   </th><th class="markdownTableHeadNone">What backs it    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">STM32F769I-DISCO   </td><td class="markdownTableBodyNone"><b>Physical-board validated</b>   </td><td class="markdownTableBodyNone">Flashed and run on real hardware (<a href="example/stm32f769">example/stm32f769</a>, <a href="example/stm32f769-fortress">fortress</a>)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">NUCLEO-H743ZI2   </td><td class="markdownTableBodyNone"><b>Reference integration (cross-build / QEMU)</b>   </td><td class="markdownTableBodyNone">Cross-built; not yet run on a physical board (<a href="example/stm32">example/stm32</a>)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">STM32F429I-DISCO   </td><td class="markdownTableBodyNone"><b>Planned</b>   </td><td class="markdownTableBodyNone">Low-resource target; hardware on hand, not validated yet   </td></tr>
+</table>
 <ul>
 <li><b>Validated on STM32F769I-DISCO:</b> raw-lwIP HTTP, mbedTLS HTTPS, static connection pools, and streamed responses through bounded TX buffers.</li>
 <li><b>LCD and load demo:</b> <code>example/stm32f769-fortress/</code> exposes 288 real connection-pool slots on the 800x480 LCD and browser dashboard, with selectable responses up to 1 MiB.</li>
-<li><b>Reference integration:</b> NUCLEO-H743ZI2 and Cortex-M7 Thumb-2 builds for <code>arm-none-eabi-gcc</code>, with QEMU semihosting checks kept separate from physical-board validation.</li>
+<li><b>Reference integration:</b> NUCLEO-H743ZI2 application, HAL hooks, and lwIP options. It is cross-built only and has not been run on a physical board.</li>
+<li><b>Automated checks (not hardware validation):</b> <a href=".github/workflows/baremetal.yml"><code>baremetal.yml</code></a> builds Cortex-M7 Thumb-2 firmware with <code>arm-none-eabi-gcc</code> and runs it under <code>qemu-arm</code> semihosting (<code>make baremetal-smoke</code>, <code>make baremetal-size-gate</code>); <a href=".github/workflows/cross-compile.yml"><code>cross-compile.yml</code></a> cross-builds <code>fat-dist</code> for embedded Linux triplets and link-smokes it under qemu-user. Passing either says nothing about a board's PHY, clock tree, NVIC, or RNG.</li>
 </ul>
 <p>Build inputs and the lwIP/TLS integration are documented in <a class="el" href="de/d87/md_docs_2embedded_2stm32.html">docs/embedded/stm32.md</a>. Board-specific wiring, cache constraints, and flashing instructions live in the example READMEs.</p>
 <h2><a class="anchor" id="autotoc_md16"></a>
