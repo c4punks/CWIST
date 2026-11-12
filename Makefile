@@ -1426,6 +1426,7 @@ TEST_TARGETS = test_worker_affinity \
                test_https \
                test_tls_hot_reload \
                test_https_park \
+               test_https_h2_fairness \
                test_https_park_full_gc \
                test_https_pool_queue \
                test_https_metrics \
@@ -1959,6 +1960,10 @@ endif
 test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
 	./test_https_park
+
+test_https_h2_fairness: $(LIB_NAME) tests/test_https_h2_fairness.c
+	$(CC) $(CFLAGS) -o $@ tests/test_https_h2_fairness.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_https_pool_queue: $(LIB_NAME) tests/test_https_pool_queue.c
 	$(CC) $(CFLAGS) -o test_https_pool_queue tests/test_https_pool_queue.c $(LIB_NAME) $(LIBS)
