@@ -1435,6 +1435,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http3_defer \
                test_http3_client_datagram \
                test_http3_datagram_channel \
+               test_http3_client_latency \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
@@ -2007,9 +2008,13 @@ test_http3_defer: $(LIB_NAME) tests/test_http3_defer.c
 test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_datagram.c $(LIB_NAME) $(LIBS)
 	./$@
+
+test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
+	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
-test_http3 test_http3_client_datagram:
+test_http3 test_http3_client_datagram test_http3_client_latency:
 	@echo "CWIST_HTTP3=0: skipping $@"
 endif
 
