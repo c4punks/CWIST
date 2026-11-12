@@ -70,6 +70,7 @@ typedef enum cwist_metric_id {
     CWIST_METRIC_TLS_CIPHERS_AES256_GCM,    /**< TLS_AES_256_GCM_SHA384 handshakes. */
     CWIST_METRIC_TLS_CIPHERS_CHACHA20,      /**< TLS_CHACHA20_POLY1305_SHA256 handshakes. */
     CWIST_METRIC_TLS_CIPHERS_OTHER,         /**< Handshakes with any other cipher. */
+    CWIST_METRIC_HTTP_IDLE_REAPED, /**< Idle C1M keep-alive connections closed by the sweep timer. */
     CWIST_METRIC_COUNT
 } cwist_metric_id_t;
 
