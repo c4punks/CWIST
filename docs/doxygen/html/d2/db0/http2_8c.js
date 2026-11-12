@@ -32,6 +32,7 @@ var http2_8c =
     [ "CWIST_HTTP2_MAX_HEADERS_PER_REQUEST", "d2/db0/http2_8c.html#a51be872c2b1676bd8a8b6321dc0a96da", null ],
     [ "CWIST_HTTP2_SEQ_CHUNK_PAYLOAD", "d2/db0/http2_8c.html#a4f86a5123d401f278995694e268b5d76", null ],
     [ "CWIST_HTTP2_USE_SEQUENCED_DATA", "d2/db0/http2_8c.html#a6c2d7fd7acb10388780bc18e419b1f67", null ],
+    [ "CWIST_HTTP2_YIELD_US_DEFAULT", "d2/db0/http2_8c.html#ac85837770c5e036cfa2e4af8b7a13561", null ],
     [ "H2_DECODE_COMPRESSION_ERROR", "d2/db0/http2_8c.html#a581214700eccde9517ea6661e9d5fdf0", null ],
     [ "H2_DECODE_OK", "d2/db0/http2_8c.html#a68f1518e5f84d485b557390e3785ef93", null ],
     [ "H2_DECODE_STREAM_ERROR", "d2/db0/http2_8c.html#ae1d812606e2c3f4fae5a997b3ee503f9", null ],

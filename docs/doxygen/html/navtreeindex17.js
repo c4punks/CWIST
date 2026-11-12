@@ -1,5 +1,9 @@
 var NAVTREEINDEX17 =
 {
+"dc/d88/structcwist__webrtc__ctx.html#a86ba6aacce0ed9589d4039678bafff2b":[95,0,106,11],
+"dc/d88/structcwist__webrtc__ctx.html#a91330b2f6dd7ae59268e74092efa91e2":[95,0,106,21],
+"dc/d88/structcwist__webrtc__ctx.html#a934c9ad24821fbb9420b2af3ffc444a0":[95,0,106,24],
+"dc/d88/structcwist__webrtc__ctx.html#a9a5a7e58850cd68281ad2adb8908b2d1":[95,0,106,34],
 "dc/d88/structcwist__webrtc__ctx.html#a9f6a93ee6527278bdceec4cbe1b48a67":[95,0,106,31],
 "dc/d88/structcwist__webrtc__ctx.html#aa92bbad29e9f40cec72f2369b40009f3":[95,0,106,0],
 "dc/d88/structcwist__webrtc__ctx.html#aaa69c85e630d8ad4dff35615ba5e9ec5":[95,0,106,45],
@@ -245,9 +249,5 @@ var NAVTREEINDEX17 =
 "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html":[70],
 "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md718":[70,0],
 "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md719":[70,1],
-"dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md720":[70,2],
-"dd/d3b/webrtc_8h.html":[96,0,1,0,2,9],
-"dd/d3b/webrtc_8h.html#a1ebc38dcb3ff4fc59ed6a8f06451e7c2":[96,0,1,0,2,9,7],
-"dd/d3b/webrtc_8h.html#a2d398afca3c8bd21b75b5f4275e4138c":[96,0,1,0,2,9,12],
-"dd/d3b/webrtc_8h.html#a2e68b4fd4a81537765e7213744f75812":[96,0,1,0,2,9,18]
+"dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md720":[70,2]
 };

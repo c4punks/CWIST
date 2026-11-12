@@ -39,6 +39,7 @@ var https_8c =
     [ "cwist_https_tls_handshakes_tls13_total", "d2/db2/https_8c.html#acb982ea80f9f05b23ac0e81b1f78d1ed", null ],
     [ "cwist_https_tls_handshakes_total", "d2/db2/https_8c.html#a7508f61a518a9f8fb77b414a5ff55b0a", null ],
     [ "cwist_https_write_raw", "d2/db2/https_8c.html#a04487c5a7b6c8b4a45d76a1ae4f3a0ca", null ],
+    [ "cwist_https_yield", "d2/db2/https_8c.html#a974d76274146772a2cab2f5aebfcce4f", null ],
     [ "cwist_tls_apply_pqc_layer", "d2/db2/https_8c.html#a2c64f58ea5cd342f9b20500759ef5cd9", null ],
     [ "cwist_tls_group_is_pq", "d2/db2/https_8c.html#add8c5280d7844d1156c5c1f07ecfc07d", null ],
     [ "cwist_tls_info_h3_clear", "d2/db2/https_8c.html#abcc692ef36d56590933bdaa9d3ec74a9", null ],

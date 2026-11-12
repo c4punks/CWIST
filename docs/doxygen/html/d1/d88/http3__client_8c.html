@@ -314,6 +314,9 @@ Macros</h2></td></tr>
 <tr class="separator:a8ea871fd705b062c103809ee494f21f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac9eaf0d2911f7fa289423f39166b3d3a" id="r_ac9eaf0d2911f7fa289423f39166b3d3a"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#ac9eaf0d2911f7fa289423f39166b3d3a">H3C_DGRAM_QUEUE_LIMIT</a>&#160;&#160;&#160;16</td></tr>
 <tr class="separator:ac9eaf0d2911f7fa289423f39166b3d3a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7af7cccbb78dc63c4fc2fd764d317941" id="r_a7af7cccbb78dc63c4fc2fd764d317941"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d88/http3__client_8c.html#a7af7cccbb78dc63c4fc2fd764d317941">H3C_RECV_BATCH</a>&#160;&#160;&#160;64</td></tr>
+<tr class="memdesc:a7af7cccbb78dc63c4fc2fd764d317941"><td class="mdescLeft">&#160;</td><td class="mdescRight">Run one iteration of the QUIC I/O loop.  <br /></td></tr>
+<tr class="separator:a7af7cccbb78dc63c4fc2fd764d317941"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
@@ -444,7 +447,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00865">865</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00872">872</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -461,6 +464,32 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00202">202</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+
+</div>
+</div>
+<a id="a7af7cccbb78dc63c4fc2fd764d317941" name="a7af7cccbb78dc63c4fc2fd764d317941"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7af7cccbb78dc63c4fc2fd764d317941">&#9670;&#160;</a></span>H3C_RECV_BATCH</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define H3C_RECV_BATCH&#160;&#160;&#160;64</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Run one iteration of the QUIC I/O loop. </p>
+<p>Computes how long lsquic wants to wait until its next timer (bounded to [0, 1s]), polls the UDP socket for that interval, feeds any received datagram into lsquic_engine_packet_in(), and finally runs lsquic_engine_process_conns() to advance all connections.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">client</td><td>The HTTP/3 client whose engine and socket are polled. </td></tr>
+    <tr><td class="paramname">timeout_ms</td><td>Desired poll timeout in milliseconds; values &lt;= 0 fall back to 1 ms. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l00961">961</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -540,7 +569,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01044">1044</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01054">1054</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../de/daf/http3_8c_source.html#l00109">cwist_h3_global_acquire()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00123">cwist_h3_global_release()</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00098">SSL_CTX_new</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00125">SSL_CTX_set_default_verify_paths</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00106">SSL_CTX_set_min_proto_version</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00124">SSL_CTX_set_verify</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00081">SSL_VERIFY_PEER</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00049">TLS1_3_VERSION</a>.</p>
 
@@ -562,7 +591,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01092">1092</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01102">1102</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../de/daf/http3_8c_source.html#l00123">cwist_h3_global_release()</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>.</p>
 
@@ -604,7 +633,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01184">1184</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01194">1194</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -649,7 +678,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success; -1 when the client has a live connection, the engine cannot be rebuilt, or WebTransport client support is not compiled in. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01210">1210</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01220">1220</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -689,7 +718,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01189">1189</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01199">1199</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -729,7 +758,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01608">1608</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01627">1627</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../df/dad/http3__client_8h_source.html#l00230">cwist_http3_datagram_stats::dequeued</a>, <a class="el" href="../../df/dad/http3__client_8h_source.html#l00232">cwist_http3_datagram_stats::dropped_alloc</a>, <a class="el" href="../../df/dad/http3__client_8h_source.html#l00231">cwist_http3_datagram_stats::dropped_full</a>, <a class="el" href="../../df/dad/http3__client_8h_source.html#l00229">cwist_http3_datagram_stats::enqueued</a>, and <a class="el" href="../../df/dad/http3__client_8h_source.html#l00233">cwist_http3_datagram_stats::queue_depth</a>.</p>
 
@@ -779,7 +808,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of bytes received, or -1 on error. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01581">1581</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01600">1600</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -855,11 +884,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST error, err_i16 == 0 on success. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01237">1237</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01247">1247</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00280">CWIST_HTTP3_DATAGRAM_PROTOCOL</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02480">cwist_http_response_destroy()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00062">cwist_http_header_node::next</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01640">cwist_http3_client_webtransport_connect()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01659">cwist_http3_client_webtransport_connect()</a>.</p>
 
 </div>
 </div>
@@ -907,7 +936,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01545">1545</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01564">1564</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -947,7 +976,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01164">1164</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01174">1174</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../df/d6d/ssl_8h_source.html#l00125">SSL_CTX_set_default_verify_paths</a>.</p>
 
@@ -989,7 +1018,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01772">1772</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01791">1791</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1029,7 +1058,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01175">1175</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01185">1185</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../df/d6d/ssl_8h_source.html#l00124">SSL_CTX_set_verify</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00080">SSL_VERIFY_NONE</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00081">SSL_VERIFY_PEER</a>.</p>
 
@@ -1071,7 +1100,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01764">1764</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01783">1783</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1111,7 +1140,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01768">1768</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01787">1787</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1158,7 +1187,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01133">1133</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01143">1143</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1197,7 +1226,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01180">1180</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01190">1190</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1251,9 +1280,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST error, err_i16 == 0 on success. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01640">1640</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01659">1659</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01237">cwist_http3_client_request()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00045">CWIST_HTTP_CONNECT</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02171">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02480">cwist_http_response_destroy()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01247">cwist_http3_client_request()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00045">CWIST_HTTP_CONNECT</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02171">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02480">cwist_http_response_destroy()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1290,9 +1319,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Close the session; its storage is released with the owning HTTP/3 client. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01747">1747</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01766">1766</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01688">cwist_webtransport_client_is_open()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01707">cwist_webtransport_client_is_open()</a>.</p>
 
 </div>
 </div>
@@ -1313,9 +1342,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Return non-zero while the peer has not closed the session. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01688">1688</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01707">1707</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01747">cwist_webtransport_client_close()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01697">cwist_webtransport_client_open_bidi()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01706">cwist_webtransport_client_open_uni()</a>, and <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01733">cwist_webtransport_client_send_datagram()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01766">cwist_webtransport_client_close()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01716">cwist_webtransport_client_open_bidi()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01725">cwist_webtransport_client_open_uni()</a>, and <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01752">cwist_webtransport_client_send_datagram()</a>.</p>
 
 </div>
 </div>
@@ -1336,9 +1365,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Open a client-initiated bidirectional WebTransport data stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01697">1697</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01716">1716</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01688">cwist_webtransport_client_is_open()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01707">cwist_webtransport_client_is_open()</a>.</p>
 
 </div>
 </div>
@@ -1359,9 +1388,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Open a client-initiated unidirectional WebTransport data stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01706">1706</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01725">1725</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01688">cwist_webtransport_client_is_open()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01707">cwist_webtransport_client_is_open()</a>.</p>
 
 </div>
 </div>
@@ -1392,7 +1421,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Progress an active WebTransport client's UDP and QUIC state machine. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01682">1682</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01701">1701</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1429,9 +1458,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Send an unreliable datagram in this WebTransport session. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01733">1733</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01752">1752</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01688">cwist_webtransport_client_is_open()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01707">cwist_webtransport_client_is_open()</a>.</p>
 
 </div>
 </div>
@@ -1451,7 +1480,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01727">1727</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01746">1746</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1471,7 +1500,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01723">1723</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01742">1742</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1508,7 +1537,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Non-blocking I/O helpers for streams returned by the open functions. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01715">1715</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01734">1734</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
@@ -1544,7 +1573,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01719">1719</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01738">1738</a> of file <a class="el" href="../../d1/d88/http3__client_8c_source.html">http3_client.c</a>.</p>
 
 </div>
 </div>
