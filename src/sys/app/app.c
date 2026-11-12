@@ -43,8 +43,6 @@
 /* Libttak headers */
 #include <ttak/mem/mem.h>
 #include <ttak/timing/timing.h>
-#include <ttak/net/lattice.h>
-#include <ttak/mols_control.h>
 #include <ttak/priority/scheduler.h>
 #include <ttak/async/sched.h>
 
@@ -2975,6 +2973,88 @@ static cwist_async_action_t app_async_flush_exit(int client_fd, cwist_http_async
     return action;
 }
 
+#ifndef CWIST_PLATFORM_NO_SOCKETS
+/* --- Big Dumb Reply privacy rules (issue #706) ---------------------------
+ * The reply cache is keyed by method + path only, so it must never hold or
+ * replay a response that depends on who is asking.  A request is treated as
+ * caller-specific when it carries credentials (Cookie, Authorization); a
+ * response when it sets a cookie or its Cache-Control forbids shared reuse
+ * (private, no-store, no-cache). */
+
+/** @brief True when @p headers contain a header named @p name. */
+static bool app_bdr_has_header(cwist_http_header_node *headers, const char *name) {
+    return cwist_http_header_get(headers, name) != NULL;
+}
+
+/** @brief True when the request carries credentials that make its reply per-caller. */
+static bool app_bdr_request_is_private(const cwist_http_request *req) {
+    return app_bdr_has_header(req->headers, "Cookie") ||
+           app_bdr_has_header(req->headers, "Authorization");
+}
+
+/**
+ * @brief True when one Cache-Control value names private, no-store or no-cache.
+ *
+ * Directives are comma separated and matched case-insensitively; a directive
+ * with an argument (e.g. private="Set-Cookie") still counts.
+ */
+static bool app_bdr_cache_control_forbids(const char *value) {
+    static const char *const forbidden[] = {"private", "no-store", "no-cache"};
+    const char *p = value;
+    while (p && *p) {
+        while (*p == ' ' || *p == '\t' || *p == ',') p++;
+        const char *tok = p;
+        while (*p && *p != ',' && *p != '=' && *p != ' ' && *p != '\t') p++;
+        size_t tlen = (size_t)(p - tok);
+        for (size_t i = 0; i < sizeof(forbidden) / sizeof(forbidden[0]); i++) {
+            if (tlen == strlen(forbidden[i]) && strncasecmp(tok, forbidden[i], tlen) == 0) {
+                return true;
+            }
+        }
+        /* Skip the rest of this directive, including a quoted argument. */
+        bool quoted = false;
+        while (*p && (quoted || *p != ',')) {
+            if (*p == '"') quoted = !quoted;
+            p++;
+        }
+    }
+    return false;
+}
+
+/** @brief True when the response must not be stored in the shared reply cache. */
+static bool app_bdr_response_is_private(const cwist_http_response *res) {
+    for (cwist_http_header_node *h = res->headers; h; h = h->next) {
+        if (!h->key || !h->key->data) continue;
+        if (strcasecmp(h->key->data, "Set-Cookie") == 0) return true;
+        if (strcasecmp(h->key->data, "Cache-Control") == 0 && h->value && h->value->data &&
+            app_bdr_cache_control_forbids(h->value->data)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @brief Raw-buffer form of app_bdr_request_is_private() for the classic
+ * ingress fast path, which looks up the cache before the request is parsed.
+ * @param buf Start of the request (request line first).
+ * @param hdr_end Position of the CRLFCRLF that ends the header block.
+ */
+static bool app_bdr_raw_request_is_private(const char *buf, const char *hdr_end) {
+    const char *line = memchr(buf, '\n', (size_t)(hdr_end - buf));
+    while (line && line < hdr_end) {
+        line++; /* first byte of the next header line */
+        size_t rest = (size_t)(hdr_end - line);
+        if ((rest >= 7 && strncasecmp(line, "Cookie:", 7) == 0) ||
+            (rest >= 14 && strncasecmp(line, "Authorization:", 14) == 0)) {
+            return true;
+        }
+        line = memchr(line, '\n', rest);
+    }
+    return false;
+}
+#endif
+
 /**
  * @brief Route and respond to one fully parsed HTTP/1.1 request.
  * Shared by the blocking keep-alive loop and the event-driven async path.
@@ -2989,10 +3069,12 @@ typedef enum {
 #ifndef CWIST_WASI_NO_SOCKETS
 /* Socket-server request serving: preview1 hosts dispatch in memory instead. */
 static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd,
-                                                   cwist_http_request *req,
-                                                   uint32_t priority_weight) {
+                                                   cwist_http_request *req) {
+    /* Credentialed requests neither read nor teach the shared cache (#706). */
+    bool bdr_private = app->bdr_ctx && app_bdr_request_is_private(req);
+
     // --- Big Dumb Reply (Read) ---
-    if (app->bdr_ctx && req->method == CWIST_HTTP_GET) {
+    if (app->bdr_ctx && !bdr_private && req->method == CWIST_HTTP_GET) {
         size_t cached_len = 0;
         bdr_blob_t *bdr_pin = NULL;
         const void *cached_blob;
@@ -3128,16 +3210,16 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
         if (app->bdr_ctx) {
             bool endpoint_file = cwist_endpoint_has(req->endpoint_opts, CWIST_ENDPOINT_FILE);
 
-            uint64_t scaled_threshold = (uint64_t)app->bdr_ctx->latency_threshold_ms;
-            if (priority_weight > 50) {
-                scaled_threshold = scaled_threshold * (100 - priority_weight) / 100;
-            }
+            uint64_t threshold = (uint64_t)app->bdr_ctx->latency_threshold_ms;
 
             /* A response that declares Vary differs by request headers the
              * path-keyed cache cannot see (e.g. fragment vs full page), so
-             * replaying it for another request would be wrong. */
+             * replaying it for another request would be wrong.  The same
+             * holds for credentialed requests and for responses that set a
+             * cookie or forbid shared caching (#706). */
             bool varies = cwist_http_header_get(res->headers, "Vary") != NULL;
-            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies) {
+            if (req->method == CWIST_HTTP_GET && !endpoint_file && !varies && !bdr_private &&
+                !app_bdr_response_is_private(res)) {
                 if (endpoint_fixed) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
@@ -3145,7 +3227,7 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                                             serialized->size);
                         cwist_sstring_destroy(serialized);
                     }
-                } else if (duration_ms > scaled_threshold) {
+                } else if (duration_ms > threshold) {
                     cwist_sstring *serialized = cwist_http_stringify_response(res);
                     if (serialized) {
                         cwist_bdr_put(app->bdr_ctx, "GET", req->path->data, serialized->data,
@@ -3312,13 +3394,6 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         return CWIST_ASYNC_DETACH;
     }
 
-    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
-    uint32_t tid = ttak_net_lattice_get_worker_id();
-    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
-    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
-
-    /* Jeungseung Gaebang Scaling for priority weighting. */
-    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
 
     /* One pipeline must not monopolize this reactor's other connections. */
     const unsigned int yield_batch = app_http_yield_batch();
@@ -3346,7 +3421,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         req->app = app;
         req->db = app->db;
         req->async_conn = conn;
-        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, priority_weight);
+        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req);
         /* Deferred: buffered coalesced responses from this turn already
          * drained inside app_serve_parsed_request, before the defer was
          * acked; the completion path owns the fd/conn now (it re-arms or
@@ -3418,16 +3493,8 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
         }
     }
 
-    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
-    uint32_t tid = ttak_net_lattice_get_worker_id();
-    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
-    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
-
-    /* Jeungseung Gaebang Scaling for priority weighting. */
-    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
-
-    /* Use stack-allocated buffer for zero-allocation ingress path.
-     * Aligned to cache line to optimize lattice-friendly access and prevent buffer loss. */
+    /* Stack buffer: the ingress read path allocates nothing. Aligned to a
+     * 64-byte cache line. */
     _Alignas(64) char read_buf[CWIST_HTTP_READ_BUFFER_SIZE];
     size_t buf_len = 0;
     read_buf[0] = '\0';
@@ -3456,7 +3523,8 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
 
                 char *hdr_end = (char *)cwist_simd_find_crlfcrlf(read_buf, buf_len);
                 if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
-                                read_buf[3] == ' ')) {
+                                read_buf[3] == ' ') &&
+                    !app_bdr_raw_request_is_private(read_buf, hdr_end)) {
                     const char *path_start = read_buf + 4;
                     const char *path_end =
                         (const char *)memchr(path_start, ' ', (size_t)(hdr_end - path_start));
@@ -3505,7 +3573,7 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
         req->app = app;
         req->db = app->db;
 
-        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, priority_weight);
+        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req);
         if (sr == APP_SERVE_DEFERRED) {
             /* The async completion owns the fd now; it re-arms on the pool
              * (keep-alive) or closes.  Do not close here. */
