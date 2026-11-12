@@ -689,6 +689,20 @@ static void https_park_stop(void) {}
 static void https_park_reopen(void) {}
 #endif
 
+bool cwist_https_yield(cwist_https_connection *conn) {
+    if (!conn || conn->fd < 0 || !conn->pool_handler || !g_https_pool_initialized) return false;
+    if (!atomic_load(&g_cwist_running)) return false;
+    pthread_mutex_lock(&g_https_pool.mutex);
+    bool waiting = g_https_pool.count > 0 && !g_https_pool.shutdown;
+    pthread_mutex_unlock(&g_https_pool.mutex);
+    if (!waiting) return false;
+    /* Same hand-off contract as a park: the pool handler must not close the
+     * connection when this thread returns. */
+    t_https_parked = true;
+    https_pool_submit_conn(conn, conn->pool_ctx, conn->pool_handler, conn->pool_user_ctx);
+    return true;
+}
+
 bool cwist_https_conn_idle(cwist_https_connection *conn) {
     if (!conn || !conn->ssl || conn->buf_len > 0) return false;
     if (SSL_pending(conn->ssl) > 0) return false;
