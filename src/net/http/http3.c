@@ -30,6 +30,7 @@
 #include "async_internal.h"
 #include "tls_info.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdatomic.h>
@@ -142,6 +143,14 @@ void cwist_h3_global_release(void) {
 #define H3_PSEUDO_PROTOCOL 0x10u
 
 typedef struct h3_stream_ctx {
+    /* Must stay the first member and NULL. Once a WebTransport session
+     * exists on a connection, lsquic's WT layer installs a connection-wide
+     * "stream committed" hook (wt_on_stream_committed in lsquic_wt.c) that
+     * reads every stream's context as its own struct wt_stream_ctx, whose
+     * first member is the session pointer, and follows it when non-NULL.
+     * Any ordinary request stream whose FIN is acked after the session
+     * opened would otherwise be dereferenced as a session (SIGSEGV). */
+    void *wt_ctx_guard;
     lsquic_stream_t *stream;
     cwist_http_request *req;
     cwist_http_response *res;
@@ -169,6 +178,10 @@ typedef struct h3_stream_ctx {
     int is_webtransport; /* extended CONNECT with :protocol webtransport */
     int wt_taken;
 #endif
+#ifdef CWIST_WT_SESSION_API
+    int is_dgram_channel; /* extended CONNECT with :protocol cwist-datagram */
+    int dgc_taken;        /* stream is this connection's datagram channel */
+#endif
 #ifdef CWIST_WT_STOCK_LSQUIC
     int wt_dispatched;                  /* session handler already ran */
     struct cwist_wt_handle *wt_session; /* CONNECT stream: accepted session */
@@ -176,6 +189,7 @@ typedef struct h3_stream_ctx {
 #endif
     struct cwist_h3_pending *pending; /* set while the handler's response is deferred */
 } h3_stream_ctx_t;
+_Static_assert(offsetof(h3_stream_ctx_t, wt_ctx_guard) == 0, "wt_ctx_guard must be first");
 
 /* ------------------------------------------------------------------ */
 /* Per-connection context                                             */
@@ -202,6 +216,14 @@ typedef struct h3_conn_ctx {
     pthread_mutex_t dgram_lock;
     h3_dgram_node_t *dgram_head;
     h3_dgram_node_t *dgram_tail;
+#ifdef CWIST_WT_SESSION_API
+    /* Datagram channel (see h3_dgc_accept): once the peer opens one, the
+     * application's raw datagrams travel as RFC 9297 HTTP Datagrams bound
+     * to this stream. Guarded by dgram_lock. */
+    lsquic_stream_t *dgc_stream;
+    h3_dgram_node_t *dgc_head;
+    h3_dgram_node_t *dgc_tail;
+#endif
 #ifdef CWIST_WT_STOCK_LSQUIC
     struct cwist_wt_handle *wt_sessions; /* accepted sessions, engine thread only */
 #endif
@@ -1201,6 +1223,16 @@ static void cwist_h3_on_conn_closed(lsquic_conn_t *conn) {
         pthread_mutex_lock(&cc->dgram_lock);
         h3_dgram_node_t *n = cc->dgram_head;
         cc->dgram_head = cc->dgram_tail = NULL;
+#ifdef CWIST_WT_SESSION_API
+        /* Normally emptied when the channel stream closes; splice any
+         * remainder onto the list freed below. */
+        if (cc->dgc_head) {
+            cc->dgc_tail->next = n;
+            n = cc->dgc_head;
+        }
+        cc->dgc_head = cc->dgc_tail = NULL;
+        cc->dgc_stream = NULL;
+#endif
         pthread_mutex_unlock(&cc->dgram_lock);
         while (n) {
             h3_dgram_node_t *next = n->next;
@@ -1606,6 +1638,10 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
         if (strcmp(name, ":protocol") == 0 && strcmp(value, "webtransport") == 0)
             st->is_webtransport = 1;
 #endif
+#ifdef CWIST_WT_SESSION_API
+        if (strcmp(name, ":protocol") == 0 && strcmp(value, CWIST_HTTP3_DATAGRAM_PROTOCOL) == 0)
+            st->is_dgram_channel = 1;
+#endif
     }
     /* RFC 9114 Section 4.3.1 completeness rules, evaluated once the whole
      * header block has been seen. */
@@ -1644,6 +1680,9 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
     }
 #ifdef CWIST_WEBTRANSPORT_SERVER
     if (!st->is_connect) st->is_webtransport = 0;
+#endif
+#ifdef CWIST_WT_SESSION_API
+    if (!st->is_connect) st->is_dgram_channel = 0;
 #endif
     st->headers_done = 1;
     char *seq_header = cwist_http_header_get(st->req->headers, "x-cwist-sequenced-data");
@@ -1879,6 +1918,188 @@ static bool h3_wt_datagram_payload(lsquic_conn_t *conn, const void *buf, size_t 
  * for writing.  Malformed requests get an inline 400 without dispatch.
  * Fatal read/allocation errors reset the stream.
  */
+#ifdef CWIST_WT_SESSION_API
+/* --- Datagram channel (CWIST_HTTP3_DATAGRAM_PROTOCOL) -----------------------
+ * With HTTP Datagrams negotiated, every DATAGRAM frame carries a quarter
+ * stream ID (RFC 9297 Section 2.1). A client that uses raw datagrams next to
+ * WebTransport opens one extended CONNECT stream with :protocol
+ * "cwist-datagram"; the server answers 200, keeps the stream open, and from
+ * then on delivers HTTP Datagrams on it to datagram_cb and sends
+ * cwist_http3_send_datagram() payloads on it. WebTransport datagrams are
+ * bound to their own session stream, so the two never mix. */
+
+static void h3_dgc_free_queue(h3_dgram_node_t *n) {
+    while (n) {
+        h3_dgram_node_t *next = n->next;
+        free(n->data);
+        free(n);
+        n = next;
+    }
+}
+
+/** @brief HTTP Datagram on the channel: hand the payload to datagram_cb. */
+static void h3_dgc_on_dg_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *h, const void *buf,
+                              size_t len) {
+    (void)h;
+    lsquic_conn_t *conn = lsquic_stream_conn(stream);
+    cwist_http3_context *ctx = h3_shared_ctx(conn);
+    if (!ctx || !buf || len == 0) return;
+    if (ctx->datagram_conn_cb) {
+        ctx->datagram_conn_cb(conn, buf, len, ctx->datagram_conn_user_ctx);
+    } else if (ctx->datagram_cb) {
+        ctx->datagram_cb(buf, len, ctx->datagram_user_ctx);
+    }
+}
+
+/** @brief Channel ready to send: emit the oldest queued payload. */
+static int h3_dgc_on_dg_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *h, size_t max_payload,
+                              lsquic_http_dg_consume_f consume) {
+    (void)h;
+    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
+    if (!cc) return -1;
+    pthread_mutex_lock(&cc->dgram_lock);
+    h3_dgram_node_t *n = cc->dgc_head;
+    if (n) {
+        cc->dgc_head = n->next;
+        if (!cc->dgc_head) cc->dgc_tail = NULL;
+    }
+    if (!cc->dgc_head) lsquic_stream_want_http_dg_write(stream, 0);
+    pthread_mutex_unlock(&cc->dgram_lock);
+    if (!n) return -1;
+    /* Raw datagram semantics: unreliable, never re-framed as a capsule. A
+     * payload that no longer fits (path MTU shrank) is dropped whole. */
+    int rc = -1;
+    if (n->len <= max_payload) {
+        rc = consume(stream, n->data, n->len, LSQUIC_HTTP_DG_SEND_DATAGRAM);
+    }
+    free(n->data);
+    free(n);
+    return rc;
+}
+
+static const struct lsquic_http_dg_if h3_dgc_if = {
+    .on_http_dg_write = h3_dgc_on_dg_write,
+    .on_http_dg_read = h3_dgc_on_dg_read,
+};
+
+/** @brief Answer a datagram-channel CONNECT and bind the stream as the channel. */
+static void h3_dgc_accept(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
+    lsquic_conn_t *conn = lsquic_stream_conn(stream);
+    cwist_http3_context *ctx = h3_shared_ctx(conn);
+    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(conn);
+    const char *status = "200";
+    bool bind = false;
+    if (!ctx || !cc || !(ctx->datagram_cb || ctx->datagram_conn_cb) ||
+        lsquic_stream_get_max_http_dg_size(stream) == 0) {
+        status = "501"; /* no datagram consumer, or HTTP Datagrams not negotiated */
+    } else {
+        pthread_mutex_lock(&cc->dgram_lock);
+        if (cc->dgc_stream) {
+            status = "409"; /* one channel per connection */
+        } else {
+            cc->dgc_stream = stream;
+            bind = true;
+        }
+        pthread_mutex_unlock(&cc->dgram_lock);
+    }
+
+    struct lsxpack_header hdr_arr[1];
+    char hbuf[64];
+    h3_hdr_out hdrs = {.arr = hdr_arr, .max = 1, .buf = hbuf, .cap = sizeof(hbuf)};
+    h3_hdr_out_add_str(&hdrs, ":status", status);
+    lsquic_http_headers_t headers = {.count = (int)hdrs.count, .headers = hdr_arr};
+    if (lsquic_stream_send_headers(stream, &headers, !bind) != 0) {
+        if (bind) {
+            pthread_mutex_lock(&cc->dgram_lock);
+            cc->dgc_stream = NULL;
+            pthread_mutex_unlock(&cc->dgram_lock);
+        }
+        lsquic_stream_close(stream);
+        return;
+    }
+    if (!bind) {
+        lsquic_stream_shutdown(stream, 1);
+        lsquic_stream_wantread(stream, 0);
+        return;
+    }
+    /* Outside on_write the header block only reaches the stream buffer, and
+     * the channel never sends FIN to push it out. */
+    lsquic_stream_flush(stream);
+    st->dgc_taken = 1;
+    lsquic_stream_set_http_dg_if(stream, &h3_dgc_if);
+    lsquic_stream_wantwrite(stream, 0);
+    lsquic_stream_wantread(stream, 1); /* to notice the peer closing it */
+}
+
+/** @brief Channel stream readable: it carries no body; discard and watch for FIN. */
+static void h3_dgc_on_read(lsquic_stream_t *stream) {
+    unsigned char buf[512];
+    ssize_t n;
+    while ((n = lsquic_stream_read(stream, buf, sizeof(buf))) > 0) {
+    }
+    if (n == 0) {
+        lsquic_stream_wantread(stream, 0);
+        lsquic_stream_shutdown(stream, 1);
+    }
+}
+
+/** @brief Channel stream closed: unbind it and drop what was queued for it. */
+static void h3_dgc_detach(lsquic_stream_t *stream) {
+    h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
+    if (!cc) return;
+    pthread_mutex_lock(&cc->dgram_lock);
+    h3_dgram_node_t *q = NULL;
+    if (cc->dgc_stream == stream) {
+        cc->dgc_stream = NULL;
+        q = cc->dgc_head;
+        cc->dgc_head = cc->dgc_tail = NULL;
+    }
+    pthread_mutex_unlock(&cc->dgram_lock);
+    h3_dgc_free_queue(q);
+}
+
+/**
+ * @brief Route a cwist_http3_send_datagram() payload through the channel.
+ * @return 0 queued on the channel, -1 refused (too large for the channel or
+ *         out of memory), 1 no channel: use the raw DATAGRAM path.
+ */
+static int h3_dgc_send(h3_conn_ctx_t *cc, const void *data, size_t len) {
+    /* Raw malloc, as for the connection's DATAGRAM queue: nodes are queued
+     * by whatever thread calls cwist_http3_send_datagram() and freed on the
+     * engine thread, so no per-thread cwist_alloc scope owns them. */
+    pthread_mutex_lock(&cc->dgram_lock);
+    lsquic_stream_t *stream = cc->dgc_stream;
+    if (!stream) {
+        pthread_mutex_unlock(&cc->dgram_lock);
+        return 1;
+    }
+    size_t max = lsquic_stream_get_max_http_dg_size(stream);
+    h3_dgram_node_t *node = (len <= max) ? malloc(sizeof(*node)) : NULL;
+    if (node) {
+        node->data = malloc(len);
+        if (!node->data) {
+            free(node);
+            node = NULL;
+        }
+    }
+    if (!node) {
+        pthread_mutex_unlock(&cc->dgram_lock);
+        return -1;
+    }
+    memcpy(node->data, data, len);
+    node->len = len;
+    node->next = NULL;
+    if (cc->dgc_tail)
+        cc->dgc_tail->next = node;
+    else
+        cc->dgc_head = node;
+    cc->dgc_tail = node;
+    lsquic_stream_want_http_dg_write(stream, 1);
+    pthread_mutex_unlock(&cc->dgram_lock);
+    return 0;
+}
+#endif /* CWIST_WT_SESSION_API */
+
 static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (!st) return;
@@ -1896,8 +2117,21 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
         return;
     }
 #endif
+#ifdef CWIST_WT_SESSION_API
+    if (st->dgc_taken) {
+        h3_dgc_on_read(stream);
+        return;
+    }
+#endif
     h3_process_stream_headers(stream, st);
     if (st->malformed) return;
+#ifdef CWIST_WT_SESSION_API
+    /* The channel never ends its request, so it opens on its header block. */
+    if (st->headers_done && st->is_dgram_channel) {
+        h3_dgc_accept(stream, st);
+        return;
+    }
+#endif
 #ifdef CWIST_WT_STOCK_LSQUIC
     /* An extended CONNECT never sends FIN, so the session is opened as soon
      * as its header block is in rather than at end of stream. */
@@ -2494,6 +2728,12 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (st) {
+        /* lsquic's WebTransport layer may still read the stream context
+         * after on_close (see wt_ctx_guard); never leave it dangling. */
+        lsquic_stream_set_ctx(stream, NULL);
+#ifdef CWIST_WT_SESSION_API
+        if (st->dgc_taken) h3_dgc_detach(stream);
+#endif
 #ifdef CWIST_WT_STOCK_LSQUIC
         if (st->wt_session) {
             h3_wt_unlink_session(st->wt_session);
@@ -2560,6 +2800,10 @@ static ssize_t cwist_h3_on_dg_write(lsquic_conn_t *conn, void *buf, size_t len) 
  */
 static void cwist_h3_on_datagram(lsquic_conn_t *conn, const void *buf, size_t len) {
     cwist_http3_context *ctx = h3_shared_ctx(conn);
+    if (ctx && ctx->datagram_conn_cb) {
+        ctx->datagram_conn_cb(conn, buf, len, ctx->datagram_conn_user_ctx);
+        return;
+    }
     if (ctx && ctx->datagram_cb) {
 #ifdef CWIST_WT_STOCK_LSQUIC
         /* A WebTransport session's datagram reaches the app without its
@@ -3324,9 +3568,12 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
         settings.es_datagrams = 1;
         settings.es_max_webtransport_sessions = 1;
         settings.es_reset_stream_at = 1;
-    } else {
-        settings.es_http_datagrams = ctx->datagram_enabled;
     }
+    /* Without a WebTransport handler H3_DATAGRAM stays off: nothing on this
+     * server could consume HTTP Datagrams, and advertising it would turn
+     * every DATAGRAM frame on the connection into one (RFC 9297 Section
+     * 2.1), so raw RFC 9221 datagrams from a client that also offers
+     * H3_DATAGRAM would be misread. */
 #endif
     settings.es_max_cfcw = 16 * 1024 * 1024;
     settings.es_max_sfcw = 8 * 1024 * 1024;
@@ -4201,6 +4448,16 @@ void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
     }
 }
 
+void cwist_http3_set_datagram_conn_callback(cwist_http3_context *ctx,
+                                            void (*cb)(void *conn, const void *data, size_t len,
+                                                       void *user_ctx),
+                                            void *user_ctx) {
+    if (ctx) {
+        ctx->datagram_conn_cb = cb;
+        ctx->datagram_conn_user_ctx = user_ctx;
+    }
+}
+
 /**
  * @brief Queue an outgoing H3 datagram on a connection.
  * @param conn lsquic connection (as seen in cwist_http_request::private_data
@@ -4223,6 +4480,11 @@ int cwist_http3_send_datagram(void *conn, const void *data, size_t len) {
 
     h3_conn_ctx_t *cc = (h3_conn_ctx_t *)lsquic_conn_get_ctx(c);
     if (!cc) return -1;
+
+#ifdef CWIST_WT_SESSION_API
+    int routed = h3_dgc_send(cc, data, len);
+    if (routed != 1) return routed; /* 0 queued on the channel, -1 refused */
+#endif
 
     pthread_mutex_lock(&cc->dgram_lock);
     size_t previous_min = lsquic_conn_get_min_datagram_size(c);

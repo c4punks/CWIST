@@ -64,6 +64,27 @@ WebTransport는 애플리케이션에 신뢰할 수 있는 스트림과 선택�
 메시지를 나눌 때 CWIST의 순번 도우미로 애플리케이션 수준의 조각난 페이로드를 다시 조립할 수
 있습니다.
 
+### WebTransport와 raw 데이터그램 함께 쓰기
+
+WebTransport에 필요한 HTTP 데이터그램(RFC 9297)을 양쪽이 켜면, 그 연결의 모든
+QUIC DATAGRAM 프레임은 quarter stream ID로 시작합니다. 그래서 RFC 9221 raw
+payload를 같은 프레임에 그대로 실을 수 없습니다. CWIST는 둘을 이렇게
+나눕니다.
+
+- 서버: `cwist_http3_set_datagram_conn_callback()`을 등록합니다. raw payload가
+  연결과 함께 전달되므로 `cwist_http3_send_datagram(conn, ...)`으로 답할 수
+  있습니다. WebTransport 세션 데이터그램은 계속
+  `cwist_http3_set_datagram_callback()`으로 갑니다.
+- 클라이언트: 연결 전에 `cwist_http3_client_enable_datagram_channel(client, 1)`을
+  호출합니다. WebTransport를 켠 서버와 연결하면 첫
+  `cwist_http3_client_send_datagram()`이 데이터그램 채널(`:protocol`이
+  `cwist-datagram`인 extended CONNECT 스트림)을 열고, 이후 raw payload는 그
+  스트림에 묶인 HTTP 데이터그램으로 오갑니다. HTTP 데이터그램을 켜지 않은 서버와는
+  일반 DATAGRAM 프레임을 씁니다.
+
+채널 토큰은 CWIST 전용입니다. HTTP 데이터그램을 켠 다른 서버는 이 요청을
+거절하며, 그때 전송 호출은 상대가 잘못 해석할 프레임을 보내지 않고 실패합니다.
+
 ## 3. 안전하게 운영하기
 
 동시 스트림, 버퍼에 쌓인 바이트, 유휴 시간에 세션별 한도를 두세요. 세션을 할당하기 전에
