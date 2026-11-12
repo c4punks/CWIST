@@ -178,6 +178,15 @@ Modules</h1>
 <li><b>Header:</b> <code>&lt;<a class="el" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto-Caching Layer for repetitive requests.">cwist/sys/app/big_dumb_reply.h</a>&gt;</code></li>
 <li><b>Functions:</b> <code>cwist_bdr_get</code>, <code>cwist_bdr_put</code>, <code>cwist_bdr_set_limits</code>.</li>
 <li><b>Guard Rails:</b> Entries expire after a configurable TTL or hit budget and the cache maintains a soft byte cap (32 MiB by default). Use <code>cwist_app_configure_bdr</code> to tune per-application behavior.</li>
+<li><p class="startli"><b>What gets cached:</b> the cache is keyed by method and path only, so it learns a response only when all of these hold:</p><ul>
+<li>the request is a <code>GET</code> with no query string and carries neither <code>Cookie</code> nor <code>Authorization</code>;</li>
+<li>the handler took longer than the latency threshold (10 ms by default);</li>
+<li>the response has no <code>Vary</code> or <code>Set-Cookie</code> header, and its <code>Cache-Control</code> names none of <code>private</code>, <code>no-store</code> or <code>no-cache</code>;</li>
+<li>the route is not a file endpoint.</li>
+</ul>
+<p class="startli">Learning happens on the classic (thread-pool) path; the C1M path only reads. A request carrying <code>Cookie</code> or <code>Authorization</code> is never answered from the cache.</p>
+</li>
+<li><b>Opting a route out:</b> send <code>Cache-Control: no-store</code> (or <code>private</code> for per-user content) from the handler. Responses that set a cookie are excluded automatically.</li>
 </ul>
 <h1><a class="anchor" id="autotoc_md796"></a>
 LibTTAK Memory Features</h1>
