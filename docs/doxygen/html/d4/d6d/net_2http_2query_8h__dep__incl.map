@@ -42,8 +42,8 @@
 <area shape="poly" id="edge37_Node000002_Node000062" title=" " alt="" coords="2014,117,1574,118,972,125,680,133,430,145,250,162,195,172,169,183,163,193,161,203,170,226,190,248,213,267,210,271,186,252,166,228,156,204,158,191,165,179,194,167,249,157,429,140,679,128,972,120,1574,112,2014,112"/>
 <area shape="rect" id="Node000064" href="$dd/dff/http3_8h.html" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="584,357,747,397"/>
 <area shape="poly" id="edge43_Node000002_Node000064" title=" " alt="" coords="2015,119,1686,125,1260,137,882,156,757,169,719,176,701,184,685,202,674,223,662,271,661,319,665,357,660,357,656,319,657,271,669,221,681,199,698,179,718,171,757,164,882,151,1259,131,1686,119,2015,113"/>
-<area shape="rect" id="Node000065" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="366,181,528,221"/>
-<area shape="poly" id="edge45_Node000002_Node000065" title=" " alt="" coords="2015,117,1760,118,1397,126,976,147,759,163,547,184,529,186,528,181,547,179,759,158,975,141,1397,121,1760,113,2015,111"/>
+<area shape="rect" id="Node000066" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="366,181,528,221"/>
+<area shape="poly" id="edge45_Node000002_Node000066" title=" " alt="" coords="2015,117,1760,118,1397,126,976,147,759,163,547,184,529,186,528,181,547,179,759,158,975,141,1397,121,1760,113,2015,111"/>
 <area shape="rect" id="Node000067" href="$d9/df2/http__client_8h.html" title="Unified HTTP/1.1 and HTTP/2 client using libcurl." alt="" coords="1416,181,1579,221"/>
 <area shape="poly" id="edge46_Node000002_Node000067" title=" " alt="" coords="2015,128,1823,152,1598,184,1580,187,1579,182,1597,179,1822,147,2015,123"/>
 <area shape="rect" id="Node000038" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="1250,277,1385,302"/>

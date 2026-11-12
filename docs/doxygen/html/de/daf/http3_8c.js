@@ -39,6 +39,7 @@ var http3_8c =
     [ "cwist_http3_send_datagram", "de/daf/http3_8c.html#a99860db5e8d04b8134684ce9ae5ebbc1", null ],
     [ "cwist_http3_server_loop", "de/daf/http3_8c.html#a8d60b85d41105c404f177a04a03f0d51", null ],
     [ "cwist_http3_set_datagram_callback", "de/daf/http3_8c.html#a48b148a623a57a569bbf3b6601e4407a", null ],
+    [ "cwist_http3_set_datagram_conn_callback", "de/daf/http3_8c.html#a1a079c4d5a24564e3d4dc0c2a03938cb", null ],
     [ "cwist_http3_set_datagram_enabled", "de/daf/http3_8c.html#ab3d036544ab8151674cbf65af2ada7d5", null ],
     [ "cwist_http3_set_early_data", "de/daf/http3_8c.html#a883319bf0c3a19099bb8a40974d4bb59", null ],
     [ "cwist_http3_set_early_data_guard", "de/daf/http3_8c.html#a265f06e9373148103e277107a8984b12", null ],

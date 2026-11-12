@@ -3,6 +3,8 @@ var structcwist__http3__context =
     [ "allow_migration", "d9/dae/structcwist__http3__context.html#a791b3f0161b4db5aad4d822d9b8ed4c4", null ],
     [ "async_queue", "d9/dae/structcwist__http3__context.html#aa4dc2d3ad070f9bcc4bf636e65d8e786", null ],
     [ "datagram_cb", "d9/dae/structcwist__http3__context.html#aead3a53aca2ff2f1d1a69b46f732ea96", null ],
+    [ "datagram_conn_cb", "d9/dae/structcwist__http3__context.html#a4c5031be9d3f677dd9e39da58a9d19d2", null ],
+    [ "datagram_conn_user_ctx", "d9/dae/structcwist__http3__context.html#a6eadcd158da86161a05a60182dc0f142", null ],
     [ "datagram_enabled", "d9/dae/structcwist__http3__context.html#a751d83957d59560e48eda5a2f915279b", null ],
     [ "datagram_user_ctx", "d9/dae/structcwist__http3__context.html#ad01f3f1bb72329239f9a7f57e93616b9", null ],
     [ "early_data_enabled", "d9/dae/structcwist__http3__context.html#a6e6eb86c8510232c97739ea248e5434e", null ],
