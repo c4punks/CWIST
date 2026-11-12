@@ -929,6 +929,7 @@ TEST_TARGETS = test_worker_affinity \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
+               test_idle_reap \
                test_classic_shutdown \
                test_compress \
                test_builtin_mw_deferred \
@@ -1327,6 +1328,10 @@ test_listen_signal_restore: $(LIB_NAME) tests/test_listen_signal_restore.c
 test_listen_ex: $(LIB_NAME) tests/test_listen_ex.c
 	$(CC) $(CFLAGS) -o test_listen_ex tests/test_listen_ex.c $(LIB_NAME) $(LIBS)
 	./test_listen_ex
+
+test_idle_reap: $(LIB_NAME) tests/test_idle_reap.c
+	$(CC) $(CFLAGS) -o test_idle_reap tests/test_idle_reap.c $(LIB_NAME) $(LIBS)
+	./test_idle_reap
 
 test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
 	$(CC) $(CFLAGS) -o test_classic_shutdown tests/test_classic_shutdown.c $(LIB_NAME) $(LIBS)

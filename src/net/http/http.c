@@ -227,7 +227,19 @@ typedef struct {
     pthread_t thread;
     cwist_reactor_t *reactor;
     uint32_t worker_id;
+    /* Idle keep-alive sweep: the timer and the list run on the reactor
+     * thread; reap_incoming is the lock-free handoff stack the acceptor
+     * pushes new connections onto before their first arm. */
+    cwist_reactor_timer_t reap_timer;
+    cwist_http_async_conn_t *reap_head;
+    _Atomic(cwist_http_async_conn_t *) reap_incoming;
 } http_thread_worker_t;
+
+/* Idle keep-alive sweep, defined with the async connection path below. */
+static void http_reap_sweep_cb(void *ctx);
+static uint64_t http_reap_interval_us(void);
+static void http_reap_teardown(http_thread_worker_t *w);
+static void http_reap_unlink(cwist_http_async_conn_t *conn);
 
 static size_t g_rr_index = 0;
 static long g_http_thread_count = 0;
@@ -693,6 +705,11 @@ int cwist_http_pool_init_mode(bool use_c1m) {
              * HTTP connection state machine (no-op where unsupported). */
             cwist_reactor_set_rx_cb(g_workers[i].reactor, http_rx_recv_cb);
             g_workers[i].worker_id = (uint32_t)i;
+            atomic_init(&g_workers[i].reap_incoming, NULL);
+            /* Armed before the reactor runs, which the timer API allows. */
+            cwist_reactor_timer_init(&g_workers[i].reap_timer, http_reap_sweep_cb, &g_workers[i]);
+            cwist_reactor_timer_arm(g_workers[i].reactor, &g_workers[i].reap_timer,
+                                    http_reap_interval_us());
             if (pthread_create(&g_workers[i].thread, NULL, http_pool_worker, &g_workers[i]) != 0) {
                 return -1;
             }
@@ -880,6 +897,7 @@ void cwist_http_pool_destroy(void) {
                 g_workers[i].reactor = NULL;
             }
         }
+        for (int i = 0; i < g_http_thread_count; i++) http_reap_teardown(&g_workers[i]);
         cwist_free(g_workers);
         g_workers = NULL;
         if (g_worker_loads) {
@@ -957,6 +975,128 @@ static uint32_t http_async_stash_idle_sec(void) {
     return (uint32_t)v;
 }
 
+/* --- Idle keep-alive sweep ------------------------------------------------
+ * http_async_event_cb() reaps a keep-alive connection past its idle timeout,
+ * but only when an event arrives. A client that opens a connection (or
+ * finishes a request) and then sends nothing never fires one, so without a
+ * timer it holds its fd, shell and reactor slot forever. Each C1M worker
+ * therefore runs a periodic sweep over the connections it owns and calls
+ * shutdown() on those that have waited longer than the keep-alive timeout.
+ * shutdown() completes the armed POLL or RECV, and the existing event path
+ * closes the connection on its owner thread, so ownership never moves.
+ *
+ * Only connections with an armed receive wait are candidates: deferred
+ * responses (SSE, long poll) and parked writers have their own deadlines. */
+
+#define CWIST_HTTP_REAP_ST_NONE 0
+#define CWIST_HTTP_REAP_ST_INCOMING 1
+#define CWIST_HTTP_REAP_ST_LISTED 2
+
+static uint32_t cwist_http_keep_alive_timeout_sec(void);
+
+/** Worker that owns @p conn's sweep list, or NULL once the pool is gone. */
+static http_thread_worker_t *http_reap_owner(const cwist_http_async_conn_t *conn) {
+    if (!g_workers || conn->worker_id >= (uint32_t)g_http_thread_count) return NULL;
+    return &g_workers[conn->worker_id];
+}
+
+/** Acceptor side: publish @p conn to its worker before the first arm. */
+static void http_reap_push(http_thread_worker_t *w, cwist_http_async_conn_t *conn) {
+    conn->reap_state = CWIST_HTTP_REAP_ST_INCOMING;
+    cwist_http_async_conn_t *head = atomic_load_explicit(&w->reap_incoming, memory_order_relaxed);
+    do {
+        conn->reap_in_next = head;
+    } while (!atomic_compare_exchange_weak_explicit(&w->reap_incoming, &head, conn,
+                                                    memory_order_release, memory_order_relaxed));
+}
+
+/** Owner thread: move every handed-off connection onto the sweep list. */
+static void http_reap_drain_incoming(http_thread_worker_t *w) {
+    cwist_http_async_conn_t *c =
+        atomic_exchange_explicit(&w->reap_incoming, NULL, memory_order_acquire);
+    while (c) {
+        cwist_http_async_conn_t *next = c->reap_in_next;
+        c->reap_in_next = NULL;
+        c->reap_prev = NULL;
+        c->reap_next = w->reap_head;
+        if (w->reap_head) w->reap_head->reap_prev = c;
+        w->reap_head = c;
+        c->reap_state = CWIST_HTTP_REAP_ST_LISTED;
+        c = next;
+    }
+}
+
+/** Owner thread: drop @p conn from its worker's sweep list before it is freed. */
+static void http_reap_unlink(cwist_http_async_conn_t *conn) {
+    if (conn->reap_state == CWIST_HTTP_REAP_ST_NONE) return;
+    http_thread_worker_t *w = http_reap_owner(conn);
+    if (!w) {
+        conn->reap_state = CWIST_HTTP_REAP_ST_NONE;
+        return;
+    }
+    if (conn->reap_state == CWIST_HTTP_REAP_ST_INCOMING) http_reap_drain_incoming(w);
+    if (conn->reap_prev)
+        conn->reap_prev->reap_next = conn->reap_next;
+    else if (w->reap_head == conn)
+        w->reap_head = conn->reap_next;
+    if (conn->reap_next) conn->reap_next->reap_prev = conn->reap_prev;
+    conn->reap_prev = conn->reap_next = NULL;
+    conn->reap_state = CWIST_HTTP_REAP_ST_NONE;
+}
+
+/** Sweep period: half the keep-alive timeout, clamped to [1 s, 30 s]. */
+static uint64_t http_reap_interval_us(void) {
+    uint32_t sec = cwist_http_keep_alive_timeout_sec() / 2;
+    if (sec < 1) sec = 1;
+    if (sec > 30) sec = 30;
+    return (uint64_t)sec * 1000000ull;
+}
+
+static void http_async_conn_release(cwist_http_async_conn_t *conn);
+
+/** Reactor timer: wake idle keep-alive connections past the timeout. */
+static void http_reap_sweep_cb(void *ctx) {
+    http_thread_worker_t *w = (http_thread_worker_t *)ctx;
+    http_reap_drain_incoming(w);
+    uint32_t now = cwist_fast_monotonic_sec();
+    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
+    cwist_http_async_conn_t *c = w->reap_head;
+    while (c) {
+        cwist_http_async_conn_t *next = c->reap_next;
+        if (__atomic_load_n(&c->reap_dead, __ATOMIC_ACQUIRE)) {
+            http_async_conn_release(c);
+        } else if (c->reap_waiting && !c->reap_kicked && c->last_active_sec > 0 &&
+                   now - c->last_active_sec > timeout_sec) {
+            /* Completes the armed wait; http_async_event_cb (POLL) sees the
+             * idle deadline and closes, a RECV completes with EOF. */
+            c->reap_kicked = true;
+            shutdown(c->fd, SHUT_RDWR);
+            cwist_metric_inc(cwist_metrics_registry(), CWIST_METRIC_HTTP_IDLE_REAPED);
+        }
+        c = next;
+    }
+    if (!atomic_load(&g_http_pool_stopping))
+        cwist_reactor_timer_arm(w->reactor, &w->reap_timer, http_reap_interval_us());
+}
+
+/** Pool teardown, after every worker thread joined: forget the lists so a
+ * connection released later (close_orphan) never walks freed worker state. */
+static void http_reap_teardown(http_thread_worker_t *w) {
+    http_reap_drain_incoming(w);
+    cwist_http_async_conn_t *c = w->reap_head;
+    while (c) {
+        cwist_http_async_conn_t *next = c->reap_next;
+        if (__atomic_load_n(&c->reap_dead, __ATOMIC_ACQUIRE)) {
+            http_async_conn_release(c);
+        } else {
+            c->reap_prev = c->reap_next = NULL;
+            c->reap_state = CWIST_HTTP_REAP_ST_NONE;
+        }
+        c = next;
+    }
+    w->reap_head = NULL;
+}
+
 /**
  * @brief Release an async connection shell and its stashes.
  *
@@ -965,6 +1105,7 @@ static uint32_t http_async_stash_idle_sec(void) {
  */
 static void http_async_conn_release(cwist_http_async_conn_t *conn) {
     if (!conn) return;
+    http_reap_unlink(conn);
     if (g_worker_loads && conn->worker_id < (uint32_t)g_http_thread_count) {
         atomic_fetch_sub_explicit(&g_worker_loads[conn->worker_id], 1, memory_order_relaxed);
     }
@@ -1054,6 +1195,10 @@ static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
         .reactor = reactor,
         .conn = conn,
     };
+    /* Idle sweep: the wait starts now. Written before arming, because once
+     * the wait is armed the owner thread may complete and free conn. */
+    conn->last_active_sec = cwist_fast_monotonic_sec();
+    conn->reap_waiting = true;
     if (cwist_reactor_rx_supported(reactor) && !conn->peer_eof && !conn->rx_recv_inflight &&
         !conn->rx_prefers_poll) {
         /* Virgin stash: grow to the 4 KiB idle floor, not the 16 KiB read
@@ -1122,6 +1267,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
     if (action == CWIST_ASYNC_DETACH) {
         /* The handler owns fd now (h2c preface, protocol upgrade).  Free the
          * shell but never touch the fd. */
+        http_reap_unlink(conn);
         if (g_worker_loads && conn->worker_id < (uint32_t)g_http_thread_count) {
             atomic_fetch_sub_explicit(&g_worker_loads[conn->worker_id], 1, memory_order_relaxed);
         }
@@ -1168,6 +1314,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
 static void http_rx_recv_cb(void *conn_ptr, int res) {
     cwist_http_async_conn_t *conn = (cwist_http_async_conn_t *)conn_ptr;
     conn->rx_recv_inflight = false;
+    conn->reap_waiting = false;
 
     if (res == -ECANCELED) {
         /* The deferred submission failed (SQ wedged) or the ring tore down;
@@ -1218,6 +1365,7 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
          * bytes again (pipelining detected), keeping the steady-state op
          * count identical to the legacy path. */
         conn->rx_prefers_poll = true;
+        conn->reap_waiting = true;
         http_async_ctx_t next = {
             .client_fd = conn->fd,
             .handler = conn->handler,
@@ -1267,6 +1415,7 @@ static void http_async_event_cb(int fd, void *ctx) {
     http_async_ctx_t *c = (http_async_ctx_t *)ctx;
     cwist_http_async_conn_t *conn = c->conn;
     cwist_async_handler_t handler = c->handler;
+    conn->reap_waiting = false;
 
     uint32_t now = cwist_fast_monotonic_sec();
     uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
@@ -1484,6 +1633,7 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
     }
     conn->reactor = w->reactor;
     conn->handler = handler;
+    http_reap_push(w, conn);
 
     /* RX-uring: when the worker reactor has a real io_uring ring, the first
      * receive wait is a RECV SQE into the (freshly grown) stash whose
@@ -1498,7 +1648,10 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
             fprintf(stderr, "[async] submit-add failed fd=%d total=%ld worker=%zu\n", client_fd, n,
                     worker_idx);
     }
-    http_async_conn_release(conn);
+    /* conn is already on the worker's handoff stack, which only the owner
+     * thread may unlink from: mark it dead and let the next sweep free it. */
+    conn->fd = -1;
+    __atomic_store_n(&conn->reap_dead, true, __ATOMIC_RELEASE);
     close(client_fd);
     return false;
 }

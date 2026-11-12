@@ -521,8 +521,10 @@ for C100K and above:
 
 Known limits of the current async path: HTTPS still runs the request phase
 on pool threads, a handler that writes faster than the socket drains waits
-inside the reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`), and idle
-cleartext keep-alive connections are not yet reaped by a timer.
+inside the reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`). Idle
+cleartext keep-alive connections are closed by a per-worker sweep timer once
+they wait longer than `CWIST_HTTP_KEEP_ALIVE_TIMEOUT` (default 15 s), counted
+in `cwist_http_idle_reaped_total`.
 
 **TLS at C1M (since v3.7.1).** A pool thread no longer waits on an idle TLS
 connection: the connection is parked in a per-process epoll set and handed
