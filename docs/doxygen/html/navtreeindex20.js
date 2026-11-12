@@ -1,5 +1,9 @@
 var NAVTREEINDEX20 =
 {
+"df/d57/latin__square_8h.html#affba43871e18da9a641166fb34072589":[59,0,2,0,1,1,9],
+"df/d57/latin__square_8h.html#affea9d7e9eb21a0542ffaacd184076d3":[59,0,2,0,1,1,7],
+"df/d57/latin__square_8h_source.html":[59,0,2,0,1,1],
+"df/d58/net_2http_2sse_8h.html":[59,0,1,0,2,3,15],
 "df/d58/net_2http_2sse_8h.html#a0921a5a6899fa86e558f2f3e48010d5a":[59,0,1,0,2,3,15,4],
 "df/d58/net_2http_2sse_8h.html#a11159f8f94ba6e260a8705bddc0cb8fd":[59,0,1,0,2,3,15,10],
 "df/d58/net_2http_2sse_8h.html#a142c15574a54fd8be066c83f2c7f3479":[59,0,1,0,2,3,15,13],
@@ -245,9 +249,5 @@ var NAVTREEINDEX20 =
 "df/dac/siphash_8h.html#afc6a74b5cc4fd3de6eebb0e7d83604c0":[59,0,1,0,19,0],
 "df/dac/siphash_8h_source.html":[59,0,1,0,19],
 "df/dad/http3__client_8h.html":[59,0,1,0,2,3,8],
-"df/dad/http3__client_8h.html#a03516b78e233ff5f770ea7f78d16f12d":[59,0,1,0,2,3,8,10],
-"df/dad/http3__client_8h.html#a051ca5d9ea16c24867801ccde546cd42":[59,0,1,0,2,3,8,14],
-"df/dad/http3__client_8h.html#a0d80519ea3bf37670733582ead5c691e":[59,0,1,0,2,3,8,30],
-"df/dad/http3__client_8h.html#a1a558af1f6551d6c6d42e83575c90c6a":[59,0,1,0,2,3,8,12],
-"df/dad/http3__client_8h.html#a1cebceb867dbe446f274df968cb30cdd":[59,0,1,0,2,3,8,11]
+"df/dad/http3__client_8h.html#a03516b78e233ff5f770ea7f78d16f12d":[59,0,1,0,2,3,8,10]
 };

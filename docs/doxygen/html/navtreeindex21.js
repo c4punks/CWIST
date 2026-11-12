@@ -1,5 +1,9 @@
 var NAVTREEINDEX21 =
 {
+"df/dad/http3__client_8h.html#a051ca5d9ea16c24867801ccde546cd42":[59,0,1,0,2,3,8,14],
+"df/dad/http3__client_8h.html#a0d80519ea3bf37670733582ead5c691e":[59,0,1,0,2,3,8,30],
+"df/dad/http3__client_8h.html#a1a558af1f6551d6c6d42e83575c90c6a":[59,0,1,0,2,3,8,12],
+"df/dad/http3__client_8h.html#a1cebceb867dbe446f274df968cb30cdd":[59,0,1,0,2,3,8,11],
 "df/dad/http3__client_8h.html#a21c7ecc5b2c262e477020b8a8d56fcd8":[59,0,1,0,2,3,8,7],
 "df/dad/http3__client_8h.html#a28c4dd00a14d72470fd8a43f6b7eb1fc":[59,0,1,0,2,3,8,13],
 "df/dad/http3__client_8h.html#a3c2b697641812cf3867fd89d504b19c6":[59,0,1,0,2,3,8,8],
@@ -227,8 +231,8 @@ var NAVTREEINDEX21 =
 "dir_fd06e4bf241e37eebda02ebf3082c3eb.html":[59,0,2,3,0],
 "dir_fd94c5c8b4925c340f10cd382b3978ca.html":[59,0,1,0,0,9],
 "files.html":[59,0],
-"functions.html":[58,2,0],
 "functions.html":[58,2,0,0],
+"functions.html":[58,2,0],
 "functions_a.html":[58,2,0,1],
 "functions_b.html":[58,2,0,2],
 "functions_c.html":[58,2,0,3],
@@ -245,9 +249,5 @@ var NAVTREEINDEX21 =
 "functions_m.html":[58,2,0,13],
 "functions_n.html":[58,2,0,14],
 "functions_o.html":[58,2,0,15],
-"functions_p.html":[58,2,0,16],
-"functions_q.html":[58,2,0,17],
-"functions_r.html":[58,2,0,18],
-"functions_s.html":[58,2,0,19],
-"functions_t.html":[58,2,0,20]
+"functions_p.html":[58,2,0,16]
 };
