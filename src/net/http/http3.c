@@ -2064,6 +2064,9 @@ static void h3_dgc_detach(lsquic_stream_t *stream) {
  *         out of memory), 1 no channel: use the raw DATAGRAM path.
  */
 static int h3_dgc_send(h3_conn_ctx_t *cc, const void *data, size_t len) {
+    /* Raw malloc, as for the connection's DATAGRAM queue: nodes are queued
+     * by whatever thread calls cwist_http3_send_datagram() and freed on the
+     * engine thread, so no per-thread cwist_alloc scope owns them. */
     pthread_mutex_lock(&cc->dgram_lock);
     lsquic_stream_t *stream = cc->dgc_stream;
     if (!stream) {
