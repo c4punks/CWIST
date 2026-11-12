@@ -1436,6 +1436,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http3 \
                test_http3_defer \
                test_http3_client_datagram \
+               test_http3_datagram_channel \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
@@ -2858,6 +2859,17 @@ else
 # CWIST_HTTP3=0: WebTransport rides on HTTP/3, so its tests are compiled out.
 test_webtransport test_webtransport_client_api:
 	@echo "CWIST_HTTP3=0: skipping $@"
+endif
+
+# Raw datagrams next to WebTransport on one client connection (#604): needs
+# both WebTransport roles on the session-API lsquic.
+ifeq ($(CWIST_HTTP3)$(CWIST_HAVE_LSQUIC_WT)$(if $(filter client,$(CWIST_WT_ROLES)),c)$(if $(filter server,$(CWIST_WT_ROLES)),s),11cs)
+test_http3_datagram_channel: $(LIB_NAME) tests/test_http3_datagram_channel.c
+	$(CC) $(CFLAGS) -o $@ tests/test_http3_datagram_channel.c $(LIB_NAME) $(LIBS)
+	./$@
+else
+test_http3_datagram_channel:
+	@echo "needs HTTP/3 with both WebTransport roles: skipping $@"
 endif
 
 # WebTransport server end to end: tests/webtransport_echo_server driven by

@@ -4351,6 +4351,8 @@ static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
     dst->datagram_enabled = src->datagram_enabled;
     dst->datagram_cb = src->datagram_cb;
     dst->datagram_user_ctx = src->datagram_user_ctx;
+    dst->datagram_conn_cb = src->datagram_conn_cb;
+    dst->datagram_conn_user_ctx = src->datagram_conn_user_ctx;
     dst->wt_handler = src->wt_handler;
     dst->idle_timeout_ms = src->idle_timeout_ms;
     dst->handshake_timeout_ms = src->handshake_timeout_ms;
