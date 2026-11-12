@@ -139,6 +139,21 @@ static inline long h2_env_long(const char *env, long fallback, long min) {
  * same name (read once at first use).
  * @return Idle timeout in milliseconds.
  */
+/**
+ * @brief Longest stretch, in microseconds, a busy connection keeps an HTTPS
+ * pool thread while other connections wait for one. Past it the session is
+ * re-queued behind them at the next point with no stream in flight.
+ * CWIST_HTTP2_YIELD_US overrides the default; 0 disables yielding.
+ */
+#define CWIST_HTTP2_YIELD_US_DEFAULT 250
+static long h2_yield_us(void) {
+    static long yield_us = -1;
+    if (yield_us < 0) {
+        yield_us = h2_env_long(getenv("CWIST_HTTP2_YIELD_US"), CWIST_HTTP2_YIELD_US_DEFAULT, 0);
+    }
+    return yield_us;
+}
+
 static int h2_idle_timeout_ms(void) {
     static int timeout_ms = 0;
     if (timeout_ms == 0) {
@@ -3458,6 +3473,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
      * conn->proto_state; a fresh one sets the session up here. */
     h2_session *st = (h2_session *)conn->proto_state;
     bool resumed = st != NULL;
+    /* Start of this thread's turn on the connection (see h2_yield_us). */
+    const uint64_t turn_start_us = h2_now_us();
     if (!st) {
         st = (h2_session *)cwist_alloc(sizeof(*st));
         if (!st) {
@@ -3575,6 +3592,19 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 h2_session_disown(st);
                 if (cwist_https_park(conn, idle_ms - idle_for, CWIST_HTTPS_PARK_HTTP2)) {
                     /* Another pool thread may own the session now. */
+                    result = make_error(CWIST_ERR_INT16);
+                    result.error.err_i16 = 0;
+                    return result;
+                }
+            } else if (h2_yield_us() > 0 &&
+                       h2_now_us() - turn_start_us >= (uint64_t)h2_yield_us()) {
+                /* Busy, but between streams: past its turn, step behind any
+                 * connection waiting for a pool thread. The session state is
+                 * exactly what a park keeps, so the next thread resumes it. */
+                st->sent_goaway = sent_goaway;
+                st->goaway_close_at = goaway_close_at;
+                h2_session_disown(st);
+                if (cwist_https_yield(conn)) {
                     result = make_error(CWIST_ERR_INT16);
                     result.error.err_i16 = 0;
                     return result;

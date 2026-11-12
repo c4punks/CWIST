@@ -75,4 +75,13 @@ bool cwist_async_res_deferred(const cwist_http_response *res);
  */
 void cwist_async_forget_response(const cwist_http_response *res);
 
+/**
+ * @brief Give the HTTPS pool thread serving @p conn to a waiting task.
+ *
+ * Re-queues the connection at the tail of the pool's task queue when other
+ * tasks are waiting. The caller must have no in-flight work on @p conn and,
+ * on true, must return without touching it.
+ */
+bool cwist_https_yield(struct cwist_https_connection *conn);
+
 #endif
