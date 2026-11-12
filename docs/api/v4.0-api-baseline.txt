@@ -1962,7 +1962,7 @@ quic_conn_fc_t
 quic_net_quality_t
 quic_stream_fc_t
 
-== enum constants (234) ==
+== enum constants (235) ==
 CWIST_ASYNC_CLOSE
 CWIST_ASYNC_DEFER
 CWIST_ASYNC_DETACH
@@ -2150,6 +2150,7 @@ CWIST_METRIC_H2_HEADERS_DROPPED
 CWIST_METRIC_HISTOGRAM
 CWIST_METRIC_HTTP_CONTINUATION_SHED
 CWIST_METRIC_HTTP_HEADER_OVERFLOW
+CWIST_METRIC_HTTP_IDLE_REAPED
 CWIST_METRIC_REQUESTS_TOTAL
 CWIST_METRIC_REQUEST_DURATION_NS
 CWIST_METRIC_STREAMS_HTTP2
@@ -2552,6 +2553,13 @@ struct cwist_http_async_conn_t [19] uint64_t kern_last_mono_ns
 struct cwist_http_async_conn_t [20] bool kern_valid
 struct cwist_http_async_conn_t [21] cwist_bdr_cursor_t bdr_cursor
 struct cwist_http_async_conn_t [22] uint32_t stash_grown_sec
+struct cwist_http_async_conn_t [23] struct cwist_http_async_conn *reap_prev
+struct cwist_http_async_conn_t [24] struct cwist_http_async_conn *reap_next
+struct cwist_http_async_conn_t [25] struct cwist_http_async_conn *reap_in_next
+struct cwist_http_async_conn_t [26] uint8_t reap_state
+struct cwist_http_async_conn_t [27] bool reap_waiting
+struct cwist_http_async_conn_t [28] bool reap_kicked
+struct cwist_http_async_conn_t [29] bool reap_dead
 struct cwist_http_header_node [0] cwist_sstring *key
 struct cwist_http_header_node [1] cwist_sstring *value
 struct cwist_http_header_node [2] struct cwist_http_header_node *next
