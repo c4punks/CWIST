@@ -1397,6 +1397,7 @@ TEST_TARGETS = test_worker_affinity \
                test_html_builder \
                test_html_component \
                test_html_response \
+               test_bdr_privacy \
                test_assets \
                test_html_parity \
                test_http2_flow_control \
@@ -2800,6 +2801,10 @@ test_html_component: $(LIB_NAME) tests/test_html_component.c
 test_html_response: $(LIB_NAME) tests/test_html_response.c
 	$(CC) $(CFLAGS) -o test_html_response tests/test_html_response.c $(LIB_NAME) $(LIBS)
 	./test_html_response
+
+test_bdr_privacy: $(LIB_NAME) tests/test_bdr_privacy.c
+	$(CC) $(CFLAGS) -o $@ tests/test_bdr_privacy.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_assets: $(LIB_NAME) tests/test_assets.c
 	$(CC) $(CFLAGS) -o test_assets tests/test_assets.c $(LIB_NAME) $(LIBS)

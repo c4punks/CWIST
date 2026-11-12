@@ -61,6 +61,21 @@ HTTP/HTTPS, URI 파싱, 데이터베이스 접근, 암호학적 해시를 위한
 - **헤더:** `<cwist/sys/app/big_dumb_reply.h>`
 - **함수:** `cwist_bdr_get`, `cwist_bdr_put`, `cwist_bdr_set_limits`.
 - **안전장치:** 항목은 설정 가능한 TTL이나 히트 횟수 예산이 지나면 만료되고, 캐시는 소프트 바이트 상한(기본 32 MiB)을 유지합니다. 애플리케이션별 동작은 `cwist_app_configure_bdr`로 조정합니다.
+- **캐시 대상:** 캐시 키는 메서드와 경로뿐이므로, 다음을 모두 만족하는
+  응답만 학습합니다.
+  - 요청이 쿼리 문자열 없는 `GET`이고 `Cookie`와 `Authorization`이 모두
+    없습니다.
+  - 핸들러 처리 시간이 지연 임계값(기본 10 ms)보다 깁니다.
+  - 응답에 `Vary`와 `Set-Cookie`가 없고, `Cache-Control`에 `private`,
+    `no-store`, `no-cache`가 없습니다.
+  - 파일 엔드포인트가 아닙니다.
+
+  학습은 classic(스레드 풀) 경로에서만 일어나고, C1M 경로는 읽기만
+  합니다. `Cookie`나 `Authorization`이 있는 요청에는 캐시로 응답하지
+  않습니다.
+- **라우트를 캐시에서 빼기:** 핸들러에서 `Cache-Control: no-store`를
+  보냅니다(사용자별 콘텐츠라면 `private`). 쿠키를 설정하는 응답은
+  자동으로 제외됩니다.
 
 ## LibTTAK 메모리 기능
 

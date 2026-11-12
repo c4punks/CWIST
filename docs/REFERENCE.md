@@ -63,6 +63,21 @@ Auto-caches serialized responses for expensive handlers.
 - **Header:** `<cwist/sys/app/big_dumb_reply.h>`
 - **Functions:** `cwist_bdr_get`, `cwist_bdr_put`, `cwist_bdr_set_limits`.
 - **Guard Rails:** Entries expire after a configurable TTL or hit budget and the cache maintains a soft byte cap (32 MiB by default). Use `cwist_app_configure_bdr` to tune per-application behavior.
+- **What gets cached:** the cache is keyed by method and path only, so it
+  learns a response only when all of these hold:
+  - the request is a `GET` with no query string and carries neither `Cookie`
+    nor `Authorization`;
+  - the handler took longer than the latency threshold (10 ms by default);
+  - the response has no `Vary` or `Set-Cookie` header, and its
+    `Cache-Control` names none of `private`, `no-store` or `no-cache`;
+  - the route is not a file endpoint.
+
+  Learning happens on the classic (thread-pool) path; the C1M path only
+  reads. A request carrying `Cookie` or `Authorization` is never answered
+  from the cache.
+- **Opting a route out:** send `Cache-Control: no-store` (or `private` for
+  per-user content) from the handler. Responses that set a cookie are
+  excluded automatically.
 
 ## LibTTAK Memory Features
 
