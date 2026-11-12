@@ -1,6 +1,8 @@
 var searchData=
 [
-  ['수명_20주기_0',['수명 주기',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md353',1,'수명 주기'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md359',1,'요청 수명 주기'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md360',1,'응답 수명 주기']]],
-  ['수정이_20해결하지_20않는_20것_1',['이 수정이 해결하지 않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md587',1,'']]],
-  ['수정_2',['수정',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md585',1,'']]]
+  ['세션과_20쿠키_0',['세션과 쿠키',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md547',1,'']]],
+  ['세션_20매니저_1',['세션 매니저',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md364',1,'']]],
+  ['세션_20침습적_20참조_20카운트_2',['공유 세션 (침습적 참조 카운트)',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md366',1,'']]],
+  ['세션_20프로토콜_20설계하기_3',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md729',1,'']]],
+  ['세션_20핸들러_20설정하기_4',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md728',1,'']]]
 ];

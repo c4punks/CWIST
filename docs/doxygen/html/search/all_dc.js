@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['폐기됨_0',['WASI preview1 (폐기됨)',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md526',1,'']]]
+  ['투명한_20malloc_20가로채기_0',['5. 투명한 malloc 가로채기',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md644',1,'']]]
 ];

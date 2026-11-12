@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['띄우기_0',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md842',1,'']]]
+  ['들어_20있는_20것_0',['WASM 빌드에 들어 있는 것',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md542',1,'']]]
 ];

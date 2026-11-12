@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['인계_20순서_0',['인계 순서',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md566',1,'']]],
-  ['인메모리_20테스트_20클라이언트_1',['인메모리 테스트 클라이언트',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md391',1,'']]],
-  ['인증_20미들웨어_2',['JWT 인증 미들웨어',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md479',1,'']]],
-  ['인증_20jwt_20및_20db_20암호화_3',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md847',1,'']]],
-  ['인코딩_4',['인코딩',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md404',1,'']]]
+  ['웹소켓_20연동_20실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md868',1,'']]],
+  ['웹_20개발_20튜토리얼_20a_20to_20z_1',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]],
+  ['웹_20서버_20벤치마크_20측정_20방법_2',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
 ];

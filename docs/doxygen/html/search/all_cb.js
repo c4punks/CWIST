@@ -1,8 +1,4 @@
 var searchData=
 [
-  ['쿠키_0',['세션과 쿠키',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md547',1,'']]],
-  ['쿠키_20쓰기_1',['쿠키 쓰기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md400',1,'']]],
-  ['쿠키_20읽기_2',['쿠키 읽기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md397',1,'']]],
-  ['쿠키_20저장소_3',['쿠키 저장소',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md394',1,'']]],
-  ['쿠키_20api_4',['쿠키 API',['../db/d04/md_docs_2ko_2api_2cookie.html',1,'']]]
+  ['침습적_20참조_20카운트_0',['공유 세션 (침습적 참조 카운트)',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md366',1,'']]]
 ];

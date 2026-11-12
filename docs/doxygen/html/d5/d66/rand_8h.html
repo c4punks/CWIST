@@ -141,17 +141,17 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:aa683720bff9343cedea7c81dda04f8c0" id="r_aa683720bff9343cedea7c81dda04f8c0"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d66/rand_8h.html#aa683720bff9343cedea7c81dda04f8c0">RAND_bytes</a>&#160;&#160;&#160;<a class="el" href="../../db/d2e/backend__mbedtls_8c.html#aacf6d52200312886799e29bfd1dc480a">cwist_mtls_RAND_bytes</a></td></tr>
+<tr class="memitem:aa683720bff9343cedea7c81dda04f8c0" id="r_aa683720bff9343cedea7c81dda04f8c0"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d66/rand_8h.html#aa683720bff9343cedea7c81dda04f8c0">RAND_bytes</a>&#160;&#160;&#160;<a class="el" href="../../db/d2e/backend__mbedtls_8c.html#aacf6d52200312886799e29bfd1dc480a">cwist_mtls_RAND_bytes</a></td></tr>
 <tr class="separator:aa683720bff9343cedea7c81dda04f8c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:aacf6d52200312886799e29bfd1dc480a" id="r_aacf6d52200312886799e29bfd1dc480a"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d66/rand_8h.html#aacf6d52200312886799e29bfd1dc480a">cwist_mtls_RAND_bytes</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">unsigned</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *buf, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">num</a>)</td></tr>
+<tr class="memitem:aacf6d52200312886799e29bfd1dc480a" id="r_aacf6d52200312886799e29bfd1dc480a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d66/rand_8h.html#aacf6d52200312886799e29bfd1dc480a">cwist_mtls_RAND_bytes</a> (unsigned char *buf, int num)</td></tr>
 <tr class="separator:aacf6d52200312886799e29bfd1dc480a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>mbedTLS TLS backend: RAND_bytes over mbedTLS CTR-DRBG. </p>
-<p>Part of the CWIST TLS backend seam; see <a class="el" href="../../df/d6d/ssl_8h.html" title="mbedTLS TLS backend: OpenSSL-shaped seam over the CWIST TLS subset.">shim/openssl/ssl.h</a> for the design. The DRBG is seeded lazily from the system entropy source and re-seeded after <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork()</a>, so CWIST's pre-fork worker model never shares DRBG state between worker processes. </p>
+<p>Part of the CWIST TLS backend seam; see <a class="el" href="../../df/d6d/ssl_8h.html" title="mbedTLS TLS backend: OpenSSL-shaped seam over the CWIST TLS subset.">shim/openssl/ssl.h</a> for the design. The DRBG is seeded lazily from the system entropy source and re-seeded after fork(), so CWIST's pre-fork worker model never shares DRBG state between worker processes. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d5/d66/rand_8h_source.html">rand.h</a>.</p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
@@ -162,7 +162,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> RAND_bytes&#160;&#160;&#160;<a class="el" href="../../db/d2e/backend__mbedtls_8c.html#aacf6d52200312886799e29bfd1dc480a">cwist_mtls_RAND_bytes</a></td>
+          <td class="memname">#define RAND_bytes&#160;&#160;&#160;<a class="el" href="../../db/d2e/backend__mbedtls_8c.html#aacf6d52200312886799e29bfd1dc480a">cwist_mtls_RAND_bytes</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -179,15 +179,15 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a> cwist_mtls_RAND_bytes </td>
+          <td class="memname">int cwist_mtls_RAND_bytes </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">unsigned</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *&#160;</td>
+          <td class="paramtype">unsigned char *&#160;</td>
           <td class="paramname"><em>buf</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">int</a>&#160;</td>
+          <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>num</em>&#160;</td>
         </tr>
         <tr>
@@ -199,8 +199,6 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../db/d2e/backend__mbedtls_8c_source.html#l00127">127</a> of file <a class="el" href="../../db/d2e/backend__mbedtls_8c_source.html">backend_mbedtls.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
 
 </div>
 </div>

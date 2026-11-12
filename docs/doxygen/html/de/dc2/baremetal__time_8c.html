@@ -109,7 +109,7 @@ $(document).ready(function(){initNavTree('de/dc2/baremetal__time_8c.html','../..
 </div><!--header-->
 <div class="contents">
 
-<p><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">clock_gettime()</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nanosleep()</a> and <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">timegm()</a> for CWIST_BAREMETAL.  
+<p>clock_gettime(), nanosleep() and timegm() for CWIST_BAREMETAL.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../de/d03/platform_8h_source.html">cwist/sys/platform.h</a>&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
@@ -127,12 +127,12 @@ Include dependency graph for baremetal_time.c:</div>
 </div>
 <p><a href="../../de/dc2/baremetal__time_8c_source.html">Go to the source code of this file.</a></p>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">clock_gettime()</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nanosleep()</a> and <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">timegm()</a> for CWIST_BAREMETAL. </p>
+<div class="textblock"><p>clock_gettime(), nanosleep() and timegm() for CWIST_BAREMETAL. </p>
 <p>newlib declares these once -D_POSIX_TIMERS / -D_POSIX_MONOTONIC_CLOCK are set (see BAREMETAL_CFLAGS) but implements none of them:</p>
 <ul>
-<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">clock_gettime(CLOCK_MONOTONIC)</a> comes from <a class="el" href="../../da/d00/port_8h.html#aa55c42241491b459c9ea265529c38e4a" title="Monotonic time since an arbitrary epoch (usually boot).">cwist_port_monotonic_ns()</a>; CLOCK_REALTIME from <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">gettimeofday()</a>, i.e. the firmware's RTC if any.</li>
-<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nanosleep()</a> busy-waits on the monotonic clock.</li>
-<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">timegm()</a> is Howard Hinnant's days_from_civil.</li>
+<li>clock_gettime(CLOCK_MONOTONIC) comes from <a class="el" href="../../da/d00/port_8h.html#aa55c42241491b459c9ea265529c38e4a" title="Monotonic time since an arbitrary epoch (usually boot).">cwist_port_monotonic_ns()</a>; CLOCK_REALTIME from gettimeofday(), i.e. the firmware's RTC if any.</li>
+<li>nanosleep() busy-waits on the monotonic clock.</li>
+<li>timegm() is Howard Hinnant's days_from_civil.</li>
 </ul>
 <p>Kept apart from <a class="el" href="../../dd/db0/baremetal_8c.html" title="OS services the core expects but newlib on bare metal lacks.">baremetal.c</a> so tests/test_baremetal_port.c can build it on the host with the three names renamed (-Dclock_gettime=... etc.). </p>
 

@@ -1,6 +1,7 @@
 var searchData=
 [
-  ['버려도_20되는_20wrk_20체크아웃에서_20빌드하기_0',['버려도 되는 wrk 체크아웃에서 빌드하기',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md656',1,'']]],
-  ['버스트_20기아_2025_20후속_1',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]],
-  ['버전의_20첫_20상승_2',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md728',1,'']]]
+  ['방법_0',['방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'웹 서버 벤치마크 측정 방법'],['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md668',1,'5. 벤치마크와 측정 방법']]],
+  ['방법_20a_3a_20100_20server_20side_20rendering_20ssr_1',['방법 A: 100% Server-Side Rendering (SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md871',1,'']]],
+  ['방법_20b_3a_20react_20webassembly_20wasm_20클라이언트_20사이드_20합성_2',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md872',1,'']]],
+  ['방진_20순열_3',['2. 직교 라틴 방진 순열',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md696',1,'']]]
 ];

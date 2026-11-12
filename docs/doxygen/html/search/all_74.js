@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['블로그_20만들기_0',['CWIST로 CRUD 블로그 만들기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html',1,'']]],
-  ['블록을_20그냥_20옮기지_20않는_20이유_1',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md635',1,'']]]
+  ['분리하기_0',['2. 산출물과 상태 분리하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md607',1,'']]],
+  ['분포_20차트_1',['지연 분포 차트',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md747',1,'']]]
 ];

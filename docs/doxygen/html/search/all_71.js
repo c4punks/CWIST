@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['분리하기_0',['2. 산출물과 상태 분리하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md607',1,'']]],
-  ['분포_20차트_1',['지연 분포 차트',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md738',1,'']]]
+  ['복사_0',['덧붙이기 / 복사',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md356',1,'']]],
+  ['복원될_20때까지의_20권장_20처리_1',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636',1,'']]],
+  ['복원하기_2',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
+  ['복원_3',['4. 재시작, 백업, 복원',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md609',1,'']]]
 ];

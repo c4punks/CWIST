@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['계수_20행렬과_20선형_20연립방정식_20풀이_0',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md688',1,'']]],
-  ['계약으로_20http_20응답_20캐싱_20복원하기_1',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
-  ['계약이_20복원될_20때까지의_20권장_20처리_2',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636',1,'']]],
-  ['계약_3',['포트 훅과 런타임 계약',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md624',1,'']]]
+  ['경계를_20통과하는_20스트리밍_0',['경계를 통과하는 스트리밍',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md548',1,'']]],
+  ['경계_1',['경계',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md531',1,'경계'],['../d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md653',1,'성능 주장의 경계'],['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md592',1,'1. 하나의 파싱된 자격 경계']]],
+  ['경로_202026_2009_2022_20감사_2',['해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md535',1,'']]]
 ];

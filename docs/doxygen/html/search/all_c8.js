@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['컨텍스트_20스위치_20열_20해석하기_0',['컨텍스트 스위치 열 해석하기',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md731',1,'']]]
+  ['체인_20현황_202026_2009_2021_20측정_0',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md532',1,'']]],
+  ['체크아웃에서_20빌드하기_1',['버려도 되는 wrk 체크아웃에서 빌드하기',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md656',1,'']]]
 ];

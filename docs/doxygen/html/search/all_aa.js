@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['읽기_0',['쿠키 읽기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md397',1,'']]]
+  ['유한체_20소수_20거듭제곱_0',['2.1 유한체 (소수 거듭제곱)',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md688',1,'']]]
 ];

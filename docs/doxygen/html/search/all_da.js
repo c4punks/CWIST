@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['편의_20매크로_0',['편의 매크로',['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md512',1,'']]]
+  ['템플릿_20엔진과_20정적_20파일_20제공_0',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md869',1,'']]]
 ];

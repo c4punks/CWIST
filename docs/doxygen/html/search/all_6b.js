@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['벤치마크와_20측정_20방법_0',['5. 벤치마크와 측정 방법',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md668',1,'']]],
-  ['벤치마크_20측정_20방법_1',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
+  ['버려도_20되는_20wrk_20체크아웃에서_20빌드하기_0',['버려도 되는 wrk 체크아웃에서 빌드하기',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md656',1,'']]],
+  ['버스트_20기아_2025_20후속_1',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]],
+  ['버전의_20첫_20상승_2',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md737',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['때까지의_20권장_20처리_0',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636',1,'']]]
+  ['되는_20wrk_20체크아웃에서_20빌드하기_0',['버려도 되는 wrk 체크아웃에서 빌드하기',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md656',1,'']]]
 ];

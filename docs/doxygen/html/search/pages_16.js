@@ -5,7 +5,7 @@ var searchData=
   ['reclamation_20in_20cwist_2',['Full GC: Automatic Resource Reclamation in CWIST',['../d9/dd1/md_docs_2GC.html',1,'']]],
   ['reduction_20audit_20local_2012_20core_20ryzen_205600x_3',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]],
   ['reference_4',['reference',['../d1/d7e/md_docs_2api-quickref.html',1,'CWIST API Reference'],['../da/dca/md_docs_2REFERENCE.html',1,'CWIST Library Reference']]],
-  ['references_5',['Mux Algorithm References',['../d6/d9f/md_docs_2references_2mux__algorithm__references.html',1,'']]],
+  ['references_5',['references',['../df/d22/md_docs_2references_2latin__square__references.html',1,'Latin Square References'],['../d6/d9f/md_docs_2references_2mux__algorithm__references.html',1,'Mux Algorithm References']]],
   ['regression_2025_6',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
   ['release_20assets_7',['Prebuilt release assets',['../d1/da3/md_docs_2deployment_2release-assets.html',1,'']]],
   ['release_20codename_20sequencing_20specification_8',['release codename sequencing specification',['../d0/db4/md_docs_2versioning.html',1,'Release Codename Sequencing Specification'],['../d6/de8/md_docs_2ko_2versioning.html',1,'Release Codename Sequencing Specification']]],

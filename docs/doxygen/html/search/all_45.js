@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['덧붙이기_20복사_0',['덧붙이기 / 복사',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md356',1,'']]]
+  ['달기_0',['1. 라우트에 주석 달기',['../dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md722',1,'']]]
 ];

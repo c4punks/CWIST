@@ -1,7 +1,10 @@
 var searchData=
 [
-  ['목록_0',['목록',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md670',1,'번역된 문서 목록'],['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md567',1,'소유권 목록'],['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md711',1,'3. 신뢰성 점검 목록']]],
-  ['목차_1',['목차',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md841',1,'']]],
-  ['목표가_20아닌_20것과_20참고_20사항_2',['목표가 아닌 것과 참고 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md648',1,'']]],
-  ['목표가_20아닌_20것_3',['목표가 아닌 것',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md539',1,'']]]
+  ['메모리_20기능_0',['LibTTAK 메모리 기능',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md681',1,'']]],
+  ['메모리_20소유권_20규칙_1',['메모리 소유권 규칙',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md389',1,'']]],
+  ['메모리_20크기_2',['메모리 크기',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md626',1,'']]],
+  ['메서드_20도우미_3',['메서드 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md362',1,'']]],
+  ['메이저_20버전의_20첫_20상승_4',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md737',1,'']]],
+  ['메타데이터_5',['기록하는 메타데이터',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md746',1,'']]],
+  ['메트릭_20미들웨어_6',['Prometheus 메트릭 미들웨어',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md478',1,'']]]
 ];

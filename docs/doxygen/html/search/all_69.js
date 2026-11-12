@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['번들_20사용하기_0',['fat 번들 사용하기',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md601',1,'']]],
-  ['번들_20크기에_20주는_20영향_1',['cwist_db가 번들 크기에 주는 영향',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md546',1,'']]],
-  ['번역된_20문서_20목록_2',['번역된 문서 목록',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md670',1,'']]]
+  ['배경_0',['배경',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md583',1,'배경'],['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md590',1,'배경']]],
+  ['배포하기_1',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['배포_20검증_2',['배포 검증',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md616',1,'']]]
 ];

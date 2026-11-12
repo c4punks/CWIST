@@ -1,6 +1,8 @@
 var searchData=
 [
-  ['선택적_20wrk_20원시_20보정_20지연_20히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]],
-  ['선형_20연립방정식_20풀이_1',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md688',1,'']]],
-  ['선형_20외삽_2',['5. 단일 단계 선형 외삽',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md690',1,'']]]
+  ['상수_0',['상수',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md431',1,'']]],
+  ['상승_1',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md737',1,'']]],
+  ['상태와_20외부_20상태_2',['빌린 상태와 외부 상태',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md568',1,'']]],
+  ['상태_3',['상태',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md580',1,'검증 상태'],['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md568',1,'빌린 상태와 외부 상태'],['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md702',1,'상태']]],
+  ['상태_20분리하기_4',['2. 산출물과 상태 분리하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md607',1,'']]]
 ];

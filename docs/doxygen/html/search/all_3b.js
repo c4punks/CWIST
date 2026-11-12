@@ -1,11 +1,5 @@
 var searchData=
 [
-  ['기능_0',['LibTTAK 메모리 기능',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md681',1,'']]],
-  ['기록하는_20메타데이터_1',['기록하는 메타데이터',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md737',1,'']]],
-  ['기록_2',['검증 (기록)',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md528',1,'']]],
-  ['기반_20공유_20rate_20limiter_3',['Redis 기반 공유 rate limiter',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md476',1,'']]],
-  ['기본_4',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md724',1,'']]],
-  ['기본_20원칙_5',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md723',1,'']]],
-  ['기아_2025_20후속_6',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]],
-  ['기준점_7',['근거와 소스 기준점',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md599',1,'']]]
+  ['그냥_20옮기지_20않는_20이유_0',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md635',1,'']]],
+  ['그_20밖에_20내보낸_20inline_20도우미_1',['그 밖에 내보낸 inline 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md351',1,'']]]
 ];
