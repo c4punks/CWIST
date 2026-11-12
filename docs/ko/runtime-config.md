@@ -68,7 +68,7 @@
 |------|------|----|--------|------|
 | `CWIST_HTTP2_IDLE_TIMEOUT_MS` | supported | 밀리초, 0보다 큼 | `300000` | HTTP/2 연결을 닫기 전 유휴 시간. |
 | `CWIST_HTTP2_GOAWAY_GRACE_MS` | supported | 밀리초, 0 이상 | `2000` | GOAWAY를 보낸 뒤 연결을 닫기까지의 시간. 클라이언트가 이미 시작한 스트림을 끝낼 수 있게 합니다. |
-| `CWIST_HTTP2_YIELD_US` | tuning | 마이크로초, 0 이상 | `250` | TLS 위 HTTP/2: 다른 연결이 HTTPS 풀 스레드를 기다리는 동안 바쁜 연결이 스레드를 잡고 있을 수 있는 시간. 이 시간이 지나면 스트림 사이에서 연결을 대기열 뒤로 보냅니다. `0`이면 끕니다. |
+| `CWIST_HTTP2_YIELD_US` | tuning | 마이크로초, 0 이상 | `250` | 바쁜 HTTP/2 연결이 스트림 사이에서 자리를 내주기 전까지 스레드를 잡고 있는 시간. TLS 연결은 HTTPS 풀 스레드를 기다리는 연결 뒤로 대기열에 다시 들어가고, 평문 h2c 연결은 CPU를 양보합니다. `0`이면 끕니다. |
 | `CWIST_HTTP2_MAX_RST_BURST` | supported | 0보다 큰 정수 | `100` | 연결을 닫기 전에 클라이언트가 한꺼번에 보낼 수 있는 스트림 리셋 수(rapid reset 방어, CVE-2023-44487). |
 | `CWIST_HTTP2_MAX_RST_RATE` | supported | 초당 리셋 수, 0보다 큼 | `100` | 그 리셋 예산이 다시 차는 속도. |
 | `CWIST_H2_BATCH_BYTES` | tuning | 바이트, 4096 이상 | `65536` | 보낼 프레임을 모았다가 이만큼 쌓이면(또는 블로킹 대기 전에) 한 번에 씁니다. |
