@@ -1,12 +1,7 @@
 var searchData=
 [
-  ['요구_20사항_0',['요구 사항',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md611',1,'']]],
-  ['요소_20측정_202026_2009_2012_1',['구성 요소 측정 (2026-09-12)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md661',1,'']]],
-  ['요약_2',['요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md848',1,'보안 정책 요약'],['../d1/dde/md_docs_2ko_2GC.html#autotoc_md646',1,'의미 요약']]],
-  ['요청과_20워커의_20책임_20나누기_3',['1. 요청과 워커의 책임 나누기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md708',1,'']]],
-  ['요청_20경로_202026_2009_2022_20감사_4',['해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md534',1,'']]],
-  ['요청_20도우미_5',['요청 도우미',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md392',1,'']]],
-  ['요청_20디스패치하기_6',['JS에서 요청 디스패치하기',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md542',1,'']]],
-  ['요청_20수명_20주기_7',['요청 수명 주기',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md358',1,'']]],
-  ['요청_20arena_8',['요청 arena',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md626',1,'']]]
+  ['예제_0',['예제',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md407',1,'예제'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md429',1,'예제'],['../d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md467',1,'예제'],['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md513',1,'예제'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md423',1,'핸들러 예제'],['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md667',1,'4. 실행 가능한 예제']]],
+  ['예제_20배포하기_1',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
+  ['예제_3a_20othello_20web_2',['예제: Othello Web',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md682',1,'']]],
+  ['예제_3a_20service_20worker_20앱_3',['실행 가능한 예제: Service Worker 앱',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md549',1,'']]]
 ];

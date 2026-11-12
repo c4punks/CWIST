@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['옮기지_20않는_20이유_0',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md634',1,'']]]
+  ['역사적_20표_3a_20gusuryak_209차_20쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md692',1,'']]]
 ];

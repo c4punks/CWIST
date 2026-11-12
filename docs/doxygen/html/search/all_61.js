@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['차수_3a_20macneish_20곱_0',['2.3 합성수 차수: MacNeish 곱',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md363',1,'']]]
+  ['묶음_20비우기에서의_20협력적_20큐잉_20이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
 ];

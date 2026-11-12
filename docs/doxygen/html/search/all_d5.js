@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['통과하는_20스트리밍_0',['경계를 통과하는 스트리밍',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md547',1,'']]],
-  ['통신_1',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md849',1,'']]],
-  ['통합_2',['systemd 통합',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md613',1,'']]],
-  ['통합_20게이트_3',['격리된 통합 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md618',1,'']]]
+  ['클라이언트_0',['인메모리 테스트 클라이언트',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md391',1,'']]],
+  ['클라이언트_20사이드_20합성_1',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md872',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md508',1,'']]]
+  ['백업_20복원_0',['4. 재시작, 백업, 복원',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md609',1,'']]]
 ];

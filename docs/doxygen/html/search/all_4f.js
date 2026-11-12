@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['안정성_20게이트_20v4_20lts부터_0',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md383',1,'']]]
+  ['때까지의_20권장_20처리_0',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636',1,'']]]
 ];

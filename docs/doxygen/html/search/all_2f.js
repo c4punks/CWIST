@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['구성법_0',['2. 코드에 쓰인 구성법',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md360',1,'']]]
+  ['격리된_20통합_20게이트_0',['격리된 통합 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md619',1,'']]],
+  ['격리하기_1',['3. 소유권, 출처, 용량 격리하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md594',1,'']]]
 ];

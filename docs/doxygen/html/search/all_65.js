@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['크기_0',['메모리 크기',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md352',1,'']]]
+  ['바꾼_20이유_0',['이름을 바꾼 이유',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md700',1,'']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['목차_0',['목차',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md499',1,'']]]
+  ['근거와_20소스_20기준점_0',['근거와 소스 기준점',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md599',1,'']]],
+  ['근거_1',['근거',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md634',1,'']]]
 ];

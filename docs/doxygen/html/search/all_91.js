@@ -1,4 +1,7 @@
 var searchData=
 [
-  ['액세스_20로그_20미들웨어_0',['액세스 로그 미들웨어',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md472',1,'']]]
+  ['알고리즘_20참고_20자료_0',['Mux 알고리즘 참고 자료',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'']]],
+  ['알려진_20리비전_20빌드하기_1',['1. 알려진 리비전 빌드하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md606',1,'']]],
+  ['알려진_20성능_20주의_20사항_2',['알려진 성능 주의 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md649',1,'']]],
+  ['알려진_20한계_3',['알려진 한계',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md748',1,'']]]
 ];

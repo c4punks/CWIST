@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['데이터베이스와_20마이그레이션_20sqlite_0',['5. 데이터베이스와 마이그레이션 (SQLite)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md504',1,'']]]
+  ['고치기_20전에_0',['프로덕션에 맞게 고치기 전에',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md610',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['역사적_20표_3a_20gusuryak_209차_20쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md365',1,'']]]
+  ['렌더링하기_0',['WASM에서 같은 뷰 렌더링하기',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md428',1,'']]]
 ];

@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['파싱과_20zod_20스키마_20검증_0',['3. JSON 파싱과 Zod 스키마 검증',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md502',1,'']]],
-  ['파일_20제공_1',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md509',1,'']]]
+  ['번들_20사용하기_0',['fat 번들 사용하기',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md601',1,'']]],
+  ['번들_20크기에_20주는_20영향_1',['cwist_db가 번들 크기에 주는 영향',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md546',1,'']]],
+  ['번역된_20문서_20목록_2',['번역된 문서 목록',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md670',1,'']]]
 ];

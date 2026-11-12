@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['정의_0',['1. 정의',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md359',1,'']]],
-  ['정적_20파일_20제공_1',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md509',1,'']]],
-  ['정책_20요약_2',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md507',1,'']]]
+  ['명시적인_20공개_20fixed_20계약으로_20http_20응답_20캐싱_20복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
+  ['명시적_20flush와_20회수_1',['7. 명시적 flush와 회수',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md646',1,'']]],
+  ['명시하기_2',['4. 호환성 변경을 명시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md595',1,'']]]
 ];

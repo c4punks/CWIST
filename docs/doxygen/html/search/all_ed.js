@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]],
-  ['현황_202026_2009_2021_20측정_1',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md531',1,'']]]
+  ['해결됨_3a_20wasip3에서의_20소켓_20요청_20경로_202026_2009_2022_20감사_0',['해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md535',1,'']]],
+  ['해결하지_20않는_20것_1',['이 수정이 해결하지 않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md587',1,'']]],
+  ['해석하기_2',['컨텍스트 스위치 열 해석하기',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md740',1,'']]],
+  ['해석_3',['출력과 해석',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md657',1,'']]]
 ];

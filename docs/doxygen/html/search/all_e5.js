@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['함께_20보기_0',['함께 보기',['../dc/d79/md_docs_2ko_2API.html#autotoc_md369',1,'']]],
-  ['함수_1',['함수',['../d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md456',1,'함수'],['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md468',1,'함수'],['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md552',1,'함수']]]
+  ['풀의_20버스트_20기아_2025_20후속_0',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]],
+  ['풀이_1',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md697',1,'']]],
+  ['풀_2',['Classic 스레드 풀',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md704',1,'']]]
 ];

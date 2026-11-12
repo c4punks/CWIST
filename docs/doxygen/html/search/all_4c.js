@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md508',1,'']]]
+  ['되는_20wrk_20체크아웃에서_20빌드하기_0',['버려도 되는 wrk 체크아웃에서 빌드하기',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md656',1,'']]]
 ];

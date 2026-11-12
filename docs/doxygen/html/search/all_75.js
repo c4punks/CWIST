@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['홀수_20소수_20거듭제곱_20p_20e_20e_202_0',['2.2 홀수 소수 거듭제곱 p^e, e &gt;= 2',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md362',1,'']]]
+  ['뷰_20렌더링하기_0',['WASM에서 같은 뷰 렌더링하기',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md428',1,'']]],
+  ['뷰_3a_20cwist_20wasm_20typedarray_20h_1',['제로 카피 뷰: cwist/wasm/typedarray.h',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md544',1,'']]]
 ];

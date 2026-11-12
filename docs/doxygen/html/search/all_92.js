@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['앱_0',['실행 가능한 예제: Service Worker 앱',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md548',1,'']]],
-  ['앱_20api_1',['프레임워크와 앱 API',['../da/dc3/md_docs_2ko_2api_2app.html',1,'']]]
+  ['암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md865',1,'']]]
 ];

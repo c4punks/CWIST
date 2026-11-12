@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['게이트_20v4_20lts부터_0',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md383',1,'']]]
+  ['거듭제곱_0',['2.1 유한체 (소수 거듭제곱)',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md688',1,'']]],
+  ['거듭제곱_20p_20e_20e_202_1',['2.2 홀수 소수 거듭제곱 p^e, e &gt;= 2',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md689',1,'']]]
 ];

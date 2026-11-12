@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['세션과_20쿠키_0',['세션과 쿠키',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md546',1,'']]],
-  ['세션_20매니저_1',['세션 매니저',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md363',1,'']]],
-  ['세션_20침습적_20참조_20카운트_2',['공유 세션 (침습적 참조 카운트)',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md365',1,'']]],
-  ['세션_20프로토콜_20설계하기_3',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md719',1,'']]],
-  ['세션_20핸들러_20설정하기_4',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md718',1,'']]]
+  ['선택적_20wrk_20원시_20보정_20지연_20히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]],
+  ['선형_20연립방정식_20풀이_1',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md697',1,'']]],
+  ['선형_20외삽_2',['5. 단일 단계 선형 외삽',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md699',1,'']]]
 ];

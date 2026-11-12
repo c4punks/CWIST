@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['카운트_0',['공유 세션 (침습적 참조 카운트)',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md365',1,'']]],
-  ['카피_20뷰_3a_20cwist_20wasm_20typedarray_20h_1',['제로 카피 뷰: cwist/wasm/typedarray.h',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md543',1,'']]]
+  ['첫_20상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md737',1,'']]],
+  ['첫_20서버_20띄우기_1',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md860',1,'']]]
 ];

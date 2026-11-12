@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['인증_20jwt_20및_20db_20암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md505',1,'']]]
+  ['매니저_0',['매니저',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md367',1,'매니저'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md364',1,'세션 매니저']]],
+  ['매크로_1',['매크로',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md395',1,'테스트 단언 매크로'],['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md512',1,'편의 매크로']]]
 ];

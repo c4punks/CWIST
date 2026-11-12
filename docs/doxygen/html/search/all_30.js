@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['기본_0',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md380',1,'']]],
-  ['기본_20원칙_1',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md379',1,'']]]
+  ['결과_0',['결과',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md597',1,'']]],
+  ['결정론적_20회귀_20테스트_1',['결정론적 회귀 테스트',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md579',1,'']]],
+  ['결정_2',['결정',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md591',1,'']]]
 ];

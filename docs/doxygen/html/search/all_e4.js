@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['한계_0',['한계',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md569',1,'검증과 한계'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md738',1,'알려진 한계'],['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md580',1,'HTTP 측정과 한계']]],
-  ['한도_1',['C1M 파일 한도',['../db/dc4/md_docs_2ko_2c1m-file-limits.html',1,'']]]
+  ['표기_0',['4. 표기',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md735',1,'']]],
+  ['표현을_20캐시하기_1',['2. 와이어 응답이 아니라 표현을 캐시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md593',1,'']]],
+  ['표_3a_20gusuryak_209차_20쌍_2',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md692',1,'']]]
 ];

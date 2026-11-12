@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['예제_0',['예제',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md406',1,'예제'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md428',1,'예제'],['../d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md466',1,'예제'],['../d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md512',1,'예제'],['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md422',1,'핸들러 예제'],['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md666',1,'4. 실행 가능한 예제']]],
-  ['예제_20배포하기_1',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
-  ['예제_3a_20othello_20web_2',['예제: Othello Web',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md681',1,'']]],
-  ['예제_3a_20service_20worker_20앱_3',['실행 가능한 예제: Service Worker 앱',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md548',1,'']]]
+  ['엔드포인트_20캐싱_3a_20현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]],
+  ['엔진과_20정적_20파일_20제공_1',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md869',1,'']]],
+  ['엔진_3a_20libttak_20에포크_20gc_2',['2. 회수 엔진: libttak 에포크 GC',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md641',1,'']]]
 ];

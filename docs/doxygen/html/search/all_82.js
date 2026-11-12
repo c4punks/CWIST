@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['속도_20제한_20미들웨어_0',['속도 제한 미들웨어',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md474',1,'']]]
+  ['성능_20주의_20사항_0',['알려진 성능 주의 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md649',1,'']]],
+  ['성능_20주장의_20경계_1',['성능 주장의 경계',['../d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md653',1,'']]]
 ];

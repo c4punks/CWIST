@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['클라이언트_20사이드_20합성_0',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md512',1,'']]]
+  ['밖에_20내보낸_20inline_20도우미_0',['그 밖에 내보낸 inline 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md351',1,'']]]
 ];

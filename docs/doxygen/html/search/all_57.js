@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['원칙_0',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md379',1,'']]]
+  ['릴리스_20관문_0',['구현과 릴리스 관문',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md598',1,'']]],
+  ['릴리스_20사전_20빌드_20에셋_1',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
 ];

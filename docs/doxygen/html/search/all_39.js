@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['만들지_20않는_20것_0',['2.4 코드가 만들지 않는 것',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md364',1,'']]]
+  ['권장_20처리_0',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636',1,'']]]
 ];

@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['설계하기_0',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md719',1,'']]],
-  ['설계_1',['설계',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md638',1,'']]],
-  ['설정하기_2',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md718',1,'']]],
-  ['설정_3',['설정',['../d5/d08/md_docs_2ko_2runtime-config.html',1,'런타임 설정'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md735',1,'Spring Boot (JVM 공정성 설정)']]]
+  ['생산자_20핸들러가_20본문을_20청크_20단위로_20생성_0',['스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md551',1,'']]],
+  ['생성하기_1',['2. openapi.json 생성하기',['../dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md724',1,'']]],
+  ['생성_2',['스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md551',1,'']]]
 ];
