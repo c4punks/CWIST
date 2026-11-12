@@ -78,6 +78,9 @@ struct cwist_http3_context {
     /* Appended in 4.x; internal, not part of the API surface. */
     void *async_queue; /**< Deferred-response queue of the running server loop (internal) */
     char *tls_groups;  /**< Key-exchange groups re-applied on reload, e.g. PQC (internal) */
+    /* Appended in 4.x: see cwist_http3_set_datagram_conn_callback(). */
+    void (*datagram_conn_cb)(void *conn, const void *data, size_t len, void *user_ctx);
+    void *datagram_conn_user_ctx;
 };
 
 /**
@@ -244,11 +247,46 @@ void cwist_http3_set_datagram_callback(cwist_http3_context *ctx,
                                        void *user_ctx);
 
 /**
+ * @brief Register a callback for raw datagrams that names their connection.
+ *
+ * Receives the payloads of raw RFC 9221 DATAGRAM frames and of a client's
+ * datagram channel (CWIST_HTTP3_DATAGRAM_PROTOCOL), together with the QUIC
+ * connection they arrived on, so the application can answer with
+ * cwist_http3_send_datagram(conn, ...). WebTransport session datagrams are
+ * not passed here; they keep going to the callback set with
+ * cwist_http3_set_datagram_callback(). While this callback is set, raw and
+ * channel payloads go only here.
+ *
+ * @param ctx       HTTP/3 context.
+ * @param cb        Callback, or NULL to remove it.
+ * @param user_ctx  Opaque pointer forwarded to @p cb.
+ */
+void cwist_http3_set_datagram_conn_callback(cwist_http3_context *ctx,
+                                            void (*cb)(void *conn, const void *data, size_t len,
+                                                       void *user_ctx),
+                                            void *user_ctx);
+
+/**
+ * @brief Extended CONNECT :protocol token of a CWIST datagram channel.
+ *
+ * When both endpoints enable HTTP Datagrams (RFC 9297), every QUIC DATAGRAM
+ * frame on the connection starts with a quarter stream ID, so raw RFC 9221
+ * payloads cannot share it with WebTransport. A client that wants both
+ * (cwist_http3_client_enable_datagram_channel()) opens one extended CONNECT
+ * stream with this :protocol; from then on the application's raw datagrams
+ * travel in both directions as HTTP Datagrams bound to that stream. The
+ * token is CWIST-specific: peers that do not know it reject the CONNECT.
+ */
+#define CWIST_HTTP3_DATAGRAM_PROTOCOL "cwist-datagram"
+
+/**
  * @brief Send an unreliable datagram over the given QUIC connection.
  *
  * This is non-blocking; the datagram is queued and flushed by the engine.
  * Payloads above the peer's advertised datagram limit are rejected before
- * queueing.
+ * queueing. When the peer has opened a datagram channel
+ * (CWIST_HTTP3_DATAGRAM_PROTOCOL), the payload is sent as an HTTP Datagram
+ * on that channel instead of a raw DATAGRAM frame.
  *
  * @param conn  Target QUIC connection.
  * @param data  Datagram payload.
