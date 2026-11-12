@@ -161,6 +161,7 @@ bool cwist_async_h3_end(void);
  * @return true when the connection was re-queued; false when nothing is
  *         waiting or @p conn is not a pool-served connection.
  */
-bool cwist_https_yield(cwist_https_connection *conn);
+struct cwist_https_connection;
+bool cwist_https_yield(struct cwist_https_connection *conn);
 
 #endif
