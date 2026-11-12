@@ -3398,6 +3398,32 @@ static void *h2c_handoff_main(void *arg) {
     return NULL;
 }
 
+/**
+ * @brief Per-connection weight in [0, 99] that scales the BDR learn threshold.
+ *
+ * The (connection, worker) pair is mapped onto libttak's mutually orthogonal
+ * Latin square (MOLS) mesh: the fd picks a node in
+ * [0, TTAK_MOLS_NODE_COUNT) and ttak_apply_mols_control() mixes it with the
+ * worker id (passed in its load slot). The result is multiplied by the
+ * 32-bit FNV prime (16777619), its low 8 bits are dropped, and it is reduced
+ * mod 100. The weight is therefore a deterministic hash of the fd and the
+ * worker, not a measured load or request priority. app_serve_parsed_request()
+ * uses weights above 50 to lower the latency a response needs before BDR
+ * learns it.
+ *
+ * The names in libttak and older comments come from the project's history:
+ * the MOLS mesh is inspired by Choi Seok-jeong's orthogonal Latin squares
+ * (Gusuryak, early 1700s), and the multiplicative scaling step was earlier
+ * labelled after the Jeungseung Gaebang method. Neither changes the
+ * arithmetic above.
+ */
+static inline uint32_t app_priority_weight(int client_fd) {
+    uint32_t tid = ttak_net_lattice_get_worker_id();
+    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
+    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
+    return ((mixed_seed * 16777619U) >> 8) % 100;
+}
+
 cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_async_conn_t *conn) {
     cwist_app *app = (cwist_app *)conn->user_ctx;
     static _Atomic long dbg_fill_fail, dbg_fatal, dbg_serve_close;
@@ -3473,13 +3499,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         return CWIST_ASYNC_DETACH;
     }
 
-    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
-    uint32_t tid = ttak_net_lattice_get_worker_id();
-    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
-    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
-
-    /* Jeungseung Gaebang Scaling for priority weighting. */
-    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
+    uint32_t priority_weight = app_priority_weight(client_fd);
 
     /* One pipeline must not monopolize this reactor's other connections. */
     const unsigned int yield_batch = app_http_yield_batch();
@@ -3597,16 +3617,10 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
         }
     }
 
-    /* Apply Choi Seok-jeong's Lattice (Sanpan) for priority scaling. */
-    uint32_t tid = ttak_net_lattice_get_worker_id();
-    uint16_t node_id = (uint16_t)(client_fd % TTAK_MOLS_NODE_COUNT);
-    uint32_t mixed_seed = ttak_apply_mols_control(node_id, tid);
+    uint32_t priority_weight = app_priority_weight(client_fd);
 
-    /* Jeungseung Gaebang Scaling for priority weighting. */
-    uint32_t priority_weight = ((mixed_seed * 16777619U) >> 8) % 100;
-
-    /* Use stack-allocated buffer for zero-allocation ingress path.
-     * Aligned to cache line to optimize lattice-friendly access and prevent buffer loss. */
+    /* Stack buffer: the ingress read path allocates nothing. Aligned to a
+     * 64-byte cache line. */
     _Alignas(64) char read_buf[CWIST_HTTP_READ_BUFFER_SIZE];
     size_t buf_len = 0;
     read_buf[0] = '\0';
