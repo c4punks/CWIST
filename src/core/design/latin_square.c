@@ -59,11 +59,10 @@ static const uint32_t k_gf2_poly[32] = {
 /*
  * Order-9 orthogonal Latin square pair, symbols 1..9 as printed.
  *
- * Origin: the figure "Gugu mosu byeongung yangdo" in Choi Seok-jeong's
- * Gusuryak (c. 1700), the earliest known orthogonal pair of order 9, some
- * eighty years before Euler's 1782 study (see
- * docs/references/latin_square_references.md, section 3). Cell (r, c) of the
- * printed table is the pair (k_choi9_a[9r + c], k_choi9_b[9r + c]).
+ * Origin: "구구모수변궁양도 (九九母數變宮陽圖)" in Choi Seok-jeong's
+ * Gusuryak (九數略, c. 1700), the earliest known orthogonal pair of order 9,
+ * some eighty years before Euler's 1782 study. Cell (r, c) of the printed
+ * table is the pair (k_choi9_a[9r + c], k_choi9_b[9r + c]).
  * tests/test_latin_square.c checks that both are Latin and orthogonal.
  */
 static const uint8_t k_choi9_a[81] = {
