@@ -90,13 +90,41 @@ void cwist_http3_client_enable_0rtt(cwist_http3_client *client, int enabled);
  * When enabled, unreliable datagrams can be sent and received
  * via cwist_http3_client_send_datagram() / recv_datagram().
  * Configure this before the first connection. Changing the setting on an
- * active connection has no effect. Raw QUIC datagram mode and WebTransport
- * mode are mutually exclusive on one client.
+ * active connection has no effect. This raw-only mode turns WebTransport
+ * off; use cwist_http3_client_enable_datagram_channel() to have both on one
+ * connection. Disabling datagrams also disables the datagram channel.
  *
  * @param client Client handle.
  * @param enabled Non-zero to enable (default: 0).
  */
 void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled);
+
+/**
+ * @brief Use raw datagrams and WebTransport on the same connection.
+ *
+ * Enables raw datagrams (as cwist_http3_client_enable_datagrams()) while
+ * keeping WebTransport and HTTP Datagrams (RFC 9297) on. Per connection:
+ * - if the peer does not enable HTTP Datagrams, raw payloads are sent and
+ *   received as plain RFC 9221 DATAGRAM frames;
+ * - if it does, every DATAGRAM frame carries a quarter stream ID, so the
+ *   first cwist_http3_client_send_datagram() opens a datagram channel, an
+ *   extended CONNECT stream with :protocol CWIST_HTTP3_DATAGRAM_PROTOCOL,
+ *   and raw payloads travel both ways as HTTP Datagrams on it. WebTransport
+ *   datagrams stay on their session's stream and never mix with them.
+ * The channel needs a peer that understands the token (a CWIST server with
+ * a datagram callback); against other peers that enable HTTP Datagrams,
+ * cwist_http3_client_send_datagram() fails instead of sending payloads the
+ * peer would misread.
+ *
+ * Configure before the first connection.
+ *
+ * @param client Client handle.
+ * @param enabled Non-zero to enable (default: 0).
+ * @return 0 on success; -1 when the client has a live connection, the
+ *         engine cannot be rebuilt, or WebTransport client support is not
+ *         compiled in.
+ */
+int cwist_http3_client_enable_datagram_channel(cwist_http3_client *client, int enabled);
 
 /**
  * @brief Set the maximum number of request retries on transient failure.

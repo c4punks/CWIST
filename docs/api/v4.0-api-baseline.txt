@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (809) ==
+== functions (811) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -319,6 +319,7 @@ cwist_http2_stream_send_trailers
 cwist_http3_client_create
 cwist_http3_client_destroy
 cwist_http3_client_enable_0rtt
+cwist_http3_client_enable_datagram_channel
 cwist_http3_client_enable_datagrams
 cwist_http3_client_get_datagram_stats
 cwist_http3_client_recv_datagram
@@ -340,6 +341,7 @@ cwist_http3_reload_context
 cwist_http3_send_datagram
 cwist_http3_server_loop
 cwist_http3_set_datagram_callback
+cwist_http3_set_datagram_conn_callback
 cwist_http3_set_datagram_enabled
 cwist_http3_set_early_data
 cwist_http3_set_early_data_guard
@@ -815,7 +817,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (810) ==
+== function signatures (812) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1131,6 +1133,7 @@ cwist_http2_stream_send_trailers: int (cwist_h2_stream *, const cwist_http2_head
 cwist_http3_client_create: cwist_http3_client * (void)
 cwist_http3_client_destroy: void (cwist_http3_client *)
 cwist_http3_client_enable_0rtt: void (cwist_http3_client *, int)
+cwist_http3_client_enable_datagram_channel: int (cwist_http3_client *, int)
 cwist_http3_client_enable_datagrams: void (cwist_http3_client *, int)
 cwist_http3_client_get_datagram_stats: void (cwist_http3_client *, cwist_http3_datagram_stats *)
 cwist_http3_client_recv_datagram: ssize_t (cwist_http3_client *, void *, size_t)
@@ -1152,6 +1155,7 @@ cwist_http3_reload_context: cwist_error_t (cwist_http3_context *, const char *, 
 cwist_http3_send_datagram: int (void *, const void *, size_t)
 cwist_http3_server_loop: cwist_error_t (int, cwist_http3_context *, cwist_http3_request_handler_func, void *)
 cwist_http3_set_datagram_callback: void (cwist_http3_context *, void (*)(const void *data, size_t len, void *user_ctx), void *)
+cwist_http3_set_datagram_conn_callback: void (cwist_http3_context *, void (*)(void *conn, const void *data, size_t len, void *user_ctx), void *)
 cwist_http3_set_datagram_enabled: void (cwist_http3_context *, int)
 cwist_http3_set_early_data: void (cwist_http3_context *, bool)
 cwist_http3_set_early_data_guard: void (cwist_http3_context *, int)
@@ -2631,6 +2635,8 @@ struct cwist_http3_context [26] uint64_t last_close_code
 struct cwist_http3_context [27] char last_close_reason[256]
 struct cwist_http3_context [28] void *async_queue
 struct cwist_http3_context [29] char *tls_groups
+struct cwist_http3_context [30] void (*datagram_conn_cb)(void *conn, const void *data, size_t len, void *user_ctx)
+struct cwist_http3_context [31] void *datagram_conn_user_ctx
 struct cwist_http_async_conn_t [0] int fd
 struct cwist_http_async_conn_t [1] void *user_ctx
 struct cwist_http_async_conn_t [2] char *rbuf
