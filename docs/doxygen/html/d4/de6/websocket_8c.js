@@ -10,6 +10,7 @@ var websocket_8c =
     [ "cwist_websocket_receive", "d4/de6/websocket_8c.html#a7c4cc8a5486ce33aab2199a8f5ec82d0", null ],
     [ "cwist_websocket_receive_sequenced", "d4/de6/websocket_8c.html#a89fcb0410ea4c7aabc529702bfcdd6a1", null ],
     [ "cwist_websocket_send", "d4/de6/websocket_8c.html#a84b014c343b059d06c899fd2b9285966", null ],
+    [ "cwist_websocket_send_fragments", "d4/de6/websocket_8c.html#a58f86294769dd8985f88bcd25b51cf6b", null ],
     [ "cwist_websocket_send_sequenced", "d4/de6/websocket_8c.html#a4d6e2a770ce633eff74dafbf509fb4d6", null ],
     [ "cwist_websocket_upgrade", "d4/de6/websocket_8c.html#a25531b0d899d92a6618a28ed0b5482d0", null ],
     [ "cwist_websocket_upgrade_response", "d4/de6/websocket_8c.html#a972fc2f9a831e71fa91f87b96339fb1f", null ]

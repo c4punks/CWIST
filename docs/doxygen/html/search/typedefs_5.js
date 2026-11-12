@@ -11,5 +11,6 @@ var searchData=
   ['grpc_5fclient_5fhpack_5fentry_8',['grpc_client_hpack_entry',['../d4/d54/grpc__client_8c.html#a0b83c8cb004a0ec021b689b3b5f8bb75',1,'grpc_client.c']]],
   ['grpc_5fclient_5fmsg_9',['grpc_client_msg',['../d4/d54/grpc__client_8c.html#a55e4abd6c928f0effa10064e632bf6f2',1,'grpc_client.c']]],
   ['grpc_5fmethod_5fconfig_10',['grpc_method_config',['../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d',1,'grpc_channel.c']]],
-  ['grpc_5fqnode_11',['grpc_qnode',['../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d',1,'grpc.c']]]
+  ['grpc_5fqnode_11',['grpc_qnode',['../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d',1,'grpc.c']]],
+  ['grpc_5froute_5fview_12',['grpc_route_view',['../d9/dba/grpc_8c.html#a2832d700232e75b80ecf8501c8d3a878',1,'grpc.c']]]
 ];

@@ -2,7 +2,9 @@ var net_2websocket_2websocket_8h =
 [
     [ "cwist_websocket", "d9/d2c/structcwist__websocket.html", "d9/d2c/structcwist__websocket" ],
     [ "cwist_ws_frame", "db/d40/structcwist__ws__frame.html", "db/d40/structcwist__ws__frame" ],
+    [ "cwist_ws_fragment", "d0/d0d/structcwist__ws__fragment.html", "d0/d0d/structcwist__ws__fragment" ],
     [ "cwist_websocket", "dd/dec/net_2websocket_2websocket_8h.html#a11f866b6d2c4d98b1cc8b835ac1b42d2", null ],
+    [ "cwist_ws_fragment", "dd/dec/net_2websocket_2websocket_8h.html#a68acebfa8f121b141c6d3c2a52efa65a", null ],
     [ "cwist_ws_frame", "dd/dec/net_2websocket_2websocket_8h.html#a17d24442b19360466e84496fe8ce8ac5", null ],
     [ "cwist_ws_opcode_t", "dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254", [
       [ "CWIST_WS_FRAME_CONTINUATION", "dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254a72830a53e7190ca827e2af7ac2d97175", null ],
@@ -18,6 +20,7 @@ var net_2websocket_2websocket_8h =
     [ "cwist_websocket_receive", "dd/dec/net_2websocket_2websocket_8h.html#a7c4cc8a5486ce33aab2199a8f5ec82d0", null ],
     [ "cwist_websocket_receive_sequenced", "dd/dec/net_2websocket_2websocket_8h.html#a89fcb0410ea4c7aabc529702bfcdd6a1", null ],
     [ "cwist_websocket_send", "dd/dec/net_2websocket_2websocket_8h.html#a84b014c343b059d06c899fd2b9285966", null ],
+    [ "cwist_websocket_send_fragments", "dd/dec/net_2websocket_2websocket_8h.html#a58f86294769dd8985f88bcd25b51cf6b", null ],
     [ "cwist_websocket_send_sequenced", "dd/dec/net_2websocket_2websocket_8h.html#a4d6e2a770ce633eff74dafbf509fb4d6", null ],
     [ "cwist_websocket_upgrade", "dd/dec/net_2websocket_2websocket_8h.html#a25531b0d899d92a6618a28ed0b5482d0", null ],
     [ "cwist_websocket_upgrade_response", "dd/dec/net_2websocket_2websocket_8h.html#a972fc2f9a831e71fa91f87b96339fb1f", null ]

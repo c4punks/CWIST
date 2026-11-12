@@ -109,6 +109,7 @@ var annotated_dup =
     [ "cwist_webrtc_ctx", "dc/d88/structcwist__webrtc__ctx.html", "dc/d88/structcwist__webrtc__ctx" ],
     [ "cwist_webrtc_msg", "d5/dcf/structcwist__webrtc__msg.html", "d5/dcf/structcwist__webrtc__msg" ],
     [ "cwist_websocket", "d9/d2c/structcwist__websocket.html", "d9/d2c/structcwist__websocket" ],
+    [ "cwist_ws_fragment", "d0/d0d/structcwist__ws__fragment.html", "d0/d0d/structcwist__ws__fragment" ],
     [ "cwist_ws_frame", "db/d40/structcwist__ws__frame.html", "db/d40/structcwist__ws__frame" ],
     [ "cwist_zod_error", "dc/d5f/structcwist__zod__error.html", "dc/d5f/structcwist__zod__error" ],
     [ "cwist_zod_result", "dd/d71/structcwist__zod__result.html", "dd/d71/structcwist__zod__result" ],
