@@ -259,7 +259,7 @@ Holding a million connections</h3>
 <td class="markdownTableBodyNone">C1M over TLS HTTP/1.1 and HTTP/2 via <a href="https://github.com/gg582/fly.board#scalability-benchmark">fly.board</a>   </td><td class="markdownTableBodyNone">1,000,000 / 1,000,000 held and served, zero failures   </td><td class="markdownTableBodyNone">19.9 GB / 30.1 GB PSS   </td></tr>
 </table>
 <p>The HTTPS ramp is handshake-bound (~2,900 full P-256 handshakes/s, so ~340 s to open 1M connections). Kernel prerequisites, the client tooling fixes the runs needed, and the per-run details are in <a class="el" href="d0/d49/md_docs_2performance_2https-c100k.html">docs/performance/https-c100k.md</a> and <a class="el" href="db/d4d/md_docs_2c1m-file-limits.html">docs/c1m-file-limits.md</a>.</p>
-<p>Known limits of the async path: HTTPS still runs the request phase on pool threads, a handler that writes faster than the socket drains waits inside the reactor thread (bounded by <code>CWIST_HTTP_TIMEOUT_MS</code>), and idle cleartext keep-alive connections are not yet reaped by a timer.</p>
+<p>Known limits of the async path: HTTPS still runs the request phase on pool threads, a handler that writes faster than the socket drains waits inside the reactor thread (bounded by <code>CWIST_HTTP_TIMEOUT_MS</code>). Idle cleartext keep-alive connections are closed by a per-worker sweep timer once they wait longer than <code>CWIST_HTTP_KEEP_ALIVE_TIMEOUT</code> (default 15 s), counted in <code>cwist_http_idle_reaped_total</code>.</p>
 <h2><a class="anchor" id="autotoc_md10"></a>
 Why C, when Axum and Gin exist?</h2>
 <ol type="1">
