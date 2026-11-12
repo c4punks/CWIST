@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 struct cwist_async;
+struct cwist_https_connection;
 
 /** Current generation of the C1M worker reactors; changes when the pool is destroyed. */
 uint64_t cwist_http_reactor_generation(void);
