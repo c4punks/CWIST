@@ -17,9 +17,9 @@ a WASI 0.2 edge runtime, a browser Service Worker, or bare-metal MCU firmware.</
 </p>
 
 <p align="center">
-<strong>Bare-metal embedded support:</strong> STM32F769I-DISCO and NUCLEO-H743ZI2,
-raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, and bounded
-response streaming on Cortex-M.
+<strong>Bare-metal embedded support:</strong> raw-lwIP HTTP, optional mbedTLS
+HTTPS, static connection pools, and bounded response streaming on Cortex-M,
+validated on a physical STM32F769I-DISCO board.
 </p>
 
 <p align="center">
@@ -43,7 +43,7 @@ adapter without BSD sockets, pthreads, epoll, or the hosted C1M reactor.
 |--------|-----------------------|--------------------------|
 | **Linux, macOS, BSD** | HTTP/1.1, HTTP/2, HTTP/3, TLS, WebSocket, WebTransport, io_uring/epoll/kqueue | [simple-server](example/simple-server) |
 | **WASI 0.2 and browser Service Worker** | The same routes and handlers on Wasmtime or in the browser | [wasip2-kv](example/wasip2-kv), [wasm-service-worker](example/wasm-service-worker) |
-| **Bare-metal STM32 and Cortex-M** | Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses | [STM32 guide](docs/embedded/stm32.md), [STM32F769I-DISCO fortress](example/stm32f769-fortress), [NUCLEO-H743ZI2](example/stm32) |
+| **Bare-metal STM32 and Cortex-M** | Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses | [STM32 guide](docs/embedded/stm32.md); STM32F769I-DISCO [fortress](example/stm32f769-fortress) (physical-board validated); NUCLEO-H743ZI2 [example](example/stm32) (reference integration: cross-build / QEMU) |
 
 ## Quick start
 
@@ -101,7 +101,7 @@ yet (for example, the wasip2 demo does not promise crash-durable writes).
 
 | Layer | What you get |
 |-------|-------------|
-| **Embedded / bare metal** | Cortex-M Thumb-2 builds, STM32F769I-DISCO and NUCLEO-H743ZI2 integrations, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming |
+| **Embedded / bare metal** | Cortex-M Thumb-2 builds, STM32F769I-DISCO (physical-board validated) and NUCLEO-H743ZI2 (reference integration) examples, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming |
 | **Protocols** | HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels |
 | **TLS / Security** | BoringSSL, one-call hybrid post-quantum TLS (X25519MLKEM768), ECH, certificate hot reload, JWT, CSRF, WAF, rate limiting, secure headers, encrypted DB columns |
 | **Database** | SQLite3 + ORM and migrations, Nuke DB (in-memory SQLite synced to disk on COMMIT), PostgreSQL/MySQL/MariaDB detection by wire protocol |
@@ -274,14 +274,28 @@ CWIST also provides a socket-free Cortex-M path for firmware that uses
 middleware, handlers, JSON helpers, and HTTP/1.1 parser are available without
 `cwist_app_listen()`, pthreads, epoll, or the C1M reactor.
 
+Each board carries exactly one of three labels:
+
+| Board | Status | What backs it |
+|-------|--------|---------------|
+| STM32F769I-DISCO | **Physical-board validated** | Flashed and run on real hardware ([example/stm32f769](example/stm32f769), [fortress](example/stm32f769-fortress)) |
+| NUCLEO-H743ZI2 | **Reference integration (cross-build / QEMU)** | Cross-built; not yet run on a physical board ([example/stm32](example/stm32)) |
+| STM32F429I-DISCO | **Planned** | Low-resource target; hardware on hand, not validated yet |
+
 - **Validated on STM32F769I-DISCO:** raw-lwIP HTTP, mbedTLS HTTPS, static
   connection pools, and streamed responses through bounded TX buffers.
 - **LCD and load demo:** `example/stm32f769-fortress/` exposes 288 real
   connection-pool slots on the 800x480 LCD and browser dashboard, with
   selectable responses up to 1 MiB.
-- **Reference integration:** NUCLEO-H743ZI2 and Cortex-M7 Thumb-2 builds for
-  `arm-none-eabi-gcc`, with QEMU semihosting checks kept separate from
-  physical-board validation.
+- **Reference integration:** NUCLEO-H743ZI2 application, HAL hooks, and lwIP
+  options. It is cross-built only and has not been run on a physical board.
+- **Automated checks (not hardware validation):**
+  [`baremetal.yml`](.github/workflows/baremetal.yml) builds Cortex-M7 Thumb-2
+  firmware with `arm-none-eabi-gcc` and runs it under `qemu-arm` semihosting
+  (`make baremetal-smoke`, `make baremetal-size-gate`);
+  [`cross-compile.yml`](.github/workflows/cross-compile.yml) cross-builds
+  `fat-dist` for embedded Linux triplets and link-smokes it under qemu-user.
+  Passing either says nothing about a board's PHY, clock tree, NVIC, or RNG.
 
 Build inputs and the lwIP/TLS integration are documented in
 [docs/embedded/stm32.md](docs/embedded/stm32.md). Board-specific wiring,
