@@ -6,8 +6,8 @@ var indexSectionsWithContent =
   3: "_bcghmqs",
   4: "abcdefghijklmnopqrstuvw",
   5: "_abceghjnopqrsw",
-  6: "acfgjq",
-  7: "acefghjq",
+  6: "acfgjqt",
+  7: "acefghjqt",
   8: "_abcdeghklmnopqrstuw",
   9: "01235abcdefghijklmnopqrstuvwz개런설웹튜"
 };

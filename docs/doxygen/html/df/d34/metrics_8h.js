@@ -28,6 +28,7 @@ var metrics_8h =
       [ "CWIST_METRIC_TLS_CIPHERS_AES256_GCM", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ac7a6b6128ce3a0ba66a5eaa6b9047826", null ],
       [ "CWIST_METRIC_TLS_CIPHERS_CHACHA20", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a1892fad67896641bb6203cf2f3b34a2d", null ],
       [ "CWIST_METRIC_TLS_CIPHERS_OTHER", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5ac5d704420477232e50164cddd0b30ad4", null ],
+      [ "CWIST_METRIC_HTTP_IDLE_REAPED", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5a7d783f649d9bdfaaf4c56a69c22c0917", null ],
       [ "CWIST_METRIC_COUNT", "df/d34/metrics_8h.html#a4b994f8e8094a926156bcc218559ffe5af42a8c54709ec9c23b8e593d015e0a9e", null ]
     ] ],
     [ "cwist_metric_type", "df/d34/metrics_8h.html#a757fbefdb6fdfb162a0cec119b076a16", [

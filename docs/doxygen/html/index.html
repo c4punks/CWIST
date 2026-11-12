@@ -118,7 +118,7 @@ $(document).ready(function(){initNavTree('index.html',''); initResizable(); });
 <p align="center"></p>
 <p><b>Write your routes and handlers once in C. Serve them from a native server, a WASI 0.2 edge runtime, a browser Service Worker, or bare-metal MCU firmware.</b> </p>
 <p align="center"></p>
-<p><b>Bare-metal embedded support:</b> STM32F769I-DISCO and NUCLEO-H743ZI2, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, and bounded response streaming on Cortex-M. </p>
+<p><b>Bare-metal embedded support:</b> raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, and bounded response streaming on Cortex-M, validated on a physical STM32F769I-DISCO board. </p>
 <p align="center"></p>
 <p>CWIST is a C17 web framework and application server: routing, middleware, templates, sessions, validation and an embedded SQLite ORM on top of HTTP/1.1, HTTP/2, HTTP/3, WebSocket and WebTransport, with an io_uring/epoll/kqueue reactor. </p>
 <p align="center"></p>
@@ -135,7 +135,7 @@ Supported platforms</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>WASI 0.2 and browser Service Worker</b>   </td><td class="markdownTableBodyNone">The same routes and handlers on Wasmtime or in the browser   </td><td class="markdownTableBodyNone"><a href="example/wasip2-kv">wasip2-kv</a>, <a href="example/wasm-service-worker">wasm-service-worker</a>    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>, <a href="example/stm32f769-fortress">STM32F769I-DISCO fortress</a>, <a href="example/stm32">NUCLEO-H743ZI2</a>   </td></tr>
+<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>; STM32F769I-DISCO <a href="example/stm32f769-fortress">fortress</a> (physical-board validated); NUCLEO-H743ZI2 <a href="example/stm32">example</a> (reference integration: cross-build / QEMU)   </td></tr>
 </table>
 <h2><a class="anchor" id="autotoc_md4"></a>
 Quick start</h2>
@@ -162,7 +162,7 @@ Quick start</h2>
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html_a342acf59fe7ce906f6d80a01bfdc1e6e"><div class="ttname"><a href="dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">cwist_http_response::body</a></div><div class="ttdeci">cwist_sstring * body</div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00087">http.h:87</a></div></div>
-<div class="ttc" id="asys_2app_2app_8h_html_a05f9a10f4d2ab307c211dd56d54fe7c3"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3">cwist_app_listen</a></div><div class="ttdeci">int cwist_app_listen(cwist_app *app, int port)</div><div class="ttdoc">Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l04759">app.c:4759</a></div></div>
+<div class="ttc" id="asys_2app_2app_8h_html_a05f9a10f4d2ab307c211dd56d54fe7c3"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3">cwist_app_listen</a></div><div class="ttdeci">int cwist_app_listen(cwist_app *app, int port)</div><div class="ttdoc">Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l04773">app.c:4773</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a2e05d7cf1fd66d956d6928d465c3aa72"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a2e05d7cf1fd66d956d6928d465c3aa72">cwist_app_get</a></div><div class="ttdeci">void cwist_app_get(cwist_app *app, const char *path, cwist_handler_func handler)</div><div class="ttdoc">Registers a GET route handler.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l02239">app.c:2239</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a8d6f015a001b2d189ebea808de9da254"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a8d6f015a001b2d189ebea808de9da254">cwist_app_destroy</a></div><div class="ttdeci">void cwist_app_destroy(cwist_app *app)</div><div class="ttdoc">Destroys the application and frees all resources.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l01484">app.c:1484</a></div></div>
 <div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l01312">app.c:1312</a></div></div>
@@ -191,7 +191,7 @@ What CWIST includes</h2>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Layer   </th><th class="markdownTableHeadNone">What you get    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds, STM32F769I-DISCO and NUCLEO-H743ZI2 integrations, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
+<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds, STM32F769I-DISCO (physical-board validated) and NUCLEO-H743ZI2 (reference integration) examples, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>Protocols</b>   </td><td class="markdownTableBodyNone">HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -259,7 +259,7 @@ Holding a million connections</h3>
 <td class="markdownTableBodyNone">C1M over TLS HTTP/1.1 and HTTP/2 via <a href="https://github.com/gg582/fly.board#scalability-benchmark">fly.board</a>   </td><td class="markdownTableBodyNone">1,000,000 / 1,000,000 held and served, zero failures   </td><td class="markdownTableBodyNone">19.9 GB / 30.1 GB PSS   </td></tr>
 </table>
 <p>The HTTPS ramp is handshake-bound (~2,900 full P-256 handshakes/s, so ~340 s to open 1M connections). Kernel prerequisites, the client tooling fixes the runs needed, and the per-run details are in <a class="el" href="d0/d49/md_docs_2performance_2https-c100k.html">docs/performance/https-c100k.md</a> and <a class="el" href="db/d4d/md_docs_2c1m-file-limits.html">docs/c1m-file-limits.md</a>.</p>
-<p>Known limits of the async path: HTTPS still runs the request phase on pool threads, a handler that writes faster than the socket drains waits inside the reactor thread (bounded by <code>CWIST_HTTP_TIMEOUT_MS</code>), and idle cleartext keep-alive connections are not yet reaped by a timer.</p>
+<p>Known limits of the async path: HTTPS still runs the request phase on pool threads, a handler that writes faster than the socket drains waits inside the reactor thread (bounded by <code>CWIST_HTTP_TIMEOUT_MS</code>). Idle cleartext keep-alive connections are closed by a per-worker sweep timer once they wait longer than <code>CWIST_HTTP_KEEP_ALIVE_TIMEOUT</code> (default 15 s), counted in <code>cwist_http_idle_reaped_total</code>.</p>
 <h2><a class="anchor" id="autotoc_md10"></a>
 Why C, when Axum and Gin exist?</h2>
 <ol type="1">
@@ -299,10 +299,22 @@ Platform support</h2>
 <h2><a class="anchor" id="autotoc_md15"></a>
 Bare-metal STM32</h2>
 <p>CWIST also provides a socket-free Cortex-M path for firmware that uses <code><a class="el" href="d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> or the raw-lwIP adapter. The same routing, middleware, handlers, JSON helpers, and HTTP/1.1 parser are available without <code><a class="el" href="d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthreads, epoll, or the C1M reactor.</p>
+<p>Each board carries exactly one of three labels:</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Board   </th><th class="markdownTableHeadNone">Status   </th><th class="markdownTableHeadNone">What backs it    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">STM32F769I-DISCO   </td><td class="markdownTableBodyNone"><b>Physical-board validated</b>   </td><td class="markdownTableBodyNone">Flashed and run on real hardware (<a href="example/stm32f769">example/stm32f769</a>, <a href="example/stm32f769-fortress">fortress</a>)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">NUCLEO-H743ZI2   </td><td class="markdownTableBodyNone"><b>Reference integration (cross-build / QEMU)</b>   </td><td class="markdownTableBodyNone">Cross-built; not yet run on a physical board (<a href="example/stm32">example/stm32</a>)    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">STM32F429I-DISCO   </td><td class="markdownTableBodyNone"><b>Planned</b>   </td><td class="markdownTableBodyNone">Low-resource target; hardware on hand, not validated yet   </td></tr>
+</table>
 <ul>
 <li><b>Validated on STM32F769I-DISCO:</b> raw-lwIP HTTP, mbedTLS HTTPS, static connection pools, and streamed responses through bounded TX buffers.</li>
 <li><b>LCD and load demo:</b> <code>example/stm32f769-fortress/</code> exposes 288 real connection-pool slots on the 800x480 LCD and browser dashboard, with selectable responses up to 1 MiB.</li>
-<li><b>Reference integration:</b> NUCLEO-H743ZI2 and Cortex-M7 Thumb-2 builds for <code>arm-none-eabi-gcc</code>, with QEMU semihosting checks kept separate from physical-board validation.</li>
+<li><b>Reference integration:</b> NUCLEO-H743ZI2 application, HAL hooks, and lwIP options. It is cross-built only and has not been run on a physical board.</li>
+<li><b>Automated checks (not hardware validation):</b> <a href=".github/workflows/baremetal.yml"><code>baremetal.yml</code></a> builds Cortex-M7 Thumb-2 firmware with <code>arm-none-eabi-gcc</code> and runs it under <code>qemu-arm</code> semihosting (<code>make baremetal-smoke</code>, <code>make baremetal-size-gate</code>); <a href=".github/workflows/cross-compile.yml"><code>cross-compile.yml</code></a> cross-builds <code>fat-dist</code> for embedded Linux triplets and link-smokes it under qemu-user. Passing either says nothing about a board's PHY, clock tree, NVIC, or RNG.</li>
 </ul>
 <p>Build inputs and the lwIP/TLS integration are documented in <a class="el" href="de/d87/md_docs_2embedded_2stm32.html">docs/embedded/stm32.md</a>. Board-specific wiring, cache constraints, and flashing instructions live in the example READMEs.</p>
 <h2><a class="anchor" id="autotoc_md16"></a>
@@ -384,12 +396,12 @@ Feature notes</h2>
 Latest benchmark run</h2>
 <p>CI regenerates this block from each benchmark run.</p>
 <p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
-<li><b>CWIST Classic pool</b>: 177186 req/s | Latency 1.30ms (P50 1.02ms, P90 2.71ms, P99 5.32ms, P99.999 15.45ms) | RSS 60644KiB | Csw 1723015</li>
-<li><b>CWIST reactor</b>: 216082 req/s | Latency 1.90ms (P50 1.64ms, P90 3.81ms, P99 6.42ms, P99.999 12.81ms) | RSS 24600KiB | Csw 199085</li>
-<li><b>Actix</b>: 209275 req/s | Latency 1.96ms (P50 1.66ms, P90 3.86ms, P99 6.42ms, P99.999 12.00ms) | RSS 12252KiB | Csw 227669</li>
-<li><b>Axum</b>: 179116 req/s | Latency 2.22ms (P50 2.00ms, P90 3.97ms, P99 6.14ms, P99.999 11.89ms) | RSS 16336KiB | Csw 343316</li>
-<li><b>Gin (Go)</b>: 131919 req/s | Latency 5.30ms (P50 2.93ms, P90 14.13ms, P99 35.02ms, P99.999 78.89ms) | RSS 28428KiB | Csw 555117</li>
-<li><b>Spring Boot</b>: 116166 req/s | Latency 3.40ms (P50 3.15ms, P90 4.96ms, P99 7.89ms, P99.999 35.25ms) | RSS 1306960KiB | Csw 430658</li>
+<li><b>CWIST Classic pool</b>: 117878 req/s | Latency 1.91ms (P50 1.50ms, P90 3.96ms, P99 7.48ms, P99.999 20.82ms) | RSS 60988KiB | Csw 1147409</li>
+<li><b>CWIST reactor</b>: 143108 req/s | Latency 2.75ms (P50 2.55ms, P90 4.92ms, P99 7.78ms, P99.999 13.73ms) | RSS 24272KiB | Csw 121601</li>
+<li><b>Actix</b>: 128403 req/s | Latency 3.06ms (P50 2.84ms, P90 5.12ms, P99 7.80ms, P99.999 22.37ms) | RSS 12156KiB | Csw 167399</li>
+<li><b>Axum</b>: 110125 req/s | Latency 3.57ms (P50 3.38ms, P90 5.98ms, P99 8.83ms, P99.999 16.81ms) | RSS 15820KiB | Csw 225548</li>
+<li><b>Gin (Go)</b>: 78999 req/s | Latency 7.77ms (P50 4.86ms, P90 19.10ms, P99 52.15ms, P99.999 117.59ms) | RSS 27960KiB | Csw 312920</li>
+<li><b>Spring Boot</b>: 45273 req/s | Latency 8.73ms (P50 8.12ms, P90 11.67ms, P99 18.76ms, P99.999 57.40ms) | RSS 1311692KiB | Csw 226789</li>
 </ul>
 <p><em>Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in <a class="el" href="d9/d15/cooperative-queuing_8md.html">docs/cooperative-queuing.md</a> and benchmarks/webserver.json; they are no longer rendered as comparison rows.</em></p>
 <p><b>Spring runtime environment</b></p>
