@@ -66,7 +66,7 @@ Each variable has one status. The status says what v4 promises about it.
 |----------|--------|--------|---------|--------|
 | `CWIST_HTTP2_IDLE_TIMEOUT_MS` | supported | milliseconds > 0 | `300000` | Idle time before an HTTP/2 connection is closed. |
 | `CWIST_HTTP2_GOAWAY_GRACE_MS` | supported | milliseconds ≥ 0 | `2000` | Time between GOAWAY and closing the connection, so a client can finish streams it already started. |
-| `CWIST_HTTP2_YIELD_US` | tuning | microseconds >= 0 | `250` | HTTP/2 over TLS: how long a busy connection may keep an HTTPS pool thread while other connections wait for one. Past it the connection is re-queued behind them between streams. `0` disables this. |
+| `CWIST_HTTP2_YIELD_US` | tuning | microseconds >= 0 | `250` | How long a busy HTTP/2 connection keeps its thread before stepping aside between streams: over TLS it is re-queued behind connections waiting for an HTTPS pool thread; cleartext h2c yields the CPU. `0` disables this. |
 | `CWIST_HTTP2_MAX_RST_BURST` | supported | integer > 0 | `100` | Stream resets a client may send in a burst before the connection is closed (rapid reset defence, CVE-2023-44487). |
 | `CWIST_HTTP2_MAX_RST_RATE` | supported | resets per second > 0 | `100` | Refill rate of that reset budget. |
 | `CWIST_H2_BATCH_BYTES` | tuning | bytes ≥ 4096 | `65536` | Outgoing frames are coalesced and written once this many bytes are pending (or before any blocking wait). |
