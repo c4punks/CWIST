@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['인증_20jwt_20및_20db_20암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md487',1,'']]]
+  ['쓰인_20구성법_0',['2. 코드에 쓰인 구성법',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md360',1,'']]]
 ];

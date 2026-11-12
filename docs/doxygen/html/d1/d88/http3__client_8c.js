@@ -11,6 +11,7 @@ var http3__client_8c =
     [ "cwist_http3_client_create", "d1/d88/http3__client_8c.html#abe7533eacceb1cc102b6a080895f42c5", null ],
     [ "cwist_http3_client_destroy", "d1/d88/http3__client_8c.html#ad8d8dca1705ea3cbec5a18788338158c", null ],
     [ "cwist_http3_client_enable_0rtt", "d1/d88/http3__client_8c.html#a86b9d00f817e3b072e6d3abfb72479a6", null ],
+    [ "cwist_http3_client_enable_datagram_channel", "d1/d88/http3__client_8c.html#a21c7ecc5b2c262e477020b8a8d56fcd8", null ],
     [ "cwist_http3_client_enable_datagrams", "d1/d88/http3__client_8c.html#a3c2b697641812cf3867fd89d504b19c6", null ],
     [ "cwist_http3_client_get_datagram_stats", "d1/d88/http3__client_8c.html#ab4604320b7c65342adf655118f3b0328", null ],
     [ "cwist_http3_client_recv_datagram", "d1/d88/http3__client_8c.html#a03516b78e233ff5f770ea7f78d16f12d", null ],

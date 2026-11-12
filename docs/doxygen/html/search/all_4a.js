@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['요약_0',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md489',1,'']]],
-  ['요청_20arena_1',['요청 arena',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md353',1,'']]]
+  ['스레드_20풀_0',['Classic 스레드 풀',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md370',1,'']]],
+  ['스키마_20검증_1',['3. JSON 파싱과 Zod 스키마 검증',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md502',1,'']]]
 ];

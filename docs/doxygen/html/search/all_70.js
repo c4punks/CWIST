@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['부하_20프로필_0',['부하 프로필',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md729',1,'']]]
+  ['풀_0',['Classic 스레드 풀',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md370',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['빈틈_0',['빈틈',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md583',1,'']]]
+  ['확장_20시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md381',1,'']]]
 ];

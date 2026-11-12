@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['프로세스와_20서버_20모드_0',['프로세스와 서버 모드',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md360',1,'']]]
+  ['진단_0',['진단',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md377',1,'']]]
 ];

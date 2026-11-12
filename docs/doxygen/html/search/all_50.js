@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['정적_20파일_20제공_0',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md491',1,'']]],
-  ['정책_20요약_1',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md489',1,'']]]
+  ['않는_20것_0',['2.4 코드가 만들지 않는 것',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md364',1,'']]]
 ];

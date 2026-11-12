@@ -94,8 +94,8 @@
 <area shape="poly" id="edge42_Node000043_Node000064" title=" " alt="" coords="2856,118,2538,121,2123,131,1920,139,1742,150,1605,165,1557,174,1526,184,1498,202,1474,225,1438,271,1434,268,1470,221,1495,197,1524,179,1556,169,1604,160,1742,145,1920,134,2123,125,2538,116,2856,112"/>
 <area shape="rect" id="Node000066" href="$dd/dff/http3_8h.html" title="HTTP/3 (QUIC&#45;based) Protocol Definitions for CWIST." alt="" coords="516,269,679,309"/>
 <area shape="poly" id="edge46_Node000043_Node000066" title=" " alt="" coords="2856,119,2015,140,1524,159,1319,171,1164,184,1029,203,895,226,677,272,676,267,894,221,1028,197,1164,179,1319,165,1523,154,2014,134,2856,114"/>
-<area shape="rect" id="Node000067" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="4064,181,4227,221"/>
-<area shape="poly" id="edge48_Node000043_Node000067" title=" " alt="" coords="3046,130,3199,146,3329,153,3551,154,3772,156,3901,163,4052,179,4064,180,4063,186,4052,184,3900,169,3772,161,3551,160,3329,158,3199,151,3045,136"/>
+<area shape="rect" id="Node000068" href="$df/dad/http3__client_8h.html" title="HTTP/3 client using lsquic/BoringSSL." alt="" coords="4064,181,4227,221"/>
+<area shape="poly" id="edge48_Node000043_Node000068" title=" " alt="" coords="3046,130,3199,146,3329,153,3551,154,3772,156,3901,163,4052,179,4064,180,4063,186,4052,184,3900,169,3772,161,3551,160,3329,158,3199,151,3045,136"/>
 <area shape="rect" id="Node000069" href="$d9/df2/http__client_8h.html" title="Unified HTTP/1.1 and HTTP/2 client using libcurl." alt="" coords="4800,357,4963,397"/>
 <area shape="poly" id="edge49_Node000043_Node000069" title=" " alt="" coords="3046,130,3385,135,3955,140,4247,144,4503,152,4692,163,4751,170,4783,179,4805,197,4824,218,4853,268,4871,317,4881,356,4875,357,4866,319,4848,270,4820,221,4802,201,4780,184,4750,175,4692,168,4503,157,4247,149,3955,145,3385,140,3046,135"/>
 <area shape="rect" id="Node000071" href="$d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="2044,181,2207,221"/>

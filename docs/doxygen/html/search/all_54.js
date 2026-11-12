@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['첫_20상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md375',1,'']]],
-  ['첫_20서버_20띄우기_1',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md482',1,'']]]
+  ['역사적_20표_3a_20gusuryak_209차_20쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md365',1,'']]]
 ];

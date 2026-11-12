@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['백업_20복원_0',['4. 재시작, 백업, 복원',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md608',1,'']]]
+  ['키_20교환_0',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md506',1,'']]]
 ];

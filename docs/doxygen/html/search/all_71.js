@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['분리하기_0',['2. 산출물과 상태 분리하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md606',1,'']]],
-  ['분포_20차트_1',['지연 분포 차트',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md737',1,'']]]
+  ['프로세스와_20서버_20모드_0',['프로세스와 서버 모드',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md369',1,'']]]
 ];

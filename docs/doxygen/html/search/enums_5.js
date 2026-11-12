@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['quic_5fnet_5fquality_5ft_0',['quic_net_quality_t',['../df/db2/quic__flow__control_8h.html#a679861111c848ea4d3f6973bf8fd128e',1,'quic_flow_control.h']]]
+  ['latin_5fkind_5ft_0',['latin_kind_t',['../d3/da8/latin__square_8c.html#ac970a9cf048a9b2df2f33b8703f58836',1,'latin_square.c']]]
 ];

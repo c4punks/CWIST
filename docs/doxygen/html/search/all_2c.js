@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['기본_0',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md371',1,'']]],
-  ['기본_20원칙_1',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md370',1,'']]]
+  ['계약_0',['포트 훅과 런타임 계약',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md350',1,'']]]
 ];

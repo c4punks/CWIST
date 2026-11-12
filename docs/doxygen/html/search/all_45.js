@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['안정성_20게이트_20v4_20lts부터_0',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md374',1,'']]]
+  ['사용_3a_20테스트에서_20런타임_20knob_20쌍_20덮기_0',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md366',1,'']]],
+  ['사이드_20합성_1',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md512',1,'']]]
 ];

@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['뷰_20렌더링하기_0',['WASM에서 같은 뷰 렌더링하기',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md427',1,'']]],
-  ['뷰_3a_20cwist_20wasm_20typedarray_20h_1',['제로 카피 뷰: cwist/wasm/typedarray.h',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md543',1,'']]]
+  ['하이브리드_20키_20교환_0',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md506',1,'']]]
 ];

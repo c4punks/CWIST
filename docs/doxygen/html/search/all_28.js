@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['검증_0',['3. JSON 파싱과 Zod 스키마 검증',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md484',1,'']]],
-  ['검증_20범위_1',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md348',1,'']]]
+  ['거듭제곱_0',['2.1 유한체 (소수 거듭제곱)',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md361',1,'']]],
+  ['거듭제곱_20p_20e_20e_202_1',['2.2 홀수 소수 거듭제곱 p^e, e &gt;= 2',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md362',1,'']]]
 ];

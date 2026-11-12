@@ -11,12 +11,13 @@ var searchData=
   ['soak_20testing_8',['Soak testing',['../db/d05/md_docs_2soak-testing.html',1,'']]],
   ['socket_20handoff_9',['Zero-downtime restart via socket handoff',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html',1,'']]],
   ['specification_10',['specification',['../d6/de8/md_docs_2ko_2versioning.html',1,'Release Codename Sequencing Specification'],['../d0/db4/md_docs_2versioning.html',1,'Release Codename Sequencing Specification']]],
-  ['sstring_20api_11',['SString API',['../db/d14/md_docs_2api_2sstring.html',1,'']]],
-  ['starvation_2025_20follow_20up_12',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
-  ['static_20ring_20vs_20growable_20ring_13',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]],
-  ['stek_20unchanged_14',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
-  ['stm32_15',['CWIST bare-metal STM32',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html',1,'']]],
-  ['stm32_20with_20cwist_16',['Bare-metal STM32 with CWIST',['../de/d87/md_docs_2embedded_2stm32.html',1,'']]],
-  ['swagger_20ui_17',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
-  ['syscall_20reduction_20audit_20local_2012_20core_20ryzen_205600x_18',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
+  ['square_20references_11',['Latin Square References',['../df/d22/md_docs_2references_2latin__square__references.html',1,'']]],
+  ['sstring_20api_12',['SString API',['../db/d14/md_docs_2api_2sstring.html',1,'']]],
+  ['starvation_2025_20follow_20up_13',['Classic pool burst starvation (#25 follow-up)',['../d9/d56/md_docs_2classic-pool-starvation.html',1,'']]],
+  ['static_20ring_20vs_20growable_20ring_14',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]],
+  ['stek_20unchanged_15',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
+  ['stm32_16',['CWIST bare-metal STM32',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html',1,'']]],
+  ['stm32_20with_20cwist_17',['Bare-metal STM32 with CWIST',['../de/d87/md_docs_2embedded_2stm32.html',1,'']]],
+  ['swagger_20ui_18',['Document an API with OpenAPI and Swagger UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html',1,'']]],
+  ['syscall_20reduction_20audit_20local_2012_20core_20ryzen_205600x_19',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
 ];

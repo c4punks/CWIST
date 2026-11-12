@@ -137,7 +137,7 @@ Test coverage</h1>
 </ol>
 <p>The default run checks 400 address changes and 1,200 in-flight requests. The two initial requests are additional checks. The two clients must keep different server-side connection identities. Each client must keep its original identity through all address changes. The server must stop with exit code zero.</p>
 <p>The test uses the server's Connection ID only through lsquic. The fixture's response header identifies the <code>lsquic_conn_t</code> object, not a wire CID. A wire CID can change without a change to that object.</p>
-<p>The test waits for a spare Connection ID because lsquic limits CID issue rate. Calling aioquic's <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">change_connection_id()</a></code> without a spare CID has no effect. The script checks private aioquic CID fields for this reason. CI pins aioquic 1.4.0.</p>
+<p>The test waits for a spare Connection ID because lsquic limits CID issue rate. Calling aioquic's <code>change_connection_id()</code> without a spare CID has no effect. The script checks private aioquic CID fields for this reason. CI pins aioquic 1.4.0.</p>
 <p>Use <code>HTTP3_MIGRATION_ARGS="--rounds N"</code> to change the number of test rounds. The script limits the complete run to 120 seconds and each PING or response to 10 seconds. This is a bounded migration-churn test, not a long-duration production soak test.</p>
 <h1><a class="anchor" id="autotoc_md346"></a>
 Limits</h1>

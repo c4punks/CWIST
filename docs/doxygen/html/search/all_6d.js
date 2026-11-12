@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['보기_0',['함께 보기',['../dc/d79/md_docs_2ko_2API.html#autotoc_md369',1,'']]],
-  ['보안_20정책_20요약_1',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md848',1,'']]],
-  ['보안_20헤더_2',['보안 헤더',['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md445',1,'']]],
-  ['보정_20지연_20히스토그램_3',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]]
+  ['펌웨어_20입력_20빌드_0',['펌웨어 입력 빌드',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md349',1,'']]]
 ];

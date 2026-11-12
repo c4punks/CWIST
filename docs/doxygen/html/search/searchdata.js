@@ -1,15 +1,15 @@
 var indexSectionsWithContent =
 {
-  0: "0123456789:_abcdefghijklmnopqrstuvwyz—洛개검게계교기대데동띄라런마메모목미및방버범보빌사상서설스시실안암양엔연요원웹응인입정제지진첫크클키템통튜파펌포표풀프하합핸확훅",
+  0: "0123456789:_abcdefghijklmnopqrstuvwyz—洛개거검것게계곱교구기대덮데동띄라런마만메모목문미및방버범보빌사상서설소스시실쌍쓰안않암양엔역연요원웹유응인입정제지진차참첫코크클키테템통튜파펌포표풀프하합핸홀확훅",
   1: "_bchqs",
   2: "0abcdefghijklmnopqrstuvwz",
   3: "_bcghmqs",
   4: "abcdefghijklmnopqrstuvw",
   5: "_abceghjnopqrsw",
-  6: "acfgjqt",
-  7: "acefghjqt",
+  6: "acfgjlqt",
+  7: "acefghjlqt",
   8: "_abcdeghklmnopqrstuw",
-  9: "01235abcdefghijklmnopqrstuvwz개런설웹튜"
+  9: "01235abcdefghijklmnopqrstuvwz개라런문설웹참튜"
 };
 
 var indexSectionNames =

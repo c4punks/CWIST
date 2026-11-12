@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['교환_0',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md488',1,'']]]
+  ['게이트_20v4_20lts부터_0',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md383',1,'']]]
 ];

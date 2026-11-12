@@ -1,6 +1,4 @@
 var searchData=
 [
-  ['배경_0',['배경',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md582',1,'배경'],['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md589',1,'배경']]],
-  ['배포하기_1',['Wasmtime으로 WASI 0.2 예제 배포하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html',1,'']]],
-  ['배포_20검증_2',['배포 검증',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md615',1,'']]]
+  ['클라이언트_20사이드_20합성_0',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md512',1,'']]]
 ];

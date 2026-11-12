@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['게이트_20v4_20lts부터_0',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md374',1,'']]]
+  ['검증_0',['3. JSON 파싱과 Zod 스키마 검증',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md502',1,'']]],
+  ['검증_20범위_1',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md348',1,'']]]
 ];

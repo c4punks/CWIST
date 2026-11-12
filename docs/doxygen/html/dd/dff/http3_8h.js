@@ -1,6 +1,7 @@
 var http3_8h =
 [
     [ "cwist_http3_context", "d9/dae/structcwist__http3__context.html", "d9/dae/structcwist__http3__context" ],
+    [ "CWIST_HTTP3_DATAGRAM_PROTOCOL", "dd/dff/http3_8h.html#a366eba65525e5b029c2eff3839f2a957", null ],
     [ "cwist_http3_context", "dd/dff/http3_8h.html#a7578186c59139d081e252829586a2c10", null ],
     [ "cwist_http3_request_handler_func", "dd/dff/http3_8h.html#ac5677399dbfa619d5b8c90cb4e598a78", null ],
     [ "cwist_webtransport_handler_func", "dd/dff/http3_8h.html#a0ddd7eeaebe08f0c409fca3b8a3f1a53", null ],
@@ -13,6 +14,7 @@ var http3_8h =
     [ "cwist_http3_send_datagram", "dd/dff/http3_8h.html#a99860db5e8d04b8134684ce9ae5ebbc1", null ],
     [ "cwist_http3_server_loop", "dd/dff/http3_8h.html#a8d60b85d41105c404f177a04a03f0d51", null ],
     [ "cwist_http3_set_datagram_callback", "dd/dff/http3_8h.html#a48b148a623a57a569bbf3b6601e4407a", null ],
+    [ "cwist_http3_set_datagram_conn_callback", "dd/dff/http3_8h.html#a1a079c4d5a24564e3d4dc0c2a03938cb", null ],
     [ "cwist_http3_set_datagram_enabled", "dd/dff/http3_8h.html#ab3d036544ab8151674cbf65af2ada7d5", null ],
     [ "cwist_http3_set_early_data", "dd/dff/http3_8h.html#a883319bf0c3a19099bb8a40974d4bb59", null ],
     [ "cwist_http3_set_early_data_guard", "dd/dff/http3_8h.html#a265f06e9373148103e277107a8984b12", null ],

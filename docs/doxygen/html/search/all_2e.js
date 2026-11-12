@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['데이터베이스와_20마이그레이션_20sqlite_0',['5. 데이터베이스와 마이그레이션 (SQLite)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md486',1,'']]]
+  ['교환_0',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md506',1,'']]]
 ];

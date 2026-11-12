@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['확장_20시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md372',1,'']]]
+  ['코드가_20만들지_20않는_20것_0',['2.4 코드가 만들지 않는 것',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md364',1,'']]],
+  ['코드에_20쓰인_20구성법_1',['2. 코드에 쓰인 구성법',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md360',1,'']]]
 ];

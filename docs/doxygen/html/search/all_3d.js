@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['빌드_0',['펌웨어 입력 빌드',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md349',1,'']]]
+  ['문헌_0',['라틴방진 참고 문헌',['../da/d05/md_docs_2ko_2references_2latin__square__references.html',1,'']]]
 ];

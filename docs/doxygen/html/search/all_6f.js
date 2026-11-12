@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['본문을_20청크_20단위로_20생성_0',['스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md550',1,'']]]
+  ['표기_0',['4. 표기',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md382',1,'']]],
+  ['표_3a_20gusuryak_209차_20쌍_1',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md365',1,'']]]
 ];

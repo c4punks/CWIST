@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md490',1,'']]]
+  ['유한체_20소수_20거듭제곱_0',['2.1 유한체 (소수 거듭제곱)',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md361',1,'']]]
 ];

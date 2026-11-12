@@ -285,12 +285,12 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a9141c6d1b7784b88c6ad32d9087f221b" id="r_a9141c6d1b7784b88c6ad32d9087f221b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d50/routes__internal_8h.html#a9141c6d1b7784b88c6ad32d9087f221b">cwist_route_visit_fn</a>) (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *ctx, <a class="el" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683d">cwist_http_method_t</a> method, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *path)</td></tr>
+<tr class="memitem:a9141c6d1b7784b88c6ad32d9087f221b" id="r_a9141c6d1b7784b88c6ad32d9087f221b"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d50/routes__internal_8h.html#a9141c6d1b7784b88c6ad32d9087f221b">cwist_route_visit_fn</a>) (void *ctx, <a class="el" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683d">cwist_http_method_t</a> method, const char *path)</td></tr>
 <tr class="separator:a9141c6d1b7784b88c6ad32d9087f221b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a43da26398d9302191de80c134431390e" id="r_a43da26398d9302191de80c134431390e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d50/routes__internal_8h.html#a43da26398d9302191de80c134431390e">cwist_app_foreach_route</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d4/d50/routes__internal_8h.html#a9141c6d1b7784b88c6ad32d9087f221b">cwist_route_visit_fn</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">visit</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *ctx)</td></tr>
+<tr class="memitem:a43da26398d9302191de80c134431390e" id="r_a43da26398d9302191de80c134431390e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d50/routes__internal_8h.html#a43da26398d9302191de80c134431390e">cwist_app_foreach_route</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d4/d50/routes__internal_8h.html#a9141c6d1b7784b88c6ad32d9087f221b">cwist_route_visit_fn</a> visit, void *ctx)</td></tr>
 <tr class="separator:a43da26398d9302191de80c134431390e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -305,7 +305,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>(* cwist_route_visit_fn) (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *ctx, <a class="el" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683d">cwist_http_method_t</a> method, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">const</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">char</a> *path)</td>
+          <td class="memname">typedef void(* cwist_route_visit_fn) (void *ctx, <a class="el" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683d">cwist_http_method_t</a> method, const char *path)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -323,7 +323,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_app_foreach_route </td>
+          <td class="memname">void cwist_app_foreach_route </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *&#160;</td>
           <td class="paramname"><em>app</em>, </td>
@@ -337,7 +337,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
+          <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>ctx</em>&#160;</td>
         </tr>
         <tr>

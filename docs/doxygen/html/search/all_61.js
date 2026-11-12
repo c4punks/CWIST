@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['하이브리드_20키_20교환_0',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md488',1,'']]]
+  ['차수_3a_20macneish_20곱_0',['2.3 합성수 차수: MacNeish 곱',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md363',1,'']]]
 ];

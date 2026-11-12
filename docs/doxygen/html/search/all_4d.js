@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['응답_0',['연결과 응답',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md354',1,'']]]
+  ['쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md365',1,'']]],
+  ['쌍_20덮기_1',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md366',1,'']]]
 ];

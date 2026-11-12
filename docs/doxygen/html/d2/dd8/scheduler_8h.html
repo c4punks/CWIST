@@ -242,31 +242,31 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:a6f0ae6fce1a81f7dc35c2b235415d1ed" id="r_a6f0ae6fce1a81f7dc35c2b235415d1ed"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> cwist_scheduler&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a></td></tr>
+<tr class="memitem:a6f0ae6fce1a81f7dc35c2b235415d1ed" id="r_a6f0ae6fce1a81f7dc35c2b235415d1ed"><td class="memItemLeft" align="right" valign="top">typedef struct cwist_scheduler&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a></td></tr>
 <tr class="memdesc:a6f0ae6fce1a81f7dc35c2b235415d1ed"><td class="mdescLeft">&#160;</td><td class="mdescRight">Opaque background job scheduler handle.  <br /></td></tr>
 <tr class="separator:a6f0ae6fce1a81f7dc35c2b235415d1ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af9cff7a369239215c4ff522fbc48f7d1" id="r_af9cff7a369239215c4ff522fbc48f7d1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#af9cff7a369239215c4ff522fbc48f7d1">cwist_scheduler_drop_cb</a>) (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *arg)</td></tr>
+<tr class="memitem:af9cff7a369239215c4ff522fbc48f7d1" id="r_af9cff7a369239215c4ff522fbc48f7d1"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#af9cff7a369239215c4ff522fbc48f7d1">cwist_scheduler_drop_cb</a>) (void *arg)</td></tr>
 <tr class="memdesc:af9cff7a369239215c4ff522fbc48f7d1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback invoked for each pending job that is cancelled.  <br /></td></tr>
 <tr class="separator:af9cff7a369239215c4ff522fbc48f7d1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ae0f1c3ad3074a69d79ea27d641ac2294" id="r_ae0f1c3ad3074a69d79ea27d641ac2294"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#ae0f1c3ad3074a69d79ea27d641ac2294">cwist_scheduler_create</a> (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> worker_count, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">queue_capacity</a>)</td></tr>
+<tr class="memitem:ae0f1c3ad3074a69d79ea27d641ac2294" id="r_ae0f1c3ad3074a69d79ea27d641ac2294"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#ae0f1c3ad3074a69d79ea27d641ac2294">cwist_scheduler_create</a> (size_t worker_count, size_t queue_capacity)</td></tr>
 <tr class="memdesc:ae0f1c3ad3074a69d79ea27d641ac2294"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a scheduler with a pool of background workers.  <br /></td></tr>
 <tr class="separator:ae0f1c3ad3074a69d79ea27d641ac2294"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a16ac83e9ad8cc4a59205bb3ce7b1c8ad" id="r_a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
+<tr class="memitem:a16ac83e9ad8cc4a59205bb3ce7b1c8ad" id="r_a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad">cwist_scheduler_destroy</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
 <tr class="memdesc:a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Destroy the scheduler and stop all worker threads.  <br /></td></tr>
 <tr class="separator:a16ac83e9ad8cc4a59205bb3ce7b1c8ad"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3f5b6e8f86cb918356d278714b809683" id="r_a3f5b6e8f86cb918356d278714b809683"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *arg)</td></tr>
+<tr class="memitem:a3f5b6e8f86cb918356d278714b809683" id="r_a3f5b6e8f86cb918356d278714b809683"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a3f5b6e8f86cb918356d278714b809683">cwist_scheduler_submit</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, void *arg)</td></tr>
 <tr class="memdesc:a3f5b6e8f86cb918356d278714b809683"><td class="mdescLeft">&#160;</td><td class="mdescRight">Submit a job to be executed as soon as a worker is available.  <br /></td></tr>
 <tr class="separator:a3f5b6e8f86cb918356d278714b809683"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a711e7f9807d19aa351f2544c59534790" id="r_a711e7f9807d19aa351f2544c59534790"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *arg, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">delay_ms</a>)</td></tr>
+<tr class="memitem:a711e7f9807d19aa351f2544c59534790" id="r_a711e7f9807d19aa351f2544c59534790"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a711e7f9807d19aa351f2544c59534790">cwist_scheduler_schedule</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d1/df5/cwist__io_8h.html#a0447e35daf4a82549bf7d207d5ce8a28">cwist_job_func</a> func, void *arg, uint64_t delay_ms)</td></tr>
 <tr class="memdesc:a711e7f9807d19aa351f2544c59534790"><td class="mdescLeft">&#160;</td><td class="mdescRight">Schedule a job to run after a relative delay.  <br /></td></tr>
 <tr class="separator:a711e7f9807d19aa351f2544c59534790"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a93a77a1ca7d1ac21f8d0a91123ca2f83" id="r_a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
+<tr class="memitem:a93a77a1ca7d1ac21f8d0a91123ca2f83" id="r_a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#a93a77a1ca7d1ac21f8d0a91123ca2f83">cwist_scheduler_pending_count</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s)</td></tr>
 <tr class="memdesc:a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of delayed jobs currently waiting to fire.  <br /></td></tr>
 <tr class="separator:a93a77a1ca7d1ac21f8d0a91123ca2f83"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac55dd12761ee804a6a7c49d2782d9b47" id="r_ac55dd12761ee804a6a7c49d2782d9b47"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#ac55dd12761ee804a6a7c49d2782d9b47">cwist_scheduler_cancel_pending</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d2/dd8/scheduler_8h.html#af9cff7a369239215c4ff522fbc48f7d1">cwist_scheduler_drop_cb</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">drop_cb</a>)</td></tr>
+<tr class="memitem:ac55dd12761ee804a6a7c49d2782d9b47" id="r_ac55dd12761ee804a6a7c49d2782d9b47"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/dd8/scheduler_8h.html#ac55dd12761ee804a6a7c49d2782d9b47">cwist_scheduler_cancel_pending</a> (<a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *s, <a class="el" href="../../d2/dd8/scheduler_8h.html#af9cff7a369239215c4ff522fbc48f7d1">cwist_scheduler_drop_cb</a> drop_cb)</td></tr>
 <tr class="memdesc:ac55dd12761ee804a6a7c49d2782d9b47"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancel all delayed jobs that have not yet fired.  <br /></td></tr>
 <tr class="separator:ac55dd12761ee804a6a7c49d2782d9b47"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
@@ -282,7 +282,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a>(* cwist_scheduler_drop_cb) (<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *arg)</td>
+          <td class="memname">typedef void(* cwist_scheduler_drop_cb) (void *arg)</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -306,7 +306,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">typedef</a> <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">struct</a> cwist_scheduler <a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a></td>
+          <td class="memname">typedef struct cwist_scheduler <a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -325,7 +325,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> cwist_scheduler_cancel_pending </td>
+          <td class="memname">size_t cwist_scheduler_cancel_pending </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em>, </td>
@@ -356,7 +356,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of jobs cancelled.</dd></dl>
-<p>Detaches the delayed-job heap under <code>s-&gt;delayed_mtx</code> and invokes <code><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">drop_cb(arg)</a></code> for each cancelled job outside the lock so caller destructors cannot deadlock on scheduler re-entry. Jobs already submitted to the io queue by the timer thread before this call are not affected.</p>
+<p>Detaches the delayed-job heap under <code>s-&gt;delayed_mtx</code> and invokes <code>drop_cb(arg)</code> for each cancelled job outside the lock so caller destructors cannot deadlock on scheduler re-entry. Jobs already submitted to the io queue by the timer thread before this call are not affected.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">s</td><td>Scheduler whose pending jobs are to be cancelled. </td></tr>
@@ -368,7 +368,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00429">429</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -381,13 +381,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="memname"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> * cwist_scheduler_create </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
+          <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>worker_count</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a>&#160;</td>
+          <td class="paramtype">size_t&#160;</td>
           <td class="paramname"><em>queue_capacity</em>&#160;</td>
         </tr>
         <tr>
@@ -420,9 +420,9 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">265</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00345">cwist_io_queue_destroy()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00345">cwist_io_queue_destroy()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02043">cwist_app_use_scheduler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02041">cwist_app_use_scheduler()</a>.</p>
 
 </div>
 </div>
@@ -433,7 +433,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> cwist_scheduler_destroy </td>
+          <td class="memname">void cwist_scheduler_destroy </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em></td><td>)</td>
@@ -455,9 +455,9 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00327">327</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00345">cwist_io_queue_destroy()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00333">cwist_io_queue_stop()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00345">cwist_io_queue_destroy()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00333">cwist_io_queue_stop()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01484">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02043">cwist_app_use_scheduler()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01482">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02041">cwist_app_use_scheduler()</a>.</p>
 
 </div>
 </div>
@@ -468,7 +468,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">size_t</a> cwist_scheduler_pending_count </td>
+          <td class="memname">size_t cwist_scheduler_pending_count </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em></td><td>)</td>
@@ -490,8 +490,6 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00412">412</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>.</p>
-
 </div>
 </div>
 <a id="a711e7f9807d19aa351f2544c59534790" name="a711e7f9807d19aa351f2544c59534790"></a>
@@ -501,7 +499,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_scheduler_schedule </td>
+          <td class="memname">bool cwist_scheduler_schedule </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em>, </td>
@@ -515,13 +513,13 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
+          <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>arg</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">uint64_t</a>&#160;</td>
+          <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>delay_ms</em>&#160;</td>
         </tr>
         <tr>
@@ -561,7 +559,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00380">380</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00277">cwist_io_queue_submit()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00277">cwist_io_queue_submit()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../db/d84/async_8c_source.html#l00464">cwist_async_set_timeout()</a>.</p>
 
@@ -574,7 +572,7 @@ Functions</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">bool</a> cwist_scheduler_submit </td>
+          <td class="memname">bool cwist_scheduler_submit </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="../../d2/dd8/scheduler_8h.html#a6f0ae6fce1a81f7dc35c2b235415d1ed">cwist_scheduler_t</a> *&#160;</td>
           <td class="paramname"><em>s</em>, </td>
@@ -588,7 +586,7 @@ Functions</h2></td></tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">void</a> *&#160;</td>
+          <td class="paramtype">void *&#160;</td>
           <td class="paramname"><em>arg</em>&#160;</td>
         </tr>
         <tr>

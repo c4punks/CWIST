@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md372',1,'']]],
-  ['시퀀스_20기본_1',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md371',1,'']]]
+  ['보안_20정책_20요약_0',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md507',1,'']]]
 ];

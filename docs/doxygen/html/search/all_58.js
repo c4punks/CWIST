@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['템플릿_20엔진과_20정적_20파일_20제공_0',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md491',1,'']]]
+  ['웹소켓_20연동_20실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md508',1,'']]],
+  ['웹_20개발_20튜토리얼_20a_20to_20z_1',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]]
 ];
