@@ -4,6 +4,7 @@ var http3__client_8c =
     [ "H3C_DECODE_BUF_SIZE", "d1/d88/http3__client_8c.html#a8ea871fd705b062c103809ee494f21f6", null ],
     [ "H3C_DGRAM_QUEUE_LIMIT", "d1/d88/http3__client_8c.html#ac9eaf0d2911f7fa289423f39166b3d3a", null ],
     [ "H3C_MAX_HEADERS", "d1/d88/http3__client_8c.html#a208ac5a7c624b5a693c19340fe7dcbf9", null ],
+    [ "H3C_RECV_BATCH", "d1/d88/http3__client_8c.html#a7af7cccbb78dc63c4fc2fd764d317941", null ],
     [ "MSG_DONTWAIT", "d1/d88/http3__client_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376", null ],
     [ "h3c_dgram_node", "d1/d88/http3__client_8c.html#ac3feccc129ea2c567256759c2a1025e5", null ],
     [ "h3c_hset_t", "d1/d88/http3__client_8c.html#a9e70aa40b49dbe2711f30381c94b424f", null ],

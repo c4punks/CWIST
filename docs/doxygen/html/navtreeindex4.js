@@ -1,5 +1,8 @@
 var NAVTREEINDEX4 =
 {
+"d2/dc2/net_2graphql_2graphql_8h_source.html":[96,0,1,0,2,1,0],
+"d2/dcb/md_docs_2tutorials_2webtransport-server.html":[91],
+"d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md890":[91,0],
 "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md891":[91,1],
 "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md892":[91,2],
 "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md893":[91,2,0],
@@ -246,8 +249,5 @@ var NAVTREEINDEX4 =
 "d3/d90/webrtc_8c.html#ad35ce1cbe49f969f6abe2ab1eb16781d":[96,0,2,2,7,4,0],
 "d3/d90/webrtc_8c.html#ad4d6c49c0295a81e4e12a7d7fd1f0adc":[96,0,2,2,7,4,7],
 "d3/d90/webrtc_8c.html#ad873cf11e9a26d4299c70a90f3d52cf7":[96,0,2,2,7,4,5],
-"d3/d90/webrtc_8c.html#ad9f37342c5b2e561a9ddb85294d4a1bd":[96,0,2,2,7,4,29],
-"d3/d90/webrtc_8c.html#adf92cd13a87dc0e778ffa48ff02549d1":[96,0,2,2,7,4,17],
-"d3/d90/webrtc_8c.html#ae757ae57ddd3483084a0d5c081c95eef":[96,0,2,2,7,4,26],
-"d3/d90/webrtc_8c.html#aeb291e2d3233e9cde4e59f0a1149cecd":[96,0,2,2,7,4,19]
+"d3/d90/webrtc_8c.html#ad9f37342c5b2e561a9ddb85294d4a1bd":[96,0,2,2,7,4,29]
 };

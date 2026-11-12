@@ -1,5 +1,9 @@
 var NAVTREEINDEX14 =
 {
+"da/d65/structcwist__grpc__client__options.html#a04b2c0e299109ff5c96b01338cbd57c7":[95,0,29,3],
+"da/d65/structcwist__grpc__client__options.html#a08c5ee6fbb1a23c063da80e61b02a1bd":[95,0,29,0],
+"da/d65/structcwist__grpc__client__options.html#a0bd122d07a2a1d51ed938d9e76490ae0":[95,0,29,2],
+"da/d65/structcwist__grpc__client__options.html#ae02fcdf9f37ba1fce035d2e7699a8512":[95,0,29,1],
 "da/d65/structcwist__grpc__client__options.html#aebdb7dcd0ef3aa8e1884084089fa3427":[95,0,29,4],
 "da/d6c/healthz_8c.html":[96,0,2,4,2,0],
 "da/d6c/healthz_8c.html#a1f82e8b3c7262c9acdff83f6d4ac5647":[96,0,2,4,2,0,5],
@@ -245,9 +249,5 @@ var NAVTREEINDEX14 =
 "db/d05/md_docs_2soak-testing.html#autotoc_md841":[85,3],
 "db/d05/md_docs_2soak-testing.html#autotoc_md842":[85,4],
 "db/d11/structcwist__cookie__options.html":[95,0,18],
-"db/d11/structcwist__cookie__options.html#a2c4a34204f19c0f94789f5ccbc257890":[95,0,18,2],
-"db/d11/structcwist__cookie__options.html#a479ff309f54d7fb09f207ce931fdd6e4":[95,0,18,3],
-"db/d11/structcwist__cookie__options.html#a4cead1a554a718df4476ac30c22b51ed":[95,0,18,5],
-"db/d11/structcwist__cookie__options.html#a7edc5041cf406830c29817cfca6beb7e":[95,0,18,0],
-"db/d11/structcwist__cookie__options.html#ab0b5e91e7c6e7e8a9bb26666872ed551":[95,0,18,1]
+"db/d11/structcwist__cookie__options.html#a2c4a34204f19c0f94789f5ccbc257890":[95,0,18,2]
 };
