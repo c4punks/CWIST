@@ -512,6 +512,20 @@ typedef struct cwist_http_async_conn {
      * keep needing capacity the stash is never shrunk at re-arm; one idle
      * window after the last growth it converges to the small floor. */
     uint32_t stash_grown_sec;
+    /* Idle keep-alive sweep (src/net/http/http.c). A connection that waits
+     * for its next request without sending anything never fires a reactor
+     * event, so the per-worker sweep timer finds it through this list and
+     * wakes it with shutdown(); the normal event path then closes it.
+     * reap_state: 0 = not tracked, 1 = on the worker's incoming handoff stack,
+     * 2 = on the owner-thread list. All but reap_dead are owner-thread only
+     * once the connection reaches state 2. */
+    struct cwist_http_async_conn *reap_prev;
+    struct cwist_http_async_conn *reap_next;
+    struct cwist_http_async_conn *reap_in_next;
+    uint8_t reap_state;
+    bool reap_waiting; /* A receive wait (POLL or RECV) is armed: no handler or defer in progress. */
+    bool reap_kicked;  /* shutdown() already issued by the sweep. */
+    bool reap_dead;    /* Initial arm failed; the owner sweep releases the shell. */
 } cwist_http_async_conn_t;
 
 /* Re-arm a connection after a deferred response completed on the reactor

@@ -174,8 +174,10 @@ needed, and the per-run details are in
 
 Known limits of the async path: HTTPS still runs the request phase on pool
 threads, a handler that writes faster than the socket drains waits inside the
-reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`), and idle cleartext
-keep-alive connections are not yet reaped by a timer.
+reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`). Idle cleartext
+keep-alive connections are closed by a per-worker sweep timer once they wait
+longer than `CWIST_HTTP_KEEP_ALIVE_TIMEOUT` (default 15 s), counted in
+`cwist_http_idle_reaped_total`.
 
 ## Why C, when Axum and Gin exist?
 
