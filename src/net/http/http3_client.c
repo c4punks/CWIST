@@ -1515,7 +1515,8 @@ static int h3c_dgc_route(cwist_http3_client *client) {
     return client->dgc ? 1 : -1;
 }
 
-/** @brief Queue @p data on the open datagram channel. */
+/** @brief Queue @p data on the open datagram channel. Raw malloc like the
+ *         client's other datagram queues, which lsquic callbacks drain. */
 static int h3c_dgc_queue(cwist_http3_client *client, const void *data, size_t len) {
     lsquic_stream_t *stream = client->dgc->stream;
     if (len > lsquic_stream_get_max_http_dg_size(stream)) return -1;
