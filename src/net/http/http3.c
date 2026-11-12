@@ -1201,6 +1201,7 @@ static void h3_apply_header(cwist_http_request *req, const char *name, const cha
  * TASFA-style ARQ assembler.
  */
 static int h3_seq_append_and_feed(h3_stream_ctx_t *st, const unsigned char *data, size_t len) {
+    if (len == 0) return 0;
     if (len > SIZE_MAX - st->seq_len) return -1;
     size_t need = st->seq_len + len;
     if (need > st->seq_cap) {
