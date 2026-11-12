@@ -284,7 +284,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:ac82267aa854cd95c43a3b62652567e68" id="r_ac82267aa854cd95c43a3b62652567e68"><td class="memItemLeft" align="right" valign="top">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d03/platform_8h.html#ac82267aa854cd95c43a3b62652567e68">CWIST_PLATFORM_HOSTED</a>&#160;&#160;&#160;1</td></tr>
+<tr class="memitem:ac82267aa854cd95c43a3b62652567e68" id="r_ac82267aa854cd95c43a3b62652567e68"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/d03/platform_8h.html#ac82267aa854cd95c43a3b62652567e68">CWIST_PLATFORM_HOSTED</a>&#160;&#160;&#160;1</td></tr>
 <tr class="separator:ac82267aa854cd95c43a3b62652567e68"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -292,7 +292,7 @@ Macros</h2></td></tr>
 <p>Guards test what the target provides instead of which toolchain built it, so a new target (bare metal, issue #447) only has to define its row here:</p>
 <ul>
 <li>CWIST_PLATFORM_HOSTED: a native POSIX host (Linux, macOS, BSD) with processes, signals, rlimits, threads, a filesystem and sockets. The server-only subsystems (listen loop, worker pool, HTTPS/H2/H3, static file cache, nuke DB) compile only here.</li>
-<li>CWIST_PLATFORM_NO_PROC: no <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">fork(2)</a>, signals, rlimits, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">getpid()</a> or threads (WASI and bare metal). Emscripten keeps its own guards.</li>
+<li>CWIST_PLATFORM_NO_PROC: no fork(2), signals, rlimits, getpid() or threads (WASI and bare metal). Emscripten keeps its own guards.</li>
 <li>CWIST_PLATFORM_NO_SOCKETS: no BSD socket API; requests reach the app through <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a> only (WASI sysroots without wasi:sockets, and bare metal).</li>
 <li>CWIST_BAREMETAL: no OS at all (arm-none-eabi + newlib on Cortex-M). Inferred for ARM EABI toolchains that define no OS macro; pass -DCWIST_BAREMETAL to force it elsewhere. The firmware supplies the hooks declared in &lt;<a class="el" href="../../da/d00/port_8h.html" title="Hooks a bare-metal firmware supplies to CWIST (issue #447).">cwist/sys/port.h</a>&gt;.</li>
 </ul>
@@ -307,7 +307,7 @@ Macros</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">#<a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">define</a> CWIST_PLATFORM_HOSTED&#160;&#160;&#160;1</td>
+          <td class="memname">#define CWIST_PLATFORM_HOSTED&#160;&#160;&#160;1</td>
         </tr>
       </table>
 </div><div class="memdoc">

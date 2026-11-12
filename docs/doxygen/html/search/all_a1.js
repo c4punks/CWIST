@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['워커의_20책임_20나누기_0',['1. 요청과 워커의 책임 나누기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md709',1,'']]]
+  ['완료_3a_20스트리밍_20sse를_20위한_20네이티브_20비동기_202026_2009_2023_0',['반영 완료: 스트리밍/SSE를 위한 네이티브 비동기 (2026-09-23)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md534',1,'']]],
+  ['완료_3a_20preview3_20shim_202026_2009_2023_1',['평가 완료: preview3-shim (2026-09-23)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md533',1,'']]]
 ];

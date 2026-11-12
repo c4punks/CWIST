@@ -1,9 +1,7 @@
 var searchData=
 [
-  ['자격_20경계_0',['1. 하나의 파싱된 자격 경계',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md592',1,'']]],
-  ['자동_20자원_20회수_1',['Full GC: CWIST의 자동 자원 회수',['../d1/dde/md_docs_2ko_2GC.html',1,'']]],
-  ['자료_2',['자료',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md669',1,'6. 참고 자료'],['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'Mux 알고리즘 참고 자료']]],
-  ['자산_3',['자산',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md383',1,'정적 자산'],['../d1/df9/md_docs_2ko_2api_2html.html',1,'HTML 컴포넌트, 범위 CSS, 프래그먼트와 자산']]],
-  ['자산_20파이프라인_4',['자산 파이프라인',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md424',1,'']]],
-  ['자원_20회수_5',['Full GC: CWIST의 자동 자원 회수',['../d1/dde/md_docs_2ko_2GC.html',1,'']]]
+  ['이름을_20바꾼_20이유_0',['이름을 바꾼 이유',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md700',1,'']]],
+  ['이슈_2025_1',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]],
+  ['이유_2',['이유',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md700',1,'이름을 바꾼 이유'],['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md530',1,'이유'],['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md635',1,'학습 블록을 그냥 옮기지 않는 이유']]],
+  ['이_20수정이_20해결하지_20않는_20것_3',['이 수정이 해결하지 않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md587',1,'']]]
 ];

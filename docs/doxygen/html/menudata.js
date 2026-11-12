@@ -144,6 +144,7 @@ var menudata={children:[
 {text:"f",url:"globals_enum.html#index_f"},
 {text:"g",url:"globals_enum.html#index_g"},
 {text:"j",url:"globals_enum.html#index_j"},
+{text:"l",url:"globals_enum.html#index_l"},
 {text:"q",url:"globals_enum.html#index_q"},
 {text:"t",url:"globals_enum.html#index_t"}]},
 {text:"Enumerator",url:"globals_eval.html",children:[
@@ -154,6 +155,7 @@ var menudata={children:[
 {text:"g",url:"globals_eval_g.html#index_g"},
 {text:"h",url:"globals_eval_h.html#index_h"},
 {text:"j",url:"globals_eval_j.html#index_j"},
+{text:"l",url:"globals_eval_l.html#index_l"},
 {text:"q",url:"globals_eval_q.html#index_q"},
 {text:"t",url:"globals_eval_t.html#index_t"}]},
 {text:"Macros",url:"globals_defs.html",children:[

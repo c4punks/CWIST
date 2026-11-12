@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['맞게_20고치기_20전에_0',['프로덕션에 맞게 고치기 전에',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md610',1,'']]],
-  ['맞게_20응답하기_1',['3. JSON을 검증하고 HTTP 의미에 맞게 응답하기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md706',1,'']]]
+  ['릴리스_20관문_0',['구현과 릴리스 관문',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md598',1,'']]],
+  ['릴리스_20사전_20빌드_20에셋_1',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
 ];

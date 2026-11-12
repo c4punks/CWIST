@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['만들기_0',['만들기',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md481',1,'사용자 정의 미들웨어 만들기'],['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md704',1,'1. 애플리케이션 만들기'],['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html',1,'CWIST로 CRUD 블로그 만들기'],['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html',1,'CWIST로 WebTransport 서버 만들기']]],
-  ['만들며_20측정한_20것_1',['2단계를 만들며 측정한 것',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md538',1,'']]]
+  ['리비전_20빌드하기_0',['1. 알려진 리비전 빌드하기',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md606',1,'']]],
+  ['리액터_20묶음_20비우기에서의_20협력적_20큐잉_20이슈_2025_1',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
 ];

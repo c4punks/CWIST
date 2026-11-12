@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['열_20해석하기_0',['컨텍스트 스위치 열 해석하기',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md731',1,'']]]
+  ['양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md868',1,'']]],
+  ['양자내성_20하이브리드_20키_20교환_1',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md866',1,'']]]
 ];

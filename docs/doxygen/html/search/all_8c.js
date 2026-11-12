@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['않는_20것_0',['않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md587',1,'이 수정이 해결하지 않는 것'],['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md550',1,'(아직) 다루지 않는 것']]],
-  ['않는_20변수_1',['사용하지 않는 변수',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md387',1,'']]],
-  ['않는_20이유_2',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md635',1,'']]]
+  ['쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md692',1,'']]],
+  ['쌍_20덮기_1',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md693',1,'']]]
 ];

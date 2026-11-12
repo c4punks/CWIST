@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['권장_20처리_0',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636',1,'']]]
+  ['교환_0',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md866',1,'']]]
 ];

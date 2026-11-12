@@ -130,9 +130,9 @@ Include dependency graph for baremetal.c:</div>
 <div class="textblock"><p>OS services the core expects but newlib on bare metal lacks. </p>
 <p>Built only into the CWIST_BAREMETAL archive (make baremetal). newlib declares the POSIX thread and timer APIs once the build enables them (-D_POSIX_THREADS, -D_POSIX_TIMERS, ...; see BAREMETAL_CFLAGS) but ships no implementation, so this file provides one for a single-threaded runtime, on top of the firmware hooks in &lt;<a class="el" href="../../da/d00/port_8h.html" title="Hooks a bare-metal firmware supplies to CWIST (issue #447).">cwist/sys/port.h</a>&gt;:</p>
 <ul>
-<li>pthread: mutexes and rwlocks cannot contend, condition variables never block (callers re-check their predicate), <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">pthread_create()</a> fails with EAGAIN so every background-thread path takes its no-thread fallback. Same contract as libttak's WASI preview1 stubs.</li>
-<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">clock_gettime()</a>, <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">nanosleep()</a> and <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">timegm()</a> live in <a class="el" href="../../de/dc2/baremetal__time_8c.html" title="clock_gettime(), nanosleep() and timegm() for CWIST_BAREMETAL.">baremetal_time.c</a>, which the host unit test (tests/test_baremetal_port.c) also builds.</li>
-<li><a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">sched_yield()</a> is a no-op.</li>
+<li>pthread: mutexes and rwlocks cannot contend, condition variables never block (callers re-check their predicate), pthread_create() fails with EAGAIN so every background-thread path takes its no-thread fallback. Same contract as libttak's WASI preview1 stubs.</li>
+<li>clock_gettime(), nanosleep() and timegm() live in <a class="el" href="../../de/dc2/baremetal__time_8c.html" title="clock_gettime(), nanosleep() and timegm() for CWIST_BAREMETAL.">baremetal_time.c</a>, which the host unit test (tests/test_baremetal_port.c) also builds.</li>
+<li>sched_yield() is a no-op.</li>
 <li>64-bit __atomic_* helpers: ARMv7-M/ARMv8-M have no LDREXD/STREXD, so GCC emits libcalls that libgcc does not implement for Cortex-M. </li>
 </ul>
 

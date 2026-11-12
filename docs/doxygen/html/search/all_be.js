@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['책임_20나누기_0',['1. 요청과 워커의 책임 나누기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md709',1,'']]]
+  ['중심_20가이드_0',['2. 작업 중심 가이드',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md665',1,'']]]
 ];

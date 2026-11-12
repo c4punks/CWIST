@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['게시하기_0',['2. 라우트에서 게시하기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md710',1,'']]],
-  ['게시_20작업_20깨우기_20회귀_2025_1',['io_uring 게시 작업 깨우기 회귀 (#25)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html',1,'']]],
-  ['게이트_2',['게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md619',1,'격리된 통합 게이트'],['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'영속 큐 필수 게이트']]],
-  ['게이트_20v4_20lts부터_3',['5. API 안정성 게이트 (v4 LTS부터)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md727',1,'']]]
+  ['것과_20참고_20사항_0',['목표가 아닌 것과 참고 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md648',1,'']]],
+  ['것_1',['것',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md539',1,'목표가 아닌 것'],['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md587',1,'이 수정이 해결하지 않는 것'],['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md550',1,'(아직) 다루지 않는 것'],['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md538',1,'2단계를 만들며 측정한 것'],['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md691',1,'2.4 코드가 만들지 않는 것'],['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md527',1,'preview1 빌드가 다르게 했던 것'],['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md542',1,'WASM 빌드에 들어 있는 것']]]
 ];
