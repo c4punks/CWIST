@@ -15,7 +15,7 @@ static int route_allocations;
 static int fail_service_copy;
 
 void *__wrap_cwist_alloc(size_t size) {
-    if (size == 5 * sizeof(void *) + 2 * sizeof(int)) {
+    if (size == 6 * sizeof(void *) + 4 * sizeof(int)) { /* cwist_grpc_route */
         route_allocations++;
         if (fail_second_route && route_allocations == 2) return NULL;
     }

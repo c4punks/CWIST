@@ -319,6 +319,147 @@ static int decoder_count(void *ctx, const cwist_grpc_message *message) {
     return 0;
 }
 
+/* --- unregistration (#602) --- */
+
+typedef struct {
+    int calls;
+    int released;
+    cwist_app *app;     /* when set, the handler unregisters its own method */
+    int released_during_call;
+} unreg_ctx;
+
+static void unreg_release(void *user_ctx) {
+    unreg_ctx *ctx = user_ctx;
+    ctx->released++;
+}
+
+static void unreg_unary(cwist_http_request *req, cwist_http_response *res,
+                        const cwist_grpc_message *message, void *user_ctx) {
+    (void)req;
+    unreg_ctx *ctx = user_ctx;
+    ctx->calls++;
+    if (ctx->app) {
+        /* The running call pins the method: release must wait for it. */
+        assert(cwist_app_grpc_unregister(ctx->app, "cwist.test.Unreg", "Unary", unreg_release) ==
+               0);
+        ctx->released_during_call = ctx->released;
+    }
+    cwist_grpc_set_response(res, CWIST_GRPC_OK, NULL, message->data, message->len);
+}
+
+static void unreg_stream(cwist_grpc_stream *stream, void *user_ctx) {
+    unreg_ctx *ctx = user_ctx;
+    ctx->calls++;
+    if (ctx->app) {
+        assert(cwist_app_grpc_unregister(ctx->app, "cwist.test.Unreg", "Stream", unreg_release) ==
+               0);
+        ctx->released_during_call = ctx->released;
+    }
+    stream->status = CWIST_GRPC_OK;
+}
+
+static const char *unreg_call(cwist_test_client *client, const char *path, const uint8_t *frame,
+                              size_t frame_len, char *status, size_t status_len) {
+    cwist_test_client_request_options opts = {
+        .body = (const char *)frame,
+        .body_len = frame_len,
+        .content_type = "application/grpc",
+    };
+    cwist_http_response *res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, path, &opts);
+    assert(res != NULL);
+    const char *value = cwist_http_header_get(res->headers, "grpc-status");
+    assert(value != NULL);
+    snprintf(status, status_len, "%s", value);
+    cwist_http_response_destroy(res);
+    return status;
+}
+
+static void test_unregister(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    cwist_test_client *client = cwist_test_client_create(app);
+    assert(client != NULL);
+    uint8_t *frame = NULL;
+    size_t frame_len = 0;
+    assert(cwist_grpc_encode_message("x", 1, 0, &frame, &frame_len) == 0);
+    char status[16];
+
+    /* Unary and streaming removal: new calls get UNIMPLEMENTED (12) and the
+     * release callback runs once, immediately, when nothing is in flight. */
+    unreg_ctx unary = {0}, stream = {0};
+    assert(cwist_app_grpc_unary(app, "cwist.test.Unreg", "Unary", unreg_unary, &unary) == 0);
+    assert(cwist_app_grpc_stream(app, "cwist.test.Unreg", "Stream", unreg_stream, &stream) == 0);
+    assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
+                             sizeof(status)), "0") == 0);
+    assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Stream", frame, frame_len, status,
+                             sizeof(status)), "0") == 0);
+    assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Unary", unreg_release) == 0);
+    assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Stream", unreg_release) == 0);
+    assert(unary.released == 1 && stream.released == 1);
+    assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
+                             sizeof(status)), "12") == 0);
+    assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Stream", frame, frame_len, status,
+                             sizeof(status)), "12") == 0);
+    assert(unary.calls == 1 && stream.calls == 1);
+
+    /* Unknown methods and bad arguments fail without side effects. */
+    assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Unary", unreg_release) == -1);
+    assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Missing", NULL) == -1);
+    assert(cwist_app_grpc_unregister(NULL, "cwist.test.Unreg", "Unary", NULL) == -1);
+    assert(cwist_app_grpc_unregister(app, "", "Unary", NULL) == -1);
+    assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", NULL, NULL) == -1);
+    assert(unary.released == 1);
+
+    /* Replacement after removal: the same path serves again, and its kind may change. */
+    unreg_ctx again = {0};
+    assert(cwist_app_grpc_stream(app, "cwist.test.Unreg", "Unary", unreg_stream, &again) == 0);
+    assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
+                             sizeof(status)), "0") == 0);
+    assert(again.calls == 1 && unary.calls == 1);
+    assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Unary", NULL) == 0);
+
+    /* A call that removes its own method defers release until it returns. */
+    unreg_ctx self_unary = {.app = app}, self_stream = {.app = app};
+    assert(cwist_app_grpc_unary(app, "cwist.test.Unreg", "Unary", unreg_unary, &self_unary) == 0);
+    assert(cwist_app_grpc_stream(app, "cwist.test.Unreg", "Stream", unreg_stream, &self_stream) ==
+           0);
+    assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
+                             sizeof(status)), "0") == 0);
+    assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Stream", frame, frame_len, status,
+                             sizeof(status)), "0") == 0);
+    assert(self_unary.released_during_call == 0 && self_unary.released == 1);
+    assert(self_stream.released_during_call == 0 && self_stream.released == 1);
+
+    /* Health cleanup: removing one method removes the service and its
+     * registry; it can then be registered from scratch. */
+    assert(cwist_app_grpc_health(app) == 0);
+    assert(cwist_app_grpc_health_set_status(app, "cwist.test.Unreg", 1) == 0);
+    assert(cwist_app_grpc_unregister(app, "grpc.health.v1.Health", "Watch", unreg_release) == 0);
+    assert(cwist_app_grpc_health_set_status(app, "cwist.test.Unreg", 1) == -1);
+    assert(cwist_app_grpc_health_watchers(app) == -1);
+    assert(strcmp(unreg_call(client, "/grpc.health.v1.Health/Check", frame, frame_len, status,
+                             sizeof(status)), "12") == 0);
+    assert(cwist_app_grpc_unregister(app, "grpc.health.v1.Health", "Check", NULL) == -1);
+    assert(cwist_app_grpc_health(app) == 0);
+    assert(cwist_app_grpc_health_watchers(app) == 0);
+    assert(cwist_app_grpc_health_set_status(app, "cwist.test.Unreg", 0) == 0);
+
+    /* Built-ins own their context: an application handler cannot overwrite one. */
+    unreg_ctx hijack = {0};
+    assert(cwist_app_grpc_unary(app, "grpc.health.v1.Health", "Check", unreg_unary, &hijack) ==
+           -1);
+    assert(cwist_app_grpc_reflection(app) == 0);
+    assert(cwist_app_grpc_reflection(app) == 0);
+    assert(cwist_app_grpc_unregister(app, "grpc.reflection.v1alpha.ServerReflection",
+                                     "ServerReflectionInfo", NULL) == 0);
+    assert(cwist_app_grpc_reflection(app) == 0);
+
+    cwist_test_client_destroy(client);
+    cwist_app_destroy(app); /* frees the re-registered health registry */
+    cwist_free(frame);
+    printf("gRPC unregister tests passed.\n");
+}
+
 int main(void) {
     cwist_pb_writer request_pb;
     cwist_pb_writer_init(&request_pb);
@@ -667,6 +808,7 @@ int main(void) {
     cwist_free(frame);
     cwist_pb_writer_free(&request_pb);
 
+    test_unregister();
     printf("test_grpc: OK\n");
     return 0;
 }

@@ -173,6 +173,39 @@ int cwist_app_grpc_unary(struct cwist_app *app, const char *service, const char 
 int cwist_app_grpc_stream(struct cwist_app *app, const char *service, const char *method,
                           cwist_grpc_stream_handler_func handler, void *user_ctx);
 
+/** Called with a method's user_ctx once no call can use it any more. */
+typedef void (*cwist_grpc_release_func)(void *user_ctx);
+
+/**
+ * @brief Remove a registered gRPC method.
+ *
+ * New calls to the method fail with UNIMPLEMENTED as soon as this returns.
+ * Calls already running keep the handler and user_ctx they started with and
+ * finish normally; this function does not wait for them. @p release, when
+ * not NULL, is called exactly once with the method's user_ctx after the last
+ * of those calls returns: before this function returns if none is running,
+ * otherwise on the thread that finishes the last call. Free user_ctx there,
+ * not after this call returns.
+ *
+ * Removing either grpc.health.v1.Health method removes the whole health
+ * service: active Watch streams end with UNAVAILABLE, and the health status
+ * calls fail until cwist_app_grpc_health() registers it again. Built-in
+ * services own their context, so @p release is not called for them.
+ *
+ * The method can be registered again afterwards with cwist_app_grpc_unary()
+ * or cwist_app_grpc_stream(). The HTTP POST route stays bound to the gRPC
+ * dispatcher, which is what answers UNIMPLEMENTED.
+ *
+ * @param app Application the method was registered on.
+ * @param service gRPC service name.
+ * @param method Method name.
+ * @param release Optional callback that receives the method's user_ctx.
+ * @return 0 when the method was removed, -1 for NULL/empty arguments, an
+ *         allocation failure, or a method that is not registered.
+ */
+int cwist_app_grpc_unregister(struct cwist_app *app, const char *service, const char *method,
+                              cwist_grpc_release_func release);
+
 /**
  * HTTP/2 stream hooks that route gRPC streaming calls through the
  * incremental transport path.  The hook context is the cwist_app pointer
