@@ -92,7 +92,7 @@
 1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
 1	src/core/validation/bind.c:free(printed);
-9	src/net/db_sync/db_sync.c:free(blob);
+10	src/net/db_sync/db_sync.c:free(blob);
 1	src/net/db_sync/db_sync.c:unsigned char *blob = (unsigned char *)malloc(blob_len);
 2	src/net/graphql/graphql.c:free(printed);
 1	src/net/http/http3.c:char *tmp = realloc(st->body, new_cap);
@@ -161,11 +161,12 @@
 1	src/net/http/tls_chain.c:free(out->data);
 2	src/net/http/tls_chain.c:free(url);
 1	src/net/http/tls_chain.c:uint8_t *tmp = (uint8_t *)realloc(buf->data, new_cap);
-3	src/security/db_crypt/db_crypt.c:free(ct);
+1	src/security/db_crypt/db_crypt.c:free(blob);
+4	src/security/db_crypt/db_crypt.c:free(ct);
 1	src/security/db_crypt/db_crypt.c:free(pt);
-1	src/security/db_crypt/db_crypt.c:unsigned char *blob = (unsigned char *)malloc(total);
+1	src/security/db_crypt/db_crypt.c:unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
 1	src/security/db_crypt/db_crypt.c:unsigned char *ct = (unsigned char *)malloc(ct_max);
-1	src/security/db_crypt/db_crypt.c:unsigned char *pt = (unsigned char *)malloc(ct_len + 1); /* extra for safety */
+1	src/security/db_crypt/db_crypt.c:unsigned char *pt = (unsigned char *)malloc(ct_len + 1);
 1	src/sys/app/app.c:char *buf = (char *)malloc((size_t)sz + 1);
 1	src/sys/app/app.c:cwist_multiport_http_client *payload = malloc(sizeof(*payload));
 1	src/sys/app/app.c:free(buf);
@@ -192,6 +193,7 @@
 1	src/sys/app/compress.c:merged = (uint8_t *)malloc(total_in_len);
 1	src/sys/app/compress.c:uint8_t *encoded = (uint8_t *)malloc(encoded_size);
 2	src/sys/app/compress.c:z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
+1	src/sys/app/config.c:free(line);
 1	src/sys/metrics/metrics.c:char *buf = malloc(cap);
 1	src/sys/metrics/metrics.c:char *nb = realloc(buf, new_cap);
 3	src/sys/metrics/metrics.c:free(buf);
