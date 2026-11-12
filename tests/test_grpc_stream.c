@@ -676,6 +676,97 @@ static void test_health_watch_alloc_failure(cwist_app *app) {
     stop_server(cfd, &ctx, tid);
 }
 
+/* --- 8. unregistering methods with calls still in flight (#602) --- */
+typedef struct {
+    atomic_int entered;
+    atomic_int released;
+} hold_state;
+
+static void wire_hold(cwist_grpc_stream *stream, void *user_ctx) {
+    hold_state *st = user_ctx;
+    atomic_store(&st->entered, 1);
+    cwist_grpc_message msg;
+    while (cwist_grpc_stream_recv(stream, &msg) == 1);
+    cwist_grpc_stream_close(stream, stream->status, stream->status_message);
+}
+
+static void hold_release(void *user_ctx) {
+    hold_state *st = user_ctx;
+    atomic_fetch_add(&st->released, 1);
+}
+
+static void wait_for(atomic_int *value, int want) {
+    for (int i = 0; i < 500 && atomic_load(value) != want; i++) {
+        struct timespec ts = {0, 10000000};
+        nanosleep(&ts, NULL);
+    }
+    assert(atomic_load(value) == want);
+}
+
+static void test_unregister_in_flight(cwist_app *app) {
+    printf("  unregister with calls in flight...\n");
+    static hold_state st;
+    atomic_store(&st.entered, 0);
+    atomic_store(&st.released, 0);
+    assert(cwist_app_grpc_stream(app, "cwist.test.Wire", "Hold", wire_hold, &st) == 0);
+
+    server_ctx ctx;
+    pthread_t tid;
+    int cfd = start_server(app, &ctx, &tid);
+    uint8_t block[4096];
+    size_t blen = build_request_block(block, "/cwist.test.Wire/Hold", NULL, 0);
+    fd_send_frame(cfd, 0x01, 0x04, 1, block, (uint32_t)blen); /* stream 1 stays open */
+    wait_for(&st.entered, 1);
+
+    /* The open call pins the method: release waits for it. */
+    assert(cwist_app_grpc_unregister(app, "cwist.test.Wire", "Hold", hold_release) == 0);
+    assert(atomic_load(&st.released) == 0);
+
+    /* A new call is refused with UNIMPLEMENTED while the old one keeps running. */
+    fd_send_frame(cfd, 0x01, 0x04, 3, block, (uint32_t)blen);
+    uint8_t frame[64];
+    size_t frame_len;
+    make_pb_frame(frame, &frame_len, NULL, 0, (const uint8_t *)"x", 1);
+    fd_send_frame(cfd, 0x00, 0x01, 3, frame, (uint32_t)frame_len);
+    test_frame f;
+    assert(fd_read_stream_frame(cfd, &f, 0x01, 3, 5000) == 0);
+    assert(f.flags & 0x01);
+    assert(frame_payload_contains(&f, "grpc-status"));
+    assert(frame_payload_contains(&f, "12"));
+    assert(atomic_load(&st.released) == 0);
+
+    /* Ending the old call runs the release callback exactly once. */
+    uint8_t rst[4] = {0, 0, 0, 0x08}; /* CANCEL */
+    fd_send_frame(cfd, 0x03, 0, 1, rst, 4);
+    wait_for(&st.released, 1);
+
+    /* Removing the health service ends an active Watch with UNAVAILABLE. */
+    blen = build_request_block(block, "/grpc.health.v1.Health/Watch", NULL, 0);
+    fd_send_frame(cfd, 0x01, 0x04, 5, block, (uint32_t)blen);
+    cwist_pb_writer pb;
+    cwist_pb_writer_init(&pb);
+    assert(cwist_pb_write_string_field(&pb, 1, "cwist.test.Wire") == 0);
+    uint8_t watch_frame[256];
+    size_t watch_frame_len;
+    make_pb_frame(watch_frame, &watch_frame_len, NULL, 0, pb.data, pb.len);
+    cwist_pb_writer_free(&pb);
+    fd_send_frame(cfd, 0x00, 0x01, 5, watch_frame, (uint32_t)watch_frame_len);
+    assert(fd_read_stream_frame(cfd, &f, 0x00, 5, 5000) == 0); /* first status */
+    for (int i = 0; i < 500 && cwist_app_grpc_health_watchers(app) != 1; i++) {
+        struct timespec ts = {0, 10000000};
+        nanosleep(&ts, NULL);
+    }
+    assert(cwist_app_grpc_health_watchers(app) == 1);
+    assert(cwist_app_grpc_unregister(app, "grpc.health.v1.Health", "Check", NULL) == 0);
+    assert(fd_read_stream_frame(cfd, &f, 0x01, 5, 5000) == 0);
+    assert(f.flags & 0x01);
+    assert(frame_payload_contains(&f, "14"));
+    assert(cwist_app_grpc_health_watchers(app) == -1);
+    assert(cwist_app_grpc_health_set_status(app, "cwist.test.Wire", 1) == -1);
+
+    stop_server(cfd, &ctx, tid);
+}
+
 int main(void) {
     printf("Testing gRPC HTTP/2 streaming...\n");
 
@@ -718,6 +809,7 @@ int main(void) {
     atomic_store(&gzip_st.messages_seen, 0);
     test_response_gzip(app, &gzip_st);
     test_unsupported_encoding(app);
+    test_unregister_in_flight(app);
 
     cwist_app_destroy(app);
     printf("test_grpc_stream: OK\n");
