@@ -70,6 +70,36 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws);
 int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const uint8_t *data,
                          size_t len);
 
+/** @brief One application-chosen piece of a fragmented message. */
+typedef struct cwist_ws_fragment {
+    const uint8_t *data; /**< Fragment bytes; may be NULL when len is 0. */
+    size_t len;          /**< Number of bytes in this fragment. */
+} cwist_ws_fragment;
+
+/**
+ * @brief Send one TEXT or BINARY message as RFC 6455 fragments.
+ *
+ * The application chooses the fragment boundaries. The first fragment is sent
+ * with @p opcode and FIN clear, the middle fragments as CONTINUATION frames,
+ * and the last fragment as a CONTINUATION frame with FIN set. One fragment is
+ * sent as a single FIN frame, and zero fragments send one empty message.
+ * Fragments may be empty. Text fragments may split a UTF-8 sequence; only the
+ * reassembled message must be valid UTF-8.
+ *
+ * All arguments are checked before anything is written. The frames are
+ * written back to back, so no control frame from this connection can land
+ * inside the message. If a write fails part way, the peer holds an unfinished
+ * message and the connection should be closed.
+ *
+ * @param ws WebSocket connection.
+ * @param opcode CWIST_WS_FRAME_TEXT or CWIST_WS_FRAME_BINARY.
+ * @param fragments Array of @p count fragments; may be NULL when @p count is 0.
+ * @param count Number of fragments.
+ * @return 0 on success, -1 on invalid arguments or a socket write failure.
+ */
+int cwist_websocket_send_fragments(cwist_websocket *ws, cwist_ws_opcode_t opcode,
+                                   const cwist_ws_fragment *fragments, size_t count);
+
 /**
  * @brief Send a large payload as sequenced binary frames.
  *
