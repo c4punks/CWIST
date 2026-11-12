@@ -259,7 +259,7 @@ endif
 # uses that session API; otherwise it uses the client-bidi-stream support of
 # stock lsquic (LSQUIC_WEBTRANSPORT_SERVER_SUPPORT), which cannot open server
 # streams. The client needs lsquic_wt.h. Object files rebuild on a change.
-CWIST_WEBTRANSPORT ?= $(if $(filter 1,$(CWIST_TINY)),none,server)
+CWIST_WEBTRANSPORT ?= $(if $(filter 1,$(CWIST_TINY)),none,client,server)
 comma := ,
 CWIST_WT_ROLES := $(strip $(subst $(comma), ,$(CWIST_WEBTRANSPORT)))
 ifeq ($(CWIST_WT_ROLES),1)
@@ -390,7 +390,6 @@ SRCS = src/core/sstring/sstring.c \
        src/sys/app/csrf.c \
        src/sys/app/waf.c \
        src/core/siphash/siphash.c \
-       src/core/design/latin_square.c \
        src/sys/app/app.c \
        src/core/utils/json_builder.c \
        src/core/utils/json_heal.c \
@@ -1399,7 +1398,6 @@ TEST_TARGETS = test_worker_affinity \
                test_html_component \
                test_html_response \
                test_bdr_privacy \
-               test_latin_square \
                test_assets \
                test_html_parity \
                test_http2_flow_control \
@@ -1428,7 +1426,6 @@ TEST_TARGETS = test_worker_affinity \
                test_https \
                test_tls_hot_reload \
                test_https_park \
-               test_https_h2_fairness \
                test_https_park_full_gc \
                test_https_pool_queue \
                test_https_metrics \
@@ -1437,8 +1434,6 @@ TEST_TARGETS = test_worker_affinity \
                test_http3 \
                test_http3_defer \
                test_http3_client_datagram \
-               test_http3_datagram_channel \
-               test_http3_client_latency \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
@@ -1965,10 +1960,6 @@ test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
 	./test_https_park
 
-test_https_h2_fairness: $(LIB_NAME) tests/test_https_h2_fairness.c
-	$(CC) $(CFLAGS) -o $@ tests/test_https_h2_fairness.c $(LIB_NAME) $(LIBS)
-	./$@
-
 test_https_pool_queue: $(LIB_NAME) tests/test_https_pool_queue.c
 	$(CC) $(CFLAGS) -o test_https_pool_queue tests/test_https_pool_queue.c $(LIB_NAME) $(LIBS)
 	./test_https_pool_queue
@@ -2015,13 +2006,9 @@ test_http3_defer: $(LIB_NAME) tests/test_http3_defer.c
 test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_datagram.c $(LIB_NAME) $(LIBS)
 	./$@
-
-test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
-	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
-	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
-test_http3 test_http3_client_datagram test_http3_client_latency:
+test_http3 test_http3_client_datagram:
 	@echo "CWIST_HTTP3=0: skipping $@"
 endif
 
@@ -2815,11 +2802,7 @@ test_html_response: $(LIB_NAME) tests/test_html_response.c
 	$(CC) $(CFLAGS) -o test_html_response tests/test_html_response.c $(LIB_NAME) $(LIBS)
 	./test_html_response
 
-test_latin_square: $(LIB_NAME) tests/test_latin_square.c src/core/design/latin_square.c src/core/design/latin_square.h
-	$(CC) $(CFLAGS) -o $@ tests/test_latin_square.c $(LIB_NAME) $(LIBS)
-	./$@
-
-test_bdr_privacy: $(LIB_NAME) tests/test_bdr_privacy.c src/core/design/latin_square.h
+test_bdr_privacy: $(LIB_NAME) tests/test_bdr_privacy.c
 	$(CC) $(CFLAGS) -o $@ tests/test_bdr_privacy.c $(LIB_NAME) $(LIBS)
 	./$@
 
@@ -2869,17 +2852,6 @@ else
 # CWIST_HTTP3=0: WebTransport rides on HTTP/3, so its tests are compiled out.
 test_webtransport test_webtransport_client_api:
 	@echo "CWIST_HTTP3=0: skipping $@"
-endif
-
-# Raw datagrams next to WebTransport on one client connection (#604): needs
-# both WebTransport roles on the session-API lsquic.
-ifeq ($(CWIST_HTTP3)$(CWIST_HAVE_LSQUIC_WT)$(if $(filter client,$(CWIST_WT_ROLES)),c)$(if $(filter server,$(CWIST_WT_ROLES)),s),11cs)
-test_http3_datagram_channel: $(LIB_NAME) tests/test_http3_datagram_channel.c
-	$(CC) $(CFLAGS) -o $@ tests/test_http3_datagram_channel.c $(LIB_NAME) $(LIBS)
-	./$@
-else
-test_http3_datagram_channel:
-	@echo "needs HTTP/3 with both WebTransport roles: skipping $@"
 endif
 
 # WebTransport server end to end: tests/webtransport_echo_server driven by

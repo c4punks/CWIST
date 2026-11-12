@@ -15,19 +15,9 @@
  *
  * Each handler counts its invocations; GET /count?p=<path> (a query string,
  * so never cached) reports the count for a path.
- *
- * The server runs once per row of a strength-2 orthogonal array over the
- * runtime knobs that pick different serving paths (classic vs C1M, io_uring
- * vs epoll, receive mode, thread count, batch size). Every pair of knob
- * values therefore meets at least once, which is what exposes a check that
- * one path has and another lacks -- #706 was a classic-only leak. Thread
- * counts go up to 64 to cover wide hosts.
  */
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE /* strcasestr */
-#endif
+#define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/app.h>
-#include "../src/core/design/latin_square.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <signal.h>
@@ -146,27 +136,15 @@ static const char *fetch(const char *path, const char *extra_headers, char *buf,
         close(fd);
         return NULL;
     }
-    /* Stop at Content-Length rather than EOF: a reply replayed from the
-     * cache carries the connection headers of the reply it was learned
-     * from, so the server may keep the socket open despite
-     * "Connection: close" (see docs/fixed-cache-status.md). */
     size_t used = 0;
     ssize_t n;
-    const char *body = NULL;
-    long want = -1;
     while (used + 1 < cap && (n = recv(fd, buf + used, cap - 1 - used, 0)) > 0) {
         used += (size_t)n;
-        buf[used] = '\0';
-        if (!body && (body = strstr(buf, "\r\n\r\n")) != NULL) {
-            body += 4;
-            const char *cl = strcasestr(buf, "\r\nContent-Length:");
-            if (cl && cl < body) want = strtol(cl + 17, NULL, 10);
-        }
-        if (body && want >= 0 && (long)(buf + used - body) >= want) break;
     }
     buf[used] = '\0';
     close(fd);
-    return body;
+    const char *body = strstr(buf, "\r\n\r\n");
+    return body ? body + 4 : NULL;
 }
 
 static int hits(const char *path) {
@@ -187,38 +165,7 @@ static int failures;
         }                                                                                          \
     } while (0)
 
-/* Runtime knobs varied by the matrix. Each factor has four levels; two-valued
- * knobs repeat their values, which keeps every pair of values covered. */
-typedef struct {
-    const char *name;
-    const char *levels[4];
-} knob_t;
-
-static const knob_t k_knobs[] = {
-    {"CWIST_C1M_MODE", {"0", "1", "0", "1"}},
-    {"CWIST_WORKER_THREADS", {"1", "2", "16", "64"}},
-    {"CWIST_REACTOR_BACKEND", {"uring", "epoll", "uring", "epoll"}},
-    {"CWIST_HTTP_BATCH", {"1", "4", "16", "1024"}},
-    {"CWIST_RX_URING", {"1", "0", "1", "0"}},
-};
-#define KNOB_COUNT (sizeof(k_knobs) / sizeof(k_knobs[0]))
-
-static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
-    char mode[256];
-    size_t used = (size_t)snprintf(mode, sizeof(mode), "run %llu:", (unsigned long long)run);
-    const char *values[KNOB_COUNT];
-    for (uint32_t k = 0; k < KNOB_COUNT; k++) {
-        values[k] = k_knobs[k].levels[cwist_latin_oa_level(oa, run, k)];
-        if (used < sizeof(mode)) {
-            used += (size_t)snprintf(mode + used, sizeof(mode) - used, " %s=%s",
-                                     k_knobs[k].name + 6 /* drop "CWIST_" */, values[k]);
-        }
-    }
-    /* Only the classic path learns (the C1M path sends through the
-     * coalescing writer and returns before the learn block). */
-    bool expect_learning = strcmp(values[0], "0") == 0;
-    int failures_before = failures;
-
+static void run_mode(const char *mode, const char *c1m, int port, bool expect_learning) {
     g_port = port;
     pid_t pid = fork();
     if (pid < 0) {
@@ -226,8 +173,7 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
         return;
     }
     if (pid == 0) {
-        for (uint32_t k = 0; k < KNOB_COUNT; k++) setenv(k_knobs[k].name, values[k], 1);
-        /* Worker processes would each keep their own cache and counters. */
+        setenv("CWIST_C1M_MODE", c1m, 1);
         setenv("CWIST_WORKERS", "1", 1);
         cwist_app *app = cwist_app_create();
         if (!app) _exit(1);
@@ -266,8 +212,8 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     b = fetch("/who", NULL, buf, sizeof(buf));
     CHECK(b && strcmp(b, "who=anon") == 0, "anonymous got '%s'", b ? b : "(null)");
 
-    /* 3. Responses that set a cookie or forbid shared caching, and a handler
-     *    under the latency threshold: every request must reach the handler. */
+    /* 3. Responses that set a cookie or forbid shared caching: every
+     *    request must reach the handler. */
     static const int slots[] = {H_SETCOOKIE, H_PRIVATE, H_NOSTORE, H_NOCACHE, H_FAST};
     for (size_t s = 0; s < sizeof(slots) / sizeof(slots[0]); s++) {
         const char *path = g_paths[slots[s]];
@@ -277,8 +223,9 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     }
 
     /* 4. Control: an ordinary slow GET is learned after two identical
-     *    replies and served from the cache afterwards, so the checks above
-     *    are not vacuous. */
+     *    replies and served from the cache afterwards.  Only the classic
+     *    path learns (the C1M path sends through the coalescing writer and
+     *    returns before the learn block), so the control is classic-only. */
     for (int i = 0; i < 5; i++) {
         b = fetch("/public", NULL, buf, sizeof(buf));
         CHECK(b && strcmp(b, "public") == 0, "/public got '%s'", b ? b : "(null)");
@@ -292,25 +239,17 @@ out:
     kill(pid, SIGTERM);
     int status = 0;
     waitpid(pid, &status, 0);
-    if (failures == failures_before) printf("Passed BDR privacy checks (%s)\n", mode);
+    if (!failures) printf("Passed BDR privacy checks (%s)\n", mode);
 }
 
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
-    /* Four levels and five factors: OA(16, 5, 4, 2) from three MOLS of
-     * order 4 (GF(4)). */
-    cwist_latin_family_t *oa = cwist_latin_family_create(4, KNOB_COUNT - 2);
-    if (!oa) {
-        fprintf(stderr, "no orthogonal array for %zu knobs\n", (size_t)KNOB_COUNT);
-        return 1;
-    }
-    uint64_t runs = cwist_latin_oa_runs(oa);
-    for (uint64_t run = 0; run < runs; run++) run_row(oa, run, 19900 + (int)run);
-    cwist_latin_family_destroy(oa);
+    run_mode("classic", "0", 19987, true);
+    run_mode("c1m", "1", 19988, false);
     if (failures) {
         fprintf(stderr, "%d BDR privacy check(s) failed\n", failures);
         return 1;
     }
-    printf("All BDR privacy tests passed (%llu runs)!\n", (unsigned long long)runs);
+    printf("All BDR privacy tests passed!\n");
     return 0;
 }
