@@ -1428,6 +1428,7 @@ TEST_TARGETS = test_worker_affinity \
                test_https \
                test_tls_hot_reload \
                test_https_park \
+               test_https_h2_fairness \
                test_https_park_full_gc \
                test_https_pool_queue \
                test_https_metrics \
@@ -1437,6 +1438,7 @@ TEST_TARGETS = test_worker_affinity \
                test_http3_defer \
                test_http3_client_datagram \
                test_http3_datagram_channel \
+               test_http3_client_latency \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
@@ -1963,6 +1965,10 @@ test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
 	./test_https_park
 
+test_https_h2_fairness: $(LIB_NAME) tests/test_https_h2_fairness.c
+	$(CC) $(CFLAGS) -o $@ tests/test_https_h2_fairness.c $(LIB_NAME) $(LIBS)
+	./$@
+
 test_https_pool_queue: $(LIB_NAME) tests/test_https_pool_queue.c
 	$(CC) $(CFLAGS) -o test_https_pool_queue tests/test_https_pool_queue.c $(LIB_NAME) $(LIBS)
 	./test_https_pool_queue
@@ -2009,9 +2015,13 @@ test_http3_defer: $(LIB_NAME) tests/test_http3_defer.c
 test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_datagram.c $(LIB_NAME) $(LIBS)
 	./$@
+
+test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
+	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
-test_http3 test_http3_client_datagram:
+test_http3 test_http3_client_datagram test_http3_client_latency:
 	@echo "CWIST_HTTP3=0: skipping $@"
 endif
 

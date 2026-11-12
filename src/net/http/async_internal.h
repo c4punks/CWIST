@@ -150,4 +150,18 @@ void cwist_async_h3_begin(cwist_http_request *req, struct cwist_h3_async_queue *
                           struct cwist_h3_pending *p);
 bool cwist_async_h3_end(void);
 
+/**
+ * @brief Give the HTTPS pool thread serving @p conn to a waiting task.
+ *
+ * Re-queues the connection at the tail of the pool's task queue when other
+ * tasks are waiting, so one busy connection cannot hold a pool thread while
+ * other connections queue behind it. The caller must have no in-flight
+ * work on the connection and, on true, must return without touching
+ * @p conn (another pool thread may already be serving it).
+ * @return true when the connection was re-queued; false when nothing is
+ *         waiting or @p conn is not a pool-served connection.
+ */
+struct cwist_https_connection;
+bool cwist_https_yield(struct cwist_https_connection *conn);
+
 #endif
