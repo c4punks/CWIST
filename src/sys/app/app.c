@@ -3083,9 +3083,9 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
              * cursor turns the lookup into a content-compare + epoch-validated
              * entry reuse instead of a SipHash + bucket walk per request. */
             cwist_http_async_conn_t *aconn = req->async_conn;
-            cached_blob = cwist_bdr_get_pinned_cursor(app->bdr_ctx, "GET", req->path->data,
-                                                      req->path->size, &cached_len, &bdr_pin,
-                                                      &aconn->bdr_cursor);
+            cached_blob =
+                cwist_bdr_get_pinned_cursor(app->bdr_ctx, "GET", req->path->data, req->path->size,
+                                            &cached_len, &bdr_pin, &aconn->bdr_cursor);
         } else {
             cached_blob =
                 cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
@@ -3153,8 +3153,8 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     cwist_async *deferred = cwist_async_dispatch_take(res);
     if (deferred) {
         cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
-        bool broken = aconn && aconn->olen > 0 &&
-                      cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
+        bool broken =
+            aconn && aconn->olen > 0 && cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
         cwist_async_dispatch_ack(deferred);
         if (broken) cwist_async_abort(deferred, CWIST_HTTP_INTERNAL_ERROR);
         return APP_SERVE_DEFERRED;
@@ -3394,7 +3394,6 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         return CWIST_ASYNC_DETACH;
     }
 
-
     /* One pipeline must not monopolize this reactor's other connections. */
     const unsigned int yield_batch = app_http_yield_batch();
     for (unsigned int handled = 0; handled < app_http_requests_per_turn(); ++handled) {
@@ -3522,8 +3521,9 @@ void cwist_app_http_handler(int client_fd, void *ctx) {
                 }
 
                 char *hdr_end = (char *)cwist_simd_find_crlfcrlf(read_buf, buf_len);
-                if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
-                                read_buf[3] == ' ') &&
+                if (hdr_end &&
+                    (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
+                     read_buf[3] == ' ') &&
                     !app_bdr_raw_request_is_private(read_buf, hdr_end)) {
                     const char *path_start = read_buf + 4;
                     const char *path_end =

@@ -27,6 +27,7 @@
 #include "tls_chain.h"
 #include "h3_hdr_out.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -136,6 +137,9 @@ static void h3_global_cleanup(void) {
 #define H3_PSEUDO_PROTOCOL 0x10u
 
 typedef struct h3_stream_ctx {
+    /* lsquic's WebTransport committed-stream hook reads every stream context
+     * as its own type. Keep the first member NULL on ordinary streams. */
+    void *wt_ctx_guard;
     lsquic_stream_t *stream;
     cwist_http_request *req;
     cwist_http_response *res;
@@ -168,6 +172,7 @@ typedef struct h3_stream_ctx {
     struct cwist_wt_handle *wt_stream;  /* stream is a peer-opened WT bidi */
 #endif
 } h3_stream_ctx_t;
+_Static_assert(offsetof(h3_stream_ctx_t, wt_ctx_guard) == 0, "wt_ctx_guard must be first");
 
 /* ------------------------------------------------------------------ */
 /* Per-connection context                                             */
@@ -2197,6 +2202,7 @@ static void cwist_h3_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
 static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     h3_stream_ctx_t *st = (h3_stream_ctx_t *)st_h;
     if (st) {
+        lsquic_stream_set_ctx(stream, NULL);
 #ifdef CWIST_WT_STOCK_LSQUIC
         if (st->wt_session) {
             h3_wt_unlink_session(st->wt_session);
@@ -2211,7 +2217,6 @@ static void cwist_h3_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h
         free(st->seq_buf);
         free(st);
     }
-    (void)stream;
 }
 
 /**

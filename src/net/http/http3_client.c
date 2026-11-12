@@ -16,6 +16,7 @@
 #include <cwist/sys/err/cwist_err.h>
 #include "h3_hdr_out.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,6 +94,9 @@ static void h3c_global_cleanup(void) {
 /* ------------------------------------------------------------------ */
 
 typedef struct h3c_stream_ctx {
+    /* lsquic's WebTransport committed-stream hook reads every stream context
+     * as its own type. Keep the first member NULL on ordinary streams. */
+    void *wt_ctx_guard;
     lsquic_stream_t *stream;
     cwist_http_response *res;
     char *req_path;
@@ -114,6 +118,7 @@ typedef struct h3c_stream_ctx {
     int is_webtransport_connect;
 #endif
 } h3c_stream_ctx_t;
+_Static_assert(offsetof(h3c_stream_ctx_t, wt_ctx_guard) == 0, "wt_ctx_guard must be first");
 
 #ifdef CWIST_WEBTRANSPORT_CLIENT
 struct cwist_webtransport_client_session {
@@ -427,10 +432,17 @@ static void h3c_wt_on_session_close(lsquic_wt_session_t *native, lsquic_wt_sessi
     }
 }
 
+/* Applications poll WebTransport streams directly. */
+static void h3c_wt_on_stream_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *h) {
+    (void)h;
+    lsquic_stream_wantread(stream, 0);
+}
+
 static const struct lsquic_webtransport_if h3c_wt_if = {
     .wti_on_session_open = h3c_wt_on_session_open,
     .wti_on_session_rejected = h3c_wt_on_session_rejected,
     .wti_on_session_close = h3c_wt_on_session_close,
+    .wti_on_stream_read = h3c_wt_on_stream_read,
 };
 #endif
 
@@ -675,6 +687,7 @@ static void h3c_on_close(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     if (!st) return;
     cwist_http3_client *client =
         (cwist_http3_client *)lsquic_conn_get_ctx(lsquic_stream_conn(stream));
+    lsquic_stream_set_ctx(stream, NULL);
     pthread_mutex_lock(&client->mtx);
     st->stream_closed = 1;
     st->response_ready = 1;
