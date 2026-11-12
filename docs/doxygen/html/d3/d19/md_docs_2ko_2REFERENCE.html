@@ -178,6 +178,15 @@ $(document).ready(function(){initNavTree('d3/d19/md_docs_2ko_2REFERENCE.html','.
 <li><b>헤더:</b> <code>&lt;<a class="el" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto-Caching Layer for repetitive requests.">cwist/sys/app/big_dumb_reply.h</a>&gt;</code></li>
 <li><b>함수:</b> <code>cwist_bdr_get</code>, <code>cwist_bdr_put</code>, <code>cwist_bdr_set_limits</code>.</li>
 <li><b>안전장치:</b> 항목은 설정 가능한 TTL이나 히트 횟수 예산이 지나면 만료되고, 캐시는 소프트 바이트 상한(기본 32 MiB)을 유지합니다. 애플리케이션별 동작은 <code>cwist_app_configure_bdr</code>로 조정합니다.</li>
+<li><p class="startli"><b>캐시 대상:</b> 캐시 키는 메서드와 경로뿐이므로, 다음을 모두 만족하는 응답만 학습합니다.</p><ul>
+<li>요청이 쿼리 문자열 없는 <code>GET</code>이고 <code>Cookie</code>와 <code>Authorization</code>이 모두 없습니다.</li>
+<li>핸들러 처리 시간이 지연 임계값(기본 10 ms)보다 깁니다.</li>
+<li>응답에 <code>Vary</code>와 <code>Set-Cookie</code>가 없고, <code>Cache-Control</code>에 <code>private</code>, <code>no-store</code>, <code>no-cache</code>가 없습니다.</li>
+<li>파일 엔드포인트가 아닙니다.</li>
+</ul>
+<p class="startli">학습은 classic(스레드 풀) 경로에서만 일어나고, C1M 경로는 읽기만 합니다. <code>Cookie</code>나 <code>Authorization</code>이 있는 요청에는 캐시로 응답하지 않습니다.</p>
+</li>
+<li><b>라우트를 캐시에서 빼기:</b> 핸들러에서 <code>Cache-Control: no-store</code>를 보냅니다(사용자별 콘텐츠라면 <code>private</code>). 쿠키를 설정하는 응답은 자동으로 제외됩니다.</li>
 </ul>
 <h1><a class="anchor" id="autotoc_md680"></a>
 LibTTAK 메모리 기능</h1>
