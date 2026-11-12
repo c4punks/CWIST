@@ -7,10 +7,21 @@ does not port `cwist_app_listen()`, pthreads, epoll, or the C1M reactor.
 
 ## Supported targets and validation
 
-- **Reference integration:** NUCLEO-H743ZI2 (STM32H743, Cortex-M7, 2 MB flash,
-  1 MB SRAM, RMII Ethernet, TRNG). `example/stm32/` contains the application,
-  HAL port hooks, lwIP options, CubeMX integration, and flashing instructions.
-- **Validated board:** STM32F769I-DISCO (STM32F769NI, Cortex-M7, 2 MB flash,
+Every board below carries exactly one label: **physical-board validated**,
+**reference integration (cross-build / QEMU)**, or **planned**.
+
+| Board | Label |
+|-------|-------|
+| STM32F769I-DISCO | Physical-board validated (the only one so far) |
+| NUCLEO-H743ZI2 | Reference integration (cross-build / QEMU); not run on a physical board |
+| STM32F429I-DISCO | Planned low-resource target; hardware available, not validated |
+
+- **Reference integration (cross-build / QEMU):** NUCLEO-H743ZI2 (STM32H743,
+  Cortex-M7, 2 MB flash, 1 MB SRAM, RMII Ethernet, TRNG). `example/stm32/`
+  contains the application, HAL port hooks, lwIP options, CubeMX integration,
+  and flashing instructions. It has been cross-built but not run on a physical
+  board.
+- **Physical-board validated:** STM32F769I-DISCO (STM32F769NI, Cortex-M7, 2 MB flash,
   512 KB SRAM, LAN8742 RMII PHY). `example/stm32f769/` is a self-contained
   no-CubeMX build (upstream STM32CubeF7 HAL + CWIST bare-metal archive)
   serving an HTML wire inspector over real Ethernet, verified on hardware
@@ -20,9 +31,18 @@ does not port `cwist_app_listen()`, pthreads, epoll, or the C1M reactor.
   connection-pool slots on the board's 800x480 LCD and in a browser dashboard,
   with selectable responses up to 1 MiB streamed through 192-byte TX buffers.
   Its host script measures successful concurrent connections on hardware.
-- **CI target:** Cortex-M7 Thumb-2 firmware built with `arm-none-eabi-gcc` and
-  run with `qemu-arm` semihosting. This validates compiled instructions and the
-  HTTP/lwIP/TLS logic, but not a board's NVIC, PHY, clock tree, or RNG.
+- **CI targets (not hardware validation):**
+  - `.github/workflows/baremetal.yml`: Cortex-M7 Thumb-2 firmware built with
+    `arm-none-eabi-gcc` and run with `qemu-arm` semihosting
+    (`make baremetal-smoke`, then `make baremetal-size-gate`). This validates
+    compiled instructions and the HTTP/lwIP/TLS logic, but not a board's NVIC,
+    PHY, clock tree, or RNG.
+  - `.github/workflows/cross-compile.yml`: `make fat-dist` cross-built for
+    embedded Linux triplets (currently `aarch64-linux-gnu`) with a link smoke
+    under qemu-user. It covers toolchain and link breakage only.
+- **Planned:** STM32F429I-DISCO (Cortex-M4F) as the low-resource target. It
+  moves to physical-board validated only after it passes the hardware smoke
+  and network test in `example/stm32/README.md`.
 - **Sizing candidates:** STM32H7 first, then F767/F429-class parts with enough
   SRAM. Cortex-M4F and F429/F767 builds are not validated targets yet. Real
   hardware acceptance remains a manual step; do not infer it from QEMU success.
