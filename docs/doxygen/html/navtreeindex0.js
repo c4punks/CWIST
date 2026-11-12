@@ -8,6 +8,9 @@ var NAVTREEINDEX0 =
 "d0/d0c/structcwist__mux__router.html#a5b3095e133e59fb2451f6d747fb65e83":[93,0,71,1],
 "d0/d0c/structcwist__mux__router.html#a92254b04e4e023a3704cc8c12c08033b":[93,0,71,4],
 "d0/d0c/structcwist__mux__router.html#ad5b4624408c39be478b40c3aaef7cc43":[93,0,71,3],
+"d0/d0d/structcwist__ws__fragment.html":[93,0,109],
+"d0/d0d/structcwist__ws__fragment.html#a0820262d37ef5099e633720f94c8627e":[93,0,109,1],
+"d0/d0d/structcwist__ws__fragment.html#a2bb2b8537a0dc85e2a0d290f47347604":[93,0,109,0],
 "d0/d11/orm__socket_8h.html":[94,0,1,0,0,4,1],
 "d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d":[94,0,1,0,0,4,1,0],
 "d0/d11/orm__socket_8h.html#a49e4e067f82940d518da70b53f2e0db9":[94,0,1,0,0,4,1,2],
@@ -246,8 +249,5 @@ var NAVTREEINDEX0 =
 "d0/d77/sys_2app_2app_8h.html#aff460c5e46e982b055da55e2fc976d0f":[94,0,1,0,4,0,0,59],
 "d0/d77/sys_2app_2app_8h_source.html":[94,0,1,0,4,0,0],
 "d0/d82/structcwist__test__client__cookie.html":[93,0,101],
-"d0/d82/structcwist__test__client__cookie.html#a3e09f1890a2df2844d1f506273e26700":[93,0,101,3],
-"d0/d82/structcwist__test__client__cookie.html#a6ec84d0070acc5b8bf414f87d247d915":[93,0,101,2],
-"d0/d82/structcwist__test__client__cookie.html#acd0fa778aac9138cb4a17936a152bd37":[93,0,101,0],
-"d0/d82/structcwist__test__client__cookie.html#acd511353d83bc041c1c27ff60659be66":[93,0,101,1]
+"d0/d82/structcwist__test__client__cookie.html#a3e09f1890a2df2844d1f506273e26700":[93,0,101,3]
 };

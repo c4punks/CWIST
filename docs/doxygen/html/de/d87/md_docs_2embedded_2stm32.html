@@ -111,11 +111,27 @@ $(document).ready(function(){initNavTree('de/d87/md_docs_2embedded_2stm32.html',
 <div class="textblock"><p><a class="anchor" id="autotoc_md308"></a> CWIST supports a socket-free Cortex-M path for small firmware that drives <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> or the raw-lwIP adapter. It uses the same router, middleware, handlers, JSON helpers, and HTTP/1.1 parser as hosted builds; it does not port <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthreads, epoll, or the C1M reactor.</p>
 <h1><a class="anchor" id="autotoc_md309"></a>
 Supported targets and validation</h1>
+<p>Every board below carries exactly one label: <b>physical-board validated</b>, <b>reference integration (cross-build / QEMU)</b>, or <b>planned</b>.</p>
+<table class="markdownTable">
+<tr class="markdownTableHead">
+<th class="markdownTableHeadNone">Board   </th><th class="markdownTableHeadNone">Label    </th></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">STM32F769I-DISCO   </td><td class="markdownTableBodyNone">Physical-board validated (the only one so far)    </td></tr>
+<tr class="markdownTableRowEven">
+<td class="markdownTableBodyNone">NUCLEO-H743ZI2   </td><td class="markdownTableBodyNone">Reference integration (cross-build / QEMU); not run on a physical board    </td></tr>
+<tr class="markdownTableRowOdd">
+<td class="markdownTableBodyNone">STM32F429I-DISCO   </td><td class="markdownTableBodyNone">Planned low-resource target; hardware available, not validated   </td></tr>
+</table>
 <ul>
-<li><b>Reference integration:</b> NUCLEO-H743ZI2 (STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM, RMII Ethernet, TRNG). <code>example/stm32/</code> contains the application, HAL port hooks, lwIP options, CubeMX integration, and flashing instructions.</li>
-<li><b>Validated board:</b> STM32F769I-DISCO (STM32F769NI, Cortex-M7, 2 MB flash, 512 KB SRAM, LAN8742 RMII PHY). <code>example/stm32f769/</code> is a self-contained no-CubeMX build (upstream STM32CubeF7 HAL + CWIST bare-metal archive) serving an HTML wire inspector over real Ethernet, verified on hardware with ping, parallel/keep-alive <code>curl</code>, and browser POSTs. See its README for the rev-A RMII erratum workaround and the D-cache constraint.</li>
+<li><b>Reference integration (cross-build / QEMU):</b> NUCLEO-H743ZI2 (STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM, RMII Ethernet, TRNG). <code>example/stm32/</code> contains the application, HAL port hooks, lwIP options, CubeMX integration, and flashing instructions. It has been cross-built but not run on a physical board.</li>
+<li><b>Physical-board validated:</b> STM32F769I-DISCO (STM32F769NI, Cortex-M7, 2 MB flash, 512 KB SRAM, LAN8742 RMII PHY). <code>example/stm32f769/</code> is a self-contained no-CubeMX build (upstream STM32CubeF7 HAL + CWIST bare-metal archive) serving an HTML wire inspector over real Ethernet, verified on hardware with ping, parallel/keep-alive <code>curl</code>, and browser POSTs. See its README for the rev-A RMII erratum workaround and the D-cache constraint.</li>
 <li><b>LCD and load demo:</b> <code>example/stm32f769-fortress/</code> renders 288 real connection-pool slots on the board's 800x480 LCD and in a browser dashboard, with selectable responses up to 1 MiB streamed through 192-byte TX buffers. Its host script measures successful concurrent connections on hardware.</li>
-<li><b>CI target:</b> Cortex-M7 Thumb-2 firmware built with <code>arm-none-eabi-gcc</code> and run with <code>qemu-arm</code> semihosting. This validates compiled instructions and the HTTP/lwIP/TLS logic, but not a board's NVIC, PHY, clock tree, or RNG.</li>
+<li><b>CI targets (not hardware validation):</b><ul>
+<li><code>.github/workflows/baremetal.yml</code>: Cortex-M7 Thumb-2 firmware built with <code>arm-none-eabi-gcc</code> and run with <code>qemu-arm</code> semihosting (<code>make baremetal-smoke</code>, then <code>make baremetal-size-gate</code>). This validates compiled instructions and the HTTP/lwIP/TLS logic, but not a board's NVIC, PHY, clock tree, or RNG.</li>
+<li><code>.github/workflows/cross-compile.yml</code>: <code>make fat-dist</code> cross-built for embedded Linux triplets (currently <code>aarch64-linux-gnu</code>) with a link smoke under qemu-user. It covers toolchain and link breakage only.</li>
+</ul>
+</li>
+<li><b>Planned:</b> STM32F429I-DISCO (Cortex-M4F) as the low-resource target. It moves to physical-board validated only after it passes the hardware smoke and network test in <code>example/stm32/README.md</code>.</li>
 <li><b>Sizing candidates:</b> STM32H7 first, then F767/F429-class parts with enough SRAM. Cortex-M4F and F429/F767 builds are not validated targets yet. Real hardware acceptance remains a manual step; do not infer it from QEMU success.</li>
 </ul>
 <p>Low-end F0/F1/L0 parts and parts below roughly 128 KB SRAM are outside this epic. Plain HTTP is the practical starting point for smaller parts; HTTPS is intended for H7-class memory budgets.</p>

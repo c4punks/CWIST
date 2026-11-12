@@ -106,7 +106,8 @@ var searchData=
   ['cwist_5fwebrtc_5fctx_103',['cwist_webrtc_ctx',['../dc/d88/structcwist__webrtc__ctx.html',1,'']]],
   ['cwist_5fwebrtc_5fmsg_104',['cwist_webrtc_msg',['../d5/dcf/structcwist__webrtc__msg.html',1,'']]],
   ['cwist_5fwebsocket_105',['cwist_websocket',['../d9/d2c/structcwist__websocket.html',1,'']]],
-  ['cwist_5fws_5fframe_106',['cwist_ws_frame',['../db/d40/structcwist__ws__frame.html',1,'']]],
-  ['cwist_5fzod_5ferror_107',['cwist_zod_error',['../dc/d5f/structcwist__zod__error.html',1,'']]],
-  ['cwist_5fzod_5fresult_108',['cwist_zod_result',['../dd/d71/structcwist__zod__result.html',1,'']]]
+  ['cwist_5fws_5ffragment_106',['cwist_ws_fragment',['../d0/d0d/structcwist__ws__fragment.html',1,'']]],
+  ['cwist_5fws_5fframe_107',['cwist_ws_frame',['../db/d40/structcwist__ws__frame.html',1,'']]],
+  ['cwist_5fzod_5ferror_108',['cwist_zod_error',['../dc/d5f/structcwist__zod__error.html',1,'']]],
+  ['cwist_5fzod_5fresult_109',['cwist_zod_result',['../dd/d71/structcwist__zod__result.html',1,'']]]
 ];

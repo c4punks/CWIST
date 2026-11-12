@@ -84,6 +84,7 @@ var searchData=
   ['grpc_5fclient_5fmsg_81',['grpc_client_msg',['../d4/d54/grpc__client_8c.html#a55e4abd6c928f0effa10064e632bf6f2',1,'grpc_client.c']]],
   ['grpc_5fmethod_5fconfig_82',['grpc_method_config',['../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d',1,'grpc_channel.c']]],
   ['grpc_5fqnode_83',['grpc_qnode',['../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d',1,'grpc.c']]],
-  ['grpc_5froutes_84',['grpc_routes',['../dc/da0/structcwist__app.html#afc9fa598fee9f0a01b9f94883436918c',1,'cwist_app']]],
-  ['guides_85',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md781',1,'']]]
+  ['grpc_5froute_5fview_84',['grpc_route_view',['../d9/dba/grpc_8c.html#a2832d700232e75b80ecf8501c8d3a878',1,'grpc.c']]],
+  ['grpc_5froutes_85',['grpc_routes',['../dc/da0/structcwist__app.html#afc9fa598fee9f0a01b9f94883436918c',1,'cwist_app']]],
+  ['guides_86',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md781',1,'']]]
 ];
