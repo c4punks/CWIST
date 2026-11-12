@@ -88,5 +88,7 @@ jobs:
               execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
               execSync('git add benchmarks/https_gates.json');
               execSync(`git commit -m "bench(ci): record HTTPS gate run [skip ci]"`);
-              execSync('git push');
+              execSync('git fetch origin dev');
+              execSync('git rebase origin/dev');
+              execSync('git push origin HEAD:dev');
             }
