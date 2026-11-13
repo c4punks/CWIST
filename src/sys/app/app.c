@@ -216,8 +216,9 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
                                      void **data_out, ttak_mem_node_t **node_out) {
     if (!mem || !fs_path || !data_out || !node_out) return false;
 
-    void *buffer = ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__,
-                                       cwist_app_mem_now(), true, false, true, true, TTAK_MEM_DEFAULT);
+    void *buffer =
+        ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__, cwist_app_mem_now(), true,
+                            false, true, true, TTAK_MEM_DEFAULT);
     if (!buffer) {
         fprintf(stderr, "[StaticMem] Failed to allocate %zu bytes via libttak for %s\n", size,
                 fs_path);
@@ -3242,9 +3243,9 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
              * cursor turns the lookup into a content-compare + epoch-validated
              * entry reuse instead of a SipHash + bucket walk per request. */
             cwist_http_async_conn_t *aconn = req->async_conn;
-            cached_blob = cwist_bdr_get_pinned_cursor(app->bdr_ctx, "GET", req->path->data,
-                                                      req->path->size, &cached_len, &bdr_pin,
-                                                      &aconn->bdr_cursor);
+            cached_blob =
+                cwist_bdr_get_pinned_cursor(app->bdr_ctx, "GET", req->path->data, req->path->size,
+                                            &cached_len, &bdr_pin, &aconn->bdr_cursor);
         } else {
             cached_blob =
                 cwist_bdr_get_pinned(app->bdr_ctx, "GET", req->path->data, &cached_len, &bdr_pin);
@@ -3262,12 +3263,17 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                     }
                 }
                 if (cached_len > CWIST_HTTP_COALESCE_MAX) {
-                    int write_rc = req->https_conn
-                                       ? cwist_https_write_raw((cwist_https_connection *)req->https_conn,
-                                                               cached_blob, cached_len)
-                                       : (send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL) < 0
-                                              ? -1
-                                              : 0);
+                    int write_rc;
+#ifndef CWIST_PLATFORM_NO_PROC
+                    if (req->https_conn) {
+                        write_rc = cwist_https_write_raw((cwist_https_connection *)req->https_conn,
+                                                         cached_blob, cached_len);
+                    } else
+#endif
+                    {
+                        write_rc =
+                            send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL) < 0 ? -1 : 0;
+                    }
                     if (write_rc != 0) {
                         cwist_bdr_unpin(bdr_pin);
                         cwist_http_request_destroy(req);
@@ -3322,8 +3328,8 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     cwist_async *deferred = cwist_async_dispatch_take(res);
     if (deferred) {
         cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
-        bool broken = aconn && aconn->olen > 0 &&
-                      cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
+        bool broken =
+            aconn && aconn->olen > 0 && cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
         /* Before the ack: afterwards the completion may already re-arm. */
         if (carry_len > 0) cwist_async_set_carry(deferred, carry, carry_len);
         bool detach_tls = aconn && req->https_conn;
@@ -3357,12 +3363,14 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
         keep_alive = false;
     }
 
+#ifndef CWIST_PLATFORM_NO_PROC
     if (upgraded && req->https_conn && req->async_conn) {
         cwist_https_connection *https = (cwist_https_connection *)req->https_conn;
         cwist_error_t send_err = req->method == CWIST_HTTP_HEAD
                                      ? cwist_https_send_response_head(https, res)
                                      : cwist_https_send_response(https, res);
-        bool detached = cwist_error_is_ok(&send_err) && cwist_https_upgrade_handler(https, req, res);
+        bool detached =
+            cwist_error_is_ok(&send_err) && cwist_https_upgrade_handler(https, req, res);
         if (detached) {
             https->ssl = NULL;
             https->fd = -1;
@@ -3373,11 +3381,17 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
         cwist_http_request_destroy(req);
         return detached ? APP_SERVE_DETACH : APP_SERVE_CLOSE;
     }
+#endif
 
     if (!upgraded) {
         if (req->async_conn) {
-            cwist_async_send_status_t as_st = cwist_http_send_response_coalesced(
-                client_fd, res, req->async_conn, keep_alive, req->method == CWIST_HTTP_HEAD);
+            cwist_http_async_conn_t *aconn = (cwist_http_async_conn_t *)req->async_conn;
+            cwist_async_send_status_t as_st =
+                aconn->https_conn
+                    ? cwist_http_send_response_async(client_fd, res, aconn, keep_alive,
+                                                     req->method == CWIST_HTTP_HEAD)
+                    : cwist_http_send_response_coalesced(client_fd, res, aconn, keep_alive,
+                                                         req->method == CWIST_HTTP_HEAD);
             cwist_http_response_destroy(res);
             cwist_http_request_destroy(req);
             if (as_st == CWIST_ASYNC_SEND_DEFERRED) return APP_SERVE_DEFERRED;
@@ -3611,8 +3625,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         req->db = app->db;
         req->async_conn = conn;
         req->https_conn = conn->https_conn;
-        app_serve_result_t sr =
-            app_serve_parsed_request(app, client_fd, req, NULL, 0);
+        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, NULL, 0);
         /* Deferred: buffered coalesced responses from this turn already
          * drained inside app_serve_parsed_request, before the defer was
          * acked; the completion path owns the fd/conn now (it re-arms or
@@ -3740,8 +3753,9 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
                 }
 
                 char *hdr_end = (char *)cwist_simd_find_crlfcrlf(read_buf, buf_len);
-                if (hdr_end && (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
-                                read_buf[3] == ' ') &&
+                if (hdr_end &&
+                    (read_buf[0] == 'G' && read_buf[1] == 'E' && read_buf[2] == 'T' &&
+                     read_buf[3] == ' ') &&
                     !app_bdr_raw_request_is_private(read_buf, hdr_end)) {
                     const char *path_start = read_buf + 4;
                     const char *path_end =
@@ -3791,8 +3805,7 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
         req->app = app;
         req->db = app->db;
 
-        app_serve_result_t sr =
-            app_serve_parsed_request(app, client_fd, req, read_buf, buf_len);
+        app_serve_result_t sr = app_serve_parsed_request(app, client_fd, req, read_buf, buf_len);
         if (sr == APP_SERVE_DEFERRED) {
             /* The async completion owns the fd now; it re-arms on the pool
              * (keep-alive) or closes, resuming with any pipelined bytes
