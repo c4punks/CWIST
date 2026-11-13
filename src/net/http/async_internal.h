@@ -164,4 +164,9 @@ bool cwist_async_h3_end(void);
 struct cwist_https_connection;
 bool cwist_https_yield(struct cwist_https_connection *conn);
 
+bool cwist_http_pool_submit_https_async(struct cwist_https_connection *https_conn,
+                                        cwist_async_handler_t handler, void *ctx);
+bool cwist_https_reactor_handoff(struct cwist_https_connection *conn,
+                                 cwist_async_handler_t handler, void *ctx);
+
 #endif
