@@ -689,6 +689,21 @@ static void https_park_stop(void) {}
 static void https_park_reopen(void) {}
 #endif
 
+bool cwist_https_reactor_handoff(cwist_https_connection *conn,
+                                 cwist_async_handler_t handler, void *ctx) {
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char *env = getenv("CWIST_HTTPS_REACTOR");
+        enabled = !(env && (env[0] == '0' || strcmp(env, "false") == 0));
+    }
+    if (!enabled || !conn || conn->negotiated_protocol != CWIST_HTTPS_PROTOCOL_HTTP11) {
+        return false;
+    }
+    if (!cwist_http_pool_submit_https_async(conn, handler, ctx)) return false;
+    t_https_parked = true;
+    return true;
+}
+
 bool cwist_https_yield(cwist_https_connection *conn) {
     if (!conn || conn->fd < 0 || !conn->pool_handler || !g_https_pool_initialized) return false;
     if (!atomic_load(&g_cwist_running)) return false;
@@ -1715,6 +1730,9 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
     memset(*conn, 0, sizeof(**conn));
     (*conn)->fd = client_fd;
     (*conn)->ssl = ssl;
+#ifndef CWIST_TLS_MBEDTLS
+    SSL_set_mode(ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
+#endif
     (*conn)->read_buf = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
     if (!(*conn)->read_buf) {
         cwist_free(*conn);
