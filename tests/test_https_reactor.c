@@ -39,7 +39,7 @@ static void hello_route(cwist_http_request *req, cwist_http_response *res) {
 static void large_route(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
     enum { LARGE_SIZE = 512 * 1024 };
-    char *body = cwist_alloc(LARGE_SIZE);
+    char *body = cwist_alloc(LARGE_SIZE + 1);
     assert(body != NULL);
     for (size_t i = 0; i < LARGE_SIZE; i++) body[i] = LARGE_BODY[i % (sizeof(LARGE_BODY) - 1)];
     cwist_sstring_adopt_len(res->body, body, LARGE_SIZE);
@@ -185,7 +185,8 @@ static void test_deferred_keep_alive(client_t *client) {
 }
 
 static void test_large_response(client_t *client) {
-    static const char request[] = "GET /large HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+    static const char request[] =
+        "GET /large HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
     ssl_write_all(client->ssl, request, sizeof(request) - 1);
     response_t response = read_response(client);
     assert(response.body_len == 512 * 1024);
@@ -198,6 +199,8 @@ static void test_large_response(client_t *client) {
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
     setenv("CWIST_WORKER_THREADS", "1", 1);
+    setenv("CWIST_HTTP_KEEP_ALIVE_TIMEOUT", "1", 1);
+    setenv("CWIST_HTTPS_IDLE_TIMEOUT_MS", "3000", 1);
 #ifdef TEST_HTTPS_REACTOR_FULL_GC
     cwist_full_gc(true);
 #endif
@@ -207,6 +210,8 @@ int main(void) {
 
     client_t split = client_open(app);
     test_split_records_and_pipeline(&split);
+    usleep(1500000);
+    request_hello(&split);
     test_deferred_keep_alive(&split);
     SSL_shutdown(split.ssl);
     SSL_free(split.ssl);

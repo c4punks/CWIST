@@ -232,7 +232,8 @@ long get_optimal_thread_count(void) {
     return threads_per_worker;
 }
 
-#ifndef CWIST_PLATFORM_NO_SOCKETS /* socket worker runtime: thread pool, live-connection registry, async connections */
+#ifndef CWIST_PLATFORM_NO_SOCKETS /* socket worker runtime: thread pool, live-connection registry, \
+                                     async connections */
 #define HTTP_TASKS_PER_THREAD 32768
 
 typedef struct {
@@ -1083,19 +1084,50 @@ static uint64_t http_reap_interval_us(void) {
 
 static void http_async_conn_release(cwist_http_async_conn_t *conn);
 
+static uint32_t http_async_idle_timeout_sec(const cwist_http_async_conn_t *conn) {
+#ifndef CWIST_PLATFORM_NO_PROC
+    if (conn->https_conn) {
+        uint64_t seconds = (cwist_https_idle_timeout_ms() + 999) / 1000;
+        return seconds > UINT32_MAX ? UINT32_MAX : (uint32_t)seconds;
+    }
+#endif
+    return cwist_http_keep_alive_timeout_sec();
+}
+
+static int http_async_tls_pending(const cwist_https_connection *https) {
+#ifndef CWIST_PLATFORM_NO_PROC
+    return https && https->ssl ? SSL_pending(https->ssl) : 0;
+#else
+    (void)https;
+    return 0;
+#endif
+}
+
+static bool http_async_close_https(cwist_http_async_conn_t *conn) {
+#ifndef CWIST_PLATFORM_NO_PROC
+    if (conn && conn->https_conn) {
+        cwist_https_close_connection((cwist_https_connection *)conn->https_conn);
+        conn->https_conn = NULL;
+        return true;
+    }
+#else
+    (void)conn;
+#endif
+    return false;
+}
+
 /** Reactor timer: wake idle keep-alive connections past the timeout. */
 static void http_reap_sweep_cb(void *ctx) {
     http_thread_worker_t *w = (http_thread_worker_t *)ctx;
     http_reap_drain_incoming(w);
     uint32_t now = cwist_fast_monotonic_sec();
-    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
     cwist_http_async_conn_t *c = w->reap_head;
     while (c) {
         cwist_http_async_conn_t *next = c->reap_next;
         if (__atomic_load_n(&c->reap_dead, __ATOMIC_ACQUIRE)) {
             http_async_conn_release(c);
         } else if (c->reap_waiting && !c->reap_kicked && c->last_active_sec > 0 &&
-                   now - c->last_active_sec > timeout_sec) {
+                   now - c->last_active_sec > http_async_idle_timeout_sec(c)) {
             /* Completes the armed wait; http_async_event_cb (POLL) sees the
              * idle deadline and closes, a RECV completes with EOF. */
             c->reap_kicked = true;
@@ -1153,6 +1185,7 @@ static void http_async_conn_release(cwist_http_async_conn_t *conn) {
  * capacity on the next busy turn. Must satisfy CWIST_RX_REARM_MIN_AVAIL so
  * the RECV-first arm stays available. */
 #define CWIST_ASYNC_STASH_IDLE 4096
+#define CWIST_ASYNC_TLS_STASH_IDLE 1024
 
 /** Shrink an async connection's stashes toward the idle floor when the
  *  capacity has not been needed for CWIST_ASYNC_STASH_IDLE_SEC seconds
@@ -1186,11 +1219,14 @@ static void http_async_stash_idle_shrink(cwist_http_async_conn_t *conn) {
             cwist_free(conn->rbuf);
             conn->rbuf = NULL;
             conn->cap = 0;
-        } else if (conn->cap > CWIST_ASYNC_STASH_IDLE) {
-            char *nb = cwist_realloc(conn->rbuf, CWIST_ASYNC_STASH_IDLE);
-            if (nb) {
-                conn->rbuf = nb;
-                conn->cap = CWIST_ASYNC_STASH_IDLE;
+        } else {
+            size_t floor = conn->https_conn ? CWIST_ASYNC_TLS_STASH_IDLE : CWIST_ASYNC_STASH_IDLE;
+            if (conn->cap > floor) {
+                char *nb = cwist_realloc(conn->rbuf, floor);
+                if (nb) {
+                    conn->rbuf = nb;
+                    conn->cap = floor;
+                }
             }
         }
     }
@@ -1269,9 +1305,11 @@ static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
 static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
                                 cwist_async_handler_t handler, void *ctx,
                                 cwist_reactor_t *reactor) {
+#ifndef CWIST_PLATFORM_NO_PROC
     if (conn->https_conn && cwist_full_gc_enabled()) {
         cwist_conn_registry_adopt(conn->https_conn);
     }
+#endif
     cwist_async_action_t action = handler(fd, conn);
 
     if (action == CWIST_ASYNC_DEFER) {
@@ -1313,10 +1351,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
         return;
     }
     if (action == CWIST_ASYNC_CLOSE) {
-        if (conn->https_conn)
-            cwist_https_close_connection((cwist_https_connection *)conn->https_conn);
-        else
-            close(fd);
+        if (!http_async_close_https(conn)) close(fd);
         http_async_conn_release(conn);
         return;
     }
@@ -1333,7 +1368,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
     http_async_stash_idle_shrink(conn);
 
     if (conn->https_conn &&
-        SSL_pending(((cwist_https_connection *)conn->https_conn)->ssl) > 0) {
+        http_async_tls_pending((cwist_https_connection *)conn->https_conn) > 0) {
         cwist_http_async_rearm(fd, reactor, conn);
         return;
     }
@@ -1344,10 +1379,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
             if (n <= 5 || n % 10000 == 0)
                 fprintf(stderr, "[async] rearm failed fd=%d total=%ld\n", fd, n);
         }
-        if (conn->https_conn)
-            cwist_https_close_connection((cwist_https_connection *)conn->https_conn);
-        else
-            close(fd);
+        if (!http_async_close_https(conn)) close(fd);
         http_async_conn_release(conn);
     }
 }
@@ -1464,7 +1496,7 @@ static void http_async_event_cb(int fd, void *ctx) {
     conn->reap_waiting = false;
 
     uint32_t now = cwist_fast_monotonic_sec();
-    uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
+    uint32_t timeout_sec = http_async_idle_timeout_sec(conn);
 
     /* Idle connection reaper: close keep-alive sockets that exceeded timeout.
      * A client may have pipelined a request into the post-timeout,
@@ -1543,8 +1575,8 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
         .reactor = reactor,
         .conn = conn,
     };
-    if (conn->len > 0 ||
-        (conn->https_conn && SSL_pending(((cwist_https_connection *)conn->https_conn)->ssl) > 0)) {
+    if (conn->len > 0 || (conn->https_conn &&
+                          http_async_tls_pending((cwist_https_connection *)conn->https_conn) > 0)) {
         /* Pipelined plaintext and decrypted TLS records do not necessarily
          * have fd readiness, so resume them through a posted continuation. */
         http_async_continuation_t *continuation = cwist_alloc(sizeof(*continuation));
@@ -1590,10 +1622,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
  * shell.  Must run on the connection's reactor owner thread.
  */
 static void http_async_close(int client_fd, cwist_http_async_conn_t *conn) {
-    if (conn && conn->https_conn) {
-        cwist_https_close_connection((cwist_https_connection *)conn->https_conn);
-        conn->https_conn = NULL;
-    } else if (client_fd >= 0) {
+    if (!http_async_close_https(conn) && client_fd >= 0) {
         char drain[2048];
         ssize_t n;
         int guard = 16;
@@ -1636,7 +1665,8 @@ static bool http_pool_submit_async_common(int client_fd, cwist_https_connection 
         atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
         if (!https) {
 #ifdef MSG_NOSIGNAL
-            send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1, MSG_NOSIGNAL | MSG_DONTWAIT);
+            send(client_fd, CWIST_HTTP_503, sizeof(CWIST_HTTP_503) - 1,
+                 MSG_NOSIGNAL | MSG_DONTWAIT);
 #endif
             close(client_fd);
         }
@@ -1660,6 +1690,12 @@ static bool http_pool_submit_async_common(int client_fd, cwist_https_connection 
     conn->virgin = true;
     conn->last_active_sec = cwist_fast_monotonic_sec();
     conn->stash_grown_sec = conn->last_active_sec;
+    if (https && !http_async_stash_grow(conn, CWIST_ASYNC_TLS_STASH_IDLE)) {
+        cwist_free(conn);
+        atomic_fetch_sub_explicit(&g_http_inflight, 1, memory_order_release);
+        return false;
+    }
+    if (https && cwist_full_gc_enabled()) cwist_gc_scope_disown(conn->rbuf);
 
     size_t worker_idx;
     if (g_worker_loads && g_http_thread_count > 1) {
@@ -1678,7 +1714,7 @@ static bool http_pool_submit_async_common(int client_fd, cwist_https_connection 
     conn->handler = handler;
     http_reap_push(w, conn);
 
-    if (https && SSL_pending(https->ssl) > 0) {
+    if (https && http_async_tls_pending(https) > 0) {
         http_async_continuation_t *continuation = cwist_alloc(sizeof(*continuation));
         if (continuation) {
             if (cwist_full_gc_enabled()) cwist_gc_scope_disown(continuation);
@@ -2705,8 +2741,8 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
             size_t vlen = curr->value->size;
             bool suppress_cl = bodyless && res->status_code != 304 && klen == 14 &&
                                strcasecmp(curr->key->data, "content-length") == 0;
-            bool suppress_te = bodyless && klen == 17 &&
-                               strcasecmp(curr->key->data, "transfer-encoding") == 0;
+            bool suppress_te =
+                bodyless && klen == 17 && strcasecmp(curr->key->data, "transfer-encoding") == 0;
             if (suppress_cl || suppress_te) {
                 curr = curr->next;
                 continue;
@@ -3244,8 +3280,35 @@ void cwist_http_async_finish_stream(int client_fd, cwist_reactor_t *reactor,
     }
 }
 
-static void http_async_prepare_response(cwist_http_async_conn_t *conn,
-                                        cwist_http_response *res) {
+static cwist_error_t http_async_send_response(cwist_http_async_conn_t *conn, int client_fd,
+                                              cwist_http_response *res) {
+#ifndef CWIST_PLATFORM_NO_PROC
+    if (conn->https_conn) {
+        return cwist_https_send_response((cwist_https_connection *)conn->https_conn, res);
+    }
+#endif
+    return cwist_http_send_response(client_fd, res);
+}
+
+static int http_async_write_raw(cwist_http_async_conn_t *conn, int client_fd, const void *data,
+                                size_t len) {
+#ifndef CWIST_PLATFORM_NO_PROC
+    if (conn->https_conn) {
+        return cwist_https_write_raw((cwist_https_connection *)conn->https_conn, data, len);
+    }
+#endif
+    struct iovec iov = {.iov_base = (void *)data, .iov_len = len};
+    int flags = 0;
+#ifdef MSG_NOSIGNAL
+    flags |= MSG_NOSIGNAL;
+#endif
+#ifdef MSG_DONTWAIT
+    flags |= MSG_DONTWAIT;
+#endif
+    return cwist_http_sendmsg_all(client_fd, &iov, 1, flags);
+}
+
+static void http_async_prepare_response(cwist_http_async_conn_t *conn, cwist_http_response *res) {
     cwist_https_connection *https = (cwist_https_connection *)conn->https_conn;
     if (!https || !https->http3_enabled || cwist_http_header_get(res->headers, "Alt-Svc")) return;
     struct sockaddr_storage ss;
@@ -3269,6 +3332,7 @@ static cwist_write_status_t http_async_write_speculative(cwist_http_async_conn_t
         return cwist_http_sendmsg_speculative(conn->fd, iov, iov_cnt, flags, sent);
     }
 
+#ifndef CWIST_PLATFORM_NO_PROC
     cwist_https_connection *https = (cwist_https_connection *)conn->https_conn;
     if (!https->ssl) return CWIST_WRITE_ERR;
     *sent = 0;
@@ -3293,6 +3357,9 @@ static cwist_write_status_t http_async_write_speculative(cwist_http_async_conn_t
         }
     }
     return CWIST_WRITE_DONE;
+#else
+    return CWIST_WRITE_ERR;
+#endif
 }
 
 /* --- Parked (POLLOUT-resumable) deferred-response writer --------------------
@@ -3398,8 +3465,7 @@ static void http_parked_write_finish(int fd, http_parked_write_t *w, bool draine
  * deadline. Frees the park state and re-arms or closes via
  * http_parked_write_finish().
  */
-static int http_parked_drain(http_parked_write_t *w, const char *buf, size_t *off,
-                             size_t *left) {
+static int http_parked_drain(http_parked_write_t *w, const char *buf, size_t *off, size_t *left) {
     struct iovec iov = {.iov_base = (void *)(buf + *off), .iov_len = *left};
     int flags = 0;
 #if defined(MSG_NOSIGNAL)
@@ -3782,10 +3848,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
             return;
         }
 #endif
-        cwist_error_t err = conn->https_conn
-                                ? cwist_https_send_response(
-                                      (cwist_https_connection *)conn->https_conn, res)
-                                : cwist_http_send_response(client_fd, res);
+        cwist_error_t err = http_async_send_response(conn, client_fd, res);
         if (keep_alive && err.error.err_i16 == 0) {
             cwist_http_async_rearm(client_fd, reactor, conn);
         } else {
@@ -3870,8 +3933,7 @@ void cwist_http_async_send_response(int client_fd, cwist_http_response *res,
         }
         cwist_http_response_release_ptr_body(res);
         cwist_http_response_release_file_stream(res);
-        if (w.buf &&
-            http_parked_rearm(client_fd, &w)) {
+        if (w.buf && http_parked_rearm(client_fd, &w)) {
             return;
         }
         cwist_free(w.buf);
@@ -3907,10 +3969,7 @@ cwist_async_send_status_t cwist_http_send_response_async(int client_fd, cwist_ht
             return fstatus;
         }
 #endif
-        cwist_error_t err = conn->https_conn
-                                ? cwist_https_send_response(
-                                      (cwist_https_connection *)conn->https_conn, res)
-                                : cwist_http_send_response(client_fd, res);
+        cwist_error_t err = http_async_send_response(conn, client_fd, res);
         return (keep_alive && err.error.err_i16 == 0) ? CWIST_ASYNC_SEND_KEEPALIVE
                                                       : CWIST_ASYNC_SEND_CLOSE;
     }
@@ -4064,10 +4123,7 @@ cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool kee
     if (!atomic_load(&g_cwist_running)) {
         /* Shutdown stops the reactor loop: finish this already-built batch
          * here instead of parking bytes on a callback that cannot run. */
-        int rc = conn->https_conn
-                     ? cwist_https_write_raw((cwist_https_connection *)conn->https_conn, conn->obuf,
-                                             conn->olen)
-                     : cwist_http_sendmsg_all(client_fd, &iov, 1, flags);
+        int rc = http_async_write_raw(conn, client_fd, conn->obuf, conn->olen);
         conn->olen = 0;
         return rc == 0 ? CWIST_COALESCE_FLUSH_DONE : CWIST_COALESCE_FLUSH_ERROR;
     }
@@ -4108,18 +4164,7 @@ cwist_http_coalesce_flush(int client_fd, cwist_http_async_conn_t *conn, bool kee
  */
 int cwist_http_coalesce_flush_blocking(int client_fd, cwist_http_async_conn_t *conn) {
     if (!conn || conn->olen == 0) return 0;
-    struct iovec iov = {.iov_base = conn->obuf, .iov_len = conn->olen};
-    int flags = 0;
-#if defined(MSG_NOSIGNAL)
-    flags |= MSG_NOSIGNAL;
-#endif
-#if defined(MSG_DONTWAIT)
-    flags |= MSG_DONTWAIT;
-#endif
-    int rc = conn->https_conn
-                     ? cwist_https_write_raw((cwist_https_connection *)conn->https_conn, conn->obuf,
-                                             conn->olen)
-                     : cwist_http_sendmsg_all(client_fd, &iov, 1, flags);
+    int rc = http_async_write_raw(conn, client_fd, conn->obuf, conn->olen);
     conn->olen = 0;
     return rc;
 }
@@ -4198,10 +4243,7 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
         }
 #endif
         if (cwist_http_coalesce_flush_blocking(client_fd, conn) != 0) return CWIST_ASYNC_SEND_CLOSE;
-        cwist_error_t err = conn->https_conn
-                                ? cwist_https_send_response(
-                                      (cwist_https_connection *)conn->https_conn, res)
-                                : cwist_http_send_response(client_fd, res);
+        cwist_error_t err = http_async_send_response(conn, client_fd, res);
         return (keep_alive && err.error.err_i16 == 0) ? CWIST_ASYNC_SEND_KEEPALIVE
                                                       : CWIST_ASYNC_SEND_CLOSE;
     }
@@ -4261,8 +4303,7 @@ cwist_async_send_status_t cwist_http_send_response_coalesced(int client_fd,
 #endif
 
         size_t sent = 0;
-        cwist_write_status_t st =
-            http_async_write_speculative(conn, iov, iov_cnt, flags, &sent);
+        cwist_write_status_t st = http_async_write_speculative(conn, iov, iov_cnt, flags, &sent);
         if (st == CWIST_WRITE_PENDING) {
             /* Pointer bodies park by reference (ownership moves to the park
              * state); everything else keeps the deep-copy remainder path. */
@@ -4648,7 +4689,8 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
         const char *colon = cwist_simd_find_char(line_start, (size_t)(line_end - line_start), ':');
         if (colon) {
             size_t key_len = colon - line_start;
-            if (key_len > 0 && (line_start[key_len - 1] == ' ' || line_start[key_len - 1] == '\t')) {
+            if (key_len > 0 &&
+                (line_start[key_len - 1] == ' ' || line_start[key_len - 1] == '\t')) {
                 cwist_http_request_destroy(req);
                 if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
                 return NULL;
@@ -5168,7 +5210,7 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
         if (pr <= 0) {
             if (pr < 0 && errno == EINTR) continue;
             if (pr < 0) continue; /* transient errors retry within the budget */
-            continue;             /* timeout slice expired; re-check the budget */
+            continue; /* timeout slice expired; re-check the budget */
         }
 
         ssize_t bytes =
@@ -5326,12 +5368,13 @@ static bool http_async_stash_grow(cwist_http_async_conn_t *conn, size_t need) {
     if (conn->rx_recv_inflight) return false;
     if (need > CWIST_ASYNC_STASH_MAX) return false;
     if (conn->cap >= need) return true;
-    /* Doubling base: a virgin stash starts at the 4 KiB idle floor (the
-     * first-arm site grows it to exactly that), so an idle C1M connection
-     * pays floor memory, not CWIST_HTTP_READ_BUFFER_SIZE. Above the floor
-     * the doubling ladder is unchanged: need 16 KiB on a virgin stash ends
-     * at the same 16 KiB cap as before. */
-    size_t cap = conn->cap ? conn->cap : CWIST_ASYNC_STASH_IDLE;
+    /* Doubling base: a virgin stash starts at the protocol's idle floor,
+     * not CWIST_HTTP_READ_BUFFER_SIZE. Above the floor the doubling ladder
+     * is unchanged: need 16 KiB on a virgin stash ends at the same 16 KiB
+     * cap as before. */
+    size_t cap = conn->cap
+                     ? conn->cap
+                     : (conn->https_conn ? CWIST_ASYNC_TLS_STASH_IDLE : CWIST_ASYNC_STASH_IDLE);
     while (cap < need) {
         if (cap > CWIST_ASYNC_STASH_MAX / 2) {
             cap = CWIST_ASYNC_STASH_MAX;
@@ -5367,6 +5410,7 @@ int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
         conn->rx_data_ready = false;
         return 0;
     }
+#ifndef CWIST_PLATFORM_NO_PROC
     if (conn->https_conn) {
         cwist_https_connection *https = (cwist_https_connection *)conn->https_conn;
         for (;;) {
@@ -5381,7 +5425,7 @@ int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
                 conn->rbuf[conn->len] = '\0';
                 conn->virgin = false;
                 conn->tls_wait = 0;
-                if ((size_t)n < avail && SSL_pending(https->ssl) == 0) return 0;
+                if ((size_t)n < avail && http_async_tls_pending(https) == 0) return 0;
                 continue;
             }
             int ssl_err = SSL_get_error(https->ssl, n);
@@ -5396,6 +5440,7 @@ int cwist_http_async_conn_fill(cwist_http_async_conn_t *conn) {
             return -1;
         }
     }
+#endif
     for (;;) {
         if (conn->len + 1 >= conn->cap && !http_async_stash_grow(conn, conn->len + 4096)) {
             return -1;
@@ -5506,8 +5551,7 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
         cwist_http_coalesce_flush_blocking(conn->fd, conn);
         if (conn->https_conn) {
             static const char interim[] = "HTTP/1.1 100 Continue\r\n\r\n";
-            cwist_https_write_raw((cwist_https_connection *)conn->https_conn, interim,
-                                  sizeof(interim) - 1);
+            http_async_write_raw(conn, conn->fd, interim, sizeof(interim) - 1);
         } else {
             http_send_100_continue(conn->fd);
         }
