@@ -3335,6 +3335,20 @@ static cwist_write_status_t http_async_write_speculative(cwist_http_async_conn_t
 #ifndef CWIST_PLATFORM_NO_PROC
     cwist_https_connection *https = (cwist_https_connection *)conn->https_conn;
     if (!https->ssl) return CWIST_WRITE_ERR;
+    if (iov_cnt > 1) {
+        size_t total = 0;
+        for (int i = 0; i < iov_cnt; i++) total += iov[i].iov_len;
+        if (total <= 16384) {
+            char compact[16384];
+            size_t off = 0;
+            for (int i = 0; i < iov_cnt; i++) {
+                memcpy(compact + off, iov[i].iov_base, iov[i].iov_len);
+                off += iov[i].iov_len;
+            }
+            struct iovec one = {.iov_base = compact, .iov_len = total};
+            return http_async_write_speculative(conn, &one, 1, flags, sent);
+        }
+    }
     *sent = 0;
     for (int i = 0; i < iov_cnt; i++) {
         size_t off = 0;
