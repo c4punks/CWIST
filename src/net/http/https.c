@@ -689,8 +689,8 @@ static void https_park_stop(void) {}
 static void https_park_reopen(void) {}
 #endif
 
-bool cwist_https_reactor_handoff(cwist_https_connection *conn,
-                                 cwist_async_handler_t handler, void *ctx) {
+bool cwist_https_reactor_handoff(cwist_https_connection *conn, cwist_async_handler_t handler,
+                                 void *ctx) {
     static int enabled = -1;
     if (enabled < 0) {
         const char *env = getenv("CWIST_HTTPS_REACTOR");
@@ -699,6 +699,9 @@ bool cwist_https_reactor_handoff(cwist_https_connection *conn,
     if (!enabled || !conn || conn->negotiated_protocol != CWIST_HTTPS_PROTOCOL_HTTP11) {
         return false;
     }
+    cwist_free(conn->read_buf);
+    conn->read_buf = NULL;
+    conn->buf_len = 0;
     if (!cwist_http_pool_submit_https_async(conn, handler, ctx)) return false;
     t_https_parked = true;
     return true;
@@ -2484,8 +2487,7 @@ bool cwist_tls_group_is_pq(uint16_t group) {
         case SSL_GROUP_MLKEM1024: return true;
 #endif
         case 0x11eb: /* SecP256r1MLKEM768 */
-        case 0x11ed: /* SecP384r1MLKEM1024 */
-            return true;
+        case 0x11ed: /* SecP384r1MLKEM1024 */ return true;
         default: return false;
     }
 }
