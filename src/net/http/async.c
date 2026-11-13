@@ -178,9 +178,13 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     if (req->https_conn) {
         a->https_conn = req->https_conn;
         ((cwist_https_connection *)req->https_conn)->deferred = true;
-        /* Only an HTTP/1.1 completion takes the conn itself; an h2 stream's
-         * completion goes through h2_queue and the h2 loop keeps the conn. */
-        if (!req->h2_queue) t_https_deferred = true;
+        /* Deferred TLS exchanges complete on their producer and re-enter
+         * through the HTTPS pool; only the async shell leaves the reactor. */
+        if (conn) {
+            a->reactor = NULL;
+            a->conn = NULL;
+        }
+        if (!req->h2_queue && !conn) t_https_deferred = true;
     }
 #ifdef CWIST_HTTP3
     if (t_h3_target.req == req && t_h3_target.q && t_h3_target.p) {
@@ -352,7 +356,7 @@ static void cwist_async_complete(cwist_async *a) {
     }
 #endif
 
-    if (a->https_conn) {
+    if (a->https_conn && !a->reactor) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
         bool ok;
         if (a->streamed) {

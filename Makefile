@@ -1428,6 +1428,8 @@ TEST_TARGETS = test_worker_affinity \
                test_https \
                test_tls_hot_reload \
                test_https_park \
+               test_https_reactor \
+               test_https_reactor_full_gc \
                test_https_h2_fairness \
                test_https_park_full_gc \
                test_https_pool_queue \
@@ -1964,6 +1966,14 @@ endif
 test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
 	./test_https_park
+
+test_https_reactor: $(LIB_NAME) tests/test_https_reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/test_https_reactor.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_https_reactor_full_gc: $(LIB_NAME) tests/test_https_reactor.c
+	$(CC) $(CFLAGS) -DTEST_HTTPS_REACTOR_FULL_GC=1 -o $@ tests/test_https_reactor.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_https_h2_fairness: $(LIB_NAME) tests/test_https_h2_fairness.c
 	$(CC) $(CFLAGS) -o $@ tests/test_https_h2_fairness.c $(LIB_NAME) $(LIBS)

@@ -2995,6 +2995,7 @@ bool cwist_https_upgrade_handler(cwist_https_connection *conn, cwist_http_reques
 
 static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
     cwist_app *app = (cwist_app *)ctx;
+    if (cwist_https_reactor_handoff(conn, cwist_app_http_handler_async, app)) return;
 
     /* HTTP/1.1 keep-alive loop: previously every request paid a full TCP
      * accept + TLS handshake + teardown because the connection closed after
@@ -3261,7 +3262,17 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                     }
                 }
                 if (cached_len > CWIST_HTTP_COALESCE_MAX) {
-                    send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL);
+                    int write_rc = req->https_conn
+                                       ? cwist_https_write_raw((cwist_https_connection *)req->https_conn,
+                                                               cached_blob, cached_len)
+                                       : (send(client_fd, cached_blob, cached_len, MSG_NOSIGNAL) < 0
+                                              ? -1
+                                              : 0);
+                    if (write_rc != 0) {
+                        cwist_bdr_unpin(bdr_pin);
+                        cwist_http_request_destroy(req);
+                        return APP_SERVE_CLOSE;
+                    }
                 } else if (cwist_http_coalesce_append(aconn, cached_blob, cached_len) != 0) {
                     cwist_bdr_unpin(bdr_pin);
                     cwist_http_request_destroy(req);
@@ -3315,9 +3326,11 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
                       cwist_http_coalesce_flush_blocking(client_fd, aconn) != 0;
         /* Before the ack: afterwards the completion may already re-arm. */
         if (carry_len > 0) cwist_async_set_carry(deferred, carry, carry_len);
+        bool detach_tls = aconn && req->https_conn;
+        if (detach_tls) aconn->https_conn = NULL;
         cwist_async_dispatch_ack(deferred);
         if (broken) cwist_async_abort(deferred, CWIST_HTTP_INTERNAL_ERROR);
-        return APP_SERVE_DEFERRED;
+        return detach_tls ? APP_SERVE_DETACH : APP_SERVE_DEFERRED;
     }
 
     /* WebSocket async handoff (issue #181): the 101 was sent and the fd was
@@ -3342,6 +3355,23 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     if (!atomic_load(&g_cwist_running)) {
         res->keep_alive = false;
         keep_alive = false;
+    }
+
+    if (upgraded && req->https_conn && req->async_conn) {
+        cwist_https_connection *https = (cwist_https_connection *)req->https_conn;
+        cwist_error_t send_err = req->method == CWIST_HTTP_HEAD
+                                     ? cwist_https_send_response_head(https, res)
+                                     : cwist_https_send_response(https, res);
+        bool detached = cwist_error_is_ok(&send_err) && cwist_https_upgrade_handler(https, req, res);
+        if (detached) {
+            https->ssl = NULL;
+            https->fd = -1;
+            ((cwist_http_async_conn_t *)req->async_conn)->https_conn = NULL;
+            cwist_https_close_connection(https);
+        }
+        cwist_http_response_destroy(res);
+        cwist_http_request_destroy(req);
+        return detached ? APP_SERVE_DETACH : APP_SERVE_CLOSE;
     }
 
     if (!upgraded) {
@@ -3511,7 +3541,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
      * other connection on the loop would stall behind it (surfaced as h2spec
      * error-response timeouts cascading once a loop was pinned).  The thread
      * owns fd and replay; the reactor never touches either again (DETACH). */
-    if (app->use_http2 && conn->len >= 24 &&
+    if (!conn->https_conn && app->use_http2 && conn->len >= 24 &&
         memcmp(conn->rbuf, "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n", 24) == 0) {
         char *replay = cwist_alloc(conn->len);
         h2c_handoff_t *handoff = replay ? cwist_alloc(sizeof(*handoff)) : NULL;
@@ -3580,6 +3610,7 @@ cwist_async_action_t cwist_app_http_handler_async(int client_fd, cwist_http_asyn
         req->app = app;
         req->db = app->db;
         req->async_conn = conn;
+        req->https_conn = conn->https_conn;
         app_serve_result_t sr =
             app_serve_parsed_request(app, client_fd, req, NULL, 0);
         /* Deferred: buffered coalesced responses from this turn already
