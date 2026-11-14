@@ -5,6 +5,7 @@
 #include <cwist/net/http/https.h>
 #include "../src/net/http/async_internal.h"
 #include <assert.h>
+#include <errno.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -124,6 +125,7 @@ static response_t read_response(client_t *client) {
             assert(read_size > 0 && read_size <= cap - len);
         }
         int n = SSL_read(client->ssl, wire + len, (int)read_size);
+        if (n <= 0 && errno == EINTR) continue;
         assert(n > 0);
         len += (size_t)n;
         wire[len] = '\0';
