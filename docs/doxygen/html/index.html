@@ -395,12 +395,12 @@ Feature notes</h2>
 Latest benchmark run</h2>
 <p>CI regenerates this block from each benchmark run.</p>
 <p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
-<li><b>CWIST Classic pool</b>: 158444 req/s | Latency 1.47ms (P50 1.18ms, P90 2.97ms, P99 5.88ms, P99.999 17.38ms) | RSS 59656KiB | Csw 1574835</li>
-<li><b>CWIST reactor</b>: 190393 req/s | Latency 2.15ms (P50 1.86ms, P90 4.24ms, P99 7.12ms, P99.999 13.88ms) | RSS 24412KiB | Csw 159036</li>
-<li><b>Actix</b>: 176845 req/s | Latency 2.26ms (P50 2.03ms, P90 4.13ms, P99 6.71ms, P99.999 13.75ms) | RSS 12852KiB | Csw 218606</li>
-<li><b>Axum</b>: 153496 req/s | Latency 2.57ms (P50 2.39ms, P90 4.46ms, P99 6.68ms, P99.999 12.70ms) | RSS 15492KiB | Csw 330160</li>
-<li><b>Gin (Go)</b>: 114519 req/s | Latency 5.77ms (P50 3.33ms, P90 15.36ms, P99 35.96ms, P99.999 82.28ms) | RSS 28216KiB | Csw 466730</li>
-<li><b>Spring Boot</b>: 77174 req/s | Latency 5.16ms (P50 4.73ms, P90 7.11ms, P99 10.98ms, P99.999 54.13ms) | RSS 1295508KiB | Csw 345245</li>
+<li><b>CWIST Classic pool</b>: 268654 req/s | Latency 0.92ms (P50 0.60ms, P90 1.97ms, P99 4.84ms, P99.999 32.81ms) | RSS 60272KiB | Csw 2646541</li>
+<li><b>CWIST reactor</b>: 351042 req/s | Latency 1.25ms (P50 0.97ms, P90 2.75ms, P99 4.92ms, P99.999 11.10ms) | RSS 23308KiB | Csw 448995</li>
+<li><b>Actix</b>: 319583 req/s | Latency 1.34ms (P50 1.07ms, P90 2.80ms, P99 4.98ms, P99.999 11.52ms) | RSS 12340KiB | Csw 493627</li>
+<li><b>Axum</b>: 260343 req/s | Latency 1.52ms (P50 1.37ms, P90 2.69ms, P99 4.26ms, P99.999 7.88ms) | RSS 15484KiB | Csw 716696</li>
+<li><b>Gin (Go)</b>: 203249 req/s | Latency 3.95ms (P50 1.96ms, P90 11.25ms, P99 25.07ms, P99.999 57.22ms) | RSS 28096KiB | Csw 1042554</li>
+<li><b>Spring Boot</b>: 134927 req/s | Latency 2.95ms (P50 2.73ms, P90 4.11ms, P99 6.14ms, P99.999 31.20ms) | RSS 1308288KiB | Csw 703289</li>
 </ul>
 <p><em>Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in <a class="el" href="d9/d15/cooperative-queuing_8md.html">docs/cooperative-queuing.md</a> and benchmarks/webserver.json; they are no longer rendered as comparison rows.</em></p>
 <p><b>Spring runtime environment</b></p>
