@@ -18,5 +18,10 @@ var searchData=
   ['proxy_5fmax_5fconn_5ftokens_15',['PROXY_MAX_CONN_TOKENS',['../dc/da0/proxy_8c.html#a0aa3c299712f7f44b7290cdb378ca799',1,'proxy.c']]],
   ['proxy_5fmax_5ffront_5fapps_16',['PROXY_MAX_FRONT_APPS',['../dc/da0/proxy_8c.html#a120dc7b094b122c9866a82692142bfe4',1,'proxy.c']]],
   ['proxy_5fpq_5fgroups_17',['PROXY_PQ_GROUPS',['../dc/da0/proxy_8c.html#aac20228881ab2d100cbb16020d6094c7',1,'proxy.c']]],
-  ['proxy_5fqueue_5fcapacity_18',['PROXY_QUEUE_CAPACITY',['../dc/da0/proxy_8c.html#a93f80b05843edc748c7c27c5aafafe33',1,'proxy.c']]]
+  ['proxy_5fqueue_5fcapacity_18',['PROXY_QUEUE_CAPACITY',['../dc/da0/proxy_8c.html#a93f80b05843edc748c7c27c5aafafe33',1,'proxy.c']]],
+  ['proxy_5ftransport_5fconnect_5ftimeout_5fms_19',['PROXY_TRANSPORT_CONNECT_TIMEOUT_MS',['../d2/d62/transport_8c.html#ab710d669b5ae3ed728fd269a767c80d7',1,'transport.c']]],
+  ['proxy_5ftransport_5fidle_5ftimeout_5fms_20',['PROXY_TRANSPORT_IDLE_TIMEOUT_MS',['../d2/d62/transport_8c.html#a1ab73799e65c5082e7fd897e1ba3715c',1,'transport.c']]],
+  ['proxy_5ftransport_5fpoll_5fms_21',['PROXY_TRANSPORT_POLL_MS',['../d2/d62/transport_8c.html#a25ffc7df20850a96907720d2cf86312b',1,'transport.c']]],
+  ['proxy_5fudp_5fmax_5fdgram_22',['PROXY_UDP_MAX_DGRAM',['../d2/d62/transport_8c.html#a84156430fbd5da09674529bdb15d30d1',1,'transport.c']]],
+  ['proxy_5fudp_5fmax_5fsessions_23',['PROXY_UDP_MAX_SESSIONS',['../d2/d62/transport_8c.html#ac1a2251d9b7a3d5ef88957bd0a5d1ce8',1,'transport.c']]]
 ];

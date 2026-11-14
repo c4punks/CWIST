@@ -205,9 +205,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Next capacity for a buffered upstream body of <code>cap</code> bytes that must hold <code>need</code>. Growth scales with the body: x1.5 below 1 MiB, x2 below 8 MiB, x4 beyond, starting from 4 KiB, never past <code>max</code>. </p><dl class="section return"><dt>Returns</dt><dd>New capacity (&gt;= <code>need</code>), <code>cap</code> when it already fits, or 0 when <code>need</code> exceeds <code>max</code>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00733">733</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00759">759</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/da0/proxy_8c_source.html#l00046">PROXY_BODY_GROW_HIGH</a>, <a class="el" href="../../dc/da0/proxy_8c_source.html#l00045">PROXY_BODY_GROW_MID</a>, and <a class="el" href="../../dc/da0/proxy_8c_source.html#l00044">PROXY_BODY_INITIAL_CAP</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00056">cap</a>, <a class="el" href="../../dc/da0/proxy_8c_source.html#l00048">PROXY_BODY_GROW_HIGH</a>, <a class="el" href="../../dc/da0/proxy_8c_source.html#l00047">PROXY_BODY_GROW_MID</a>, and <a class="el" href="../../dc/da0/proxy_8c_source.html#l00046">PROXY_BODY_INITIAL_CAP</a>.</p>
 
 </div>
 </div>
@@ -228,7 +228,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>True when <code>name</code> is a non-empty RFC 9110 token. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00457">457</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00483">483</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
 
 </div>
 </div>
@@ -249,7 +249,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>True when <code>value</code> holds no CR, LF, NUL or other control byte except HTAB. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00466">466</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00492">492</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
 
 </div>
 </div>
@@ -270,9 +270,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>True when <code>path</code> is an origin-form path the proxy forwards unchanged. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00414">414</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00440">440</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/da0/proxy_8c_source.html#l00392">cwist_proxy_resolve_url()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dc/da0/proxy_8c_source.html#l00418">cwist_proxy_resolve_url()</a>.</p>
 
 </div>
 </div>
@@ -293,9 +293,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>True when <code>query</code> (raw, without '?') may be forwarded; NULL and "" are safe. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00447">447</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00473">473</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/da0/proxy_8c_source.html#l00392">cwist_proxy_resolve_url()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dc/da0/proxy_8c_source.html#l00418">cwist_proxy_resolve_url()</a>.</p>
 
 </div>
 </div>
@@ -350,9 +350,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap URL (free with cwist_free), or NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00392">392</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/da0/proxy_8c_source.html#l00418">418</a> of file <a class="el" href="../../dc/da0/proxy_8c_source.html">proxy.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dc/da0/proxy_8c_source.html#l00414">cwist_proxy_path_is_safe()</a>, and <a class="el" href="../../dc/da0/proxy_8c_source.html#l00447">cwist_proxy_query_is_safe()</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dc/da0/proxy_8c_source.html#l00440">cwist_proxy_path_is_safe()</a>, and <a class="el" href="../../dc/da0/proxy_8c_source.html#l00473">cwist_proxy_query_is_safe()</a>.</p>
 
 </div>
 </div>

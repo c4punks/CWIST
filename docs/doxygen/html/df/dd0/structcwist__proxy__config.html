@@ -148,7 +148,7 @@ Public Attributes</h2></td></tr>
 <div class="textblock"><p>Process-wide proxy settings, read by <a class="el" href="../../d9/d76/proxy_8h.html#a529675f7be66702e5130f28d65ed4d5e" title="Serve every registered origin port until shutdown; blocks.">cwist_proxy_listen()</a>. </p>
 <p>Change fields before <a class="el" href="../../d9/d76/proxy_8h.html#a529675f7be66702e5130f28d65ed4d5e" title="Serve every registered origin port until shutdown; blocks.">cwist_proxy_listen()</a>; later changes are not applied. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00060">60</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00062">62</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="a477c3b1f54e0c5df9e9d56326e96bb4f" name="a477c3b1f54e0c5df9e9d56326e96bb4f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a477c3b1f54e0c5df9e9d56326e96bb4f">&#9670;&#160;</a></span>cert_path</h2>
@@ -163,9 +163,9 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>PEM certificate chain; required by <a href="https://">https://</a> origins, forbidden with <a href="http://">http://</a> ones. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00074">74</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00076">76</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dc/da0/proxy_8c_source.html#l01667">cwist_proxy_listen()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dc/da0/proxy_8c_source.html#l01693">cwist_proxy_listen()</a>.</p>
 
 </div>
 </div>
@@ -182,7 +182,9 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Upstream connect timeout in milliseconds (default 5000). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00080">80</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00082">82</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/d62/transport_8c_source.html#l00443">cwist_proxy_transport_start()</a>.</p>
 
 </div>
 </div>
@@ -199,7 +201,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Serve HTTP/2: h2 over TLS (ALPN), h2c prior knowledge in cleartext. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00062">62</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00064">64</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -216,7 +218,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Serve HTTP/3 on the origin port's UDP side (ephemeral cert without TLS). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00064">64</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00066">66</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -233,7 +235,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Let HTTP/1.1 (and HTTP/2) clients move to the newest enabled protocol: responses advertise <code>Alt-Svc: h3=":&lt;port&gt;"</code> when h3 is enabled, and TLS listeners offer h2 through ALPN when h2 is enabled. When false, proxied responses carry <code>Alt-Svc: clear</code>, so only clients that already target HTTP/3 use it. Cleartext h2c Upgrade is not offered (RFC 9113 deprecates it). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00072">72</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00074">74</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -250,7 +252,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>PEM private key matching cert_path. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00076">76</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00078">78</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -267,7 +269,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Largest upstream response body accepted, in bytes (default 64 MiB). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00084">84</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00086">86</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -284,7 +286,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Send the client's Host upstream instead of the target authority. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00078">78</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00080">80</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -301,7 +303,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Whole upstream exchange timeout in milliseconds (default 30000). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00082">82</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00084">84</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -318,7 +320,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Promote TLS to hybrid post-quantum key exchange (X25519MLKEM768, TLS 1.3) on both sides: front listeners (TCP and QUIC) prefer it, and every <a href="https://">https://</a> upstream must negotiate it or the request fails with 502. When false, an <a href="https://">https://</a> upstream keeps the client's level instead: the same minimum TLS version, and post-quantum key exchange only when the client negotiated it. <a href="http://">http://</a> targets always terminate TLS here. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00095">95</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00097">97</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -335,7 +337,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>PEM CA bundle for verifying <a href="https://">https://</a> upstreams; NULL uses the system store. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00097">97</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00099">99</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>
@@ -352,7 +354,7 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Upstream worker threads per process (default 8). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00086">86</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d76/proxy_8h_source.html#l00088">88</a> of file <a class="el" href="../../d9/d76/proxy_8h_source.html">proxy.h</a>.</p>
 
 </div>
 </div>

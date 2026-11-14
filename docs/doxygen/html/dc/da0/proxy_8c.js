@@ -28,5 +28,7 @@ var proxy_8c =
     [ "cwist_proxy_reset", "dc/da0/proxy_8c.html#ad01cb83f059796f4919fc96677ee3b0d", null ],
     [ "cwist_proxy_resolve_url", "dc/da0/proxy_8c.html#a7b7c6e1d657aabfe840dedacff503bf6", null ],
     [ "cwist_proxy_route", "dc/da0/proxy_8c.html#a85408303c607698a8ff90e5dcc9917e1", null ],
+    [ "cwist_proxy_tcp_forward", "dc/da0/proxy_8c.html#a07cabcfdeb16a5a673b6f0dca0253771", null ],
+    [ "cwist_proxy_udp_forward", "dc/da0/proxy_8c.html#a248637d1c3043f5871c213f5f7f9eb1a", null ],
     [ "cwist_proxy", "dc/da0/proxy_8c.html#a3e1bcbabbfb63dde10014452e85e6d1c", null ]
 ];
