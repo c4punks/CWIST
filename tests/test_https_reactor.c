@@ -200,7 +200,7 @@ int main(void) {
     signal(SIGPIPE, SIG_IGN);
     setenv("CWIST_WORKER_THREADS", "1", 1);
     setenv("CWIST_HTTP_KEEP_ALIVE_TIMEOUT", "1", 1);
-    setenv("CWIST_HTTPS_IDLE_TIMEOUT_MS", "3000", 1);
+    setenv("CWIST_HTTPS_IDLE_TIMEOUT_MS", "30000", 1);
 #ifdef TEST_HTTPS_REACTOR_FULL_GC
     cwist_full_gc(true);
 #endif
