@@ -812,6 +812,7 @@ wasm-sw-example: $(SW_BUILD_DIR)/app.component.wasm
 	npm exec -y --package=esbuild -- esbuild $(SW_EXAMPLE_DIR)/sw.js \
 	    --bundle --platform=browser --format=iife --conditions=browser \
 	    --alias:@bytecodealliance/preview2-shim=./$(SW_BUILD_DIR)/node/node_modules/@bytecodealliance/preview2-shim/dist/browser/index.js \
+	    --alias:node:fs/promises=$(abspath tests/wasm_component_browser_fs.js) \
 	    --outfile=$(SW_BUILD_DIR)/site/sw.js
 	cp $(SW_EXAMPLE_DIR)/index.html $(SW_BUILD_DIR)/browser/*.wasm $(SW_BUILD_DIR)/site/
 	@echo "wasm-sw-example: serve $(SW_BUILD_DIR)/site/ over http://localhost"
