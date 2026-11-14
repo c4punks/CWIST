@@ -39,6 +39,8 @@
  * the response on the worker before handing it to the connection thread.
  * WebSocket upgrades and CONNECT tunnels pass through as raw byte relays on
  * cleartext HTTP/1.1 fronts (and return 501 on TLS/HTTP-2/HTTP-3 fronts).
+ * Raw TCP and UDP rules provide transport-level forwarding for protocols such
+ * as Redis, NATS, Memcached, DNS, NTP and Syslog.
  */
 
 #ifndef CWIST_NET_PROXY_PROXY_H
@@ -139,10 +141,42 @@ cwist_error_t cwist_proxy_route(const char *origin, const char *origin_route, co
 cwist_error_t cwist_proxy_port_forward(unsigned short origin_port, unsigned short target_port);
 
 /**
+ * @brief Forward a raw TCP listener to a registered upstream.
+ *
+ * The relay is byte-transparent and supports bidirectional half-close. It can
+ * carry TLS, Redis, NATS, Memcached, databases and other TCP protocols without
+ * HTTP parsing. One listener is allowed per origin port.
+ *
+ * @param origin_port Local port to bind on every interface.
+ * @param target_host Upstream hostname or IP address resolved per connection.
+ * @param target_port Upstream TCP port.
+ * @return err_i16 0 on success; -1 on invalid arguments, a duplicate listener,
+ *         allocation failure, or after cwist_proxy_listen() has started.
+ */
+cwist_error_t cwist_proxy_tcp_forward(unsigned short origin_port, const char *target_host,
+                                      unsigned short target_port);
+
+/**
+ * @brief Forward a raw UDP listener to a registered upstream.
+ *
+ * Each client address gets a bounded, idle-expiring upstream session. Datagram
+ * boundaries are preserved for DNS, NTP, Syslog and other UDP protocols.
+ *
+ * @param origin_port Local port to bind on every interface.
+ * @param target_host Upstream hostname or IP address resolved per session.
+ * @param target_port Upstream UDP port.
+ * @return err_i16 0 on success; -1 on invalid arguments, a duplicate listener,
+ *         allocation failure, or after cwist_proxy_listen() has started.
+ */
+cwist_error_t cwist_proxy_udp_forward(unsigned short origin_port, const char *target_host,
+                                      unsigned short target_port);
+
+/**
  * @brief Serve every registered origin port until shutdown; blocks.
  *
- * One port is served by cwist_app_listen() (reactor or classic pool, per
- * CWIST_C1M_MODE); several ports share cwist_app_multiport().
+ * One HTTP port is served by cwist_app_listen() (reactor or classic pool, per
+ * CWIST_C1M_MODE); several HTTP ports share cwist_app_multiport(). Raw TCP and
+ * UDP rules run alongside HTTP rules and may also be used without HTTP rules.
  * @return 0 after a graceful shutdown, -1 when nothing is registered or the
  *         listeners could not start.
  */
