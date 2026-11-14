@@ -8,6 +8,7 @@
 #include <cwist/core/mem/gc.h>
 #include <cwist/sys/app/shutdown.h>
 #include "../../core/utils/buffer.h"
+#include "../../core/mem/gc_internal.h"
 #include "tls_chain.h"
 #include "async_internal.h"
 #include <openssl/ssl.h>
@@ -702,7 +703,11 @@ bool cwist_https_reactor_handoff(cwist_https_connection *conn, cwist_async_handl
     cwist_free(conn->read_buf);
     conn->read_buf = NULL;
     conn->buf_len = 0;
-    if (!cwist_http_pool_submit_https_async(conn, handler, ctx)) return false;
+    bool disowned = cwist_conn_registry_disown(conn);
+    if (!cwist_http_pool_submit_https_async(conn, handler, ctx)) {
+        if (disowned) cwist_conn_registry_adopt(conn);
+        return false;
+    }
     t_https_parked = true;
     return true;
 }
