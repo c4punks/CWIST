@@ -61,7 +61,9 @@ static void read_frame(int fd, int *type) {
 }
 
 static void *serve(void *arg) {
-    int listen_fd = *(int *)arg;
+    int *ctx = arg;
+    int listen_fd = *ctx;
+    free(ctx);
     int fd = accept(listen_fd, NULL, NULL);
     assert(fd >= 0);
 
