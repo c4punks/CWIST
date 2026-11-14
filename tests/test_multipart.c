@@ -61,13 +61,12 @@ static void test_basic_two_fields(void) {
  * the next one. */
 static void test_empty_header_value_does_not_swallow_next_header(void) {
     printf("Testing empty header value followed by Content-Disposition...\n");
-    static const char body[] =
-        "--" B "\r\n"
-        "X-Empty:\r\n"
-        "Content-Disposition: form-data; name=\"named\"\r\n"
-        "\r\n"
-        "value\r\n"
-        "--" B "--\r\n";
+    static const char body[] = "--" B "\r\n"
+                               "X-Empty:\r\n"
+                               "Content-Disposition: form-data; name=\"named\"\r\n"
+                               "\r\n"
+                               "value\r\n"
+                               "--" B "--\r\n";
 
     cwist_multipart_result *r = cwist_multipart_parse(body, sizeof(body) - 1, B);
     assert(r != NULL);
@@ -78,13 +77,12 @@ static void test_empty_header_value_does_not_swallow_next_header(void) {
     cwist_multipart_result_destroy(r);
 
     /* Same thing with a space after the colon, which the parser skips. */
-    static const char body2[] =
-        "--" B "\r\n"
-        "X-Empty: \r\n"
-        "Content-Disposition: form-data; name=\"named2\"\r\n"
-        "\r\n"
-        "v2\r\n"
-        "--" B "--\r\n";
+    static const char body2[] = "--" B "\r\n"
+                                "X-Empty: \r\n"
+                                "Content-Disposition: form-data; name=\"named2\"\r\n"
+                                "\r\n"
+                                "v2\r\n"
+                                "--" B "--\r\n";
     r = cwist_multipart_parse(body2, sizeof(body2) - 1, B);
     assert(r != NULL);
     assert(count_fields(r) == 1);
@@ -97,15 +95,14 @@ static void test_empty_header_value_does_not_swallow_next_header(void) {
  * are still returned. */
 static void test_truncated_body_drops_partial_part(void) {
     printf("Testing truncated body...\n");
-    static const char body[] =
-        "--" B "\r\n"
-        "Content-Disposition: form-data; name=\"done\"\r\n"
-        "\r\n"
-        "complete\r\n"
-        "--" B "\r\n"
-        "Content-Disposition: form-data; name=\"cut\"\r\n"
-        "\r\n"
-        "this part never sees its closing boundary";
+    static const char body[] = "--" B "\r\n"
+                               "Content-Disposition: form-data; name=\"done\"\r\n"
+                               "\r\n"
+                               "complete\r\n"
+                               "--" B "\r\n"
+                               "Content-Disposition: form-data; name=\"cut\"\r\n"
+                               "\r\n"
+                               "this part never sees its closing boundary";
 
     cwist_multipart_result *r = cwist_multipart_parse(body, sizeof(body) - 1, B);
     assert(r != NULL);
@@ -130,12 +127,11 @@ static void test_truncated_body_drops_partial_part(void) {
 /* Input the parser rejects is reported as NULL per the documented contract. */
 static void test_malformed_input_returns_null(void) {
     printf("Testing malformed input...\n");
-    static const char body[] =
-        "--" B "\r\n"
-        "Bad Header Name: x\r\n"
-        "\r\n"
-        "data\r\n"
-        "--" B "--\r\n";
+    static const char body[] = "--" B "\r\n"
+                               "Bad Header Name: x\r\n"
+                               "\r\n"
+                               "data\r\n"
+                               "--" B "--\r\n";
     assert(cwist_multipart_parse(body, sizeof(body) - 1, B) == NULL);
 
     static const char garbage[] = "this is not multipart at all";
@@ -150,8 +146,7 @@ static void test_oversized_metadata_rejected(void) {
     name[256] = '\0';
     char body[2048];
     snprintf(body, sizeof(body),
-             "--" B "\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\nvalue\r\n--" B
-             "--\r\n",
+             "--" B "\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\nvalue\r\n--" B "--\r\n",
              name);
     assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
 
@@ -175,6 +170,71 @@ static void test_oversized_metadata_rejected(void) {
     printf("  Passed.\n");
 }
 
+static void test_disposition_parameter_forms(void) {
+    printf("Testing Content-Disposition parameter forms...\n");
+    static const char unquoted[] =
+        "--" B "\r\n"
+        "Content-Disposition: form-data; name=title; filename=report.txt\r\n"
+        "\r\n"
+        "body\r\n"
+        "--" B "--\r\n";
+    cwist_multipart_result *r = cwist_multipart_parse(unquoted, sizeof(unquoted) - 1, B);
+    assert(r != NULL && count_fields(r) == 1);
+    assert(r->fields->name && strcmp(r->fields->name, "title") == 0);
+    assert(r->fields->filename && strcmp(r->fields->filename, "report.txt") == 0);
+    assert(r->fields->data_len == 4 && memcmp(r->fields->data, "body", 4) == 0);
+    cwist_multipart_result_destroy(r);
+
+    static const char mixed[] =
+        "--" B "\r\n"
+        "Content-Disposition: form-data; NAME=plain; FILENAME=\"quoted.txt\"\r\n"
+        "\r\n"
+        "x\r\n"
+        "--" B "--\r\n";
+    r = cwist_multipart_parse(mixed, sizeof(mixed) - 1, B);
+    assert(r != NULL && r->fields->name && strcmp(r->fields->name, "plain") == 0);
+    assert(r->fields->filename && strcmp(r->fields->filename, "quoted.txt") == 0);
+    cwist_multipart_result_destroy(r);
+
+    static const char escaped[] =
+        "--" B "\r\n"
+        "Content-Disposition: form-data; name=\"escaped\\\"name\"; filename=\"a\\\\b.txt\"\r\n"
+        "\r\n"
+        "x\r\n"
+        "--" B "--\r\n";
+    r = cwist_multipart_parse(escaped, sizeof(escaped) - 1, B);
+    assert(r != NULL && r->fields->name && strcmp(r->fields->name, "escaped\"name") == 0);
+    assert(r->fields->filename && strcmp(r->fields->filename, "a\\b.txt") == 0);
+    cwist_multipart_result_destroy(r);
+
+    static const char exact[] = "--" B "\r\n"
+                                "Content-Disposition: form-data; x-name=wrong; name=right\r\n"
+                                "\r\n"
+                                "x\r\n"
+                                "--" B "--\r\n";
+    r = cwist_multipart_parse(exact, sizeof(exact) - 1, B);
+    assert(r != NULL && r->fields->name && strcmp(r->fields->name, "right") == 0);
+    cwist_multipart_result_destroy(r);
+
+    static const char filename_only[] = "--" B "\r\n"
+                                        "Content-Disposition: form-data; filename=only.txt\r\n"
+                                        "\r\n"
+                                        "x\r\n"
+                                        "--" B "--\r\n";
+    r = cwist_multipart_parse(filename_only, sizeof(filename_only) - 1, B);
+    assert(r != NULL && r->fields->name == NULL);
+    assert(r->fields->filename && strcmp(r->fields->filename, "only.txt") == 0);
+    cwist_multipart_result_destroy(r);
+
+    static const char invalid[] = "--" B "\r\n"
+                                  "Content-Disposition: form-data; name=bad\"token\r\n"
+                                  "\r\n"
+                                  "x\r\n"
+                                  "--" B "--\r\n";
+    assert(cwist_multipart_parse(invalid, sizeof(invalid) - 1, B) == NULL);
+    printf("  Passed.\n");
+}
+
 static void test_extract_boundary(void) {
     printf("Testing boundary extraction...\n");
     char *b = cwist_multipart_extract_boundary("multipart/form-data; boundary=" B);
@@ -193,6 +253,7 @@ int main(void) {
     test_truncated_body_drops_partial_part();
     test_malformed_input_returns_null();
     test_oversized_metadata_rejected();
+    test_disposition_parameter_forms();
     test_extract_boundary();
     printf("All multipart tests passed.\n");
     return 0;
