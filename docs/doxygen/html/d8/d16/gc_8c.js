@@ -5,6 +5,7 @@ var gc_8c =
     [ "cwist_conn_owner_t", "d8/d16/gc_8c.html#a449a3b9fe458900c0bd52268ae793800", null ],
     [ "__attribute__", "d8/d16/gc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d", null ],
     [ "cwist_conn_registry_adopt", "d8/d16/gc_8c.html#a508dbea3a902e11b26c082674079e011", null ],
+    [ "cwist_conn_registry_disown", "d8/d16/gc_8c.html#aae75b63be0d892268ee96958015803ef", null ],
     [ "cwist_conn_registry_flush", "d8/d16/gc_8c.html#aa0e57fd4f5152ff19be1e832e8dfa3cc", null ],
     [ "cwist_conn_registry_pending_count", "d8/d16/gc_8c.html#a9e4705e4cecb1de3290481eef3500c2e", null ],
     [ "cwist_conn_registry_sweep_all", "d8/d16/gc_8c.html#a190fb06d2ebdb046377b856d47bbbc15", null ],

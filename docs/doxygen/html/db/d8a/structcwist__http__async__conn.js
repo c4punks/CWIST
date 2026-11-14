@@ -5,6 +5,7 @@ var structcwist__http__async__conn =
     [ "expect_continue_sent", "db/d8a/structcwist__http__async__conn.html#a30a010d2d9caa8d4a79e95bcf6acfde1", null ],
     [ "fd", "db/d8a/structcwist__http__async__conn.html#a47b7632336be932d12e25ab0cd318a34", null ],
     [ "handler", "db/d8a/structcwist__http__async__conn.html#a9f171f79675a67ca7b618ebc58da2366", null ],
+    [ "https_conn", "db/d8a/structcwist__http__async__conn.html#ae42aeba35889090bd4924ff4de2d0ff9", null ],
     [ "kern_last_mono_ns", "db/d8a/structcwist__http__async__conn.html#aa9a37cba9773d5df7ed57fe803484e21", null ],
     [ "kern_valid", "db/d8a/structcwist__http__async__conn.html#a05cb78ef3a88e86995a786cd1b8451c1", null ],
     [ "last_active_sec", "db/d8a/structcwist__http__async__conn.html#a0b9d8ab4353bbd3ce2876d5a8fb5e9f6", null ],
@@ -27,6 +28,7 @@ var structcwist__http__async__conn =
     [ "rx_prefers_poll", "db/d8a/structcwist__http__async__conn.html#aa600bd7e1e75d051402308e87041e8f2", null ],
     [ "rx_recv_inflight", "db/d8a/structcwist__http__async__conn.html#aff2c72c0421589cdfc2f16c3f8d62580", null ],
     [ "stash_grown_sec", "db/d8a/structcwist__http__async__conn.html#a64bce0dc8e29f81e1bb4d84549a191c8", null ],
+    [ "tls_wait", "db/d8a/structcwist__http__async__conn.html#ad3685e6ebf736bbf362f3013ca01f675", null ],
     [ "user_ctx", "db/d8a/structcwist__http__async__conn.html#ae11aabec78487fd25035496636eb734c", null ],
     [ "virgin", "db/d8a/structcwist__http__async__conn.html#a9da8ac048454f074c458a85300a857bf", null ],
     [ "worker_id", "db/d8a/structcwist__http__async__conn.html#afeb47b1d1686277776f5ce3b6e2af005", null ]
