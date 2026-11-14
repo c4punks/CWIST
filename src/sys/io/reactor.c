@@ -1459,6 +1459,14 @@ static uint32_t reactor_drain_chunk(void) {
     return (uint32_t)v;
 }
 
+#if defined(__x86_64__) || defined(__i386__)
+#define reactor_cpu_relax() __builtin_ia32_pause()
+#elif defined(__aarch64__)
+#define reactor_cpu_relax() __asm__ __volatile__("yield")
+#else
+#define reactor_cpu_relax() ((void)0)
+#endif
+
 #ifdef __linux__
 /* CQ grace: how long a reactor loop peeks its completion ring (pure
  * userspace, no syscall) before committing to the kernel wait. Completions
@@ -1569,14 +1577,6 @@ static void reactor_idle_note_wake(cwist_reactor_t *r) {
         r->idle_since_ns = now;
     }
 }
-
-#if defined(__x86_64__) || defined(__i386__)
-#define reactor_cpu_relax() __builtin_ia32_pause()
-#elif defined(__aarch64__)
-#define reactor_cpu_relax() __asm__ __volatile__("yield")
-#else
-#define reactor_cpu_relax() ((void)0)
-#endif
 #endif
 
 static void reactor_ctx_invoke(reactor_event_ctx_t *ev_ctx) {
