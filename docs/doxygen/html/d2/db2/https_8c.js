@@ -24,6 +24,7 @@ var https_8c =
     [ "cwist_https_init_context_with_options", "d2/db2/https_8c.html#aa52c1e697fc239828f1b1abe7eff140c", null ],
     [ "cwist_https_park", "d2/db2/https_8c.html#ace951bdcf9e2247293b50061288a0576", null ],
     [ "cwist_https_pending_handshakes", "d2/db2/https_8c.html#aa79b1dd4be8a06f8613ed93967f31ce9", null ],
+    [ "cwist_https_reactor_handoff", "d2/db2/https_8c.html#a49b771306457acf7064db6915d922d41", null ],
     [ "cwist_https_receive_request", "d2/db2/https_8c.html#a251baaa81315b64e15308af9287d9a10", null ],
     [ "cwist_https_reload_context", "d2/db2/https_8c.html#a730210fa8bf88c03bf8e3a3820f82890", null ],
     [ "cwist_https_send_response", "d2/db2/https_8c.html#a52d82fd02567a54801fafd539f5e70bd", null ],
