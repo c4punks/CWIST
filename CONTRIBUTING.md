@@ -124,6 +124,10 @@ taken. Ask in the issue or on Discord if it is unclear which happened.
   broken binary, or a severe availability regression (for example, a server
   that stops serving connections under normal load). The fix lands on `dev`
   and `main` as usual.
+- **Do not align `lib/lsquic` between `dev` and `main`.** Their gitlinks are
+  intentionally different and must remain so. Never cherry-pick or copy the
+  `dev` lsquic revision into `main`, and never treat matching dependency
+  revisions as a goal. Dependency changes stay on their originating branch.
 - A release is tagged only when:
   - every CI workflow on the commit to be tagged has passed, and
   - the source archive builds and tests clean without Git metadata:
