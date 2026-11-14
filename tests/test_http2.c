@@ -2277,13 +2277,12 @@ static void test_http2_settings_ack_payload(void) {
                                                    0x00, 0x00, 0x00, 0x00};
     /* SETTINGS ACK (flag 0x1) with a 6-byte payload: header + one entry. */
     static const unsigned char settings_ack_with_payload[] = {
-        0x00, 0x00, 0x06, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x04, 0x00, 0x00, 0x00, 0x64};
+        0x00, 0x00, 0x06, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x64};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
-    assert(ssl_write_all(client, settings_ack_with_payload,
-                         sizeof(settings_ack_with_payload)) == 0);
+    assert(ssl_write_all(client, settings_ack_with_payload, sizeof(settings_ack_with_payload)) ==
+           0);
 
     bool saw_goaway = false;
     uint32_t goaway_err = 0xffffffffu;

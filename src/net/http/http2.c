@@ -3709,8 +3709,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 int settings_rc =
                     h2_handle_settings(hc, payload, len, flags & CWIST_HTTP2_FLAG_ACK);
                 if (settings_rc != 0) {
-                    h2_send_goaway(hc, hc->last_processed_stream_id,
-                                   (uint32_t)settings_rc);
+                    h2_send_goaway(hc, hc->last_processed_stream_id, (uint32_t)settings_rc);
                     connected = false;
                 } else if ((flags & CWIST_HTTP2_FLAG_ACK) == 0) {
                     if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, CWIST_HTTP2_FLAG_ACK, 0,
