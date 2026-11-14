@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (811) ==
+== functions (813) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -633,6 +633,8 @@ cwist_proxy_listen
 cwist_proxy_port_forward
 cwist_proxy_reset
 cwist_proxy_route
+cwist_proxy_tcp_forward
+cwist_proxy_udp_forward
 cwist_query_map_clear
 cwist_query_map_create
 cwist_query_map_create_in_arena
@@ -817,7 +819,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (812) ==
+== function signatures (814) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1447,6 +1449,8 @@ cwist_proxy_listen: int (void)
 cwist_proxy_port_forward: cwist_error_t (unsigned short, unsigned short)
 cwist_proxy_reset: void (void)
 cwist_proxy_route: cwist_error_t (const char *, const char *, const char *, const char *)
+cwist_proxy_tcp_forward: cwist_error_t (unsigned short, const char *, unsigned short)
+cwist_proxy_udp_forward: cwist_error_t (unsigned short, const char *, unsigned short)
 cwist_query_map_clear: void (cwist_query_map *)
 cwist_query_map_create: cwist_query_map * (void)
 cwist_query_map_create_in_arena: cwist_query_map * (void *)
