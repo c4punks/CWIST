@@ -2,6 +2,7 @@ var reactor_8c =
 [
     [ "_POSIX_C_SOURCE", "d3/d99/reactor_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
     [ "REACTOR_CHUNK_EVENTS", "d3/d99/reactor_8c.html#a68e30fb245e8d8625ef6b0500d8acfc9", null ],
+    [ "reactor_cpu_relax", "d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96", null ],
     [ "REACTOR_IDLE_WAIT_NS", "d3/d99/reactor_8c.html#a68ce423571de7595079eb22c297295c6", null ],
     [ "reactor_slot_chunk_t", "d3/d99/reactor_8c.html#a8e1a1b9f6e49aae5933a35ce4145a2e0", null ],
     [ "cwist_reactor_add", "d3/d99/reactor_8c.html#a36ad427aab3be386e5dcc81cfc9f1103", null ],

@@ -1,5 +1,6 @@
 var NAVTREEINDEX4 =
 {
+"d2/dc2/net_2graphql_2graphql_8h.html#af4cd10db9ed7e02591939f7942cea948":[96,0,1,0,2,1,0,0],
 "d2/dc2/net_2graphql_2graphql_8h_source.html":[96,0,1,0,2,1,0],
 "d2/dcb/md_docs_2tutorials_2webtransport-server.html":[91],
 "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md890":[91,0],
@@ -248,6 +249,5 @@ var NAVTREEINDEX4 =
 "d3/d90/webrtc_8c.html#ac7f343253bd234aa0375359e9d256c0d":[96,0,2,2,7,4,1],
 "d3/d90/webrtc_8c.html#ad35ce1cbe49f969f6abe2ab1eb16781d":[96,0,2,2,7,4,0],
 "d3/d90/webrtc_8c.html#ad4d6c49c0295a81e4e12a7d7fd1f0adc":[96,0,2,2,7,4,7],
-"d3/d90/webrtc_8c.html#ad873cf11e9a26d4299c70a90f3d52cf7":[96,0,2,2,7,4,5],
-"d3/d90/webrtc_8c.html#ad9f37342c5b2e561a9ddb85294d4a1bd":[96,0,2,2,7,4,29]
+"d3/d90/webrtc_8c.html#ad873cf11e9a26d4299c70a90f3d52cf7":[96,0,2,2,7,4,5]
 };

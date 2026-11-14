@@ -814,16 +814,17 @@ static reactor_event_ctx_t *alloc_reactor_ctx(cwist_reactor_t *r, int fd, cwist_
 
     memset(ev_ctx, 0, sizeof(*ev_ctx));
     ev_ctx->fd = fd;
-    ev_ctx->cb = cb;
     ev_ctx->ctx = ev_ctx->payload;
     if (payload && payload_size > 0) {
         memcpy(ev_ctx->payload, payload, payload_size);
     }
+    __atomic_store_n(&ev_ctx->cb, cb, __ATOMIC_RELEASE);
     return ev_ctx;
 }
 
 static void free_reactor_ctx(cwist_reactor_t *r, reactor_event_ctx_t *ev_ctx) {
     if (!r || !ev_ctx) return;
+    __atomic_store_n(&ev_ctx->cb, NULL, __ATOMIC_RELEASE);
     pthread_mutex_lock(&r->pool_lock);
     ev_ctx->ctx = r->free_head;
     r->free_head = ev_ctx;
@@ -1458,6 +1459,14 @@ static uint32_t reactor_drain_chunk(void) {
     return (uint32_t)v;
 }
 
+#if defined(__x86_64__) || defined(__i386__)
+#define reactor_cpu_relax() __builtin_ia32_pause()
+#elif defined(__aarch64__)
+#define reactor_cpu_relax() __asm__ __volatile__("yield")
+#else
+#define reactor_cpu_relax() ((void)0)
+#endif
+
 #ifdef __linux__
 /* CQ grace: how long a reactor loop peeks its completion ring (pure
  * userspace, no syscall) before committing to the kernel wait. Completions
@@ -1542,7 +1551,9 @@ static uint32_t reactor_malloc_trim_idle_sec(void) {
 extern int malloc_trim(size_t __pad) __attribute__((weak));
 
 /* A wake that dispatched events (or ran posted work) ends the idle streak. */
-static void reactor_idle_note_eventful(cwist_reactor_t *r) { r->idle_since_ns = 0; }
+static void reactor_idle_note_eventful(cwist_reactor_t *r) {
+    r->idle_since_ns = 0;
+}
 
 /* Bookkeeping for a wake that saw zero events. Starts an idle streak on the
  * first such wake; once the streak has lasted CWIST_MALLOC_TRIM_IDLE_SEC
@@ -1566,15 +1577,13 @@ static void reactor_idle_note_wake(cwist_reactor_t *r) {
         r->idle_since_ns = now;
     }
 }
+#endif
 
-#if defined(__x86_64__) || defined(__i386__)
-#define reactor_cpu_relax() __builtin_ia32_pause()
-#elif defined(__aarch64__)
-#define reactor_cpu_relax() __asm__ __volatile__("yield")
-#else
-#define reactor_cpu_relax() ((void)0)
-#endif
-#endif
+static void reactor_ctx_invoke(reactor_event_ctx_t *ev_ctx) {
+    cwist_reactor_cb_t cb;
+    while (!(cb = __atomic_load_n(&ev_ctx->cb, __ATOMIC_ACQUIRE))) reactor_cpu_relax();
+    cb(ev_ctx->fd, ev_ctx->ctx);
+}
 
 void cwist_reactor_run(cwist_reactor_t *reactor) {
     if (!reactor) return;
@@ -1615,20 +1624,19 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
              * code falls through to the bounded wait below. */
             bool cq_pending = false;
             if (cq_grace_ns > 0) {
-                uint32_t ph =
-                    __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
+                uint32_t ph = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
                 if (ph == *reactor->impl.cq_tail) {
                     struct timespec gs;
                     clock_gettime(CLOCK_MONOTONIC, &gs);
-                    uint64_t g_end = (uint64_t)gs.tv_sec * 1000000000ull +
-                                     (uint64_t)gs.tv_nsec + cq_grace_ns;
+                    uint64_t g_end =
+                        (uint64_t)gs.tv_sec * 1000000000ull + (uint64_t)gs.tv_nsec + cq_grace_ns;
                     uint32_t spins = 0;
                     while (ph == *reactor->impl.cq_tail) {
                         reactor_cpu_relax();
                         if (((++spins) & 31u) == 0) {
                             clock_gettime(CLOCK_MONOTONIC, &gs);
-                            uint64_t now = (uint64_t)gs.tv_sec * 1000000000ull +
-                                           (uint64_t)gs.tv_nsec;
+                            uint64_t now =
+                                (uint64_t)gs.tv_sec * 1000000000ull + (uint64_t)gs.tv_nsec;
                             if (now >= g_end) break;
                         }
                         ph = __atomic_load_n(reactor->impl.cq_head, __ATOMIC_ACQUIRE);
@@ -1739,7 +1747,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                                  * the probe was enabled; fold it into the first
                                  * bucket rather than producing a garbage delay. */
                                 uint64_t delay_ns = ev_ctx->armed_ns ? t0 - ev_ctx->armed_ns : 0;
-                                ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                                reactor_ctx_invoke(ev_ctx);
                                 clock_gettime(CLOCK_MONOTONIC, &ts);
                                 uint64_t t1 =
                                     (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
@@ -1756,7 +1764,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                                                      &reactor->probe[LATENCY_PROBE_SVC].over_5ms,
                                                      (t1 - t0) / 1000);
                             } else {
-                                ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                                reactor_ctx_invoke(ev_ctx);
                             }
                         }
                         free_reactor_ctx(reactor, ev_ctx);
@@ -1768,16 +1776,14 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                     __atomic_store_n(reactor->impl.cq_head, head, __ATOMIC_RELEASE);
                     reactor_drain_posts(reactor);
                 }
-                if (round_budget_us && head != tail &&
-                    (++since_budget_check & 63u) == 0) {
+                if (round_budget_us && head != tail && (++since_budget_check & 63u) == 0) {
                     /* The budget check rides its own cadence (every 64
                      * callbacks), independent of CWIST_REACTOR_DRAIN_CHUNK,
                      * so disabling the post drain does not disable the
                      * round bound. */
                     struct timespec ts;
                     clock_gettime(CLOCK_MONOTONIC, &ts);
-                    uint64_t now_ns =
-                        (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+                    uint64_t now_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
                     if (now_ns - round_start_ns >= round_budget_us * 1000ull) {
                         /* Long round: flush the re-arms parked so far instead
                          * of holding them to round end. The batch itself
@@ -1848,7 +1854,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
                 }
                 reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].data.ptr;
                 if (ev_ctx) {
-                    ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                    reactor_ctx_invoke(ev_ctx);
                     free_reactor_ctx(reactor, ev_ctx);
                     if (drain_chunk && ++since_drain >= drain_chunk && i + 1 < n) {
                         since_drain = 0;
@@ -1888,7 +1894,7 @@ void cwist_reactor_run(cwist_reactor_t *reactor) {
         for (int i = 0; i < n; i++) {
             reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].udata;
             if (ev_ctx) {
-                ev_ctx->cb(ev_ctx->fd, ev_ctx->ctx);
+                reactor_ctx_invoke(ev_ctx);
                 free_reactor_ctx(reactor, ev_ctx);
                 if (drain_chunk && ++since_drain >= drain_chunk && i + 1 < n) {
                     since_drain = 0;

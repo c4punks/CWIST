@@ -7,6 +7,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/app/shutdown.h>
 #include "../../sys/io/reactor_rx.h"
+#include "async_internal.h"
 #include "sockopts.h"
 #include <fcntl.h>
 #include <errno.h>
@@ -194,9 +195,9 @@ static void async_accept_cb(int fd, void *ctx) {
 /**
  * @brief Run the async (reactor-based) HTTP/HTTPS server loop for C1M scale.
  *
- * Initializes the HTTPS thread pool when the app serves HTTPS, otherwise the
- * HTTP thread pool (without re-reading CWIST_C1M_MODE, which
- * cwist_app_listen_ex() may have overridden). Sets the server socket
+ * Initializes the HTTP reactor workers and, for HTTPS, the handshake pool.
+ * The mode is explicit rather than re-reading CWIST_C1M_MODE, which
+ * cwist_app_listen_ex() may have overridden. Sets the server socket
  * non-blocking, enables SO_REUSEPORT when available, creates the reactor, and
  * registers the accept callback on @p server_fd. Blocks in cwist_reactor_run()
  * until the reactor is stopped (e.g. on shutdown), then tears down the reactor
@@ -217,27 +218,24 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     err.error.err_i16 = -1;
 
     bool use_https = app_use_https(app);
-    if (use_https) {
-        if (https_pool_init() != 0) {
-            fprintf(stderr, "[async] Failed to init HTTPS thread pool\n");
-            return err;
-        }
-    } else {
-        /* This loop only drives reactor workers: do not re-read
-         * CWIST_C1M_MODE, which cwist_app_listen_ex() may have overridden. */
-        if (cwist_http_pool_init_mode(true) != 0) {
-            fprintf(stderr, "[async] Failed to init HTTP thread pool\n");
-            return err;
-        }
+    if (use_https && https_pool_init() != 0) {
+        fprintf(stderr, "[async] Failed to init HTTPS thread pool\n");
+        return err;
+    }
+    /* This loop only drives reactor workers: do not re-read CWIST_C1M_MODE,
+     * which cwist_app_listen_ex() may have overridden. HTTPS uses these same
+     * workers after the handshake pool establishes HTTP/1.1 TLS sessions. */
+    if (cwist_http_pool_init_mode(true) != 0) {
+        fprintf(stderr, "[async] Failed to init HTTP thread pool\n");
+        if (use_https) https_pool_destroy();
+        return err;
     }
 
     int flags = fcntl(server_fd, F_GETFL, 0);
     if (flags < 0 || fcntl(server_fd, F_SETFL, flags | O_NONBLOCK) < 0) {
         perror("[async] Failed to set server socket non-blocking");
-        if (use_https)
-            https_pool_destroy();
-        else
-            cwist_http_pool_destroy();
+        if (use_https) https_pool_destroy();
+        cwist_http_pool_destroy();
         return err;
     }
 
@@ -253,10 +251,8 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     g_reactor = cwist_reactor_create();
     if (!g_reactor) {
         fprintf(stderr, "[async] Failed to create reactor\n");
-        if (use_https)
-            https_pool_destroy();
-        else
-            cwist_http_pool_destroy();
+        if (use_https) https_pool_destroy();
+        cwist_http_pool_destroy();
         return err;
     }
 
@@ -275,10 +271,8 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
             fprintf(stderr, "[async] Failed to register listener\n");
             cwist_reactor_destroy(g_reactor);
             g_reactor = NULL;
-            if (use_https)
-                https_pool_destroy();
-            else
-                cwist_http_pool_destroy();
+            if (use_https) https_pool_destroy();
+            cwist_http_pool_destroy();
             return err;
         }
 #if defined(__linux__)
@@ -295,11 +289,8 @@ cwist_error_t cwist_async_server_loop(int server_fd, cwist_app *app) {
     cwist_reactor_destroy(g_reactor);
     g_reactor = NULL;
 
-    if (use_https) {
-        https_pool_destroy();
-    } else {
-        cwist_http_pool_destroy();
-    }
+    if (use_https) https_pool_destroy();
+    cwist_http_pool_destroy();
 
     err.error.err_i16 = 0;
     return err;

@@ -307,7 +307,8 @@ typedef void (*cwist_conn_close_fn)(void *handle);
  *
  * The registry is one process-wide table. Each handle has an owner thread;
  * that thread's exit sweep (or cwist_conn_registry_flush()) closes it. The
- * owner is the tracking thread until cwist_conn_registry_adopt() moves it.
+ * owner is the tracking thread until a handoff disowns it or
+ * cwist_conn_registry_adopt() moves it.
  *
  * @param handle Opaque connection handle, passed back to @p close_fn.
  * @param close_fn Called with @p handle to close/tear it down; must be

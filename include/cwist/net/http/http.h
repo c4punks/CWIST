@@ -537,6 +537,8 @@ typedef struct cwist_http_async_conn {
     bool reap_waiting; /* A receive wait (POLL or RECV) is armed: no handler or defer in progress. */
     bool reap_kicked;  /* shutdown() already issued by the sweep. */
     bool reap_dead;    /* Initial arm failed; the owner sweep releases the shell. */
+    void *https_conn; /* Established TLS transport; NULL for cleartext. */
+    uint8_t tls_wait; /* 0 = read readiness, 1 = write readiness. */
 } cwist_http_async_conn_t;
 
 /* Re-arm a connection after a deferred response completed on the reactor
