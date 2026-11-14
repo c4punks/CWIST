@@ -369,6 +369,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             payload = ws->frag_buf;
             payload_len = ws->frag_len;
             opcode = ws->frag_opcode;
+            if (!payload) {
+                payload = cwist_alloc(1);
+                if (!payload) return NULL;
+            }
+            payload[payload_len] = '\0';
 
             ws->frag_buf = NULL;
             ws->frag_len = ws->frag_cap = 0;
@@ -499,7 +504,8 @@ int cwist_websocket_send(cwist_websocket *ws, cwist_ws_opcode_t opcode, const ui
  */
 int cwist_websocket_send_fragments(cwist_websocket *ws, cwist_ws_opcode_t opcode,
                                    const cwist_ws_fragment *fragments, size_t count) {
-    if (!ws || ws->is_closed || (opcode != CWIST_WS_FRAME_TEXT && opcode != CWIST_WS_FRAME_BINARY) ||
+    if (!ws || ws->is_closed ||
+        (opcode != CWIST_WS_FRAME_TEXT && opcode != CWIST_WS_FRAME_BINARY) ||
         (!fragments && count > 0))
         return -1;
     for (size_t i = 0; i < count; i++) {
