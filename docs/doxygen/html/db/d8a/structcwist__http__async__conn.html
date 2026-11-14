@@ -190,6 +190,10 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a07458f49d8bbc7cda5494f88927b249f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9df99f8ef2d4db0b8d53bfa8da4d8c4c" id="r_a9df99f8ef2d4db0b8d53bfa8da4d8c4c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d8a/structcwist__http__async__conn.html#a9df99f8ef2d4db0b8d53bfa8da4d8c4c">reap_dead</a></td></tr>
 <tr class="separator:a9df99f8ef2d4db0b8d53bfa8da4d8c4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae42aeba35889090bd4924ff4de2d0ff9" id="r_ae42aeba35889090bd4924ff4de2d0ff9"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d8a/structcwist__http__async__conn.html#ae42aeba35889090bd4924ff4de2d0ff9">https_conn</a></td></tr>
+<tr class="separator:ae42aeba35889090bd4924ff4de2d0ff9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3685e6ebf736bbf362f3013ca01f675" id="r_ad3685e6ebf736bbf362f3013ca01f675"><td class="memItemLeft" align="right" valign="top">uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/d8a/structcwist__http__async__conn.html#ad3685e6ebf736bbf362f3013ca01f675">tls_wait</a></td></tr>
+<tr class="separator:ad3685e6ebf736bbf362f3013ca01f675"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -225,7 +229,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00483">483</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05301">cwist_http_receive_request_nb()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05528">cwist_http_receive_request_nb()</a>.</p>
 
 </div>
 </div>
@@ -243,7 +247,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00489">489</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05301">cwist_http_receive_request_nb()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05528">cwist_http_receive_request_nb()</a>.</p>
 
 </div>
 </div>
@@ -261,7 +265,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00480">480</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05301">cwist_http_receive_request_nb()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05528">cwist_http_receive_request_nb()</a>.</p>
 
 </div>
 </div>
@@ -279,7 +283,25 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00493">493</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01506">cwist_http_async_rearm()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01557">cwist_http_async_rearm()</a>.</p>
+
+</div>
+</div>
+<a id="ae42aeba35889090bd4924ff4de2d0ff9" name="ae42aeba35889090bd4924ff4de2d0ff9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae42aeba35889090bd4924ff4de2d0ff9">&#9670;&#160;</a></span>https_conn</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void* cwist_http_async_conn::https_conn</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00540">540</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03526">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01557">cwist_http_async_rearm()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05528">cwist_http_receive_request_nb()</a>.</p>
 
 </div>
 </div>
@@ -329,7 +351,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00490">490</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01506">cwist_http_async_rearm()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01557">cwist_http_async_rearm()</a>.</p>
 
 </div>
 </div>
@@ -347,7 +369,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00484">484</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03482">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01506">cwist_http_async_rearm()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03641">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03921">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05301">cwist_http_receive_request_nb()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03768">cwist_http_send_response_async()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04018">cwist_http_send_response_coalesced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03526">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01557">cwist_http_async_rearm()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03845">cwist_http_async_send_response()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04125">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05528">cwist_http_receive_request_nb()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03972">cwist_http_send_response_async()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04213">cwist_http_send_response_coalesced()</a>.</p>
 
 </div>
 </div>
@@ -365,7 +387,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00485">485</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l03892">cwist_http_coalesce_append()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03921">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03976">cwist_http_coalesce_flush_blocking()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04018">cwist_http_send_response_coalesced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l04096">cwist_http_coalesce_append()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04125">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04179">cwist_http_coalesce_flush_blocking()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04213">cwist_http_send_response_coalesced()</a>.</p>
 
 </div>
 </div>
@@ -383,7 +405,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00486">486</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l03892">cwist_http_coalesce_append()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04018">cwist_http_send_response_coalesced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l04096">cwist_http_coalesce_append()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04213">cwist_http_send_response_coalesced()</a>.</p>
 
 </div>
 </div>
@@ -401,7 +423,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00487">487</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l03892">cwist_http_coalesce_append()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03921">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03976">cwist_http_coalesce_flush_blocking()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04018">cwist_http_send_response_coalesced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l04096">cwist_http_coalesce_append()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04125">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04179">cwist_http_coalesce_flush_blocking()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04213">cwist_http_send_response_coalesced()</a>.</p>
 
 </div>
 </div>
@@ -419,7 +441,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00494">494</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03482">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01506">cwist_http_async_rearm()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03526">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01557">cwist_http_async_rearm()</a>.</p>
 
 </div>
 </div>
@@ -437,7 +459,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00482">482</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03482">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05301">cwist_http_receive_request_nb()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03526">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05528">cwist_http_receive_request_nb()</a>.</p>
 
 </div>
 </div>
@@ -455,7 +477,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00492">492</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03482">cwist_app_http_handler_async()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00152">cwist_async_defer()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03921">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03768">cwist_http_send_response_async()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04018">cwist_http_send_response_coalesced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03526">cwist_app_http_handler_async()</a>, <a class="el" href="../../db/d84/async_8c_source.html#l00152">cwist_async_defer()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04125">cwist_http_coalesce_flush()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03972">cwist_http_send_response_async()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04213">cwist_http_send_response_coalesced()</a>.</p>
 
 </div>
 </div>
@@ -472,8 +494,6 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00539">539</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
-
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>.</p>
 
 </div>
 </div>
@@ -603,7 +623,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00503">503</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>.</p>
 
 </div>
 </div>
@@ -637,7 +657,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00502">502</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>.</p>
 
 </div>
 </div>
@@ -655,7 +675,25 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00525">525</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l03892">cwist_http_coalesce_append()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05301">cwist_http_receive_request_nb()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04018">cwist_http_send_response_coalesced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l04096">cwist_http_coalesce_append()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05528">cwist_http_receive_request_nb()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04213">cwist_http_send_response_coalesced()</a>.</p>
+
+</div>
+</div>
+<a id="ad3685e6ebf736bbf362f3013ca01f675" name="ad3685e6ebf736bbf362f3013ca01f675"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3685e6ebf736bbf362f3013ca01f675">&#9670;&#160;</a></span>tls_wait</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint8_t cwist_http_async_conn::tls_wait</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00541">541</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>.</p>
 
 </div>
 </div>
@@ -673,7 +711,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00481">481</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03482">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01506">cwist_http_async_rearm()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03526">cwist_app_http_handler_async()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01557">cwist_http_async_rearm()</a>.</p>
 
 </div>
 </div>
@@ -691,7 +729,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00488">488</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05222">cwist_http_async_conn_fill()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05418">cwist_http_async_conn_fill()</a>.</p>
 
 </div>
 </div>
@@ -709,7 +747,7 @@ Public Attributes</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00491">491</a> of file <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html">http.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01602">cwist_http_async_close_orphan()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l01617">cwist_http_pool_submit_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l01644">cwist_http_async_close_orphan()</a>.</p>
 
 </div>
 </div>

@@ -2,8 +2,8 @@
  * @file gc_internal.h
  * @brief Internal bridge between the allocator and the epoch GC wrapper.
  *
- * Not part of the installed public API: this declaration is shared only
- * between src/core/mem/alloc.c and src/core/mem/gc.c.
+ * Not part of the installed public API: these declarations are shared only
+ * between the GC implementation and internal ownership-transfer paths.
  */
 
 #ifndef __CWIST_CORE_MEM_GC_INTERNAL_H__
@@ -24,5 +24,6 @@
  * @return true when @p ptr was registered and has been detached.
  */
 bool cwist_gc_reg_untrack(void *ptr);
+bool cwist_conn_registry_disown(void *handle);
 
 #endif

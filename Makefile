@@ -812,6 +812,7 @@ wasm-sw-example: $(SW_BUILD_DIR)/app.component.wasm
 	npm exec -y --package=esbuild -- esbuild $(SW_EXAMPLE_DIR)/sw.js \
 	    --bundle --platform=browser --format=iife --conditions=browser \
 	    --alias:@bytecodealliance/preview2-shim=./$(SW_BUILD_DIR)/node/node_modules/@bytecodealliance/preview2-shim/dist/browser/index.js \
+	    --alias:node:fs/promises=$(abspath tests/wasm_component_browser_fs.js) \
 	    --outfile=$(SW_BUILD_DIR)/site/sw.js
 	cp $(SW_EXAMPLE_DIR)/index.html $(SW_BUILD_DIR)/browser/*.wasm $(SW_BUILD_DIR)/site/
 	@echo "wasm-sw-example: serve $(SW_BUILD_DIR)/site/ over http://localhost"
@@ -929,10 +930,10 @@ clean-component:
 # Packaging gate for the browser bundle (issue #203, stage 2 remainder): the
 # transpiled component plus the cwist-wasm adapter must bundle for a browser
 # with no node-only imports. esbuild resolves the shim's browser exports via
-# --conditions=browser; --no-nodejs-compat makes jco emit pure browser-style
-# wasm loading (fetch), which is exactly what a bundler consumer gets. The
-# esbuild exit code is the assertion: the browser bundle cannot execute under
-# node (its loader fetches the wasm shards), so no runtime step here.
+# --conditions=browser; --no-nodejs-compat selects fetch loading, and the fs
+# alias replaces jco's dormant Node fallback with an explicit browser error.
+# The esbuild exit code is the assertion: the browser bundle cannot execute
+# under node (its loader fetches the wasm shards), so no runtime step here.
 component-browser-smoke: component-smoke
 	npm exec -y --package=@bytecodealliance/jco -- \
 	    jco transpile $(COMPONENT_BUILD_DIR)/guest.component.wasm \
@@ -941,6 +942,7 @@ component-browser-smoke: component-smoke
 	npm exec -y --package=esbuild -- esbuild $(JCO_GUEST_DIR)/wasm_component_browser_entry.js \
 	    --bundle --platform=browser --format=esm --conditions=browser \
 	    --alias:cwist-guest-component=$(abspath $(JCO_GUEST_DIR)/browser/guest.component.js) \
+	    --alias:node:fs/promises=$(abspath tests/wasm_component_browser_fs.js) \
 	    --outfile=$(JCO_GUEST_DIR)/browser_bundle.js
 	@echo "component-browser-smoke: PASS (esbuild bundled the guest + adapter for a browser with no node-only imports)" 
 
@@ -1428,6 +1430,8 @@ TEST_TARGETS = test_worker_affinity \
                test_https \
                test_tls_hot_reload \
                test_https_park \
+               test_https_reactor \
+               test_https_reactor_full_gc \
                test_https_h2_fairness \
                test_https_park_full_gc \
                test_https_pool_queue \
@@ -1965,6 +1969,14 @@ endif
 test_https_park: $(LIB_NAME) tests/test_https_park.c
 	$(CC) $(CFLAGS) -o test_https_park tests/test_https_park.c $(LIB_NAME) $(LIBS)
 	./test_https_park
+
+test_https_reactor: $(LIB_NAME) tests/test_https_reactor.c
+	$(CC) $(CFLAGS) -o $@ tests/test_https_reactor.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_https_reactor_full_gc: $(LIB_NAME) tests/test_https_reactor.c
+	$(CC) $(CFLAGS) -DTEST_HTTPS_REACTOR_FULL_GC=1 -o $@ tests/test_https_reactor.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_https_h2_fairness: $(LIB_NAME) tests/test_https_h2_fairness.c
 	$(CC) $(CFLAGS) -o $@ tests/test_https_h2_fairness.c $(LIB_NAME) $(LIBS)

@@ -24,10 +24,12 @@ var async__internal_8h =
     [ "cwist_h3_pending_release", "d6/d73/async__internal_8h.html#adca7e68f317a617762866eff17e82f5b", null ],
     [ "cwist_http_async_close_orphan", "d6/d73/async__internal_8h.html#ab5d519d4fe569356efe9a73671d8f38d", null ],
     [ "cwist_http_async_finish_stream", "d6/d73/async__internal_8h.html#a65225d39f297752d32576dacf3bfcfab", null ],
+    [ "cwist_http_pool_submit_https_async", "d6/d73/async__internal_8h.html#a9af364c025bb4c196fc8af857a19030b", null ],
     [ "cwist_http_reactor_generation", "d6/d73/async__internal_8h.html#a4212369d5a88e570c7c231df1f26e36c", null ],
     [ "cwist_http_reactor_post_live", "d6/d73/async__internal_8h.html#af3261ed92180c369e2b52cbcfb0e174f", null ],
     [ "cwist_http_write_chunk", "d6/d73/async__internal_8h.html#aac7afd67b78f558b56a93458b836b754", null ],
     [ "cwist_http_write_raw", "d6/d73/async__internal_8h.html#af3514667216917594e87d46831f84d1f", null ],
+    [ "cwist_https_reactor_handoff", "d6/d73/async__internal_8h.html#a552e7adb2bd82248f1a90729b316926e", null ],
     [ "cwist_https_write_raw", "d6/d73/async__internal_8h.html#a4e59492fa528be80eb501a660c7d90fe", null ],
     [ "cwist_https_yield", "d6/d73/async__internal_8h.html#a00b59bd98491a500f7609db562da9a27", null ]
 ];

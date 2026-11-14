@@ -124,6 +124,16 @@ Include dependency graph for gc_internal.h:</div>
 <area shape="poly" title=" " alt="" coords="107,31,107,65,102,65,102,31"/>
 </map>
 </div>
+</div><div class="textblock"><div class="dynheader">
+This graph shows which files directly or indirectly include this file:</div>
+<div class="dyncontent">
+<div class="center"><img src="../../d1/d4f/gc__internal_8h__dep__incl.png" border="0" usemap="#asrc_2core_2mem_2gc__internal_8hdep" alt=""/></div>
+<map name="asrc_2core_2mem_2gc__internal_8hdep" id="asrc_2core_2mem_2gc__internal_8hdep">
+<area shape="rect" title="Internal bridge between the allocator and the epoch GC wrapper." alt="" coords="5,5,204,31"/>
+<area shape="rect" href="../../d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="33,79,177,104"/>
+<area shape="poly" title=" " alt="" coords="107,44,107,79,102,79,102,44"/>
+</map>
+</div>
 </div>
 <p><a href="../../d6/deb/gc__internal_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -132,13 +142,39 @@ Functions</h2></td></tr>
 <tr class="memitem:a45eb150717e87ba0b5eba6dc4738ddb1" id="r_a45eb150717e87ba0b5eba6dc4738ddb1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/deb/gc__internal_8h.html#a45eb150717e87ba0b5eba6dc4738ddb1">cwist_gc_reg_untrack</a> (void *ptr)</td></tr>
 <tr class="memdesc:a45eb150717e87ba0b5eba6dc4738ddb1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Detach a pointer previously handed to a GC context through <a class="el" href="../../d0/daa/gc_8h.html#a349ae8f8d434ff73172bffbb90ab72de" title="Register a pointer without specifying a size (defaults to 0).">cwist_reg_ptr()</a>/cwist_reg_ptr_sized(), without freeing it.  <br /></td></tr>
 <tr class="separator:a45eb150717e87ba0b5eba6dc4738ddb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae75b63be0d892268ee96958015803ef" id="r_aae75b63be0d892268ee96958015803ef"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/deb/gc__internal_8h.html#aae75b63be0d892268ee96958015803ef">cwist_conn_registry_disown</a> (void *handle)</td></tr>
+<tr class="separator:aae75b63be0d892268ee96958015803ef"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Internal bridge between the allocator and the epoch GC wrapper. </p>
-<p>Not part of the installed public API: this declaration is shared only between <a class="el" href="../../d9/d39/alloc_8c.html">src/core/mem/alloc.c</a> and <a class="el" href="../../d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch-based reclamation.">src/core/mem/gc.c</a>. </p>
+<p>Not part of the installed public API: these declarations are shared only between the GC implementation and internal ownership-transfer paths. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d6/deb/gc__internal_8h_source.html">gc_internal.h</a>.</p>
 </div><h2 class="groupheader">Function Documentation</h2>
+<a id="aae75b63be0d892268ee96958015803ef" name="aae75b63be0d892268ee96958015803ef"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae75b63be0d892268ee96958015803ef">&#9670;&#160;</a></span>cwist_conn_registry_disown()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_conn_registry_disown </td>
+          <td>(</td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>handle</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d8/d16/gc_8c_source.html#l01038">1038</a> of file <a class="el" href="../../d8/d16/gc_8c_source.html">gc.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d2/db2/https_8c_source.html#l00693">cwist_https_reactor_handoff()</a>.</p>
+
+</div>
+</div>
 <a id="a45eb150717e87ba0b5eba6dc4738ddb1" name="a45eb150717e87ba0b5eba6dc4738ddb1"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a45eb150717e87ba0b5eba6dc4738ddb1">&#9670;&#160;</a></span>cwist_gc_reg_untrack()</h2>
 

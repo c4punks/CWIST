@@ -2667,6 +2667,8 @@ struct cwist_http_async_conn_t [26] uint8_t reap_state
 struct cwist_http_async_conn_t [27] bool reap_waiting
 struct cwist_http_async_conn_t [28] bool reap_kicked
 struct cwist_http_async_conn_t [29] bool reap_dead
+struct cwist_http_async_conn_t [30] void *https_conn
+struct cwist_http_async_conn_t [31] uint8_t tls_wait
 struct cwist_http_header_node [0] cwist_sstring *key
 struct cwist_http_header_node [1] cwist_sstring *value
 struct cwist_http_header_node [2] struct cwist_http_header_node *next
