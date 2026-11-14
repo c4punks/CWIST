@@ -14,6 +14,7 @@
 typedef struct {
     int fd;
     int over_limit;
+    int push;
 } server_ctx;
 
 static void read_all(int fd, void *buf, size_t len) {
@@ -79,6 +80,13 @@ static void *serve(void *arg) {
     } while (type != 0);
 
     static const unsigned char status_ok[] = {0x88};
+    if (ctx->push == 1) {
+        static const unsigned char other_stream_headers[] = {0x40, 1, 'x', 1, 'y'};
+        send_frame(fd, 1, 4, 2, other_stream_headers, sizeof(other_stream_headers));
+    } else if (ctx->push == 2) {
+        static const unsigned char push_promise[] = {0, 0, 0, 4};
+        send_frame(fd, 5, 4, stream, push_promise, sizeof(push_promise));
+    }
     if (ctx->over_limit) {
         send_frame(fd, 1, 0, stream, status_ok, sizeof(status_ok));
         unsigned char zeros[4096] = {0};
@@ -98,7 +106,7 @@ static void *serve(void *arg) {
     return NULL;
 }
 
-static uint16_t start_server(int over_limit, pthread_t *tid) {
+static uint16_t start_server(int over_limit, int push, pthread_t *tid) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(fd >= 0);
     int one = 1;
@@ -114,21 +122,23 @@ static uint16_t start_server(int over_limit, pthread_t *tid) {
     assert(ctx != NULL);
     ctx->fd = fd;
     ctx->over_limit = over_limit;
+    ctx->push = push;
     assert(pthread_create(tid, NULL, serve, ctx) == 0);
     return ntohs(addr.sin_port);
 }
 
-static void run_case(int over_limit) {
+static void run_case(int over_limit, int push) {
     pthread_t tid;
-    uint16_t port = start_server(over_limit, &tid);
+    uint16_t port = start_server(over_limit, push, &tid);
     cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
     assert(client != NULL);
     cwist_grpc_call *call = cwist_grpc_call_start(client, "/test.Test/Call", NULL, 0, 2000);
     assert(call != NULL);
     cwist_grpc_message msg;
     int rc = cwist_grpc_call_recv(call, &msg);
-    if (over_limit) {
+    if (over_limit || push) {
         assert(rc != 1);
+        if (push) assert(cwist_grpc_client_dead(client));
     } else {
         assert(rc == 1 && msg.len == 1 && msg.data[0] == 'x');
     }
@@ -138,8 +148,10 @@ static void run_case(int over_limit) {
 }
 
 int main(void) {
-    run_case(0);
-    run_case(1);
+    run_case(0, 0);
+    run_case(1, 0);
+    run_case(0, 1);
+    run_case(0, 2);
     puts("test_grpc_client_headers: all passed");
     return 0;
 }
