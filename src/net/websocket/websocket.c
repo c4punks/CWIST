@@ -369,6 +369,11 @@ cwist_ws_frame *cwist_websocket_receive(cwist_websocket *ws) {
             payload = ws->frag_buf;
             payload_len = ws->frag_len;
             opcode = ws->frag_opcode;
+            if (!payload) {
+                payload = cwist_alloc(1);
+                if (!payload) return NULL;
+            }
+            payload[payload_len] = '\0';
 
             ws->frag_buf = NULL;
             ws->frag_len = ws->frag_cap = 0;

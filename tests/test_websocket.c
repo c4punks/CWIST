@@ -253,6 +253,7 @@ static void test_orphan_continuation_rejected(void) {
         assert(frame->opcode == CWIST_WS_FRAME_TEXT);
         assert(frame->payload_len == 5);
         assert(memcmp(frame->payload, "hello", 5) == 0);
+        assert(frame->payload[5] == '\0');
         cwist_websocket_frame_destroy(frame);
 
         cwist_websocket_destroy(ws);
@@ -314,6 +315,7 @@ static void test_fragmentation_state(void) {
     frame = cwist_websocket_receive(ws);
     assert(frame != NULL && frame->opcode == CWIST_WS_FRAME_TEXT);
     assert(frame->payload_len == 0);
+    assert(frame->payload != NULL && frame->payload[0] == '\0');
     cwist_websocket_frame_destroy(frame);
     cwist_websocket_destroy(ws);
     cwist_http_request_destroy(req);
