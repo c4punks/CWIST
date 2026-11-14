@@ -1714,7 +1714,7 @@ static bool http_pool_submit_async_common(int client_fd, cwist_https_connection 
     conn->handler = handler;
     http_reap_push(w, conn);
 
-    if (https && http_async_tls_pending(https) > 0) {
+    if (https) {
         http_async_continuation_t *continuation = cwist_alloc(sizeof(*continuation));
         if (continuation) {
             if (cwist_full_gc_enabled()) cwist_gc_scope_disown(continuation);
