@@ -929,10 +929,10 @@ clean-component:
 # Packaging gate for the browser bundle (issue #203, stage 2 remainder): the
 # transpiled component plus the cwist-wasm adapter must bundle for a browser
 # with no node-only imports. esbuild resolves the shim's browser exports via
-# --conditions=browser; --no-nodejs-compat makes jco emit pure browser-style
-# wasm loading (fetch), which is exactly what a bundler consumer gets. The
-# esbuild exit code is the assertion: the browser bundle cannot execute under
-# node (its loader fetches the wasm shards), so no runtime step here.
+# --conditions=browser; --no-nodejs-compat selects fetch loading, and the fs
+# alias replaces jco's dormant Node fallback with an explicit browser error.
+# The esbuild exit code is the assertion: the browser bundle cannot execute
+# under node (its loader fetches the wasm shards), so no runtime step here.
 component-browser-smoke: component-smoke
 	npm exec -y --package=@bytecodealliance/jco -- \
 	    jco transpile $(COMPONENT_BUILD_DIR)/guest.component.wasm \
@@ -941,6 +941,7 @@ component-browser-smoke: component-smoke
 	npm exec -y --package=esbuild -- esbuild $(JCO_GUEST_DIR)/wasm_component_browser_entry.js \
 	    --bundle --platform=browser --format=esm --conditions=browser \
 	    --alias:cwist-guest-component=$(abspath $(JCO_GUEST_DIR)/browser/guest.component.js) \
+	    --alias:node:fs/promises=$(abspath tests/wasm_component_browser_fs.js) \
 	    --outfile=$(JCO_GUEST_DIR)/browser_bundle.js
 	@echo "component-browser-smoke: PASS (esbuild bundled the guest + adapter for a browser with no node-only imports)" 
 
