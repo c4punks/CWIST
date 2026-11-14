@@ -14,9 +14,11 @@
 #include <cwist/net/http/async.h>
 #include <cwist/net/http/http.h>
 #include <cwist/sys/app/app.h>
+#include <cwist/sys/app/shutdown.h>
 #include <cwist/sys/job/scheduler.h>
 
 #include "proxy_internal.h"
+#include "transport_internal.h"
 #include "../http/async_internal.h"
 #include "../http/curl_global.h"
 #include "../http/tls_info.h"
@@ -289,6 +291,30 @@ cwist_error_t cwist_proxy_port_forward(unsigned short origin_port, unsigned shor
     r.port = origin_port;
     r.any_host = true;
     return proxy_add_rule(r, "/", target, "/");
+}
+
+static cwist_error_t proxy_transport_register(int transport, unsigned short origin_port,
+                                              const char *target_host, unsigned short target_port) {
+    pthread_mutex_lock(&g_proxy_rules_mu);
+    if (g_proxy_started) {
+        pthread_mutex_unlock(&g_proxy_rules_mu);
+        return proxy_result(-1);
+    }
+    cwist_error_t err = cwist_proxy_transport_add(transport, origin_port, target_host, target_port);
+    pthread_mutex_unlock(&g_proxy_rules_mu);
+    return err;
+}
+
+cwist_error_t cwist_proxy_tcp_forward(unsigned short origin_port, const char *target_host,
+                                      unsigned short target_port) {
+    return proxy_transport_register(CWIST_PROXY_TRANSPORT_TCP, origin_port, target_host,
+                                    target_port);
+}
+
+cwist_error_t cwist_proxy_udp_forward(unsigned short origin_port, const char *target_host,
+                                      unsigned short target_port) {
+    return proxy_transport_register(CWIST_PROXY_TRANSPORT_UDP, origin_port, target_host,
+                                    target_port);
 }
 
 /*
@@ -1667,9 +1693,10 @@ static void proxy_snapshot_config(void) {
 int cwist_proxy_listen(void) {
     unsigned short ports[CWIST_MULTIPORT_MAX_PORTS];
     size_t port_count = 0;
+    size_t transport_rule_count = cwist_proxy_transport_count();
 
     pthread_mutex_lock(&g_proxy_rules_mu);
-    if (g_proxy_started || g_proxy_rule_count == 0) {
+    if (g_proxy_started || (g_proxy_rule_count == 0 && transport_rule_count == 0)) {
         pthread_mutex_unlock(&g_proxy_rules_mu);
         return -1;
     }
@@ -1706,20 +1733,39 @@ int cwist_proxy_listen(void) {
     if (has_http && has_https) {
         fprintf(stderr,
                 "cwist_proxy: http:// and https:// origins cannot be served together yet\n");
+        g_proxy_started = false;
         return -1;
     }
     if (has_https && !have_cert) {
         fprintf(stderr, "cwist_proxy: https:// origins need cwist_proxy.cert_path/key_path\n");
+        g_proxy_started = false;
         return -1;
     }
     if (has_http && have_cert) {
         fprintf(stderr, "cwist_proxy: certificate configured but every origin is http://\n");
+        g_proxy_started = false;
         return -1;
     }
     bool tls = has_https || (!has_http && have_cert);
+    if (cwist_proxy_transport_start() != 0) {
+        g_proxy_started = false;
+        return -1;
+    }
+    if (port_count == 0) {
+        cwist_shutdown_install_handlers();
+        while (atomic_load(&g_cwist_running)) usleep(100000);
+        cwist_proxy_transport_stop();
+        cwist_shutdown_restore_handlers();
+        g_proxy_started = false;
+        return 0;
+    }
 
     cwist_app *root = proxy_build_front_app(tls);
-    if (!root) return -1;
+    if (!root) {
+        cwist_proxy_transport_stop();
+        g_proxy_started = false;
+        return -1;
+    }
     root->port = ports[0];
     g_proxy_front_apps[0] = root;
     g_proxy_front_app_count = 1;
@@ -1727,7 +1773,9 @@ int cwist_proxy_listen(void) {
         cwist_app *sub = cwist_multiport_get_app(&root, ports[i]);
         if (!sub) {
             cwist_app_destroy(root);
+            cwist_proxy_transport_stop();
             g_proxy_front_app_count = 0;
+            g_proxy_started = false;
             return -1;
         }
         g_proxy_front_apps[g_proxy_front_app_count++] = sub;
@@ -1744,8 +1792,10 @@ int cwist_proxy_listen(void) {
         rc = cwist_app_multiport(&root, ports[0], extra);
     }
 
+    cwist_proxy_transport_stop();
     cwist_app_internal_set_fallback(NULL, NULL);
     g_proxy_front_app_count = 0;
+    g_proxy_started = false;
     cwist_app_destroy(root); /* also releases detached multiport sub-apps */
     cwist_curl_global_release();
     return rc;
@@ -1759,6 +1809,7 @@ void cwist_proxy_reset(void) {
     g_proxy_rule_count = 0;
     g_proxy_started = false;
     pthread_mutex_unlock(&g_proxy_rules_mu);
+    cwist_proxy_transport_reset();
     cwist_proxy_config defaults = PROXY_DEFAULTS;
     cwist_proxy = defaults;
     g_proxy_cfg = defaults;
