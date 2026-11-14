@@ -1,8 +1,10 @@
 <map id="include/cwist/net/proxy/proxy.h" name="include/cwist/net/proxy/proxy.h">
-<area shape="rect" id="Node000001" title="Reverse proxy: forward HTTP/1.1, HTTP/2 and HTTP/3 requests to HTTP/1.1 upstreams." alt="" coords="5,5,179,45"/>
-<area shape="rect" id="Node000002" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="13,181,171,207"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="77,59,65,94,62,113,65,133,75,158,87,180,82,182,70,161,60,134,57,113,60,93,72,57"/>
-<area shape="rect" id="Node000003" href="$db/d7d/proxy__internal_8h.html" title="Reverse proxy internals exposed to the in&#45;tree unit tests." alt="" coords="74,93,222,133"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="114,56,138,92,133,95,110,58"/>
-<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="129,146,103,183,98,179,124,143"/>
+<area shape="rect" id="Node000001" title="Reverse proxy: forward HTTP/1.1, HTTP/2 and HTTP/3 requests to HTTP/1.1 upstreams." alt="" coords="53,5,227,45"/>
+<area shape="rect" id="Node000002" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="5,181,163,207"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="93,55,73,73,57,94,53,117,57,141,78,180,73,182,52,142,47,117,52,92,69,69,90,51"/>
+<area shape="rect" id="Node000003" href="$db/d7d/proxy__internal_8h.html" title="Reverse proxy internals exposed to the in&#45;tree unit tests." alt="" coords="66,93,214,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="143,59,143,93,137,93,137,59"/>
+<area shape="rect" id="Node000004" href="$d2/d62/transport_8c.html" title=" " alt="" coords="239,101,420,126"/>
+<area shape="poly" id="edge4_Node000001_Node000004" title=" " alt="" coords="195,49,305,98,303,103,193,53"/>
+<area shape="poly" id="edge3_Node000003_Node000002" title=" " alt="" coords="121,146,95,183,90,179,116,143"/>
 </map>
