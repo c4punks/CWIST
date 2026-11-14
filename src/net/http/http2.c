@@ -3164,19 +3164,22 @@ static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id, const unsigne
  * 6.5.2); an INITIAL_WINDOW_SIZE delta is propagated to every open stream's
  * send window and parked senders are woken.
  * @param hc Connection receiving the frame.
- * @param payload Frame payload (ignored for ACKs).
+ * @param payload Frame payload (ignored for acks).
  * @param len Length of @p payload.
- * @param ack Whether this is a SETTINGS ack (no-op).
- * @retval 0 Settings applied (or ack ignored).
- * @retval -1 Malformed frame or out-of-range value; caller sends GOAWAY.
+ * @param ack Whether this is a SETTINGS ack; RFC 7540 section 6.5 requires an
+ *            empty payload for acks.
+ * @retval 0 Settings applied, or a zero-length ack accepted.
+ * @retval H2_ERR_FRAME_SIZE_ERROR Payload is not a multiple of 6, or an ack
+ *         carries a non-empty payload.
+ * @retval H2_ERR_PROTOCOL_ERROR / H2_ERR_FLOW_CONTROL_ERROR Illegal setting value.
  */
 static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t len, bool ack) {
     if (ack) {
-        return 0;
+        return len == 0 ? 0 : H2_ERR_FRAME_SIZE_ERROR;
     }
 
     if (len % 6 != 0) {
-        return -1; /* FRAME_SIZE_ERROR */
+        return H2_ERR_FRAME_SIZE_ERROR;
     }
 
     for (size_t i = 0; i + 6 <= len; i += 6) {
@@ -3185,13 +3188,13 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
         switch (id) {
             case 0x1: /* SETTINGS_HEADER_TABLE_SIZE */ break;
             case 0x2: /* SETTINGS_ENABLE_PUSH */
-                if (value > 1) return -1; /* PROTOCOL_ERROR */
+                if (value > 1) return H2_ERR_PROTOCOL_ERROR;
                 break;
             case 0x3: /* SETTINGS_MAX_CONCURRENT_STREAMS */
                 hc->peer_max_concurrent_streams = value;
                 break;
             case 0x4: /* SETTINGS_INITIAL_WINDOW_SIZE */
-                if (value > 2147483647U) return -1; /* FLOW_CONTROL_ERROR */
+                if (value > 2147483647U) return H2_ERR_FLOW_CONTROL_ERROR;
                 {
                     int32_t delta = (int32_t)value - (int32_t)hc->peer_initial_window_size;
                     hc->peer_initial_window_size = value;
@@ -3204,7 +3207,7 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
                 }
                 break;
             case 0x5: /* SETTINGS_MAX_FRAME_SIZE */
-                if (value < 16384 || value > 16777215) return -1; /* PROTOCOL_ERROR */
+                if (value < 16384 || value > 16777215) return H2_ERR_PROTOCOL_ERROR;
                 hc->peer_max_frame_size = value;
                 break;
             case 0x6: /* SETTINGS_MAX_HEADER_LIST_SIZE */ break;
@@ -3703,8 +3706,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
 
         switch (type) {
             case CWIST_HTTP2_FRAME_SETTINGS: {
-                if (h2_handle_settings(hc, payload, len, flags & CWIST_HTTP2_FLAG_ACK) != 0) {
-                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                int settings_rc =
+                    h2_handle_settings(hc, payload, len, flags & CWIST_HTTP2_FLAG_ACK);
+                if (settings_rc != 0) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id,
+                                   (uint32_t)settings_rc);
                     connected = false;
                 } else if ((flags & CWIST_HTTP2_FLAG_ACK) == 0) {
                     if (h2_write_frame(hc, CWIST_HTTP2_FRAME_SETTINGS, CWIST_HTTP2_FLAG_ACK, 0,

@@ -1502,6 +1502,7 @@ TEST_TARGETS = test_worker_affinity \
                test_grpc_client_headers \
                test_grpc_client_padding \
                test_grpc_client_frame_limit \
+               test_grpc_client_settings_ack \
                test_grpc_client_windows \
                test_grpc_channel \
                test_dispatch_memory \
@@ -2701,6 +2702,10 @@ test_grpc_client_padding: $(LIB_NAME) tests/test_grpc_client_padding.c
 test_grpc_client_frame_limit: $(LIB_NAME) tests/test_grpc_client_frame_limit.c
 	$(CC) $(CFLAGS) -o test_grpc_client_frame_limit tests/test_grpc_client_frame_limit.c $(LIB_NAME) $(LIBS)
 	./test_grpc_client_frame_limit
+
+test_grpc_client_settings_ack: $(LIB_NAME) tests/test_grpc_client_settings_ack.c
+	$(CC) $(CFLAGS) -o test_grpc_client_settings_ack tests/test_grpc_client_settings_ack.c $(LIB_NAME) $(LIBS)
+	./test_grpc_client_settings_ack
 
 test_grpc_client_windows: $(LIB_NAME) tests/test_grpc_client_windows.c
 	$(CC) $(CFLAGS) -o test_grpc_client_windows tests/test_grpc_client_windows.c $(LIB_NAME) $(LIBS)
