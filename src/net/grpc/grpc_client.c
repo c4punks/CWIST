@@ -677,7 +677,10 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
 
     static const char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     if (grpc_client_write_all(c, preface, sizeof(preface) - 1, deadline) != 0) goto fail;
-    if (grpc_client_write_frame(c, H2_FRAME_SETTINGS, 0, 0, NULL, 0, deadline) != 0) goto fail;
+    static const uint8_t settings[] = {0, 2, 0, 0, 0, 0}; /* SETTINGS_ENABLE_PUSH = 0 */
+    if (grpc_client_write_frame(c, H2_FRAME_SETTINGS, 0, 0, settings, sizeof(settings), deadline) !=
+        0)
+        goto fail;
 
     /* The server's first frame must be SETTINGS; answer it, then keep
      * reading until our own SETTINGS ACK lands. */
@@ -994,7 +997,15 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             }
             break;
         case H2_FRAME_HEADERS: {
-            if (f.stream_id != call->stream_id) break;
+            if (f.stream_id != call->stream_id) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = 0x01; /* PROTOCOL_ERROR */
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+                break;
+            }
             uint8_t *block = NULL;
             size_t block_len = 0;
             int end_stream = 0;
@@ -1097,7 +1108,16 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             }
             break;
         }
-        default: break; /* PUSH_PROMISE, PRIORITY, unknown: ignore */
+        case H2_FRAME_PUSH_PROMISE: {
+            uint8_t goaway[8] = {0};
+            goaway[7] = 0x01; /* PROTOCOL_ERROR */
+            grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                    call->deadline_ms);
+            c->dead = 1;
+            rc = -1;
+            break;
+        }
+        default: break; /* PRIORITY and unknown extension frames */
     }
     cwist_free(f.payload);
     return rc;
