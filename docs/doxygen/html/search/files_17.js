@@ -18,7 +18,7 @@ var searchData=
   ['websocket_2emd_15',['websocket.md',['../de/d84/websocket_8md.html',1,'']]],
   ['websocket_5fasync_2ec_16',['websocket_async.c',['../d4/d57/websocket__async_8c.html',1,'']]],
   ['websocket_5fasync_2eh_17',['websocket_async.h',['../d6/dad/websocket__async_8h.html',1,'']]],
-  ['webtransport_2dserver_2emd_18',['webtransport-server.md',['../d9/dea/webtransport-server_8md.html',1,'']]],
+  ['webtransport_2dserver_2emd_18',['webtransport-server.md',['../df/df9/tutorials_2webtransport-server_8md.html',1,'(Global Namespace)'],['../d2/d98/ko_2tutorials_2webtransport-server_8md.html',1,'(Global Namespace)']]],
   ['worker_5faffinity_2eh_19',['worker_affinity.h',['../da/d0d/worker__affinity_8h.html',1,'']]],
   ['writer_5ffast_2ec_20',['writer_fast.c',['../d5/d23/writer__fast_8c.html',1,'']]],
   ['writer_5ffast_2eh_21',['writer_fast.h',['../d2/d7d/writer__fast_8h.html',1,'']]],

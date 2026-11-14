@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['설정_0',['런타임 설정',['../d5/d08/md_docs_2ko_2runtime-config.html',1,'']]]
+  ['만들기_0',['CWIST로 WebTransport 서버 만들기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['나누기_0',['1. 요청과 워커의 책임 나누기',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md718',1,'']]]
+  ['미들웨어_20cors_20logging_0',['4. 미들웨어 (CORS, Logging)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md523',1,'']]]
 ];

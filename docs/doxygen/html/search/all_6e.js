@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['벤치마크와_20측정_20방법_0',['5. 벤치마크와 측정 방법',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md668',1,'']]],
-  ['벤치마크_20측정_20방법_1',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
+  ['클라이언트_20사이드_20합성_0',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md532',1,'']]]
 ];

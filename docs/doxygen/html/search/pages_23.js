@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['참고_20문헌_0',['라틴방진 참고 문헌',['../da/d05/md_docs_2ko_2references_2latin__square__references.html',1,'']]]
+  ['서버_20만들기_0',['CWIST로 WebTransport 서버 만들기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html',1,'']]]
 ];

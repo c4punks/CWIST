@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['마방진_20洛書_0',['1. 낙서 마방진 (洛書)',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md695',1,'']]],
-  ['마이그레이션_1',['스키마 마이그레이션',['../d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md491',1,'']]],
-  ['마이그레이션_20sqlite_2',['5. 데이터베이스와 마이그레이션 (SQLite)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md865',1,'']]],
-  ['마치며_3',['마치며',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md874',1,'']]]
+  ['연결과_20응답_0',['연결과 응답',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md354',1,'']]],
+  ['연동_20실시간_20양방향_20통신_1',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md528',1,'']]]
 ];

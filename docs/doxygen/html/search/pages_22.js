@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['웹_20개발_20튜토리얼_20a_20to_20z_0',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]]
+  ['문헌_0',['라틴방진 참고 문헌',['../da/d05/md_docs_2ko_2references_2latin__square__references.html',1,'']]]
 ];

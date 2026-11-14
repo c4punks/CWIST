@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['덧붙이기_20복사_0',['덧붙이기 / 복사',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md356',1,'']]]
+  ['상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md404',1,'']]],
+  ['상태_1',['상태',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md382',1,'']]]
 ];

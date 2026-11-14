@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['때까지의_20권장_20처리_0',['계약이 복원될 때까지의 권장 처리',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636',1,'']]]
+  ['쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md379',1,'']]],
+  ['쌍_20덮기_1',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md380',1,'']]]
 ];

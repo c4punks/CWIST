@@ -108,8 +108,8 @@ $(document).ready(function(){initNavTree('d4/dc9/md_docs_2ko_2embedded_2stm32.ht
   <div class="headertitle"><div class="title">CWIST bare-metal STM32</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md621"></a> CWIST는 소켓 없이 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> 또는 raw-lwIP 어댑터를 구동하는 Cortex-M 경로를 제공합니다. 호스트 빌드와 같은 라우터, 미들웨어, 핸들러, JSON 도구, HTTP/1.1 파서를 사용하지만 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthread, epoll, C1M 리액터는 이식하지 않습니다.</p>
-<h1><a class="anchor" id="autotoc_md622"></a>
+<div class="textblock"><p><a class="anchor" id="autotoc_md347"></a> CWIST는 소켓 없이 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code> 또는 raw-lwIP 어댑터를 구동하는 Cortex-M 경로를 제공합니다. 호스트 빌드와 같은 라우터, 미들웨어, 핸들러, JSON 도구, HTTP/1.1 파서를 사용하지만 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, pthread, epoll, C1M 리액터는 이식하지 않습니다.</p>
+<h1><a class="anchor" id="autotoc_md348"></a>
 지원 대상과 검증 범위</h1>
 <ul>
 <li><b>참조 통합:</b> NUCLEO-H743ZI2(STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM, RMII Ethernet, TRNG). <code>example/stm32/</code>에 애플리케이션, HAL 포트 훅, lwIP 옵션, CubeMX 통합 및 플래싱 방법이 있습니다.</li>
@@ -119,7 +119,7 @@ $(document).ready(function(){initNavTree('d4/dc9/md_docs_2ko_2embedded_2stm32.ht
 <li><b>메모리 후보:</b> STM32H7을 우선으로 하고, 충분한 SRAM을 갖춘 F767/F429급을 검토할 수 있습니다. Cortex-M4F와 F429/F767은 아직 검증된 대상이 아닙니다. 실제 보드 수용 테스트는 수동 단계이며 QEMU 성공을 보드 성공으로 간주하면 안 됩니다.</li>
 </ul>
 <p>F0/F1/L0 및 약 128 KB 미만 SRAM 부품은 범위 밖입니다. 작은 부품은 plain HTTP부터 시작하고, HTTPS는 H7급 메모리 예산을 권장합니다.</p>
-<h1><a class="anchor" id="autotoc_md623"></a>
+<h1><a class="anchor" id="autotoc_md349"></a>
 펌웨어 입력 빌드</h1>
 <p>ARM EABI GCC와 newlib-nano를 설치한 후 실행합니다.</p>
 <div class="fragment"><div class="line">make CROSS_COMPILE=arm-none-eabi- CWIST_PLATFORM=baremetal CWIST_TINY=1 amalgamation fat-dist</div>
@@ -135,7 +135,7 @@ $(document).ready(function(){initNavTree('d4/dc9/md_docs_2ko_2embedded_2stm32.ht
 <div class="line">make baremetal-smoke       # qemu-arm 펌웨어 4종 실행</div>
 <div class="line">make baremetal-size-gate   # smoke + 크기/할당 예산 검사</div>
 </div><!-- fragment --><p><code>BAREMETAL_CROSS</code>와 <code>BAREMETAL_ARCH</code>로 다른 접두사 또는 Cortex-M CPU/FPU 프로파일을 선택할 수 있습니다. 서로 다른 ARM ABI로 만든 객체는 섞지 마십시오.</p>
-<h1><a class="anchor" id="autotoc_md624"></a>
+<h1><a class="anchor" id="autotoc_md350"></a>
 포트 훅과 런타임 계약</h1>
 <p>펌웨어는 <code><a class="el" href="../../da/d00/port_8h.html" title="Hooks a bare-metal firmware supplies to CWIST (issue #447).">cwist/sys/port.h</a></code>의 링크 타임 심벌을 제공해야 합니다.</p>
 <div class="fragment"><div class="line">uint64_t <a class="code hl_function" href="../../da/d00/port_8h.html#aa55c42241491b459c9ea265529c38e4a">cwist_port_monotonic_ns</a>(<span class="keywordtype">void</span>);</div>
@@ -145,7 +145,7 @@ $(document).ready(function(){initNavTree('d4/dc9/md_docs_2ko_2embedded_2stm32.ht
 </div><!-- fragment --><p><code><a class="el" href="../../da/d00/port_8h.html#a4e3716f7c991b336200a53504327d412" title="Fill a buffer with cryptographically secure random bytes.">cwist_port_entropy()</a></code>는 **필수**입니다. MCU의 RNG 주변장치를 읽고 실패 시 0이 아닌 값을 반환해야 합니다. 상수 시드나 클럭+<code>rand()</code> 대체는 허용하지 않습니다. 해시 플러딩 방어, 세션 ID, TLS가 이 엔트로피에 의존합니다.</p>
 <p>단조 시간 훅은 보통 SysTick, DWT 또는 타이머를 사용합니다. 로깅은 newlib의 <code>_write</code>를 통해 동기적으로 이루어지며 예제는 USART3로 별도 스레드 없이 출력합니다. 백그라운드 로거, 스케줄러, GC 스레드, RTOS 락 훅은 없습니다. lwIP 어댑터 호출과 콜백은 모두 lwIP 코어 컨텍스트에서 실행해야 합니다.</p>
 <p>RTC가 있으면 newlib의 <code>time()</code>/<code>_gettimeofday</code>를 제공하고, 없으면 CWIST가 RFC 9110에 따라 HTTP <code>Date</code> 헤더를 생략합니다. 정적 자산은 파일 시스템 대신 기존 컴파일 내장 자산 테이블을 사용합니다.</p>
-<h1><a class="anchor" id="autotoc_md625"></a>
+<h1><a class="anchor" id="autotoc_md351"></a>
 raw lwIP HTTP</h1>
 <p><code><a class="el" href="../../d7/d5d/lwip_8c.html" title="CWIST over lwIP&#39;s raw TCP API; see &lt;cwist/sys/port/lwip.h&gt;.">src/sys/port/lwip.c</a></code>를 펌웨어의 <code>lwipopts.h</code>와 함께 컴파일하고 lwIP 초기화 후 코어 컨텍스트에서 서버를 만듭니다.</p>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d5/d41/structcwist__lwip__config.html">cwist_lwip_config</a> cfg;</div>
@@ -162,7 +162,7 @@ raw lwIP HTTP</h1>
 <div class="ttc" id="astructcwist__lwip__config_html_ac941910eea6b66fe454bd5610297295b"><div class="ttname"><a href="../../d5/d41/structcwist__lwip__config.html#ac941910eea6b66fe454bd5610297295b">cwist_lwip_config::max_conns</a></div><div class="ttdeci">uint16_t max_conns</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d9a/lwip_8h_source.html#l00071">lwip.h:71</a></div></div>
 <div class="ttc" id="astructcwist__lwip__config_html_af67150cd1a35fb892c499674a261efc0"><div class="ttname"><a href="../../d5/d41/structcwist__lwip__config.html#af67150cd1a35fb892c499674a261efc0">cwist_lwip_config::max_header_bytes</a></div><div class="ttdeci">size_t max_header_bytes</div><div class="ttdef"><b>Definition</b> <a href="../../d4/d9a/lwip_8h_source.html#l00073">lwip.h:73</a></div></div>
 </div><!-- fragment --><p>Content-Length 프레이밍, keep-alive, 순서가 보장된 파이프라이닝, <code>Expect: 100-continue</code>, HEAD, idle timeout, 연결 수 제한, 400/413/431 응답을 지원합니다. Transfer-Encoding 요청 본문은 501을 반환합니다. 연결마다 한 번에 하나의 요청-응답을 처리하며 <code>tcp_write</code>, <code>tcp_sent</code>, <code>tcp_poll</code>로 back-pressure를 적용합니다. CubeMX 설정과 메인 루프는 <code>example/stm32/README.md</code>를 참고하십시오.</p>
-<h1><a class="anchor" id="autotoc_md626"></a>
+<h1><a class="anchor" id="autotoc_md352"></a>
 메모리 크기</h1>
 <p>아래 수치는 loopback 클라이언트와 테스트 버퍼를 포함한 <b>전체 테스트 펌웨어</b> 기준입니다. CWIST 단독 비용이 아니라 상한 예산으로 해석해야 합니다. 최신 예산과 측정값은 <code>scripts/ci/baremetal-budget.txt</code>에 기록합니다.</p>
 <table class="markdownTable">
@@ -178,23 +178,23 @@ raw lwIP HTTP</h1>
 <td class="markdownTableBodyNone">hello-tls   </td><td class="markdownTableBodyRight">138,564 B   </td><td class="markdownTableBodyRight">75,608 B   </td><td class="markdownTableBodyRight">121,256 B   </td><td class="markdownTableBodyRight">8,740 B   </td><td class="markdownTableBodyRight">0   </td></tr>
 </table>
 <p>인메모리 요청의 한 번은 <code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#aeb91a66106e8a027272fb5b711ac0ba7" title="Run the full router/middleware/handler pipeline on a raw HTTP/1.x request held in a memory buffer,...">cwist_app_dispatch_memory()</a></code>가 호출자에게 반환하는 응답 버퍼입니다. lwIP/TLS는 warm-up된 연결의 steady-state를 측정합니다. cJSON 핸들러처럼 애플리케이션이 할당하는 비용은 별도로 더해야 합니다.</p>
-<h2><a class="anchor" id="autotoc_md627"></a>
+<h2><a class="anchor" id="autotoc_md353"></a>
 요청 arena</h2>
 <p>요청과 응답 객체는 두 개의 arena를 사용합니다. 비호스트 빌드는 첫 사용 후 arena 구조체와 기본 크기 버퍼를 재활용하므로 반복 요청의 힙 단편화를 막습니다. 기본값은 8 KB generation 두 개이며, 최대 버퍼 4개와 구조체 4개를 캐시합니다.</p>
 <p>작은 부품에서는 공통 경로 용량을 빌드 시 조정할 수 있습니다.</p>
 <div class="fragment"><div class="line">make baremetal BAREMETAL_EXTRA_CFLAGS=-DCWIST_ARENA_DEFAULT_GENERATION_BYTES=4096</div>
 </div><!-- fragment --><p>generation을 초과하는 할당은 arena에서 <code>NULL</code>을 반환하고 호출자의 힙 fallback을 사용합니다. arena를 줄여도 요청 제한은 바뀌지 않으며, 핸들러나 반환 응답의 할당까지 없어지는 것은 아닙니다.</p>
-<h2><a class="anchor" id="autotoc_md628"></a>
+<h2><a class="anchor" id="autotoc_md354"></a>
 연결과 응답</h2>
 <p>어댑터는 listen 시점에 <code>max_conns</code> 슬롯의 정적 풀 한 개를 할당합니다. 슬롯 크기는 <code>sizeof(conn) + rx_buffer_bytes + tx_buffer_bytes</code>(기본 각 2048 B)이며, accept/close는 슬롯을 free list와 활성 목록 사이에서 옮길 뿐이므로 연결·응답 단위의 힙 할당이 없습니다. 32-bit ARM에서 슬롯의 제어 블록은 약 130바이트이며 다음 메모리가 추가됩니다.</p>
 <ul>
 <li>슬롯 고정 수신 버퍼(<code>rx_buffer_bytes</code>): 들어오지 않는 요청은 프로토콜 상한 이내여도 431/413으로 거부됩니다.</li>
-<li>슬롯 고정 송신 버퍼(<code>tx_buffer_bytes</code>): 작은 스트리밍 본문은 헤더 직후 직접 참조해 초기 ACK 지연을 피하고, 큰 본문은 peer의 ACK에 따라 제한된 버퍼의 chunk로 스트리밍합니다. 소유형 본문은 응답 객체를 유지하지만 애플리케이션 소유 포인터 본문은 스트리밍 전에 객체를 해제합니다.</li>
+<li>슬롯 고정 송신 버퍼(<code>tx_buffer_bytes</code>): 더 큰 응답은 peer의 ACK에 따라 버퍼를 chunk 단위로 스트리밍합니다. 소유형 본문은 응답 객체를 유지하지만 애플리케이션 소유 포인터 본문은 스트리밍 전에 객체를 해제하므로 응답 크기가 풀 크기에 영향을 주지 않습니다.</li>
 <li>lwIP의 PCB, pbuf, segment, timer pool</li>
 </ul>
 <p>풀 크기는 <code>max_conns * (conn + rx + tx)</code>로 계산하고 링커 맵으로 검증하십시오. 버퍼를 줄이면 요청 제한이 타이트해지고 응답 chunk가 늘어나는 대신 더 많은 연결을 수용할 수 있습니다. 현재 파서/직렬화기는 최소 16 KB의 메인 스택 여유를 권장하며, 최종 애플리케이션에서 다시 측정해야 합니다.</p>
 <p>TLS는 여기에 mbedTLS 세션, 최대 <code>MBEDTLS_SSL_IN_CONTENT_LEN + 2048</code>의 암호문 입력, HTTP 버퍼를 더합니다. 테스트 프로파일의 서버 측 TLS 세션은 어댑터 버퍼 전 약 25 KB입니다. 임의 클라이언트의 전체 크기 record를 받기 위해 입력 record 버퍼는 16 KB를 유지합니다.</p>
-<h2><a class="anchor" id="autotoc_md629"></a>
+<h2><a class="anchor" id="autotoc_md355"></a>
 lwIP pool</h2>
 <p>예제의 초기값입니다. 디버그 빌드에서는 링커 맵과 runtime pool 통계를 함께 보고 조정하십시오.</p>
 <table class="markdownTable">
@@ -214,11 +214,11 @@ lwIP pool</h2>
 <td class="markdownTableBodyNone"><code>TCP_SND_BUF</code>   </td><td class="markdownTableBodyRight"><code>2 * TCP_MSS</code>   </td><td class="markdownTableBodyNone">송신 back-pressure와 스트리밍 구간   </td></tr>
 </table>
 <p>제공하는 raw-only 예제는 <code>NO_SYS=1</code>, <code>LWIP_NETCONN=0</code>, <code>LWIP_SOCKET=0</code>이 필요합니다. <code>MEMP_NUM_TCP_PCB</code>는 리스너와 모든 수락 연결을 포함해야 합니다. DHCP, DNS 또는 netif를 추가하면 pool도 늘리십시오.</p>
-<h1><a class="anchor" id="autotoc_md630"></a>
+<h1><a class="anchor" id="autotoc_md356"></a>
 HTTPS</h1>
 <p>어댑터를 <code>CWIST_LWIP_TLS</code>로 빌드하고 mbedTLS 3.6을 링크한 다음 <code>cfg.tls</code>에 <code><a class="el" href="../../d4/d9a/lwip_8h.html#aa2dfb64bc973ea5eaed35da983e9ae38" title="Create a TLS server context from a certificate chain and private key.">cwist_lwip_tls_create()</a></code>의 컨텍스트를 지정합니다. 현재 프로파일은 TLS 1.2 서버이며 ECDHE-ECDSA P-256, AES-128-GCM-SHA256을 사용합니다. 인증서/키 파싱과 DRBG 시딩은 실패 시 닫히며, TLS 설정이 plaintext로 대체되지 않습니다.</p>
 <p>MCU의 CRYP/HASH/PKA 가속은 CWIST 훅이 아니라 펌웨어의 <code>MBEDTLS_*_ALT</code> 설정 영역입니다. TLS 1.3, 세션 티켓, 재접속은 포함하지 않습니다. 제품에 적용하기 전에 record 버퍼 크기를 검토하십시오.</p>
-<h1><a class="anchor" id="autotoc_md631"></a>
+<h1><a class="anchor" id="autotoc_md357"></a>
 제한사항</h1>
 <ul>
 <li><code><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a05f9a10f4d2ab307c211dd56d54fe7c3" title="Serve app on port until SIGTERM, SIGINT or cwist_shutdown_request(); blocks the calling thread.">cwist_app_listen()</a></code>, 소켓, worker pool, RTOS/netconn, W5500 어댑터는 없습니다.</li>

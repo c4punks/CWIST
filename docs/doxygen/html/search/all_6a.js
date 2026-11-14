@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['백업_20복원_0',['4. 재시작, 백업, 복원',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md609',1,'']]]
+  ['첫_20상승_0',['6. 메이저 버전의 첫 상승',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md404',1,'']]],
+  ['첫_20서버_20띄우기_1',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md520',1,'']]]
 ];

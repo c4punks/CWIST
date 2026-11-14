@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['릴리스_20관문_0',['구현과 릴리스 관문',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md598',1,'']]],
-  ['릴리스_20사전_20빌드_20에셋_1',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
+  ['역사적_20표_3a_20gusuryak_209차_20쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md379',1,'']]]
 ];

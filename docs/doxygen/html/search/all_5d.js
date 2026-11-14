@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['명시적인_20공개_20fixed_20계약으로_20http_20응답_20캐싱_20복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
-  ['명시적_20flush와_20회수_1',['7. 명시적 flush와 회수',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md646',1,'']]],
-  ['명시하기_2',['4. 호환성 변경을 명시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md595',1,'']]]
+  ['웹소켓_20연동_20실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md528',1,'']]],
+  ['웹_20개발_20튜토리얼_20a_20to_20z_1',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]]
 ];

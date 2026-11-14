@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['들어_20있는_20것_0',['WASM 빌드에 들어 있는 것',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md542',1,'']]]
+  ['시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md401',1,'']]],
+  ['시퀀스_20기본_1',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md400',1,'']]]
 ];

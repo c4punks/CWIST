@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['맞게_20고치기_20전에_0',['프로덕션에 맞게 고치기 전에',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md610',1,'']]],
-  ['맞게_20응답하기_1',['3. JSON을 검증하고 HTTP 의미에 맞게 응답하기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md715',1,'']]]
+  ['요약_0',['보안 정책 요약',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md527',1,'']]],
+  ['요청_20arena_1',['요청 arena',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md353',1,'']]]
 ];

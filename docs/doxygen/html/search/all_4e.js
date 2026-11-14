@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['디스패치하기_0',['JS에서 요청 디스패치하기',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md543',1,'']]]
+  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md528',1,'']]]
 ];

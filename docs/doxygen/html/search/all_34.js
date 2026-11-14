@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['곱_0',['2.3 합성수 차수: MacNeish 곱',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md690',1,'']]]
+  ['동적_20css_20합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md530',1,'']]]
 ];

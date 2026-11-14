@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['블로그_20만들기_0',['CWIST로 CRUD 블로그 만들기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html',1,'']]],
-  ['블록을_20그냥_20옮기지_20않는_20이유_1',['학습 블록을 그냥 옮기지 않는 이유',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md635',1,'']]]
+  ['표기_0',['4. 표기',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md402',1,'']]],
+  ['표_3a_20gusuryak_209차_20쌍_1',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md379',1,'']]]
 ];

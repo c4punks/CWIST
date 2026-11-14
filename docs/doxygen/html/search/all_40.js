@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['낙서_20마방진_20洛書_0',['1. 낙서 마방진 (洛書)',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md695',1,'']]]
+  ['및_20db_20암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md525',1,'']]],
+  ['및_20ssr_1',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md530',1,'']]]
 ];

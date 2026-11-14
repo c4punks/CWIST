@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['대상과_20검증_20범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md622',1,'']]],
-  ['대상_1',['WASI 대상',['../d0/d3c/md_docs_2ko_2api_2wasi.html',1,'']]],
-  ['대안_2',['검토한 대안',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md596',1,'']]]
+  ['사용_3a_20테스트에서_20런타임_20knob_20쌍_20덮기_0',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md380',1,'']]],
+  ['사이드_20합성_1',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md532',1,'']]]
 ];
