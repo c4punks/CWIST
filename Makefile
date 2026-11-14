@@ -259,7 +259,7 @@ endif
 # uses that session API; otherwise it uses the client-bidi-stream support of
 # stock lsquic (LSQUIC_WEBTRANSPORT_SERVER_SUPPORT), which cannot open server
 # streams. The client needs lsquic_wt.h. Object files rebuild on a change.
-CWIST_WEBTRANSPORT ?= $(if $(filter 1,$(CWIST_TINY)),none,client,server)
+CWIST_WEBTRANSPORT ?= $(if $(filter 1,$(CWIST_TINY)),none,server)
 comma := ,
 CWIST_WT_ROLES := $(strip $(subst $(comma), ,$(CWIST_WEBTRANSPORT)))
 ifeq ($(CWIST_WT_ROLES),1)
