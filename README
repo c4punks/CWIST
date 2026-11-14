@@ -21,6 +21,11 @@ bare-metal MCU firmware (example/wasm-service-worker, example/wasip2-kv,
 example/stm32f769-fortress). The WASM hosts are newer than the native
 server; each example's README says what is and is not guaranteed yet.
 
+Bare-metal embedded support includes raw-lwIP HTTP, optional mbedTLS HTTPS,
+static connection pools, and bounded response streaming on Cortex-M. The
+STM32F769I-DISCO build is validated on physical hardware; NUCLEO-H743ZI2 is a
+reference cross-build/QEMU integration.
+
 Two server modes, tuned for opposite things; pick per workload.
 CWIST reactor is the default (no env var needed); CWIST_C1M_MODE=0 selects
 CWIST Classic pool.
@@ -107,7 +112,11 @@ ships with the entire stack:
 ==================================================================
 
 Protocols       HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC),
-                WebSocket, WebTransport
+                WebSocket, WebTransport, WebRTC data channels
+
+Reverse proxy   Registered HTTP/1.1, h2/h2c, HTTP/3, WebSocket and
+                CONNECT routes, plus raw TCP and UDP forwarding for
+                Redis, NATS, Memcached, DNS, NTP, Syslog and TLS tunnels
 
 TLS / Security  BoringSSL, PQC hybrid groups, ECH, JWT,
                 DB Crypt, Monocypher
