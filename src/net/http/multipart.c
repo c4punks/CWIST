@@ -54,34 +54,72 @@ static int mp_on_header_value(multipart_parser *p, const char *at, size_t len) {
     return 0;
 }
 
+static bool mp_token_char(unsigned char c) {
+    return c > 32 && c < 127 && c != '\\' && c != '"' && !strchr("()<>@,;:/[]?={}", c);
+}
+
+static int mp_disposition_param(const char *value, const char *key, char *out, size_t cap) {
+    size_t key_len = strlen(key);
+    const char *p = value;
+    while (*p) {
+        while (isspace((unsigned char)*p) || *p == ';') p++;
+        if (strncasecmp(p, key, key_len) != 0) {
+            while (*p && *p != ';') p++;
+            continue;
+        }
+        const char *name_end = p + key_len;
+        if (*name_end != '=' && !isspace((unsigned char)*name_end)) {
+            while (*p && *p != ';') p++;
+            continue;
+        }
+        p = name_end;
+        while (isspace((unsigned char)*p)) p++;
+        if (*p != '=') {
+            while (*p && *p != ';') p++;
+            continue;
+        }
+        p++;
+        while (isspace((unsigned char)*p)) p++;
+
+        size_t out_len = 0;
+        if (*p == '"') {
+            p++;
+            bool closed = false;
+            while (*p) {
+                if (*p == '"') {
+                    closed = true;
+                    break;
+                }
+                if (*p == '\\') {
+                    p++;
+                    if (!*p) return -1;
+                }
+                if (out_len + 1 >= cap) return -1;
+                out[out_len++] = *p++;
+            }
+            if (!closed) return -1;
+        } else {
+            while (*p && *p != ';' && !isspace((unsigned char)*p)) {
+                if (!mp_token_char((unsigned char)*p) || out_len + 1 >= cap) return -1;
+                out[out_len++] = *p++;
+            }
+        }
+        out[out_len] = '\0';
+        return 1;
+    }
+    return 0;
+}
+
 /** Finalize one complete header pair without accepting truncated values. */
 static int mp_parse_headers(mp_parse_ctx *ctx) {
     ctx->header_field[ctx->header_field_len] = '\0';
     ctx->header_value[ctx->header_value_len] = '\0';
 
     if (strcasecmp(ctx->header_field, "Content-Disposition") == 0) {
-        const char *name_tag = strstr(ctx->header_value, "name=\"");
-        if (name_tag) {
-            name_tag += 6;
-            const char *name_end = strchr(name_tag, '"');
-            if (name_end) {
-                size_t nlen = (size_t)(name_end - name_tag);
-                if (nlen >= sizeof(ctx->name)) return 1;
-                memcpy(ctx->name, name_tag, nlen);
-                ctx->name[nlen] = '\0';
-            }
-        }
-        const char *filename_tag = strstr(ctx->header_value, "filename=\"");
-        if (filename_tag) {
-            filename_tag += 10;
-            const char *filename_end = strchr(filename_tag, '"');
-            if (filename_end) {
-                size_t flen = (size_t)(filename_end - filename_tag);
-                if (flen >= sizeof(ctx->filename)) return 1;
-                memcpy(ctx->filename, filename_tag, flen);
-                ctx->filename[flen] = '\0';
-            }
-        }
+        if (mp_disposition_param(ctx->header_value, "name", ctx->name, sizeof(ctx->name)) < 0 ||
+            mp_disposition_param(ctx->header_value, "filename", ctx->filename,
+                                 sizeof(ctx->filename)) < 0)
+            return 1;
     } else if (strcasecmp(ctx->header_field, "Content-Type") == 0) {
         size_t vlen = strlen(ctx->header_value);
         if (vlen >= sizeof(ctx->content_type)) return 1;
