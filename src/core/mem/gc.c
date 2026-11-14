@@ -965,7 +965,8 @@ static cwist_conn_owner_t *cwist_conn_owner_get(bool create) {
      * time: most processes never enable full-GC). */
     if (!atomic_exchange_explicit(&g_conn_hooks_registered, true, memory_order_acq_rel)) {
         atexit(cwist_conn_registry_atexit);
-        pthread_atfork(cwist_conn_atfork_prepare, cwist_conn_atfork_parent, cwist_conn_atfork_child);
+        pthread_atfork(cwist_conn_atfork_prepare, cwist_conn_atfork_parent,
+                       cwist_conn_atfork_child);
     }
     return owner;
 }
@@ -996,7 +997,8 @@ void cwist_conn_registry_track(void *handle, cwist_conn_close_fn close_fn) {
         size_t mask = g_conn_cap - 1;
         size_t j = cwist_conn_slot(handle, mask);
         while (g_conn_slots[j].handle) j = (j + 1) & mask;
-        g_conn_slots[j] = (cwist_conn_entry_t){.handle = handle, .close_fn = close_fn, .owner = owner};
+        g_conn_slots[j] =
+            (cwist_conn_entry_t){.handle = handle, .close_fn = close_fn, .owner = owner};
         g_conn_count++;
     }
     pthread_mutex_unlock(&g_conn_registry_lock);
@@ -1031,6 +1033,18 @@ bool cwist_conn_registry_adopt(void *handle) {
     if (i != SIZE_MAX) g_conn_slots[i].owner = owner;
     pthread_mutex_unlock(&g_conn_registry_lock);
     return i != SIZE_MAX;
+}
+
+bool cwist_conn_registry_disown(void *handle) {
+    if (!handle || !cwist_full_gc_enabled()) return false;
+    cwist_conn_owner_t *owner = cwist_conn_owner_get(false);
+    if (!owner) return false;
+    pthread_mutex_lock(&g_conn_registry_lock);
+    size_t i = cwist_conn_find_locked(handle);
+    bool disowned = i != SIZE_MAX && g_conn_slots[i].owner == owner;
+    if (disowned) g_conn_slots[i].owner = NULL;
+    pthread_mutex_unlock(&g_conn_registry_lock);
+    return disowned;
 }
 
 /**

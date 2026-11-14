@@ -178,9 +178,13 @@ cwist_async *cwist_async_defer(cwist_http_request *req, cwist_http_response *res
     if (req->https_conn) {
         a->https_conn = req->https_conn;
         ((cwist_https_connection *)req->https_conn)->deferred = true;
-        /* Only an HTTP/1.1 completion takes the conn itself; an h2 stream's
-         * completion goes through h2_queue and the h2 loop keeps the conn. */
-        if (!req->h2_queue) t_https_deferred = true;
+        /* Deferred TLS exchanges complete on their producer and re-enter
+         * through the HTTPS pool; only the async shell leaves the reactor. */
+        if (conn) {
+            a->reactor = NULL;
+            a->conn = NULL;
+        }
+        if (!req->h2_queue && !conn) t_https_deferred = true;
     }
 #ifdef CWIST_HTTP3
     if (t_h3_target.req == req && t_h3_target.q && t_h3_target.p) {
@@ -352,7 +356,8 @@ static void cwist_async_complete(cwist_async *a) {
     }
 #endif
 
-    if (a->https_conn) {
+#ifndef CWIST_PLATFORM_NO_PROC
+    if (a->https_conn && !a->reactor) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
         bool ok;
         if (a->streamed) {
@@ -370,15 +375,16 @@ static void cwist_async_complete(cwist_async *a) {
         } else {
             cwist_https_close_connection(conn);
         }
-    } else if (a->orphaned) {
+    } else
+#endif
+        if (a->orphaned) {
         /* The server stopped and destroyed the worker reactor this
          * connection was parked on: nothing can send on it or re-arm it any
          * more, so close it. */
         cwist_http_async_close_orphan(a->client_fd, a->conn);
     } else if (a->reactor) {
         if (a->streamed) {
-            cwist_http_async_finish_stream(a->client_fd, a->reactor, a->conn,
-                                           keep && a->stream_ok);
+            cwist_http_async_finish_stream(a->client_fd, a->reactor, a->conn, keep && a->stream_ok);
         } else {
             /* Resumable write: on a partial send the remainder is parked on a
              * POLLOUT slot and the reactor thread is freed immediately; the
@@ -547,11 +553,14 @@ bool cwist_async_stream_start(cwist_async *a, cwist_http_response *res, bool chu
     res->keep_alive = keep;
     res->stream_mode = chunked;
 
+#ifndef CWIST_PLATFORM_NO_PROC
     if (a->https_conn) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
         cwist_error_t err = cwist_https_send_response_head(conn, res);
         a->stream_ok = cwist_error_is_ok(&err);
-    } else {
+    } else
+#endif
+    {
         cwist_error_t err = cwist_http_send_response_head(a->client_fd, res);
         a->stream_ok = (err.error.err_i16 == 0);
     }
@@ -565,6 +574,7 @@ bool cwist_async_stream_write(cwist_async *a, const void *data, size_t len, bool
         a->stream_ok = false;
         return false;
     }
+#ifndef CWIST_PLATFORM_NO_PROC
     if (a->https_conn) {
         cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
         if (chunked) {
@@ -581,7 +591,9 @@ bool cwist_async_stream_write(cwist_async *a, const void *data, size_t len, bool
             a->stream_ok = false;
             return false;
         }
-    } else {
+    } else
+#endif
+    {
         int rc = chunked ? cwist_http_write_chunk(a->client_fd, data, len)
                          : cwist_http_write_raw(a->client_fd, data, len);
         if (rc != 0) {
@@ -596,10 +608,13 @@ void cwist_async_stream_finish(cwist_async *a, bool ok, bool chunked) {
     if (!a || !a->streamed) return;
     bool final_ok = ok && a->stream_ok;
     if (final_ok && chunked) {
+#ifndef CWIST_PLATFORM_NO_PROC
         if (a->https_conn) {
             cwist_https_connection *conn = (cwist_https_connection *)a->https_conn;
             if (cwist_https_write_raw(conn, "0\r\n\r\n", 5) != 0) final_ok = false;
-        } else {
+        } else
+#endif
+        {
             if (cwist_http_write_raw(a->client_fd, "0\r\n\r\n", 5) != 0) final_ok = false;
         }
     }

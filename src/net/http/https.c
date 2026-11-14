@@ -8,6 +8,7 @@
 #include <cwist/core/mem/gc.h>
 #include <cwist/sys/app/shutdown.h>
 #include "../../core/utils/buffer.h"
+#include "../../core/mem/gc_internal.h"
 #include "tls_chain.h"
 #include "async_internal.h"
 #include <openssl/ssl.h>
@@ -688,6 +689,28 @@ bool cwist_https_park(cwist_https_connection *conn, uint64_t idle_ms, cwist_http
 static void https_park_stop(void) {}
 static void https_park_reopen(void) {}
 #endif
+
+bool cwist_https_reactor_handoff(cwist_https_connection *conn, cwist_async_handler_t handler,
+                                 void *ctx) {
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char *env = getenv("CWIST_HTTPS_REACTOR");
+        enabled = !(env && (env[0] == '0' || strcmp(env, "false") == 0));
+    }
+    if (!enabled || !conn || conn->negotiated_protocol != CWIST_HTTPS_PROTOCOL_HTTP11) {
+        return false;
+    }
+    cwist_free(conn->read_buf);
+    conn->read_buf = NULL;
+    conn->buf_len = 0;
+    bool disowned = cwist_conn_registry_disown(conn);
+    if (!cwist_http_pool_submit_https_async(conn, handler, ctx)) {
+        if (disowned) cwist_conn_registry_adopt(conn);
+        return false;
+    }
+    t_https_parked = true;
+    return true;
+}
 
 bool cwist_https_yield(cwist_https_connection *conn) {
     if (!conn || conn->fd < 0 || !conn->pool_handler || !g_https_pool_initialized) return false;
@@ -1715,6 +1738,9 @@ static cwist_error_t https_wrap_established(cwist_https_context *ctx, int client
     memset(*conn, 0, sizeof(**conn));
     (*conn)->fd = client_fd;
     (*conn)->ssl = ssl;
+#ifndef CWIST_TLS_MBEDTLS
+    SSL_set_mode(ssl, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_ENABLE_PARTIAL_WRITE);
+#endif
     (*conn)->read_buf = cwist_alloc(CWIST_HTTP_READ_BUFFER_SIZE);
     if (!(*conn)->read_buf) {
         cwist_free(*conn);
@@ -2466,8 +2492,7 @@ bool cwist_tls_group_is_pq(uint16_t group) {
         case SSL_GROUP_MLKEM1024: return true;
 #endif
         case 0x11eb: /* SecP256r1MLKEM768 */
-        case 0x11ed: /* SecP384r1MLKEM1024 */
-            return true;
+        case 0x11ed: /* SecP384r1MLKEM1024 */ return true;
         default: return false;
     }
 }
