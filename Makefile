@@ -366,6 +366,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
        src/net/proxy/proxy.c \
+       src/net/proxy/transport.c \
        src/net/http/https.c \
        src/net/http/https_upgrade_hook.c \
        src/net/http/tls_chain.c \
@@ -1483,6 +1484,7 @@ TEST_TARGETS = test_worker_affinity \
                test_scheduler \
                test_async_defer \
                test_proxy \
+               test_proxy_transport \
                test_async_after_shutdown \
                test_async_listener_rearm \
                test_async_file_park \
@@ -2615,6 +2617,10 @@ test_proxy: $(LIB_NAME) tests/test_proxy.c
 	$(CC) $(CFLAGS) -o test_proxy tests/test_proxy.c $(LIB_NAME) $(LIBS)
 	./test_proxy
 	CWIST_C1M_MODE=0 ./test_proxy
+
+test_proxy_transport: $(LIB_NAME) tests/test_proxy_transport.c
+	$(CC) $(CFLAGS) -o test_proxy_transport tests/test_proxy_transport.c $(LIB_NAME) $(LIBS)
+	./test_proxy_transport
 
 test_async_defer: $(LIB_NAME) tests/test_async_defer.c
 	$(CC) $(CFLAGS) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
