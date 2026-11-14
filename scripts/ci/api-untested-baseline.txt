@@ -41,7 +41,6 @@ cwist_grpc_call_retry_pushback_ms
 cwist_grpc_call_start_ex
 cwist_grpc_call_status
 cwist_grpc_channel_call_cancel
-cwist_grpc_client_dead
 cwist_grpc_routes_clone
 cwist_grpc_routes_destroy
 cwist_grpc_stream_set_retry_pushback
