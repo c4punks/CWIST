@@ -690,6 +690,11 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
             server_settings = 1;
             rc = grpc_client_apply_settings(c, f.payload, f.len, deadline);
         } else if (f.type == H2_FRAME_SETTINGS) {
+            /* RFC 7540 section 6.5: a SETTINGS ack must carry an empty payload. */
+            if (f.len != 0) {
+                cwist_free(f.payload);
+                goto fail;
+            }
             our_ack = 1;
         } else if (f.type == H2_FRAME_PING && !(f.flags & H2_FLAG_ACK) && f.len == 8) {
             rc = grpc_client_write_frame(c, H2_FRAME_PING, H2_FLAG_ACK, 0, f.payload, 8, deadline);
@@ -905,6 +910,8 @@ static int grpc_client_pump(cwist_grpc_call *call) {
         case H2_FRAME_SETTINGS:
             if (!(f.flags & H2_FLAG_ACK))
                 rc = grpc_client_apply_settings(c, f.payload, f.len, call->deadline_ms);
+            else if (f.len != 0)
+                rc = -1; /* RFC 7540 section 6.5: ack payload must be empty */
             break;
         case H2_FRAME_PING:
             if (!(f.flags & H2_FLAG_ACK) && f.len == 8)

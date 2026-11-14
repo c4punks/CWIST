@@ -2125,8 +2125,72 @@ static void test_http2_oversized_frame(uint8_t type, bool raise_peer_max) {
     printf("Passed HTTP/2 oversized frame type 0x%02x rejection.\n", type);
 }
 
+/**
+ * @brief RFC 7540 section 6.5: a SETTINGS ack with a non-empty payload is a
+ * connection error of type FRAME_SIZE_ERROR.
+ *
+ * The client completes the preface with a valid empty SETTINGS frame, then
+ * sends an ACK carrying a 6-byte payload.  The server must answer with
+ * GOAWAY(FRAME_SIZE_ERROR) instead of ignoring the ack.
+ */
+static void test_http2_settings_ack_payload(void) {
+    printf("Testing HTTP/2 SETTINGS ACK with non-empty payload...\n");
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+
+    test_http2_server_ctx server_ctx = {.fd = sv[0], .result = make_error(CWIST_ERR_INT16)};
+    pthread_t tid;
+    assert(pthread_create(&tid, NULL, http2_server_thread, &server_ctx) == 0);
+
+    SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(client_ctx != NULL);
+    SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+    SSL *client = SSL_new(client_ctx);
+    assert(client != NULL);
+    assert(SSL_set_fd(client, sv[1]) == 1);
+    assert(SSL_connect(client) == 1);
+
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
+                                                   0x00, 0x00, 0x00, 0x00};
+    /* SETTINGS ACK (flag 0x1) with a 6-byte payload: header + one entry. */
+    static const unsigned char settings_ack_with_payload[] = {
+        0x00, 0x00, 0x06, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x04, 0x00, 0x00, 0x00, 0x64};
+
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
+    assert(ssl_write_all(client, settings_ack_with_payload,
+                         sizeof(settings_ack_with_payload)) == 0);
+
+    bool saw_goaway = false;
+    uint32_t goaway_err = 0xffffffffu;
+    for (int i = 0; i < 16 && !saw_goaway; ++i) {
+        unsigned char hdr[9];
+        if (ssl_read_exact(client, hdr, sizeof(hdr)) != 0) break;
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | (uint32_t)hdr[2];
+        unsigned char payload[64];
+        assert(len <= sizeof(payload));
+        if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x07 && len >= 8) {
+            goaway_err = ((uint32_t)payload[4] << 24) | ((uint32_t)payload[5] << 16) |
+                         ((uint32_t)payload[6] << 8) | payload[7];
+            saw_goaway = true;
+        }
+    }
+
+    SSL_shutdown(client);
+    SSL_free(client);
+    SSL_CTX_free(client_ctx);
+    close(sv[1]);
+    pthread_join(tid, NULL);
+    assert(saw_goaway && goaway_err == 0x6);
+    printf("Passed HTTP/2 SETTINGS ACK payload rejection.\n");
+}
+
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
+    test_http2_settings_ack_payload();
     test_http2_roundtrip();
     test_http2_large_body_interleave();
     test_http2_ping();
