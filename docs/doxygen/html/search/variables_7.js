@@ -28,6 +28,6 @@ var searchData=
   ['http3_5fenabled_25',['http3_enabled',['../dd/dcc/structcwist__https__context.html#ae5fb8260765d956691b50f886d1bbc7a',1,'cwist_https_context::http3_enabled'],['../db/d95/structcwist__https__connection.html#afdf3f82e9168047d62d064540163dc95',1,'cwist_https_connection::http3_enabled']]],
   ['http_5fauto_5fpromote_26',['http_auto_promote',['../df/dd0/structcwist__proxy__config.html#a8a654bb3b49b3b2df15aabb29fd3fa82',1,'cwist_proxy_config']]],
   ['http_5fonly_27',['http_only',['../db/d11/structcwist__cookie__options.html#ab0b5e91e7c6e7e8a9bb26666872ed551',1,'cwist_cookie_options']]],
-  ['https_5fconn_28',['https_conn',['../dd/d68/structcwist__http__request.html#aa66fbe825b5f747dd76c893f0d09fc02',1,'cwist_http_request']]],
+  ['https_5fconn_28',['https_conn',['../dd/d68/structcwist__http__request.html#aa66fbe825b5f747dd76c893f0d09fc02',1,'cwist_http_request::https_conn'],['../db/d8a/structcwist__http__async__conn.html#ae42aeba35889090bd4924ff4de2d0ff9',1,'cwist_http_async_conn::https_conn']]],
   ['https_5frequest_5fhandler_29',['https_request_handler',['../dc/da0/structcwist__app.html#aab6d5756669e87d45094b8cbb75fb34f',1,'cwist_app']]]
 ];

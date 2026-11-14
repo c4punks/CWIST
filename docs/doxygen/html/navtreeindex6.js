@@ -1,5 +1,7 @@
 var NAVTREEINDEX6 =
 {
+"d4/d54/grpc__client_8c.html#abdfc7855683d1154beefc4785714ed3f":[96,0,2,2,2,2,36],
+"d4/d54/grpc__client_8c.html#abe847a9b57494bf66a1b60e870b8307f":[96,0,2,2,2,2,23],
 "d4/d54/grpc__client_8c.html#ac36b0c87fd7beb99465f842ebebd3ff7":[96,0,2,2,2,2,22],
 "d4/d54/grpc__client_8c.html#acc3275ede6828445a3f50fcb652e6a3f":[96,0,2,2,2,2,12],
 "d4/d54/grpc__client_8c.html#ad5db76f8a96e35b7b42ec327845b6184":[96,0,2,2,2,2,16],
@@ -247,7 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d11/md_docs_2api_2sql.html#autotoc_md170":[10,0],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md171":[10,0,5],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md172":[10,0,6],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md173":[10,0,7],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md174":[10,0,8],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md175":[10,0,9]
+"d5/d11/md_docs_2api_2sql.html#autotoc_md173":[10,0,7]
 };
