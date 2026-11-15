@@ -24,7 +24,7 @@ server; each example's README says what is and is not guaranteed yet.
 Bare-metal embedded support includes raw-lwIP HTTP, optional mbedTLS HTTPS,
 static connection pools, and bounded response streaming on Cortex-M. The
 STM32F769I-DISCO build is validated on physical hardware; NUCLEO-H743ZI2 is a
-reference cross-build/QEMU integration.
+reference cross-build/QEMU integration; STM32F429I-DISCO is planned.
 
 Two server modes, tuned for opposite things; pick per workload.
 CWIST reactor is the default (no env var needed); CWIST_C1M_MODE=0 selects
