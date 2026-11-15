@@ -172,11 +172,14 @@ needed, and the per-run details are in
 [docs/performance/https-c100k.md](docs/performance/https-c100k.md) and
 [docs/c1m-file-limits.md](docs/c1m-file-limits.md).
 
-Known limits of the async path: HTTPS still runs the request phase on pool
-threads, a handler that writes faster than the socket drains waits inside the
-reactor thread (bounded by `CWIST_HTTP_TIMEOUT_MS`). Idle cleartext
-keep-alive connections are closed by a per-worker sweep timer once they wait
-longer than `CWIST_HTTP_KEEP_ALIVE_TIMEOUT` (default 15 s), counted in
+On the async path, established HTTP/1.1 TLS connections are served on the C1M
+reactor by default (`CWIST_HTTPS_REACTOR=1`). TLS handshakes and HTTP/2
+requests continue to use HTTPS pool threads; setting `CWIST_HTTPS_REACTOR=0`
+restores pool-based HTTP/1.1 handling. A handler that writes faster than the
+socket drains waits inside the reactor thread (bounded by
+`CWIST_HTTP_TIMEOUT_MS`). Idle cleartext keep-alive connections are closed by
+a per-worker sweep timer once they wait longer than
+`CWIST_HTTP_KEEP_ALIVE_TIMEOUT` (default 15 s), counted in
 `cwist_http_idle_reaped_total`.
 
 ## Why C, when Axum and Gin exist?
