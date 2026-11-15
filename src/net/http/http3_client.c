@@ -1011,7 +1011,12 @@ static SSL_CTX *h3c_get_ssl_ctx(void *peer_ctx, const struct sockaddr *local) {
 /* Client API                                                         */
 /* ------------------------------------------------------------------ */
 
+static int g_h3c_fail_engine_new = 0;
+
 static lsquic_engine_t *h3c_engine_new(cwist_http3_client *client) {
+    if (g_h3c_fail_engine_new) {
+        return NULL;
+    }
     struct lsquic_engine_settings settings;
     lsquic_engine_init_settings(&settings, LSENG_HTTP);
     settings.es_versions = (1 << LSQVER_I001) | (1 << LSQVER_I002);
@@ -1196,8 +1201,32 @@ void cwist_http3_client_enable_0rtt(cwist_http3_client *client, int enabled) {
     SSL_CTX_set_early_data_enabled(client->ssl_ctx, enabled ? 1 : 0);
 }
 
-void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled) {
-    if (!client || client->conn || client->datagram_enabled == !!enabled) return;
+#ifndef EINVAL
+#define EINVAL 22
+#endif
+#ifndef EBUSY
+#define EBUSY 16
+#endif
+#ifndef ENOMEM
+#define ENOMEM 12
+#endif
+#ifndef ENOSYS
+#define ENOSYS 38
+#endif
+
+cwist_error_t cwist_http3_client_enable_datagrams_checked(cwist_http3_client *client, int enabled) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!client) {
+        err.error.err_i16 = EINVAL;
+        return err;
+    }
+    if (client->conn) {
+        err.error.err_i16 = EBUSY;
+        return err;
+    }
+    if (client->datagram_enabled == !!enabled) {
+        return err;
+    }
 
     int previous = client->datagram_enabled;
     client->datagram_enabled = !!enabled;
@@ -1211,20 +1240,37 @@ void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled
 #ifdef CWIST_WEBTRANSPORT_CLIENT
         client->dgc_enabled = previous_dgc;
 #endif
-        return;
+        err.error.err_i16 = ENOMEM;
+        return err;
     }
     lsquic_engine_destroy(client->engine);
     client->engine = engine;
+    return err;
 }
 
-int cwist_http3_client_enable_datagram_channel(cwist_http3_client *client, int enabled) {
+void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled) {
+    (void)cwist_http3_client_enable_datagrams_checked(client, enabled);
+}
+
+cwist_error_t cwist_http3_client_enable_datagram_channel_checked(cwist_http3_client *client, int enabled) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
 #ifndef CWIST_WEBTRANSPORT_CLIENT
     (void)client;
     (void)enabled;
-    return -1;
+    err.error.err_i16 = ENOSYS;
+    return err;
 #else
-    if (!client || client->conn) return -1;
-    if (client->dgc_enabled == !!enabled && (!enabled || client->datagram_enabled)) return 0;
+    if (!client) {
+        err.error.err_i16 = EINVAL;
+        return err;
+    }
+    if (client->conn) {
+        err.error.err_i16 = EBUSY;
+        return err;
+    }
+    if (client->dgc_enabled == !!enabled && (!enabled || client->datagram_enabled)) {
+        return err;
+    }
     int prev_dg = client->datagram_enabled, prev_dgc = client->dgc_enabled;
     client->dgc_enabled = !!enabled;
     if (enabled) client->datagram_enabled = 1;
@@ -1232,12 +1278,18 @@ int cwist_http3_client_enable_datagram_channel(cwist_http3_client *client, int e
     if (!engine) {
         client->datagram_enabled = prev_dg;
         client->dgc_enabled = prev_dgc;
-        return -1;
+        err.error.err_i16 = ENOMEM;
+        return err;
     }
     lsquic_engine_destroy(client->engine);
     client->engine = engine;
-    return 0;
+    return err;
 #endif
+}
+
+int cwist_http3_client_enable_datagram_channel(cwist_http3_client *client, int enabled) {
+    cwist_error_t err = cwist_http3_client_enable_datagram_channel_checked(client, enabled);
+    return cwist_error_is_ok(&err) ? 0 : -1;
 }
 
 /* ------------------------------------------------------------------ */

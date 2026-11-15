@@ -101,6 +101,101 @@ int main(void) {
     assert(stats.queue_depth == 0);
 
     pthread_mutex_destroy(&client.dgram_mtx);
+
+    /* Test checked configuration APIs (Issue #603) */
+    /* 1. NULL client */
+    cwist_error_t err_null = cwist_http3_client_enable_datagrams_checked(NULL, 1);
+    assert(!cwist_error_is_ok(&err_null));
+    assert(err_null.error.err_i16 == EINVAL);
+
+    err_null = cwist_http3_client_enable_datagram_channel_checked(NULL, 1);
+    assert(!cwist_error_is_ok(&err_null));
+    assert(err_null.error.err_i16 == EINVAL);
+
+    /* 2. Active-connection rejection */
+    cwist_http3_client mock_client;
+    memset(&mock_client, 0, sizeof(mock_client));
+    mock_client.conn = (void *)0x1;
+
+    cwist_error_t err_busy = cwist_http3_client_enable_datagrams_checked(&mock_client, 1);
+    assert(!cwist_error_is_ok(&err_busy));
+    assert(err_busy.error.err_i16 == EBUSY);
+
+    err_busy = cwist_http3_client_enable_datagram_channel_checked(&mock_client, 1);
+    assert(!cwist_error_is_ok(&err_busy));
+    assert(err_busy.error.err_i16 == EBUSY);
+
+    /* 3. Injected engine-creation failure */
+    memset(&mock_client, 0, sizeof(mock_client));
+    mock_client.datagram_enabled = 0;
+    g_h3c_fail_engine_new = 1;
+
+    cwist_error_t err_oom = cwist_http3_client_enable_datagrams_checked(&mock_client, 1);
+    assert(!cwist_error_is_ok(&err_oom));
+    assert(err_oom.error.err_i16 == ENOMEM);
+    assert(mock_client.datagram_enabled == 0);
+
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+    err_oom = cwist_http3_client_enable_datagram_channel_checked(&mock_client, 1);
+    assert(!cwist_error_is_ok(&err_oom));
+    assert(err_oom.error.err_i16 == ENOMEM);
+    assert(mock_client.dgc_enabled == 0);
+#endif
+
+    g_h3c_fail_engine_new = 0;
+
+    /* 4. Pre-connection changes with live client */
+    cwist_http3_client *live = cwist_http3_client_create();
+    if (live) {
+        assert(live->datagram_enabled == 0);
+
+        /* Successful pre-connection enable */
+        cwist_error_t ok_err = cwist_http3_client_enable_datagrams_checked(live, 1);
+        assert(cwist_error_is_ok(&ok_err));
+        assert(live->datagram_enabled == 1);
+
+        /* Idempotent re-configuration */
+        ok_err = cwist_http3_client_enable_datagrams_checked(live, 1);
+        assert(cwist_error_is_ok(&ok_err));
+        assert(live->datagram_enabled == 1);
+
+        /* Successful toggle back to disabled */
+        ok_err = cwist_http3_client_enable_datagrams_checked(live, 0);
+        assert(cwist_error_is_ok(&ok_err));
+        assert(live->datagram_enabled == 0);
+
+        /* Compatibility void wrapper */
+        cwist_http3_client_enable_datagrams(live, 1);
+        assert(live->datagram_enabled == 1);
+
+        /* Active connection rejection on live client */
+        live->conn = (void *)0x1;
+        cwist_error_t live_busy = cwist_http3_client_enable_datagrams_checked(live, 0);
+        assert(!cwist_error_is_ok(&live_busy));
+        assert(live_busy.error.err_i16 == EBUSY);
+        assert(live->datagram_enabled == 1);
+        live->conn = NULL;
+
+        /* Injected failure on live client restores previous state */
+        g_h3c_fail_engine_new = 1;
+        cwist_error_t live_oom = cwist_http3_client_enable_datagrams_checked(live, 0);
+        assert(!cwist_error_is_ok(&live_oom));
+        assert(live_oom.error.err_i16 == ENOMEM);
+        assert(live->datagram_enabled == 1);
+        g_h3c_fail_engine_new = 0;
+
+#ifdef CWIST_WEBTRANSPORT_CLIENT
+        ok_err = cwist_http3_client_enable_datagram_channel_checked(live, 1);
+        assert(cwist_error_is_ok(&ok_err));
+        assert(live->dgc_enabled == 1);
+
+        assert(cwist_http3_client_enable_datagram_channel(live, 0) == 0);
+        assert(live->dgc_enabled == 0);
+#endif
+
+        cwist_http3_client_destroy(live);
+    }
+
     printf("test_http3_client_datagram: ok\n");
     return 0;
 }
