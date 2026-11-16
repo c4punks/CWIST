@@ -15,9 +15,10 @@ typedef struct {
 
 static void *blocked_sender(void *arg) {
     sse_sender *sender = arg;
-    char *payload = malloc(1024 * 1024);
+    char *payload = malloc(1024 * 1024 + 1);
     assert(payload != NULL);
     memset(payload, 'x', 1024 * 1024);
+    payload[1024 * 1024] = '\0';
     while (cwist_sse_stream_send(sender->stream, "message", NULL, -1, payload).error.err_i16 == 0) {
     }
     free(payload);
