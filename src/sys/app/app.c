@@ -400,7 +400,10 @@ typedef struct cwist_route_entry {
     cwist_handler_ctx_destroy_func ctx_destroy;
     cwist_ws_handler_func ws_handler;
     cwist_ws_on_message_t ws_async_on_message;
+    cwist_ws_on_open_t ws_async_on_open;
+    cwist_ws_on_close_t ws_async_on_close;
     void *ws_async_user_data;
+    size_t ws_async_max_message_bytes;
     cwist_endpoint_opt_t opts;
     struct cwist_route_entry *next;
 } cwist_route_entry;
@@ -505,7 +508,10 @@ static void cwist_route_entry_set_target(cwist_route_entry *entry,
     entry->ctx_destroy = target->ctx_destroy;
     entry->ws_handler = target->ws_handler;
     entry->ws_async_on_message = NULL;
+    entry->ws_async_on_open = NULL;
+    entry->ws_async_on_close = NULL;
     entry->ws_async_user_data = NULL;
+    entry->ws_async_max_message_bytes = 0;
 }
 
 static cwist_route_entry *cwist_route_entry_create(const char *path, const char *name,
@@ -2358,22 +2364,36 @@ void cwist_app_ws(cwist_app *app, const char *path, cwist_ws_handler_func handle
  */
 void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
                         void *user_data) {
+    (void)cwist_app_internal_ws_async(app, path, on_message, NULL, NULL, user_data, 0);
+}
+
+bool cwist_app_internal_ws_async(cwist_app *app, const char *path,
+                                 cwist_ws_on_message_t on_message,
+                                 cwist_ws_on_open_t on_open, cwist_ws_on_close_t on_close,
+                                 void *user_data, size_t max_message_bytes) {
 #ifdef CWIST_WS
-    if (!app || !app->router || !path || !on_message) return;
+    if (!app || !app->router || !path || !on_message) return false;
     const cwist_route_target target = {0};
-    cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
-                             CWIST_ENDPOINT_DEFAULT);
+    if (!cwist_route_table_insert(app->router, path, NULL, CWIST_HTTP_GET, &target,
+                                  CWIST_ENDPOINT_DEFAULT))
+        return false;
     cwist_route_entry *entry = cwist_route_table_lookup(app->router, CWIST_HTTP_GET, path);
-    if (entry) {
-        entry->ws_async_on_message = on_message;
-        entry->ws_async_user_data = user_data;
-    }
+    if (!entry) return false;
+    entry->ws_async_on_message = on_message;
+    entry->ws_async_on_open = on_open;
+    entry->ws_async_on_close = on_close;
+    entry->ws_async_user_data = user_data;
+    entry->ws_async_max_message_bytes = max_message_bytes;
+    return true;
 #else
-    /* WebSocket compiled out (CWIST_WS=0): registration is a no-op. */
     (void)app;
     (void)path;
     (void)on_message;
+    (void)on_open;
+    (void)on_close;
     (void)user_data;
+    (void)max_message_bytes;
+    return false;
 #endif
 }
 
@@ -2830,10 +2850,11 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                 res->keep_alive = true;
                 cwist_http_send_response_coalesced(req->client_fd, res, aconn, false, false);
                 cwist_http_coalesce_flush_blocking(req->client_fd, aconn);
-                if (cwist_websocket_async_attach(req->client_fd, aconn->reactor,
-                                                 found_route->ws_async_on_message,
-                                                 found_route->ws_async_user_data,
-                                                 (const uint8_t *)aconn->rbuf, aconn->len)) {
+                if (cwist_websocket_async_attach_full(
+                        req->client_fd, aconn->reactor, found_route->ws_async_on_message,
+                        found_route->ws_async_on_open, found_route->ws_async_on_close,
+                        found_route->ws_async_user_data, (const uint8_t *)aconn->rbuf, aconn->len,
+                        found_route->ws_async_max_message_bytes)) {
                     /* Bytes already read past the upgrade request were
                      * copied into the WS stash by attach.  The HTTP layer
                      * releases the connection shell (without closing the fd)

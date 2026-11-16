@@ -11,9 +11,8 @@ The baseline records the C public surface of include/cwist/**:
     every preprocessor conditional around it), and every enumerator with its
     explicit value.
 
-WebTransport symbols are experimental until v4.1 (ROADMAP "API surface
-decisions") and are recorded in separate "experimental" sections outside the
-guarantee.
+WebTransport and livemsg symbols are experimental and are recorded in separate
+"experimental" sections outside the guarantee.
 
 Output is sorted (layouts keep member order) and independent of header read
 order, so diffs review cleanly.
@@ -28,7 +27,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-EXPERIMENTAL = re.compile(r"webtransport", re.I)
+EXPERIMENTAL = re.compile(r"webtransport|livemsg", re.I)
 
 # Words that end a parameter type rather than name it: `unsigned int` keeps
 # its `int`.

@@ -58,4 +58,16 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
  *  wire, mirroring cwist_websocket_async_close() teardown semantics. */
 void cwist_websocket_async_close_code(cwist_websocket_async *ws, uint16_t code);
 
+/** Called after connection state is ready and before initial bytes are parsed. */
+typedef void (*cwist_ws_on_open_t)(cwist_websocket_async *ws, void *user_data);
+
+/** Attach with open notification and a lower per-message receive limit. */
+cwist_websocket_async *cwist_websocket_async_attach_full(
+    int fd, cwist_reactor_t *reactor, cwist_ws_on_message_t on_message, cwist_ws_on_open_t on_open,
+    cwist_ws_on_close_t on_close, void *user_data, const uint8_t *initial, size_t initial_len,
+    size_t max_message_bytes);
+
+/** Bytes queued for a non-blocking send on the owning reactor thread. */
+size_t cwist_websocket_async_buffered_amount(const cwist_websocket_async *ws);
+
 #endif

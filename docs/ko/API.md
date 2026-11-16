@@ -15,6 +15,7 @@ CWIST 라이브러리 레퍼런스에 오신 것을 환영합니다. 아래 모�
 *   **[HTML 컴포넌트](api/html.md)**: 재사용 가능한 HTML 렌더 단위, 컴포넌트 범위 CSS, 페이지/프래그먼트 응답.
 *   **[미들웨어](api/middleware.md)**: 미들웨어 파이프라인과 내장 미들웨어.
 *   **[WebSocket](api/websocket.md)**: WebSocket 업그레이드와 프레이밍.
+*   **[라이브 메시지](api/livemsg.md)**: WebSocket과 WebRTC DataChannel 위의 실험적 메시지 런타임.
 *   **[Server-Sent Events](api/sse.md)**: 이벤트 스트림 응답과 실시간 스트림.
 *   **[쿠키](api/cookie.md)**: Cookie 헤더 파싱과 Set-Cookie 생성.
 
