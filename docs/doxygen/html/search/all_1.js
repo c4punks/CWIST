@@ -16,7 +16,7 @@ var searchData=
   ['1_20cwist_5ffull_5fgc_20bool_20—_20the_20global_20toggle_13',['1. cwist_full_gc(bool) — the global toggle',['../d9/dd1/md_docs_2GC.html#autotoc_md327',1,'']]],
   ['1_20definitions_14',['1. Definitions',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md466',1,'']]],
   ['1_20finite_20fields_20prime_20powers_15',['2.1 Finite fields (prime powers)',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md468',1,'']]],
-  ['1_20getting_20started_16',['1. Getting started',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md445',1,'']]],
+  ['1_20getting_20started_16',['1. Getting started',['..//home/yjlee/cwist-v43-main/docs/README.md#autotoc_md445',1,'']]],
   ['1_20hello_20world_3a_20첫_20서버_20띄우기_17',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md520',1,'']]],
   ['1_20hello_20world_3a_20starting_20your_20first_20server_18',['1. Hello World: Starting Your First Server',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md504',1,'']]],
   ['1_20http_203과_20세션_20핸들러_20설정하기_19',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md394',1,'']]],

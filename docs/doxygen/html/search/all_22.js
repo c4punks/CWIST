@@ -40,7 +40,7 @@ var searchData=
   ['webrtc_2eh_37',['webrtc.h',['../dd/d3b/webrtc_8h.html',1,'']]],
   ['webrtc_5finternal_2eh_38',['webrtc_internal.h',['../da/d89/webrtc__internal_8h.html',1,'']]],
   ['webserver_2dbenchmark_2emd_39',['webserver-benchmark.md',['../dd/dc3/webserver-benchmark_8md.html',1,'']]],
-  ['websocket_40',['websocket',['../d9/dfa/md_docs_2runtime-config.html#autotoc_md493',1,'WebSocket'],['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md389',1,'WebSocket']]],
+  ['websocket_40',['websocket',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md389',1,'WebSocket'],['../d9/dfa/md_docs_2runtime-config.html#autotoc_md493',1,'WebSocket']]],
   ['websocket_20api_41',['websocket api',['../db/dc5/md_docs_2api_2websocket.html#autotoc_md238',1,'Async (C1M) WebSocket API'],['../db/dc5/md_docs_2api_2websocket.html',1,'WebSocket API']]],
   ['websocket_20integration_20real_20time_20bidirectional_20communication_42',['8. WebSocket Integration (Real-Time Bidirectional Communication)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md512',1,'']]],
   ['websocket_2ec_43',['websocket.c',['../d4/de6/websocket_8c.html',1,'']]],

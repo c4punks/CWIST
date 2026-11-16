@@ -1,5 +1,12 @@
 var NAVTREEINDEX18 =
 {
+"dd/d68/structcwist__http__request.html#a49024fbbb1e599f5d8efcc0b00fc50be":[60,0,49,19],
+"dd/d68/structcwist__http__request.html#a5b8785aeefb2697d11f7dbe43b0eb23a":[60,0,49,9],
+"dd/d68/structcwist__http__request.html#a620f6ffc8da54b44d1849a4968c4bd62":[60,0,49,21],
+"dd/d68/structcwist__http__request.html#a6cdd82d14bdd230ee18ca75a6fe04bb6":[60,0,49,11],
+"dd/d68/structcwist__http__request.html#a747dd16054b62bfb37a209af22349812":[60,0,49,0],
+"dd/d68/structcwist__http__request.html#a7ae8498045aa64de63dc00cee14b074d":[60,0,49,23],
+"dd/d68/structcwist__http__request.html#a7b1638bf9bf448d8e1b9834839df655c":[60,0,49,27],
 "dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1":[60,0,49,3],
 "dd/d68/structcwist__http__request.html#a93bc1facc9f75e9d2e243ea9f82b5669":[60,0,49,25],
 "dd/d68/structcwist__http__request.html#a998d09d0c1226ea371439ddbdd8e5e22":[60,0,49,1],
@@ -69,11 +76,12 @@ var NAVTREEINDEX18 =
 "dd/d7f/query_8c.html#a3024ccd4a9af5109d24e6c57565d74a1":[61,0,2,2,3,23,0],
 "dd/d7f/query_8c.html#a3530ad32cfbd60444e2e4c060ddcbd74":[61,0,2,2,3,23,4],
 "dd/d7f/query_8c.html#a64bef0793560239ca4f284b40ff8a506":[61,0,2,2,3,23,1],
-"dd/d7f/query_8c.html#a85c42bf26fba0b85420412688e5781d5":[61,0,2,2,3,23,10],
+"dd/d7f/query_8c.html#a85c42bf26fba0b85420412688e5781d5":[61,0,2,2,3,23,11],
 "dd/d7f/query_8c.html#a85cc4d59947227a4cf09f7eff2727246":[61,0,2,2,3,23,7],
 "dd/d7f/query_8c.html#a93292394e0096daa1a997758f0346a93":[61,0,2,2,3,23,2],
 "dd/d7f/query_8c.html#a93eddf49027cbbc8fc6a0a3270a0985a":[61,0,2,2,3,23,3],
 "dd/d7f/query_8c.html#ac8607e9171334f329fa4a248ddd3bfe1":[61,0,2,2,3,23,6],
+"dd/d7f/query_8c.html#af8294f26aaa4dee4a99a5b2004664821":[61,0,2,2,3,23,10],
 "dd/d7f/query_8c.html#afc1bffaa7da52b648d4306067c8d21b8":[61,0,2,2,3,23,9],
 "dd/d7f/query_8c_source.html":[61,0,2,2,3,23],
 "dd/d82/structcwist__buffer.html":[60,0,12],
@@ -241,13 +249,5 @@ var NAVTREEINDEX18 =
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md273":[22,1,1],
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md274":[22,1,2],
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md275":[22,1,3],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md276":[22,2],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md277":[22,3],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md278":[22,4],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md279":[22,5],
-"de/d52/structcwist__grpc__decoder.html":[60,0,30],
-"de/d52/structcwist__grpc__decoder.html#a0632cc2f9c13424a3c37c722edccf159":[60,0,30,2],
-"de/d52/structcwist__grpc__decoder.html#a0831993b3bdbf0e2defacde0caf7abe2":[60,0,30,3],
-"de/d52/structcwist__grpc__decoder.html#a4b7d214ca4a3d80323ebe270bfe9bf54":[60,0,30,4],
-"de/d52/structcwist__grpc__decoder.html#a4d575a1166da1c084de1bc65186e54d7":[60,0,30,5]
+"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md276":[22,2]
 };

@@ -44,7 +44,7 @@ var searchData=
   ['order_209_20pair_41',['3. Historical table: the Gusuryak order-9 pair',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md472',1,'']]],
   ['order_20and_20loss_20under_20growth_3a_20tests_20test_5fhttps_5fpool_5fqueue_20c_42',['4. Order and loss under growth: tests/test_https_pool_queue.c',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md420',1,'']]],
   ['orders_3a_20macneish_20s_20product_43',['2.3 Composite orders: MacNeish&apos;s product',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md470',1,'']]],
-  ['oriented_20guides_44',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md446',1,'']]],
+  ['oriented_20guides_44',['2. Task-oriented guides',['..//home/yjlee/cwist-v43-main/docs/README.md#autotoc_md446',1,'']]],
   ['orm_2ec_45',['orm.c',['../d8/d03/orm_8c.html',1,'']]],
   ['orm_2eh_46',['orm.h',['../d6/d9b/orm_8h.html',1,'']]],
   ['orm_5fproto_5fmagic_47',['ORM_PROTO_MAGIC',['../d5/dcf/orm__socket_8c.html#aad0e1b104655825167fa9ad8dcdd97be',1,'orm_socket.c']]],

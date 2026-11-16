@@ -135,7 +135,7 @@ Supported platforms</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>WASI 0.2 and browser Service Worker</b>   </td><td class="markdownTableBodyNone">The same routes and handlers on Wasmtime or in the browser   </td><td class="markdownTableBodyNone"><a href="example/wasip2-kv">wasip2-kv</a>, <a href="example/wasm-service-worker">wasm-service-worker</a>    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>; STM32F769I-DISCO <a href="example/stm32f769-fortress">fortress</a> (physical-board validated); NUCLEO-H743ZI2 <a href="example/stm32">example</a> (reference integration: cross-build / QEMU)   </td></tr>
+<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>; STM32F769I-DISCO <a href="example/stm32f769-fortress">fortress</a> (physical-board validated); NUCLEO-H743ZI2 <a href="example/stm32">example</a> (reference integration: cross-build / QEMU); STM32F429I-DISCO (planned)   </td></tr>
 </table>
 <h2><a class="anchor" id="autotoc_md4"></a>
 Quick start</h2>
@@ -167,7 +167,7 @@ Quick start</h2>
 <div class="ttc" id="asys_2app_2app_8h_html_a9aeebb72e5908f56c1b5823ae4a773c8"><div class="ttname"><a href="d0/d77/sys_2app_2app_8h.html#a9aeebb72e5908f56c1b5823ae4a773c8">cwist_app_create</a></div><div class="ttdeci">cwist_app * cwist_app_create(void)</div><div class="ttdoc">Creates a new CWIST application instance.</div><div class="ttdef"><b>Definition</b> <a href="df/d7f/app_8c_source.html#l01311">app.c:1311</a></div></div>
 </div><!-- fragment --><div class="fragment"><div class="line">gcc -o server main.c $(pkg-config --cflags --libs cwist)</div>
 <div class="line">./server</div>
-</div><!-- fragment --><p>Or scaffold a hot-reloading project with <code>cwist new project demo &amp;&amp; cwist watcher</code>. Next steps: the 30 modules in tutorials/ and the guides in <a class="el" href="/home/runner/work/CWIST/CWIST/docs/README.md#md_docs_2README">docs/</a>.</p>
+</div><!-- fragment --><p>Or scaffold a hot-reloading project with <code>cwist new project demo &amp;&amp; cwist watcher</code>. Next steps: the 30 modules in tutorials/ and the guides in <a class="el" href="/home/yjlee/cwist-v43-main/docs/README.md#md_docs_2README">docs/</a>.</p>
 <h2><a class="anchor" id="autotoc_md5"></a>
 Same routes and handlers across four targets</h2>
 <p>A CWIST app registers routes and middleware on a <code><a class="el" href="dc/da0/structcwist__app.html" title="Main Application Context.">cwist_app</a></code>. The same route and handler definitions compile across four target environments, while transport and runtime capabilities follow each host:</p>
@@ -190,7 +190,7 @@ What CWIST includes</h2>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Layer   </th><th class="markdownTableHeadNone">What you get    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds, STM32F769I-DISCO (physical-board validated) and NUCLEO-H743ZI2 (reference integration) examples, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
+<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds; STM32F769I-DISCO (physical-board validated), NUCLEO-H743ZI2 (reference integration), and STM32F429I-DISCO (planned) examples; raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>Protocols</b>   </td><td class="markdownTableBodyNone">HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -214,8 +214,8 @@ What CWIST includes</h2>
 </table>
 <h2><a class="anchor" id="autotoc_md7"></a>
 Performance, including where it loses</h2>
-<p>Every push and pull request runs CWIST against Actix, Axum, Gin and Spring Boot under <code>wrk -t12 -c400 -d10s</code> on a GitHub runner.</p>
-<p><b><a href="https://github.com/c4punks/CWIST/actions/runs/42153892833">Latest completed CI benchmark</a></b> (2026-11-06, commit <code>b3834e0d</code>, 4 vCPU AMD EPYC 9V74):</p>
+<p>Every push and pull request runs CWIST against Actix, Axum, Gin and Spring Boot under <code>wrk -t12 -c400 -d10s</code> on a GitHub runner. Methodology and fairness settings are in <a class="el" href="d6/d42/md_docs_2webserver-benchmark.html">docs/webserver-benchmark.md</a>; the raw numbers for every run are in <a href="benchmarks/webserver.json">benchmarks/webserver.json</a>.</p>
+<p><b><a href="https://github.com/c4punks/CWIST/actions/runs/42153892833">Latest completed CI benchmark</a></b> (2026-11-06, commit <code>b3834e0d</code>, 4 vCPU AMD EPYC 9V74, <a href="https://github.com/c4punks/CWIST/actions/runs/42153892833">download <code>webserver-result</code> artifact</a>):</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone"></th><th class="markdownTableHeadRight">CWIST reactor   </th><th class="markdownTableHeadRight">CWIST Classic   </th><th class="markdownTableHeadRight">Actix   </th><th class="markdownTableHeadRight">Axum   </th><th class="markdownTableHeadRight">Gin   </th><th class="markdownTableHeadRight">Spring Boot    </th></tr>
@@ -234,7 +234,7 @@ Performance, including where it loses</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">Context switches   </td><td class="markdownTableBodyRight"><b>123,365</b>   </td><td class="markdownTableBodyRight">1,244,131   </td><td class="markdownTableBodyRight">155,742   </td><td class="markdownTableBodyRight">244,680   </td><td class="markdownTableBodyRight">310,205   </td><td class="markdownTableBodyRight">277,009   </td></tr>
 </table>
-<p>In this run the reactor is within runner variance of Actix on throughput (~2% apart) with fewer context switches, and the Classic pool answers the median request in about half of Axum's time and has the lowest p99. <b>Actix and Axum have the tighter extreme tail (P99.999) and the smaller memory footprint</b>; closing the tail gap is open work. The benchmark section below is regenerated by CI (<code>Latency</code> in that summary line is <code>wrk</code> mean latency), so it shows the most recent run, which may be newer than this table. Methodology and fairness settings are in <a class="el" href="d6/d42/md_docs_2webserver-benchmark.html">docs/webserver-benchmark.md</a>.</p>
+<p>In this run the reactor is within runner variance of Actix on throughput (~2% apart) with fewer context switches, and the Classic pool answers the median request in about half of Axum's time and has the lowest p99. <b>Actix and Axum have the tighter extreme tail (P99.999) and the smaller memory footprint</b>; closing the tail gap is open work. The benchmark section below is regenerated by CI (<code>Latency</code> in that summary line is <code>wrk</code> mean latency), so it shows the most recent run, which may be newer than this table.</p>
 <h3><a class="anchor" id="autotoc_md8"></a>
 Two server modes</h3>
 <p>The mode is one environment variable; pick per workload.</p>
@@ -244,7 +244,7 @@ Two server modes</h3>
 </ul>
 <h3><a class="anchor" id="autotoc_md9"></a>
 Holding a million connections</h3>
-<p>Measured on one 12-core machine (Ryzen 5 5600X, 62 GB, Linux 6.12, loopback):</p>
+<p>Measured on one 12-core machine (Ryzen 5 5600X, 62 GB, Linux 6.12, loopback); commands and kernel prerequisites to reproduce each run are in <a class="el" href="d0/d49/md_docs_2performance_2https-c100k.html">docs/performance/https-c100k.md</a> and <a class="el" href="db/d4d/md_docs_2c1m-file-limits.html">docs/c1m-file-limits.md</a>:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Run   </th><th class="markdownTableHeadNone">Result   </th><th class="markdownTableHeadNone">Server memory    </th></tr>
@@ -257,7 +257,7 @@ Holding a million connections</h3>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">C1M over TLS HTTP/1.1 and HTTP/2 via <a href="https://github.com/gg582/fly.board#scalability-benchmark">fly.board</a>   </td><td class="markdownTableBodyNone">1,000,000 / 1,000,000 held and served, zero failures   </td><td class="markdownTableBodyNone">19.9 GB / 30.1 GB PSS   </td></tr>
 </table>
-<p>The HTTPS ramp is handshake-bound (~2,900 full P-256 handshakes/s, so ~340 s to open 1M connections). Kernel prerequisites, the client tooling fixes the runs needed, and the per-run details are in <a class="el" href="d0/d49/md_docs_2performance_2https-c100k.html">docs/performance/https-c100k.md</a> and <a class="el" href="db/d4d/md_docs_2c1m-file-limits.html">docs/c1m-file-limits.md</a>.</p>
+<p>The HTTPS ramp is handshake-bound (~2,900 full P-256 handshakes/s, so ~340 s to open 1M connections).</p>
 <p>On the async path, established HTTP/1.1 TLS connections are served on the C1M reactor by default (<code>CWIST_HTTPS_REACTOR=1</code>). TLS handshakes and HTTP/2 requests continue to use HTTPS pool threads; setting <code>CWIST_HTTPS_REACTOR=0</code> restores pool-based HTTP/1.1 handling. A handler that writes faster than the socket drains waits inside the reactor thread (bounded by <code>CWIST_HTTP_TIMEOUT_MS</code>). Idle cleartext keep-alive connections are closed by a per-worker sweep timer once they wait longer than <code>CWIST_HTTP_KEEP_ALIVE_TIMEOUT</code> (default 15 s), counted in <code>cwist_http_idle_reaped_total</code>.</p>
 <h2><a class="anchor" id="autotoc_md10"></a>
 Why C, when Axum and Gin exist?</h2>
@@ -278,7 +278,7 @@ Memory safety and security in C</h2>
 <li><b>Deterministic lifetimes.</b> Request buffers and cached replies live in libttak generational arenas and epoch-based reclamation critical sections. Deferred responses use an explicit ownership handoff, and <code>CWIST_ASYNC_STRICT=1</code> turns misuse into an abort instead of a warning.</li>
 <li><b>Built-in security controls and opt-in PQC TLS.</b> Default HTTPS enforces TLS 1.2+ with AEAD cipher suites (<code>X25519:P-256</code>), while <code>cwist_app_use_pqc_layer(app, true)</code> opts into hybrid post-quantum key exchange (<code>X25519MLKEM768:X25519:P-256</code>) and a TLS 1.3 minimum. Built-in middleware and session helpers provide WAF checks, token-bucket rate limiting, timing-safe HMAC session verification, CSRF tokens and strict security headers (HSTS, COOP, Permissions-Policy).</li>
 </ul>
-<p>Design decisions and their current status are recorded in <a class="el" href="/home/runner/work/CWIST/CWIST/docs/decisions/README.md#md_docs_2decisions_2README">docs/decisions/</a>.</p>
+<p>Design decisions and their current status are recorded in <a class="el" href="/home/yjlee/cwist-v43-main/docs/decisions/README.md#md_docs_2decisions_2README">docs/decisions/</a>.</p>
 <h2><a class="anchor" id="autotoc_md12"></a>
 Install</h2>
 <p>CWIST vendors its dependencies (BoringSSL, lsquic, libttak, SQLite3), so a plain build works on a fresh Linux, macOS, or BSD machine:</p>
@@ -443,12 +443,12 @@ Stability and conformance</h2>
 </ul>
 <h2><a class="anchor" id="autotoc_md22"></a>
 Documentation</h2>
-<p>The full map is <a class="el" href="/home/runner/work/CWIST/CWIST/docs/README.md#md_docs_2README">docs/README.md</a>. In suggested reading order:</p>
+<p>The full map is <a class="el" href="/home/yjlee/cwist-v43-main/docs/README.md#md_docs_2README">docs/README.md</a>. In suggested reading order:</p>
 <ul>
 <li><b>Tutorials</b>: 30 hands-on modules, each with a runnable <code>main.c</code>, a <code>CMakeLists.txt</code> and a guided README.</li>
 <li><b><a href="docs/tutorials/">Guides</a></b>: <a class="el" href="d4/db0/md_docs_2tutorials_2blog-crud.html">CRUD blog</a>, <a class="el" href="da/d48/md_docs_2tutorials_2nats-integration.html">NATS integration</a>, <a class="el" href="d2/dcb/md_docs_2tutorials_2webtransport-server.html">WebTransport server</a>.</li>
 <li><b><a class="el" href="d7/d15/md_docs_2API.html">API reference</a></b>: per-module docs under <code>docs/api/</code>, the <a class="el" href="d1/d7e/md_docs_2api-quickref.html">flat quick reference</a> and generated <a href="https://c4punks.github.io/CWIST/">Doxygen HTML</a>.</li>
-<li><b><a class="el" href="/home/runner/work/CWIST/CWIST/docs/decisions/README.md#md_docs_2decisions_2README">Decision records</a></b> and <b>ROADMAP.md</b>.</li>
+<li><b><a class="el" href="/home/yjlee/cwist-v43-main/docs/decisions/README.md#md_docs_2decisions_2README">Decision records</a></b> and <b>ROADMAP.md</b>.</li>
 </ul>
 <h2><a class="anchor" id="autotoc_md23"></a>
 Examples</h2>

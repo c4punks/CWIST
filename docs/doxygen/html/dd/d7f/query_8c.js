@@ -10,5 +10,6 @@ var query_8c =
     [ "cwist_query_map_foreach", "dd/d7f/query_8c.html#a85cc4d59947227a4cf09f7eff2727246", null ],
     [ "cwist_query_map_get", "dd/d7f/query_8c.html#a2df19e2544e3de48d2340412b2e03f32", null ],
     [ "cwist_query_map_parse", "dd/d7f/query_8c.html#afc1bffaa7da52b648d4306067c8d21b8", null ],
+    [ "cwist_query_map_parse_checked", "dd/d7f/query_8c.html#af8294f26aaa4dee4a99a5b2004664821", null ],
     [ "cwist_query_map_set", "dd/d7f/query_8c.html#a85c42bf26fba0b85420412688e5781d5", null ]
 ];
