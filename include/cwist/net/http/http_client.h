@@ -51,6 +51,9 @@ void cwist_http_client_destroy(cwist_http_client *client);
  * @brief Enable or disable automatic redirect following.
  * @param client Client handle.
  * @param follow Non-zero to follow redirects (default: 1).
+ *
+ * Redirects are not followed for requests with custom headers, preventing
+ * application credentials from being forwarded to another origin.
  */
 void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follow);
 

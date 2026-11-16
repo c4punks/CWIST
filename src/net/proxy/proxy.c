@@ -618,6 +618,8 @@ typedef struct proxy_upstream_res {
     bool has_clen;
     size_t clen;
     bool has_te;
+    size_t header_count;
+    size_t header_bytes;
     bool can_stream;
     bool stream_started;
     bool stream_chunked;
@@ -691,6 +693,8 @@ static size_t proxy_upstream_header_cb(char *ptr, size_t size, size_t nmemb, voi
         /* New status line (interim 1xx or the final one): restart the block. */
         cwist_http_header_free_all(u->headers);
         u->headers = NULL;
+        u->header_count = 0;
+        u->header_bytes = 0;
         u->has_clen = false;
         u->clen = 0;
         u->has_te = false;
@@ -714,6 +718,12 @@ static size_t proxy_upstream_header_cb(char *ptr, size_t size, size_t nmemb, voi
         u->bad_header = true;
         return n;
     }
+    if (u->header_count >= 200 || len > 16384 || u->header_bytes > 65536 - len) {
+        u->too_big = true;
+        return 0;
+    }
+    u->header_count++;
+    u->header_bytes += len;
     const char *colon = memchr(ptr, ':', len);
     if (!colon || colon == ptr || (size_t)(colon - ptr) >= 256) {
         u->bad_header = true;

@@ -1480,6 +1480,8 @@ void cwist_app_configure_bdr(cwist_app *app, size_t max_bytes, time_t max_entry_
  * @brief Release every resource owned by the application object.
  * @param app Application instance to destroy.
  */
+void cwist_session_app_destroy(cwist_app *app);
+
 void cwist_app_destroy(cwist_app *app) {
     if (!app) return;
 #if defined(CWIST_PLATFORM_HOSTED)
@@ -1589,6 +1591,7 @@ void cwist_app_destroy(cwist_app *app) {
         cwist_free(app->db_path);
     }
 
+    cwist_session_app_destroy(app);
     if (app->session_secret) cwist_free(app->session_secret);
     if (app->session_name) cwist_free(app->session_name);
 

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 static int header_contains(cwist_http_header_node *headers, const char *key, const char *value) {
     cwist_http_header_node *curr = headers;
@@ -18,6 +19,83 @@ static int header_contains(cwist_http_header_node *headers, const char *key, con
         curr = curr->next;
     }
     return 0;
+}
+
+static void session_cookie_value(cwist_http_response *res, char *out, size_t out_size) {
+    const char *set_cookie = cwist_http_header_get(res->headers, "Set-Cookie");
+    assert(set_cookie != NULL);
+    const char *eq = strchr(set_cookie, '=');
+    const char *semi = eq ? strchr(eq, ';') : NULL;
+    assert(eq != NULL);
+    size_t len = semi ? (size_t)(semi - eq - 1) : strlen(eq + 1);
+    assert(len < out_size);
+    memcpy(out, eq + 1, len);
+    out[len] = '\0';
+}
+
+static void session_set_cookie(cwist_http_request *req, const char *value) {
+    char header[8192];
+    snprintf(header, sizeof(header), "cwist_session=%s", value);
+    cwist_http_header_add(&req->headers, "Cookie", header);
+}
+
+static void test_session_expiry_and_revocation(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    assert(cwist_app_use_session(app, "expiry-secret") == 0);
+    cwist_app_set_session_max_age(app, 1);
+
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_session_t *session = cwist_session_start(app, req, res);
+    assert(session != NULL);
+    assert(cwist_session_set(session, "role", "admin") == 0);
+    assert(cwist_session_commit(session, res) == 0);
+    char revoked[4096];
+    session_cookie_value(res, revoked, sizeof(revoked));
+    cwist_session_invalidate(session);
+    assert(cwist_session_commit(session, res) == 0);
+
+    cwist_http_request *replayed = cwist_http_request_create();
+    cwist_http_response *replay_res = cwist_http_response_create();
+    session_set_cookie(replayed, revoked);
+    cwist_session_t *replayed_session = cwist_session_start(app, replayed, replay_res);
+    assert(replayed_session != NULL);
+    assert(cwist_session_get(replayed_session, "role") == NULL);
+    cwist_session_destroy(replayed_session);
+    replayed->session = NULL;
+    cwist_http_response_destroy(replay_res);
+    cwist_http_request_destroy(replayed);
+    cwist_session_destroy(session);
+    req->session = NULL;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    req = cwist_http_request_create();
+    res = cwist_http_response_create();
+    session = cwist_session_start(app, req, res);
+    assert(cwist_session_set(session, "role", "admin") == 0);
+    assert(cwist_session_commit(session, res) == 0);
+    char expired[4096];
+    session_cookie_value(res, expired, sizeof(expired));
+    assert(strcmp(revoked, expired) != 0);
+    sleep(2);
+
+    replayed = cwist_http_request_create();
+    replay_res = cwist_http_response_create();
+    session_set_cookie(replayed, expired);
+    replayed_session = cwist_session_start(app, replayed, replay_res);
+    assert(cwist_session_get(replayed_session, "role") == NULL);
+    cwist_session_destroy(replayed_session);
+    replayed->session = NULL;
+    cwist_http_response_destroy(replay_res);
+    cwist_http_request_destroy(replayed);
+    cwist_session_destroy(session);
+    req->session = NULL;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    cwist_app_destroy(app);
+    puts("[session] expiry and revocation OK");
 }
 
 static void test_session_create_and_commit(void) {
@@ -188,6 +266,7 @@ int main(void) {
     test_session_round_trip();
     test_session_large_round_trip();
     test_session_invalid_signature();
+    test_session_expiry_and_revocation();
     printf("All session tests passed.\n");
     return 0;
 }

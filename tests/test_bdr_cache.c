@@ -6,9 +6,31 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/big_dumb_reply.h>
+#include <cwist/core/siphash/siphash.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+static void test_hash_key_is_not_static(void) {
+    static const uint8_t published_key[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                              0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+    cwist_bdr_t *bdr = cwist_bdr_create();
+    assert(bdr != NULL);
+    const char body[] = "response";
+    cwist_bdr_put_fixed(bdr, "GET", "/chosen-collision", body, sizeof(body));
+    uint64_t old_hash =
+        siphash24("/chosen-collision", strlen("/chosen-collision"), published_key) ^ 'G';
+    bool found = false;
+    for (size_t i = 0; i < bdr->bucket_count; i++) {
+        bdr_entry_t *entry = atomic_load(&bdr->buckets[i]);
+        if (entry) {
+            found = true;
+            assert(entry->request_hash != old_hash);
+        }
+    }
+    assert(found);
+    cwist_bdr_destroy(bdr);
+}
 
 static void test_put_fixed_and_get(void) {
     printf("test_bdr_put_fixed + cwist_bdr_get...\n");
@@ -109,6 +131,7 @@ static void test_set_limits(void) {
 }
 
 int main(void) {
+    test_hash_key_is_not_static();
     test_put_fixed_and_get();
     test_get_method_key();
     test_get_pinned_and_unpin();
