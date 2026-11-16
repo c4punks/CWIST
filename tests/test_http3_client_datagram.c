@@ -102,9 +102,11 @@ int main(void) {
     assert(!cwist_error_is_ok(&err_null));
     assert(err_null.error.err_i16 == EINVAL);
 
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     err_null = cwist_http3_client_enable_datagram_channel_checked(NULL, 1);
     assert(!cwist_error_is_ok(&err_null));
     assert(err_null.error.err_i16 == EINVAL);
+#endif
 
     /* 2. Active-connection rejection */
     cwist_http3_client mock_client;
@@ -115,9 +117,11 @@ int main(void) {
     assert(!cwist_error_is_ok(&err_busy));
     assert(err_busy.error.err_i16 == EBUSY);
 
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     err_busy = cwist_http3_client_enable_datagram_channel_checked(&mock_client, 1);
     assert(!cwist_error_is_ok(&err_busy));
     assert(err_busy.error.err_i16 == EBUSY);
+#endif
 
     /* 3. Injected engine-creation failure */
     memset(&mock_client, 0, sizeof(mock_client));
