@@ -53,6 +53,7 @@ CWIST를 배우고, 사용하고, 확장하는 데 필요한 모든 문서를 �
 | [db](../../example/db) / [db-crypt](../../example/db-crypt) | SQLite 연동, 투명한 컬럼 암호화 |
 | [jwt](../../example/jwt) | 토큰 발급과 검증 |
 | [websocket / othello-web](../../example/othello-web) | WebSocket 게임 서버 |
+| [livemsg-websocket](../../example/livemsg-websocket) / [livemsg-webrtc](../../example/livemsg-webrtc) | 전송 독립적인 실험적 JSON 에코 |
 | [rps-showcase](../../example/rps-showcase) | 정적 캐싱 + 처리량 데모 |
 | [json-builder](../../example/json-builder), [html](../../example/html), [template](../../example/template) | 렌더링 도우미 |
 | [micro](../../example/micro), [mem](../../example/mem), [siphash](../../example/siphash), [sstring](../../example/sstring) | 핵심 유틸리티 |

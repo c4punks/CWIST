@@ -16,6 +16,7 @@ function signature.
 *   **[HTML Components](api/html.md)**: Reusable HTML render units, component-scoped CSS, and page/fragment responses.
 *   **[Middleware](api/middleware.md)**: Middleware pipeline and built-ins.
 *   **[WebSocket](api/websocket.md)**: WebSocket upgrade and framing.
+*   **[Live Messages](api/livemsg.md)**: Experimental message runtime over WebSocket and WebRTC DataChannel.
 *   **[Server-Sent Events](api/sse.md)**: Event-stream responses and live streams.
 *   **[Cookies](api/cookie.md)**: Cookie header parsing and Set-Cookie construction.
 
