@@ -10,6 +10,7 @@
  */
 #include "webrtc_internal.h"
 
+#include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -256,7 +257,7 @@ int cwist_ice_stun_validate_request(const uint8_t *buf, size_t len, const char *
     memcpy(hdr, buf, STUN_HDR_LEN);
     wr16(hdr + 2, (uint16_t)(mi_off - STUN_HDR_LEN + 4 + 20));
     return stun_hmac_sha1(hdr, buf + STUN_HDR_LEN, mi_off - STUN_HDR_LEN, pwd, hmac) == 0 &&
-           memcmp(hmac, buf + mi_off + 4, 20) == 0;
+           CRYPTO_memcmp(hmac, buf + mi_off + 4, 20) == 0;
 }
 
 /** @brief Build a STUN binding response for a received binding request.
