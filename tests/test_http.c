@@ -278,6 +278,21 @@ void test_cl_te_smuggling_rules() {
     expect_parse_rejection(
         "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked, gzip\r\n\r\n",
         CWIST_HTTP_PARSE_MALFORMED, 400);
+    /* Empty transfer-coding list elements are malformed. */
+    expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked,\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: ,chunked\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked,,chunked\r\n\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
+    /* Field names must be nonempty RFC tokens. */
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\nX Bad: value\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\n: value\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\nX\001Bad: value\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
     /* Unsupported transfer coding alongside a final chunked -> 501 */
     expect_parse_rejection(
         "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: gzip, chunked\r\n\r\n",

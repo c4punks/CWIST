@@ -947,6 +947,8 @@ TEST_TARGETS = test_worker_affinity \
                test_rate_limit \
                test_cache \
                test_bdr \
+               test_bdr_cache \
+               test_db_sync \
                test_secure_headers \
                test_profile \
                test_http_chunked \
@@ -960,6 +962,7 @@ TEST_TARGETS = test_worker_affinity \
                test_db_pool \
                test_db_memory \
                test_redis \
+               test_redis_close \
                test_scheduler \
                test_gc_job_handoff \
                test_async_defer \
@@ -1403,6 +1406,14 @@ test_bdr: $(LIB_NAME) tests/test_bdr.c
 	$(CC) $(CFLAGS) -o test_bdr tests/test_bdr.c $(LIB_NAME) $(LIBS)
 	./test_bdr
 
+test_bdr_cache: $(LIB_NAME) tests/test_bdr_cache.c
+	$(CC) $(CFLAGS) -o $@ tests/test_bdr_cache.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_db_sync: $(LIB_NAME) tests/test_db_sync.c
+	$(CC) $(CFLAGS) -o $@ tests/test_db_sync.c $(LIB_NAME) $(LIBS)
+	./$@
+
 install: $(LIB_NAME) $(PC_FILE)
 	@echo "Installing CWIST library to $(LIBDIR)..."
 	install -d $(INSTALL_LIBDIR)
@@ -1733,6 +1744,10 @@ test_db_memory: $(LIB_NAME) tests/test_db_memory.c
 test_redis: $(LIB_NAME) tests/test_redis.c
 	$(CC) $(CFLAGS) -o test_redis tests/test_redis.c $(LIB_NAME) $(LIBS)
 	./test_redis
+
+test_redis_close: $(LIB_NAME) tests/test_redis_close.c
+	$(CC) $(CFLAGS) -o $@ tests/test_redis_close.c $(LIB_NAME) $(LIBS)
+	./$@
 
 test_sse: $(LIB_NAME) tests/test_sse.c
 	$(CC) $(CFLAGS) -o test_sse tests/test_sse.c $(LIB_NAME) $(LIBS)

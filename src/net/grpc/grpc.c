@@ -556,6 +556,7 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
     size_t offset = 0;
     size_t cap = 4;
     size_t count = 0;
+    size_t decoded_bytes = 0;
     cwist_grpc_message *messages = (cwist_grpc_message *)cwist_alloc(cap * sizeof(*messages));
     if (!messages) {
         cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
@@ -582,6 +583,15 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
             cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "malformed gRPC stream frame");
             return;
         }
+        if (!messages[count].compressed) {
+            if (messages[count].len > CWIST_HTTP_MAX_BODY_SIZE - decoded_bytes) {
+                cwist_free(messages);
+                cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
+                                     "decoded gRPC stream exceeds aggregate size limit");
+                return;
+            }
+            decoded_bytes += messages[count].len;
+        }
         count++;
     }
 
@@ -604,6 +614,9 @@ static void grpc_dispatch_stream(cwist_http_request *req, cwist_http_response *r
         memset(owned, 0, count * sizeof(*owned));
         for (size_t i = 0; i < count; i++) {
             int inflate_rc = grpc_message_inflate(req, &messages[i], &owned[i]);
+            if (inflate_rc == 0 && messages[i].len > CWIST_HTTP_MAX_BODY_SIZE - decoded_bytes)
+                inflate_rc = -2;
+            if (inflate_rc == 0) decoded_bytes += messages[i].len;
             if (inflate_rc != 0) {
                 for (size_t j = 0; j < count; j++) cwist_free(owned[j]);
                 cwist_free(messages);

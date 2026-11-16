@@ -239,6 +239,24 @@ static void unit_checks(void) {
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "wrongpassword000000000") == 0);
 
+        uint8_t injected[512];
+        memcpy(injected, req, 44);
+        memmove(injected + 32, injected + 36, 8);
+        injected[2] = 0;
+        injected[3] = 20;
+        int injected_len =
+            cwist_ice_stun_sign_request(injected, sizeof(injected), 40, "testpassword0123456789");
+        assert(injected_len > 0);
+        memset(injected + injected_len, 0, 4);
+        injected[injected_len + 1] = 0x25;
+        injected_len += 4;
+        uint16_t body_len = (uint16_t)(injected_len - 20);
+        injected[2] = (uint8_t)(body_len >> 8);
+        injected[3] = (uint8_t)body_len;
+        assert(cwist_ice_stun_validate_request(injected, (size_t)injected_len,
+                                               "testpassword0123456789") == 1);
+        assert(!cwist_ice_stun_has_use_candidate(injected, (size_t)injected_len));
+
         uint8_t truncated[19] = {0};
         assert(cwist_ice_stun_sign_request(truncated, sizeof(truncated), 0,
                                            "testpassword0123456789") == -1);

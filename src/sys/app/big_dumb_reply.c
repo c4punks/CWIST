@@ -4,12 +4,22 @@
 #include <cwist/core/siphash/siphash.h>
 #include <cwist/sys/sys_info.h>
 #include <cwist/core/macros.h>
+#ifdef CWIST_BAREMETAL
+#include <cwist/sys/port.h>
+#endif
 #include <ttak/mem/epoch.h>
 #include <sqlite3.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <unistd.h>
+#if defined(__wasi__) || defined(__EMSCRIPTEN__) || defined(__APPLE__)
+#include <sys/random.h>
+#endif
 
 /**
  * @file big_dumb_reply.c
@@ -32,11 +42,35 @@
 #define BDR_DEFAULT_ENTRY_TTL 300
 #define BDR_DEFAULT_REVALIDATE_HITS 100000
 
-/**
- * @brief Static SipHash key used to bucket request and response fingerprints.
- */
-static const uint8_t BDR_KEY[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                                    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+static uint8_t bdr_key[16];
+static int bdr_key_ok;
+static pthread_once_t bdr_key_once = PTHREAD_ONCE_INIT;
+
+static void bdr_key_init(void) {
+    int fd = open("/dev/urandom", O_RDONLY);
+    if (fd < 0) return;
+    size_t off = 0;
+    while (off < sizeof(bdr_key)) {
+        ssize_t n = read(fd, bdr_key + off, sizeof(bdr_key) - off);
+        if (n > 0) {
+            off += (size_t)n;
+        } else if (n < 0 && errno == EINTR) {
+            continue;
+        } else {
+            break;
+        }
+    }
+    close(fd);
+#if defined(__wasi__) || defined(__EMSCRIPTEN__) || defined(__APPLE__)
+    if (off < sizeof(bdr_key) && getentropy(bdr_key + off, sizeof(bdr_key) - off) == 0)
+        off = sizeof(bdr_key);
+#endif
+#ifdef CWIST_BAREMETAL
+    if (off < sizeof(bdr_key) && cwist_port_entropy(bdr_key + off, sizeof(bdr_key) - off) == 0)
+        off = sizeof(bdr_key);
+#endif
+    bdr_key_ok = off == sizeof(bdr_key);
+}
 
 /* --- Blob lifetime -------------------------------------------------------- */
 
@@ -152,7 +186,7 @@ static void bdr_entry_publish(cwist_bdr_t *bdr, bdr_entry_t *entry, bdr_blob_t *
  * @return 64-bit bucket hash.
  */
 static uint64_t bdr_hash(const char *method, const char *path) {
-    uint64_t h = siphash24((const void *)path, strlen(path), BDR_KEY);
+    uint64_t h = siphash24((const void *)path, strlen(path), bdr_key);
     h ^= (uint64_t)(method[0]);
     return h;
 }
@@ -165,7 +199,7 @@ static uint64_t bdr_hash(const char *method, const char *path) {
  * @return 64-bit bucket hash.
  */
 static uint64_t bdr_hash_n(const char *method, const char *path, size_t path_len) {
-    uint64_t h = siphash24((const void *)path, path_len, BDR_KEY);
+    uint64_t h = siphash24((const void *)path, path_len, bdr_key);
     h ^= (uint64_t)(method[0]);
     return h;
 }
@@ -177,7 +211,7 @@ static uint64_t bdr_hash_n(const char *method, const char *path, size_t path_len
  * @return 64-bit response hash.
  */
 static uint64_t bdr_hash_data(const void *data, size_t len) {
-    return siphash24(data, len, BDR_KEY);
+    return siphash24(data, len, bdr_key);
 }
 
 /**
@@ -470,6 +504,8 @@ static void bdr_janitor_tick(cwist_bdr_t *bdr) {
  * @return New cache instance on success, NULL on allocation or mutex failure.
  */
 cwist_bdr_t *cwist_bdr_create(void) {
+    pthread_once(&bdr_key_once, bdr_key_init);
+    if (!bdr_key_ok) return NULL;
     cwist_bdr_t *bdr = cwist_alloc(sizeof(cwist_bdr_t));
     if (!bdr) return NULL;
     if (pthread_mutex_init(&bdr->lock, NULL) != 0) {
@@ -557,9 +593,8 @@ static const void *bdr_serve_hit(cwist_bdr_t *bdr, uint64_t req_h, bdr_entry_t *
                                  size_t *out_len, bdr_blob_t **out_pin) {
     ttak_epoch_enter();
     bdr_entry_t *entry = hint;
-    if (entry &&
-        (atomic_load_explicit(&entry->retired, memory_order_acquire) ||
-         entry->request_hash != req_h)) {
+    if (entry && (atomic_load_explicit(&entry->retired, memory_order_acquire) ||
+                  entry->request_hash != req_h)) {
         entry = NULL;
     }
     if (!entry) entry = bdr_find(bdr, req_h);
@@ -645,9 +680,8 @@ const void *cwist_bdr_get_pinned_cursor(cwist_bdr_t *bdr, const char *method, co
 
     uint64_t req_h;
     bdr_entry_t *hint = NULL;
-    if (cursor->entry && cursor->path_len == path_len &&
-        path_len < CWIST_BDR_CURSOR_PATH_MAX && cursor->req_hash != 0 &&
-        memcmp(cursor->path, path, path_len) == 0) {
+    if (cursor->entry && cursor->path_len == path_len && path_len < CWIST_BDR_CURSOR_PATH_MAX &&
+        cursor->req_hash != 0 && memcmp(cursor->path, path, path_len) == 0) {
         hint = cursor->entry;
         req_h = cursor->req_hash;
     } else {

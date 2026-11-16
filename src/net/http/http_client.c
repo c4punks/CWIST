@@ -418,6 +418,10 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
     }
     if (curl_headers) {
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);
+        /* libcurl cannot filter arbitrary custom headers per redirect origin.
+         * Do not forward caller credentials or other custom metadata to a
+         * redirect target; header-free requests retain automatic redirects. */
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
     }
 
     /* Request body */

@@ -288,6 +288,27 @@ static void test_redirect_not_followed(cwist_http_client *client, const char *ba
     report(before, "redirect following disabled");
 }
 
+static void test_custom_headers_not_forwarded_on_redirect(cwist_http_client *client,
+                                                          const char *base) {
+    int before = g_failures;
+    char url[128];
+    snprintf(url, sizeof(url), "%s/redirect", base);
+    cwist_http_header_node *headers = NULL;
+    cwist_http_header_add(&headers, "X-Api-Key", "secret");
+    cwist_http_response *res = NULL;
+    cwist_error_t err =
+        cwist_http_client_request(client, url, CWIST_HTTP_GET, headers, NULL, 0, &res);
+    CHECK(cwist_error_is_ok(&err), "custom-header redirect request failed");
+    cwist_error_dispose(&err);
+    cwist_http_header_free_all(headers);
+    if (res) {
+        CHECK(res->status_code == CWIST_HTTP_FOUND,
+              "custom-header request followed a redirect and could forward credentials");
+        cwist_http_response_destroy(res);
+    }
+    report(before, "custom headers are not forwarded across redirects");
+}
+
 static void test_closed_port(cwist_http_client *client) {
     int before = g_failures;
     int port = pick_free_port();
@@ -360,6 +381,7 @@ int main(void) {
         test_post(client, base);
         test_redirect_followed(client, base);
         test_redirect_not_followed(client, base);
+        test_custom_headers_not_forwarded_on_redirect(client, base);
     }
 
     g_failures += stop_server(pid);

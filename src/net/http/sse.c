@@ -4,13 +4,14 @@
 #include <cwist/core/sstring/sstring.h>
 #include <errno.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 
 struct cwist_sse_stream {
     int fd;
-    int closed;
+    atomic_int closed;
     pthread_mutex_t mutex;
 };
 
@@ -211,7 +212,7 @@ cwist_sse_stream_t *cwist_sse_stream_open(cwist_http_request *req) {
     cwist_sse_stream_t *stream = cwist_alloc(sizeof(*stream));
     if (!stream) return NULL;
     stream->fd = req->client_fd;
-    stream->closed = 0;
+    atomic_init(&stream->closed, 0);
     pthread_mutex_init(&stream->mutex, NULL);
     req->upgraded = true;
     return stream;
@@ -236,8 +237,8 @@ cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *even
     cwist_sstring *frame = format_event(event, id, retry_ms, data, 0);
     if (!frame) return sse_error(-1);
     pthread_mutex_lock(&stream->mutex);
-    int rc = stream->closed ? -1 : send_all(stream->fd, frame->data, frame->size);
-    if (rc) stream->closed = 1;
+    int rc = atomic_load(&stream->closed) ? -1 : send_all(stream->fd, frame->data, frame->size);
+    if (rc) atomic_store(&stream->closed, 1);
     pthread_mutex_unlock(&stream->mutex);
     cwist_sstring_destroy(frame);
     return sse_error(rc);
@@ -258,8 +259,8 @@ cwist_error_t cwist_sse_stream_comment(cwist_sse_stream_t *stream, const char *c
     cwist_sstring *frame = format_event(NULL, NULL, -1, comment, 1);
     if (!frame) return sse_error(-1);
     pthread_mutex_lock(&stream->mutex);
-    int rc = stream->closed ? -1 : send_all(stream->fd, frame->data, frame->size);
-    if (rc) stream->closed = 1;
+    int rc = atomic_load(&stream->closed) ? -1 : send_all(stream->fd, frame->data, frame->size);
+    if (rc) atomic_store(&stream->closed, 1);
     pthread_mutex_unlock(&stream->mutex);
     cwist_sstring_destroy(frame);
     return sse_error(rc);
@@ -284,6 +285,10 @@ cwist_error_t cwist_sse_stream_write(cwist_sse_stream_t *stream, const cwist_sse
  */
 void cwist_sse_stream_close(cwist_sse_stream_t *stream) {
     if (!stream) return;
+    atomic_store(&stream->closed, 1);
+    (void)shutdown(stream->fd, SHUT_RDWR);
+    pthread_mutex_lock(&stream->mutex);
+    pthread_mutex_unlock(&stream->mutex);
     pthread_mutex_destroy(&stream->mutex);
     cwist_free(stream);
 }

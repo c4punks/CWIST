@@ -532,12 +532,46 @@ int main(void) {
         assert(stream_size.message_len == 1024);
         cwist_http_response_destroy(res);
 
-        res = request_gzip_zeros(client, "/cwist.test.Echo/SizeStream",
-                                 CWIST_HTTP_MAX_BODY_SIZE + 1);
+        res =
+            request_gzip_zeros(client, "/cwist.test.Echo/SizeStream", CWIST_HTTP_MAX_BODY_SIZE + 1);
         assert(res != NULL);
         assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "8") == 0);
         assert(stream_size.calls == 1);
         cwist_http_response_destroy(res);
+
+        uint8_t *plain = cwist_alloc(CWIST_HTTP_MAX_BODY_SIZE);
+        assert(plain != NULL);
+        memset(plain, 0, CWIST_HTTP_MAX_BODY_SIZE);
+        uint8_t *zipped = NULL;
+        size_t zipped_len = 0;
+        gzip_compress(plain, CWIST_HTTP_MAX_BODY_SIZE, &zipped, &zipped_len);
+        uint8_t *first = NULL, *second = NULL;
+        size_t first_len = 0, second_len = 0;
+        assert(cwist_grpc_encode_message(zipped, zipped_len, 1, &first, &first_len) == 0);
+        assert(cwist_grpc_encode_message(zipped, zipped_len, 1, &second, &second_len) == 0);
+        char *pair = cwist_alloc(first_len + second_len);
+        assert(pair != NULL);
+        memcpy(pair, first, first_len);
+        memcpy(pair + first_len, second, second_len);
+        static const cwist_test_client_kv gzip_header[] = {{"grpc-encoding", "gzip"}};
+        cwist_test_client_request_options pair_opts = {
+            .body = pair,
+            .body_len = first_len + second_len,
+            .content_type = "application/grpc",
+            .headers = gzip_header,
+            .header_count = 1,
+        };
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/SizeStream",
+                                           &pair_opts);
+        assert(res != NULL);
+        assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "8") == 0);
+        assert(stream_size.calls == 1);
+        cwist_http_response_destroy(res);
+        cwist_free(pair);
+        cwist_free(first);
+        cwist_free(second);
+        cwist_free(zipped);
+        cwist_free(plain);
     }
 
     /* Client sending grpc-accept-encoding: gzip receives a compressed response. */

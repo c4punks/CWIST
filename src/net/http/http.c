@@ -28,6 +28,7 @@
 #include "http_live.h"
 
 #include <limits.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -4293,17 +4294,21 @@ static int http_validate_transfer_encoding(cwist_http_header_node *headers) {
         bool any_token = false;
         bool last_chunked = false;
         while (*p) {
-            while (*p == ' ' || *p == '\t' || *p == ',') p++;
+            while (*p == ' ' || *p == '\t') p++;
             const char *tok = p;
             while (*p && *p != ',') p++;
             const char *end = p;
             while (end > tok && (end[-1] == ' ' || end[-1] == '\t')) end--;
-            if (*p) p++;
-            if (end == tok) continue;
+            if (end == tok) return 1;
             any_token = true;
             /* A token with parameters (e.g. "chunked;x=1") is not chunked. */
             last_chunked = ((size_t)(end - tok) == 7 && strncasecmp(tok, "chunked", 7) == 0);
             if (!last_chunked) bad_coding = true;
+            if (!*p) break;
+            p++;
+            const char *next = p;
+            while (*next == ' ' || *next == '\t') next++;
+            if (!*next || *next == ',') return 1;
         }
         if (!seen) {
             final_is_chunked = any_token && last_chunked;
@@ -4414,7 +4419,15 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
         const char *colon = cwist_simd_find_char(line_start, (size_t)(line_end - line_start), ':');
         if (colon) {
             size_t key_len = colon - line_start;
-            if (key_len > 0 && (line_start[key_len - 1] == ' ' || line_start[key_len - 1] == '\t')) {
+            bool valid_name = key_len > 0;
+            for (size_t i = 0; i < key_len; i++) {
+                unsigned char c = (unsigned char)line_start[i];
+                if (!(isalnum(c) || strchr("!#$%&'*+-.^_`|~", c))) {
+                    valid_name = false;
+                    break;
+                }
+            }
+            if (!valid_name) {
                 cwist_http_request_destroy(req);
                 if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
                 return NULL;

@@ -259,8 +259,8 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
  * @param secret Shared HS256 signing secret.
  * @return Heap-allocated claims object, or NULL when verification/parsing fails.
  */
-cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
-    if (!token || !secret) return NULL;
+static cwist_jwt_claims *jwt_verify_hs256(const char *token, const char *secret, time_t leeway) {
+    if (!token || !secret || leeway < 0) return NULL;
 
     /* --- Split the token into three parts --------------------------------- */
     /* We need mutable copies to split on '.' */
@@ -360,8 +360,8 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
 
     if (!json) return NULL;
 
-    /* --- Validate "exp" and "nbf" claims with leeway for clock skew/high-RTT --- */
-#define CWIST_JWT_TIME_LEEWAY 300
+    /* Expiry and not-before claims are exact unless the caller explicitly
+     * configures clock-skew leeway. */
     time_t now = time(NULL);
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
     if (exp_item && (!cJSON_IsNumber(exp_item) || !isfinite(exp_item->valuedouble))) {
@@ -370,7 +370,7 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     }
     if (exp_item) {
         time_t exp_time = (time_t)exp_item->valuedouble;
-        if (now > CWIST_JWT_TIME_LEEWAY && exp_time < now - CWIST_JWT_TIME_LEEWAY) {
+        if (now > leeway && exp_time < now - leeway) {
             cJSON_Delete(json);
             return NULL; /* token expired */
         }
@@ -382,7 +382,7 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     }
     if (nbf_item) {
         time_t nbf_time = (time_t)nbf_item->valuedouble;
-        if (nbf_time > now && (nbf_time - now) > CWIST_JWT_TIME_LEEWAY) {
+        if (nbf_time > now && (nbf_time - now) > leeway) {
             cJSON_Delete(json);
             return NULL; /* token not yet valid */
         }
@@ -396,6 +396,15 @@ cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
     }
     claims->json = json;
     return claims;
+}
+
+cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
+    return jwt_verify_hs256(token, secret, 0);
+}
+
+cwist_jwt_claims *cwist_jwt_verify_with_leeway(const char *token, const char *secret,
+                                               long leeway_seconds) {
+    return jwt_verify_hs256(token, secret, (time_t)leeway_seconds);
 }
 
 /**

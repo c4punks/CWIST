@@ -53,6 +53,10 @@ char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seco
  */
 cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret);
 
+/** Verify an HS256 JWT with an explicit nonnegative exp/nbf leeway in seconds. */
+cwist_jwt_claims *cwist_jwt_verify_with_leeway(const char *token, const char *secret,
+                                               long leeway_seconds);
+
 /**
  * @brief Retrieve a claim value by key from decoded claims.
  *

@@ -148,45 +148,28 @@ static bool walk_attrs(const uint8_t *msg, size_t len, attr_cb cb, void *arg) {
     return off == end;
 }
 
-/** State for attr_find_cb(): which attribute type to look for and the result. */
-typedef struct {
-    bool found; /**< Set true once the wanted attribute has been seen. */
-    uint16_t val_len; /**< Value length of the found attribute (valid only if found). */
-    uint16_t type_wanted; /**< Attribute type to search for. */
-} attr_find_arg;
-
-/** @brief attr_cb that records the first occurrence of a wanted attribute.
- * Stops the walk (returns false) after the first match so later duplicates are ignored.
- */
-static bool attr_find_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg) {
-    (void)val;
-    attr_find_arg *a = arg;
-    if (type == a->type_wanted) {
-        a->found = true;
-        a->val_len = val_len;
-        return false;
-    }
-    return true;
-}
-
-/** @brief Check whether a STUN message contains an attribute of the given type.
- * @param msg  STUN message buffer.
- * @param len  Bytes available at @p msg.
- * @param type Attribute type to look for.
- * @return true if present. Malformed messages simply report "not found".
- */
-static bool attr_present(const uint8_t *msg, size_t len, uint16_t type) {
-    attr_find_arg a = {.type_wanted = type};
-    walk_attrs(msg, len, attr_find_cb, &a);
-    return a.found;
-}
+static bool find_mi(const uint8_t *msg, size_t len, size_t *mi_off);
 
 /** @brief Check whether a STUN message carries the USE-CANDIDATE attribute.
  * @param buf Datagram bytes.
  * @param len Number of bytes at @p buf.
  */
 bool cwist_ice_stun_has_use_candidate(const uint8_t *buf, size_t len) {
-    return attr_present(buf, len, ATTR_USE_CANDIDATE);
+    size_t mi_off;
+    if (!find_mi(buf, len, &mi_off)) return false;
+    uint16_t msg_len = rd16(buf + 2);
+    size_t authenticated_len = mi_off;
+    size_t off = STUN_HDR_LEN;
+    while (off + 4 <= authenticated_len) {
+        uint16_t type = rd16(buf + off);
+        uint16_t alen = rd16(buf + off + 2);
+        off += 4;
+        if (off + alen > authenticated_len || off + alen > (size_t)msg_len + STUN_HDR_LEN)
+            return false;
+        if (type == ATTR_USE_CANDIDATE) return true;
+        off += (alen + 3) & ~3u;
+    }
+    return false;
 }
 
 typedef struct {
