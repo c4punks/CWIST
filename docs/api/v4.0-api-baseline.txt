@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (778) ==
+== functions (780) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -480,6 +480,7 @@ cwist_jwt_sign_chunks
 cwist_jwt_split_chunks
 cwist_jwt_verify
 cwist_jwt_verify_chunks
+cwist_jwt_verify_with_leeway
 cwist_log_async_active
 cwist_log_async_flush
 cwist_log_async_start
@@ -654,6 +655,7 @@ cwist_redis_publish
 cwist_redis_reply_free
 cwist_redis_select
 cwist_redis_set
+cwist_redis_set_timeout_ms
 cwist_redis_setex
 cwist_redis_subscribe
 cwist_reg_ptr
@@ -784,7 +786,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (779) ==
+== function signatures (781) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1261,6 +1263,7 @@ cwist_jwt_sign_chunks: cwist_jwt_chunk_t * (const char *, const char *, long, ui
 cwist_jwt_split_chunks: cwist_jwt_chunk_t * (const char *, uint16_t, size_t *)
 cwist_jwt_verify: cwist_jwt_claims * (const char *, const char *)
 cwist_jwt_verify_chunks: cwist_jwt_claims * (const cwist_jwt_chunk_t *, size_t, const char *)
+cwist_jwt_verify_with_leeway: cwist_jwt_claims * (const char *, const char *, long)
 cwist_log_async_active: bool (void)
 cwist_log_async_flush: void (void)
 cwist_log_async_start: bool (size_t)
@@ -1435,6 +1438,7 @@ cwist_redis_publish: cwist_error_t (cwist_redis_t *, const char *, const char *)
 cwist_redis_reply_free: void (cwist_redis_reply_t *)
 cwist_redis_select: cwist_error_t (cwist_redis_t *, unsigned int)
 cwist_redis_set: cwist_error_t (cwist_redis_t *, const char *, const char *)
+cwist_redis_set_timeout_ms: int (cwist_redis_t *, int)
 cwist_redis_setex: cwist_error_t (cwist_redis_t *, const char *, const char *, int)
 cwist_redis_subscribe: cwist_error_t (cwist_redis_t *, const char **, cwist_redis_msg_cb, void *)
 cwist_reg_ptr: void (cwist_gc_t *, void *)
