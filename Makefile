@@ -361,6 +361,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http.c \
        src/net/http/sse.c \
        src/net/graphql/graphql.c \
+       src/net/livemsg/livemsg.c \
        src/net/http/http2.c \
        src/net/http/http2_flow_control.c \
        src/net/http/curl_global.c \
@@ -1423,6 +1424,8 @@ TEST_TARGETS = test_worker_affinity \
                test_cors \
                test_websocket \
                test_websocket_async \
+               test_livemsg \
+               test_livemsg_webrtc \
                test_webrtc \
                test_jwt \
                test_jwt_asym \
@@ -2066,9 +2069,13 @@ test_websocket: $(LIB_NAME) tests/test_websocket.c
 test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
 	$(CC) $(CFLAGS) -o test_websocket_async tests/test_websocket_async.c $(LIB_NAME) $(LIBS)
 	./test_websocket_async
+
+test_livemsg: $(LIB_NAME) tests/test_livemsg.c
+	$(CC) $(CFLAGS) -o test_livemsg tests/test_livemsg.c $(LIB_NAME) $(LIBS)
+	./test_livemsg
 else
 # CWIST_WS=0: the module and its tests are compiled out.
-test_websocket test_websocket_async:
+test_websocket test_websocket_async test_livemsg:
 	@echo "CWIST_WS=0: skipping $@"
 endif
 
@@ -2303,6 +2310,12 @@ EXAMPLE_BINS = example/simple-server/simple-server \
 ifeq ($(CWIST_JWT),1)
 EXAMPLE_BINS += example/jwt/step-2-http-auth/jwt-auth
 endif
+ifeq ($(CWIST_WS),1)
+EXAMPLE_BINS += example/livemsg-websocket/livemsg-websocket
+endif
+ifeq ($(CWIST_WEBRTC),1)
+EXAMPLE_BINS += example/livemsg-webrtc/livemsg-webrtc
+endif
 ifeq ($(CWIST_DB),1)
 EXAMPLE_BINS += example/db/step-1-open-query/open-query \
                 example/db/step-2-migrations/migrations \
@@ -2343,6 +2356,12 @@ example/db/step-4-json-insert/json-insert: $(LIB_NAME) example/db/step-4-json-in
 
 example/rps-showcase/rps-showcase: $(LIB_NAME) example/rps-showcase/main.c
 	$(CC) $(CFLAGS) -o $@ example/rps-showcase/main.c $(LIB_NAME) $(APP_LIBS)
+
+example/livemsg-websocket/livemsg-websocket: $(LIB_NAME) example/livemsg-websocket/main.c
+	$(CC) $(CFLAGS) -o $@ example/livemsg-websocket/main.c $(LIB_NAME) $(APP_LIBS)
+
+example/livemsg-webrtc/livemsg-webrtc: $(LIB_NAME) example/livemsg-webrtc/main.c
+	$(CC) $(CFLAGS) -o $@ example/livemsg-webrtc/main.c $(LIB_NAME) $(APP_LIBS)
 
 # Micro examples
 MICRO_BINS = example/micro/01-hello/hello \
@@ -2502,6 +2521,10 @@ test_webrtc: $(LIB_NAME) $(USRSCTP_LIB) tests/test_webrtc.c
 	$(CC) $(CFLAGS) -o test_webrtc tests/test_webrtc.c $(LIB_NAME) $(LIBS)
 	./test_webrtc
 
+test_livemsg_webrtc: $(LIB_NAME) $(USRSCTP_LIB) tests/test_livemsg_webrtc.c
+	$(CC) $(CFLAGS) -o test_livemsg_webrtc tests/test_livemsg_webrtc.c $(LIB_NAME) $(LIBS)
+	./test_livemsg_webrtc
+
 # Loopback DataChannel benchmark: idle cost, throughput, RTT. Not part of
 # `make test`; run ./bench_webrtc [small_count] [large_count] after building.
 bench_webrtc: $(LIB_NAME) $(USRSCTP_LIB) tests/bench_webrtc.c
@@ -2518,13 +2541,13 @@ test_webrtc_browser: $(LIB_NAME) $(USRSCTP_LIB)
 	kill $$pid 2>/dev/null; wait $$pid 2>/dev/null; \
 	exit $$rc
 
-.PHONY: test_webrtc bench_webrtc test_webrtc_browser
+.PHONY: test_webrtc test_livemsg_webrtc bench_webrtc test_webrtc_browser
 else
 # CWIST_WEBRTC=0: the module and its test are compiled out.
-test_webrtc bench_webrtc test_webrtc_browser:
+test_webrtc test_livemsg_webrtc bench_webrtc test_webrtc_browser:
 	@echo "CWIST_WEBRTC=0: skipping $@"
 
-.PHONY: test_webrtc bench_webrtc test_webrtc_browser
+.PHONY: test_webrtc test_livemsg_webrtc bench_webrtc test_webrtc_browser
 endif
 
 test_waf: $(LIB_NAME) tests/test_waf.c

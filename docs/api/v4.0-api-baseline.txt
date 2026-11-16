@@ -2909,10 +2909,24 @@ struct session_rc_header [1] void (*destructor)(void *)
 
 # Experimental: outside the v4.0 guarantee (WebTransport, until v4.1).
 
-== experimental functions (23) ==
+== experimental functions (37) ==
 cwist_app_use_webtransport
 cwist_http3_client_webtransport_connect
 cwist_http3_set_webtransport_handler
+cwist_livemsg_alloc
+cwist_livemsg_config_init
+cwist_livemsg_create
+cwist_livemsg_destroy
+cwist_livemsg_foreach_peer
+cwist_livemsg_peer_ctx
+cwist_livemsg_reply_set_json
+cwist_livemsg_reply_write
+cwist_livemsg_run
+cwist_livemsg_send_json
+cwist_livemsg_send_raw
+cwist_livemsg_serve
+cwist_livemsg_serve_args
+cwist_livemsg_webrtc_offer
 cwist_webtransport_client_close
 cwist_webtransport_client_is_open
 cwist_webtransport_client_open_bidi
@@ -2934,10 +2948,24 @@ cwist_webtransport_send_datagram
 cwist_webtransport_set_new_stream_handler
 cwist_webtransport_write
 
-== experimental function signatures (23) ==
+== experimental function signatures (37) ==
 cwist_app_use_webtransport: void (cwist_app *, cwist_webtransport_handler_func)
 cwist_http3_client_webtransport_connect: cwist_error_t (cwist_http3_client *, const char *, const char *, cwist_webtransport_client_session **)
 cwist_http3_set_webtransport_handler: void (cwist_http3_context *, cwist_webtransport_handler_func)
+cwist_livemsg_alloc: void * (cwist_livemsg_peer *, size_t)
+cwist_livemsg_config_init: void (cwist_livemsg_config *, uint32_t)
+cwist_livemsg_create: cwist_livemsg_ctx * (const cwist_livemsg_config *)
+cwist_livemsg_destroy: void (cwist_livemsg_ctx *)
+cwist_livemsg_foreach_peer: void (cwist_livemsg_ctx *, void (*)(cwist_livemsg_peer *peer, void *arg), void *)
+cwist_livemsg_peer_ctx: cwist_livemsg_ctx * (cwist_livemsg_peer *)
+cwist_livemsg_reply_set_json: int (cwist_livemsg_reply *, cJSON *)
+cwist_livemsg_reply_write: int (cwist_livemsg_reply *, const void *, size_t)
+cwist_livemsg_run: int (cwist_livemsg_ctx *)
+cwist_livemsg_send_json: int (cwist_livemsg_peer *, const cJSON *)
+cwist_livemsg_send_raw: int (cwist_livemsg_peer *, const void *, size_t)
+cwist_livemsg_serve: int (cwist_livemsg_config_fn)
+cwist_livemsg_serve_args: int (int, char **, cwist_livemsg_config (*)(int, char **))
+cwist_livemsg_webrtc_offer: int (cwist_livemsg_ctx *, const char *, char **)
 cwist_webtransport_client_close: int (cwist_webtransport_client_session *, uint64_t, const char *)
 cwist_webtransport_client_is_open: int (const cwist_webtransport_client_session *)
 cwist_webtransport_client_open_bidi: void * (cwist_webtransport_client_session *)
@@ -2961,14 +2989,30 @@ cwist_webtransport_write: ssize_t (void *, const void *, size_t)
 
 == experimental inline function signatures (0) ==
 
-== experimental types (struct/union/enum names) (1) ==
+== experimental types (struct/union/enum names) (4) ==
+cwist_livemsg_ctx
+cwist_livemsg_peer
+cwist_livemsg_reply
 cwist_webtransport_client_session
 
-== experimental typedefs (2) ==
+== experimental typedefs (9) ==
+cwist_livemsg_codec_t
+cwist_livemsg_config
+cwist_livemsg_config_fn
+cwist_livemsg_ctx
+cwist_livemsg_peer
+cwist_livemsg_reply
+cwist_livemsg_transport_t
 cwist_webtransport_client_session
 cwist_webtransport_handler_func
 
-== experimental enum constants (0) ==
+== experimental enum constants (6) ==
+CWIST_LIVEMSG_CODEC_JSON
+CWIST_LIVEMSG_CODEC_RAW
+CWIST_LIVEMSG_NO_REPLY
+CWIST_LIVEMSG_OK
+CWIST_LIVEMSG_TRANSPORT_WEBRTC
+CWIST_LIVEMSG_TRANSPORT_WS
 
 == experimental globals (extern) (0) ==
 

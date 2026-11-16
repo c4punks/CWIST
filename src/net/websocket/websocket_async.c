@@ -17,7 +17,7 @@
  * paths enforce identical RFC 6455 semantics (issues #145-#164).
  */
 
-#include <cwist/net/websocket/websocket_async.h>
+#include "ws_async_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/net/http/writer_fast.h>
 #include <cwist/sys/io/reactor.h>
@@ -72,6 +72,7 @@ struct cwist_websocket_async {
     uint8_t *stash;
     size_t stash_len;
     size_t stash_cap;
+    size_t max_message_bytes;
 
     /* Fragmented-message reassembly state (RFC 6455 section 5.4), same
      * shape as cwist_websocket in websocket.h. */
@@ -834,10 +835,12 @@ static bool ws_async_stash_append(cwist_websocket_async *ws, const uint8_t *src,
  * @param len Number of bytes to append.
  * @retval true The bytes were appended.
  * @retval false Allocation failure, or the reassembled message would exceed
- *         WS_ASYNC_MAX_MESSAGE_BYTES.
+ *         the connection's message limit.
  */
 static bool ws_async_frag_append(cwist_websocket_async *ws, const uint8_t *src, size_t len) {
-    if (len > WS_ASYNC_MAX_MESSAGE_BYTES - ws->frag_len) return false;
+    if (ws->frag_len > ws->max_message_bytes ||
+        len > ws->max_message_bytes - ws->frag_len)
+        return false;
     size_t need = ws->frag_len + len + 1; /* +1 for null terminator */
     if (need > ws->frag_cap) {
         size_t new_cap = ws->frag_cap ? ws->frag_cap * 2 : 4096;
@@ -1012,7 +1015,10 @@ static int ws_async_feed(cwist_websocket_async *ws) {
 
         /* Reject frames that would force a huge allocation before any
          * payload is read (OOM DoS vector). */
-        if (payload_len > WS_ASYNC_MAX_PAYLOAD_BYTES) return -1;
+        if (payload_len > WS_ASYNC_MAX_PAYLOAD_BYTES || payload_len > ws->max_message_bytes) {
+            if (payload_len > 125) cwist_websocket_async_close_code(ws, 1009);
+            return -1;
+        }
 
         /* RFC 6455 section 5.5: control frames MUST NOT carry more than 125
          * bytes and MUST NOT be fragmented. */
@@ -1133,8 +1139,8 @@ static void ws_async_read_ready(int fd, void *ctx) {
  * Sets the fd non-blocking, feeds any bytes already read past the upgrade
  * request through the parser (delivery can happen inline here, including a
  * close from the on_message callback), arms the one-shot read slot, and
- * joins the reactor's idle sweep.  On any failure the fd is closed and all
- * state is freed; on_close does not fire because the attach itself failed.
+ * joins the reactor's idle sweep. On any failure the fd is closed and all
+ * state is freed. If on_open ran, on_close balances it before this returns.
  *
  * @param fd Upgraded socket fd (owned by the new connection on success).
  * @param reactor Reactor to register the fd with.
@@ -1147,11 +1153,10 @@ static void ws_async_read_ready(int fd, void *ctx) {
  * @return The new async connection, or NULL on invalid arguments or failure
  *         (fd is closed in the latter case).
  */
-cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *reactor,
-                                                       cwist_ws_on_message_t on_message,
-                                                       cwist_ws_on_close_t on_close,
-                                                       void *user_data, const uint8_t *initial,
-                                                       size_t initial_len) {
+cwist_websocket_async *cwist_websocket_async_attach_full(
+    int fd, cwist_reactor_t *reactor, cwist_ws_on_message_t on_message,
+    cwist_ws_on_open_t on_open, cwist_ws_on_close_t on_close, void *user_data,
+    const uint8_t *initial, size_t initial_len, size_t max_message_bytes) {
     if (fd < 0 || !reactor || !on_message) return NULL;
 
     cwist_websocket_async *ws = (cwist_websocket_async *)cwist_alloc(sizeof(*ws));
@@ -1166,6 +1171,7 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
     ws->user_data = user_data;
     ws->stash = NULL;
     ws->stash_len = ws->stash_cap = 0;
+    ws->max_message_bytes = max_message_bytes ? max_message_bytes : WS_ASYNC_MAX_MESSAGE_BYTES;
     ws->frag_buf = NULL;
     ws->frag_len = ws->frag_cap = 0;
     ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
@@ -1182,22 +1188,18 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
     ws->read_armed = false;
     ws->write_armed = false;
 
-    /* The fd must never block the reactor thread. */
     int fl = fcntl(fd, F_GETFL, 0);
     if (fl >= 0) fcntl(fd, F_SETFL, fl | O_NONBLOCK);
 
-    /* Bytes already read past the upgrade request (conn->rbuf) go through the
-     * parser before the first reactor wait.  Delivery can happen inline here,
-     * including a cwist_websocket_async_close() from the callback. */
+    bool opened = on_open != NULL;
+    if (on_open) on_open(ws, user_data);
     bool fail = false;
     if (initial_len > 0) {
         if (!ws_async_stash_append(ws, initial, initial_len)) fail = true;
         if (!fail && ws_async_feed(ws) != 0) fail = true;
     }
     if (fail || ws->terminate_pending) {
-        /* No reactor slot was registered yet: nothing to cancel.  on_close
-         * does not fire here; attach failed, so the caller keeps ownership of
-         * any state installed during inline initial-bytes delivery. */
+        if (opened && on_close) on_close(ws, user_data);
         close(fd);
         cwist_free(ws->stash);
         cwist_free(ws->frag_buf);
@@ -1206,12 +1208,7 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
         return NULL;
     }
 
-    /* Everything the reactor thread reads is set before the slot is added:
-     * once cwist_reactor_add() returns, the read callback may already run
-     * on the reactor thread (attach can be called from any thread), so this
-     * thread must not write ws any more (#351).
-     *
-     * Join the reactor's idle sweep (no-op when reaping is disabled). */
+    /* Once the slot is added, only the reactor thread may mutate ws. */
     ws_async_sweep_link(ws, reactor);
     ws->read_armed = true;
 
@@ -1219,6 +1216,7 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
     if (!cwist_reactor_add(reactor, fd, ws_async_read_ready, &slot, sizeof(slot))) {
         ws->read_armed = false;
         ws_async_sweep_unlink(ws);
+        if (opened && on_close) on_close(ws, user_data);
         close(fd);
         cwist_free(ws->stash);
         cwist_free(ws->frag_buf);
@@ -1227,6 +1225,19 @@ cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *
         return NULL;
     }
     return ws;
+}
+
+cwist_websocket_async *cwist_websocket_async_attach_ex(int fd, cwist_reactor_t *reactor,
+                                                       cwist_ws_on_message_t on_message,
+                                                       cwist_ws_on_close_t on_close,
+                                                       void *user_data, const uint8_t *initial,
+                                                       size_t initial_len) {
+    return cwist_websocket_async_attach_full(fd, reactor, on_message, NULL, on_close, user_data,
+                                             initial, initial_len, 0);
+}
+
+size_t cwist_websocket_async_buffered_amount(const cwist_websocket_async *ws) {
+    return ws ? ws->parked_bytes : 0;
 }
 
 /**

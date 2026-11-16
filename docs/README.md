@@ -57,6 +57,7 @@ Self-contained demos under [`example/`](../example/):
 | [db](../example/db) / [db-crypt](../example/db-crypt) | SQLite integration, transparent column encryption |
 | [jwt](../example/jwt) | Token issuing and verification |
 | [websocket / othello-web](../example/othello-web) | WebSocket game server |
+| [livemsg-websocket](../example/livemsg-websocket) / [livemsg-webrtc](../example/livemsg-webrtc) | Experimental transport-independent JSON echo |
 | [rps-showcase](../example/rps-showcase) | Static caching + throughput demo |
 | [json-builder](../example/json-builder), [html](../example/html), [template](../example/template) | Rendering helpers |
 | [micro](../example/micro), [mem](../example/mem), [siphash](../example/siphash), [sstring](../example/sstring) | Core utilities |
