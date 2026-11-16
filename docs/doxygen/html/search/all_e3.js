@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['포트_20훅과_20런타임_20계약_0',['포트 훅과 런타임 계약',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md624',1,'']]]
+  ['평가_20완료_3a_20preview3_20shim_202026_2009_2023_0',['평가 완료: preview3-shim (2026-09-23)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md547',1,'']]]
 ];

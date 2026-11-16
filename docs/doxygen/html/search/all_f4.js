@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['협력적_20큐잉_20이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
+  ['행렬과_20선형_20연립방정식_20풀이_0',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md711',1,'']]]
 ];

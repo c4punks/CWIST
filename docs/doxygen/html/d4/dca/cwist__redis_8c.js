@@ -2,6 +2,8 @@ var cwist__redis_8c =
 [
     [ "_POSIX_C_SOURCE", "d4/dca/cwist__redis_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
     [ "CWIST_REDIS_BUF_SIZE", "d4/dca/cwist__redis_8c.html#a50847f85cac560afa936cbb9ae9b4853", null ],
+    [ "CWIST_REDIS_CONNECT_TIMEOUT_MS", "d4/dca/cwist__redis_8c.html#ab671cf1acc0ad9d99f69ade4e9f10e6e", null ],
+    [ "CWIST_REDIS_IO_TIMEOUT_MS", "d4/dca/cwist__redis_8c.html#abc91f122927d0bbb5e060aeb32c5341b", null ],
     [ "CWIST_REDIS_LINE_MAX", "d4/dca/cwist__redis_8c.html#ab4b999780d0c19571db03fc120310435", null ],
     [ "CWIST_REDIS_MAX_BULK_BYTES", "d4/dca/cwist__redis_8c.html#a7a17ed24ebb683020a56fc98def994f6", null ],
     [ "CWIST_REDIS_MAX_REPLY_DEPTH", "d4/dca/cwist__redis_8c.html#a545889941e3a467559c6d17c6cf32d04", null ],
@@ -36,6 +38,7 @@ var cwist__redis_8c =
     [ "cwist_redis_reply_free", "d4/dca/cwist__redis_8c.html#ac1acbfb11055b6a1a2caf21b41802f99", null ],
     [ "cwist_redis_select", "d4/dca/cwist__redis_8c.html#aae2624e481cdd89780cff2e96316bbe1", null ],
     [ "cwist_redis_set", "d4/dca/cwist__redis_8c.html#af47033893cd7f80f457610f1a155a10a", null ],
+    [ "cwist_redis_set_timeout_ms", "d4/dca/cwist__redis_8c.html#a590a6d56e9ddf7e875b76f2d58c557fc", null ],
     [ "cwist_redis_setex", "d4/dca/cwist__redis_8c.html#a9e0ba5b12c0ec2c507e70972d81a2230", null ],
     [ "cwist_redis_subscribe", "d4/dca/cwist__redis_8c.html#abc6e0fe90ac671129ddc653f55d4e8da", null ]
 ];

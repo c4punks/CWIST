@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md528',1,'']]],
-  ['양자내성_20하이브리드_20키_20교환_1',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md526',1,'']]]
+  ['않는_20것_0',['2.4 코드가 만들지 않는 것',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md392',1,'']]]
 ];

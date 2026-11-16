@@ -15,5 +15,6 @@ var jwt_8h =
     [ "cwist_jwt_verify", "d5/d6c/jwt_8h.html#a7ebdc506413955dc760508df1943b0ca", null ],
     [ "cwist_jwt_verify_chunks", "d5/d6c/jwt_8h.html#adb61a3f86525a66a8b5d2eb0ae0c492c", null ],
     [ "cwist_jwt_verify_ed25519", "d5/d6c/jwt_8h.html#af92c64b451fdba1c2e3065572daaf5fc", null ],
-    [ "cwist_jwt_verify_es256", "d5/d6c/jwt_8h.html#a449066f8812ceed8be3af264d626b123", null ]
+    [ "cwist_jwt_verify_es256", "d5/d6c/jwt_8h.html#a449066f8812ceed8be3af264d626b123", null ],
+    [ "cwist_jwt_verify_with_leeway", "d5/d6c/jwt_8h.html#a07985e26c7135aa715ad4fcf83eda914", null ]
 ];

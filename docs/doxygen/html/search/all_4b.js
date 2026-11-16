@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['소수_20거듭제곱_0',['2.1 유한체 (소수 거듭제곱)',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md375',1,'']]],
-  ['소수_20거듭제곱_20p_20e_20e_202_1',['2.2 홀수 소수 거듭제곱 p^e, e &gt;= 2',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md376',1,'']]]
+  ['설계하기_0',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md410',1,'']]],
+  ['설정하기_1',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md409',1,'']]],
+  ['설정_2',['설정',['../d5/d08/md_docs_2ko_2runtime-config.html',1,'런타임 설정'],['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md356',1,'설정']]]
 ];

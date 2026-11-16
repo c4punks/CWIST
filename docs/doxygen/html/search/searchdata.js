@@ -1,6 +1,6 @@
 var indexSectionsWithContent =
 {
-  0: "0123456789:_abcdefghijklmnopqrstuvwyz—洛개거검것게계곱교구기대덮데동띄라런레마만메모목문미및방버범보빌사상서설세소스시실쌍쓰안않암양에엔역연예요운원웹유응의인입정제지진차참처첫코쿼크클키테템통튜파펌포표풀프하함합핸홀확훅",
+  0: "0123456789:_abcdefghijklmnopqrstuvwyz—洛개거검것게결계곱교구기대덮데동띄라런레마만메모목문미및방백버범보빌사상서설세소스시실쌍쓰안않암양에엔역연예외요운원웹유응의인임입정제지진차참처첫최코쿼크클키테템통튜파펌포표푸풀프하함합핸홀확훅",
   1: "_bchqs",
   2: "0abcdefghijklmnopqrstuvwz",
   3: "_bcghmqs",
@@ -9,7 +9,7 @@ var indexSectionsWithContent =
   6: "acfgjlqt",
   7: "acefghjlqt",
   8: "_abcdeghklmnopqrstuw",
-  9: "01235abcdefghijklmnopqrstuvwz개라런레만문서설웹참튜"
+  9: "01235abcdefghijklmnopqrstuvwz개라런레만메문서설실웹참튜"
 };
 
 var indexSectionNames =

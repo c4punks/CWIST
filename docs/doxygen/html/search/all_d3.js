@@ -1,6 +1,8 @@
 var searchData=
 [
-  ['큐잉_20이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]],
-  ['큐_20소유권_1',['큐 소유권',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md571',1,'스케줄러와 IO 큐 소유권'],['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md569',1,'HTTP/2 큐 소유권']]],
-  ['큐_20필수_20게이트_2',['영속 큐 필수 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'']]]
+  ['쿠키_0',['세션과 쿠키',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md561',1,'']]],
+  ['쿠키_20쓰기_1',['쿠키 쓰기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md407',1,'']]],
+  ['쿠키_20읽기_2',['쿠키 읽기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md404',1,'']]],
+  ['쿠키_20저장소_3',['쿠키 저장소',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md401',1,'']]],
+  ['쿠키_20api_4',['쿠키 API',['../db/d04/md_docs_2ko_2api_2cookie.html',1,'']]]
 ];

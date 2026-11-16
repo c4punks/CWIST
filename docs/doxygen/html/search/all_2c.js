@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['계약_0',['포트 훅과 런타임 계약',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md350',1,'']]]
+  ['결과_20소유권_0',['메시지와 결과 소유권',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md357',1,'']]]
 ];

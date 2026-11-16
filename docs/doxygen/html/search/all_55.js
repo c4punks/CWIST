@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['에러_20처리_0',['7. 에러 처리',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md366',1,'']]]
+  ['암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md541',1,'']]]
 ];

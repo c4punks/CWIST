@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['하나의_20파싱된_20자격_20경계_0',['1. 하나의 파싱된 자격 경계',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md592',1,'']]],
-  ['하는_20일_1',['지금 런타임이 실제로 하는 일',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md633',1,'']]],
-  ['하이브리드_20키_20교환_2',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md867',1,'']]]
+  ['풀의_20버스트_20기아_2025_20후속_0',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]],
+  ['풀이_1',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md711',1,'']]],
+  ['풀_2',['Classic 스레드 풀',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md718',1,'']]]
 ];

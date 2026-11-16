@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['덮기_0',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md380',1,'']]]
+  ['대상과_20검증_20범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md362',1,'']]]
 ];

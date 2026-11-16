@@ -1,6 +1,7 @@
 var transport_8c =
 [
     [ "_POSIX_C_SOURCE", "d2/d62/transport_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
+    [ "PROXY_TCP_MAX_CONNECTIONS", "d2/d62/transport_8c.html#af72b41cf51e61f4996e4cc96a885c2aa", null ],
     [ "PROXY_TRANSPORT_CONNECT_TIMEOUT_MS", "d2/d62/transport_8c.html#ab710d669b5ae3ed728fd269a767c80d7", null ],
     [ "PROXY_TRANSPORT_IDLE_TIMEOUT_MS", "d2/d62/transport_8c.html#a1ab73799e65c5082e7fd897e1ba3715c", null ],
     [ "PROXY_TRANSPORT_POLL_MS", "d2/d62/transport_8c.html#a25ffc7df20850a96907720d2cf86312b", null ],

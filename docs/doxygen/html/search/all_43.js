@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md348',1,'']]]
+  ['백프레셔_0',['응답, 푸시, 백프레셔',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md358',1,'']]]
 ];

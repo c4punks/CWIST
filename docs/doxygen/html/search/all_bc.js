@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['종료_20정리_0',['3. 스레드/프로세스 종료 정리',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md642',1,'']]],
-  ['종류_1',['Opcode 종류',['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md557',1,'']]],
-  ['종류_20감지_2',['종류 감지',['../d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md524',1,'']]]
+  ['조정_0',['조정',['../db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md589',1,'조정'],['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md602',1,'조정']]],
+  ['조회_1',['비교 / 조회',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md364',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['템플릿_20엔진과_20정적_20파일_20제공_0',['9. 템플릿 엔진과 정적 파일 제공',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md529',1,'']]]
+  ['쿼리_20파싱_0',['4. 쿼리 파싱',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md377',1,'']]]
 ];

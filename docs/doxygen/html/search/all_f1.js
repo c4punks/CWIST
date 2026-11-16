@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['행렬과_20선형_20연립방정식_20풀이_0',['3. 계수 행렬과 선형 연립방정식 풀이',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md697',1,'']]]
+  ['핵심_20도우미_0',['핵심 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md361',1,'']]]
 ];

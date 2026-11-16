@@ -179,8 +179,8 @@ Functions</h2></td></tr>
 <p>The server serialises its in-memory SQLite database, encrypts the bytes using the KEK/DEK hierarchy from db_crypt, and streams the sealed blob to any connecting client.</p>
 <h1><a class="anchor" id="autotoc_md0"></a>
 Wire protocol (per-connection)</h1>
-<p>Client → Server: 4-byte magic 0x43 0x57 0x53 0x59 ("CWSY") Server → Client: 8-byte little-endian uint64 blob_length Server → Client: blob_length bytes (the sealed blob)</p>
-<p>The client verifies the magic, reads the length, then opens the blob with <a class="el" href="../../d9/df9/db__crypt_8h.html#a535e9e0c49e217d59ea6c60e7cdd1101" title="Decrypt a sealed blob produced by cwist_db_crypt_seal().">cwist_db_crypt_open()</a> using its copy of the KEK. </p>
+<p>Client → Server: magic, fresh client nonce, keyed client authenticator Server → Client: fresh server nonce, keyed server authenticator Server → Client: 8-byte little-endian uint64 blob_length and sealed blob Server → Client: keyed authenticator binding the blob to both nonces</p>
+<p>Unauthenticated clients are rejected without consuming the one-shot send. The client verifies both authenticators before opening the blob with <a class="el" href="../../d9/df9/db__crypt_8h.html#a535e9e0c49e217d59ea6c60e7cdd1101" title="Decrypt a sealed blob produced by cwist_db_crypt_seal().">cwist_db_crypt_open()</a>, preventing recorded sessions from being replayed. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 </div><h2 class="groupheader">Macro Definition Documentation</h2>
@@ -196,7 +196,7 @@ Wire protocol (per-connection)</h1>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00026">26</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00028">28</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 
 </div>
 </div>
@@ -212,7 +212,7 @@ Wire protocol (per-connection)</h1>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00030">30</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">32</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 
 </div>
 </div>
@@ -228,7 +228,7 @@ Wire protocol (per-connection)</h1>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">32</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">34</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 
 </div>
 </div>
@@ -244,7 +244,7 @@ Wire protocol (per-connection)</h1>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">33</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00035">35</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 
 </div>
 </div>
@@ -260,7 +260,7 @@ Wire protocol (per-connection)</h1>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">31</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">33</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 
 </div>
 </div>
@@ -276,7 +276,7 @@ Wire protocol (per-connection)</h1>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">34</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00036">36</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 
 </div>
 </div>
@@ -294,7 +294,7 @@ Wire protocol (per-connection)</h1>
 
 <p>Return codes. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00029">29</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">31</a> of file <a class="el" href="../../d6/dd4/db__sync_8h_source.html">db_sync.h</a>.</p>
 
 </div>
 </div>
@@ -369,9 +369,9 @@ Wire protocol (per-connection)</h1>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_DB_SYNC_OK on success, or a protocol/network/crypto error code. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00228">228</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00277">277</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00237">cwist_db_crypt_open()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00026">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00030">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_PROTO</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00030">CWIST_DB_SYNC_MAX_BLOB_SIZE</a>, and <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00029">CWIST_DB_SYNC_OK</a>.</p>
+<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00237">cwist_db_crypt_open()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00028">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00035">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00036">CWIST_DB_SYNC_ERR_PROTO</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00037">CWIST_DB_SYNC_MAX_BLOB_SIZE</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_OK</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00034">DB_SYNC_MAC_LEN</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00033">DB_SYNC_NONCE_LEN</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 </div>
 </div>
@@ -429,9 +429,9 @@ Wire protocol (per-connection)</h1>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_DB_SYNC_OK on success, or a protocol/network/crypto error code. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00128">128</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00154">154</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00074">cwist_db_crypt_seal()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00026">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00030">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_PROTO</a>, and <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00029">CWIST_DB_SYNC_OK</a>.</p>
+<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00074">cwist_db_crypt_seal()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00028">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00035">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00036">CWIST_DB_SYNC_ERR_PROTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_OK</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00040">CWIST_DB_SYNC_TIMEOUT_SEC</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00034">DB_SYNC_MAC_LEN</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00033">DB_SYNC_NONCE_LEN</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 </div>
 </div>

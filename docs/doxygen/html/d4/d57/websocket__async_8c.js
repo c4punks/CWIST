@@ -11,6 +11,8 @@ var websocket__async_8c =
     [ "ws_async_sweep_t", "d4/d57/websocket__async_8c.html#a25620353edaccff62b19c338b85c4311", null ],
     [ "cwist_websocket_async_attach", "d4/d57/websocket__async_8c.html#a73e36956d0653cb9ca562cadaaa53851", null ],
     [ "cwist_websocket_async_attach_ex", "d4/d57/websocket__async_8c.html#a640996b854bf04f108f28eaad63f7133", null ],
+    [ "cwist_websocket_async_attach_full", "d4/d57/websocket__async_8c.html#a9de5ca340ce3e4ff09fac7190a51564f", null ],
+    [ "cwist_websocket_async_buffered_amount", "d4/d57/websocket__async_8c.html#aa70b3433a47ff8fe7523d0d4c1f78e4b", null ],
     [ "cwist_websocket_async_close", "d4/d57/websocket__async_8c.html#a58cd0931439fe5825a93da77fc25542e", null ],
     [ "cwist_websocket_async_close_code", "d4/d57/websocket__async_8c.html#a599b5da71481d4e0f293ea4261c45561", null ],
     [ "cwist_websocket_async_send", "d4/d57/websocket__async_8c.html#a3029917957e6cb47adc4d97dae14c7d7", null ]

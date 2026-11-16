@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['쓰기_0',['WebTransport와 raw 데이터그램 함께 쓰기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md396',1,'']]],
-  ['쓰인_20구성법_1',['2. 코드에 쓰인 구성법',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md374',1,'']]]
+  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md544',1,'']]],
+  ['실험적_1',['라이브 메시지 런타임(실험적)',['../d2/daa/md_docs_2ko_2api_2livemsg.html',1,'']]]
 ];

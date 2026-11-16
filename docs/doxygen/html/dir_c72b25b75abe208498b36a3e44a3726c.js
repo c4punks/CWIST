@@ -4,6 +4,7 @@ var dir_c72b25b75abe208498b36a3e44a3726c =
     [ "graphql", "dir_9b1eeb7a9295631997a6606c6891fcec.html", "dir_9b1eeb7a9295631997a6606c6891fcec" ],
     [ "grpc", "dir_a738ffd196b7a521d927e1330e6dd6af.html", "dir_a738ffd196b7a521d927e1330e6dd6af" ],
     [ "http", "dir_dd2d28fd72df0d33d2116010ecf4f11d.html", "dir_dd2d28fd72df0d33d2116010ecf4f11d" ],
+    [ "livemsg", "dir_63a323703e0fc24ee10321ea88112827.html", "dir_63a323703e0fc24ee10321ea88112827" ],
     [ "nats", "dir_2e2cca8cbb7c60879e0e07c0265440e3.html", "dir_2e2cca8cbb7c60879e0e07c0265440e3" ],
     [ "proxy", "dir_077ac7c5718cd11a37d5ae62d190a061.html", "dir_077ac7c5718cd11a37d5ae62d190a061" ],
     [ "redis", "dir_e865be13b74a5e9de1bd591ab1d299a3.html", "dir_e865be13b74a5e9de1bd591ab1d299a3" ],

@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['저장소_0',['쿠키 저장소',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md394',1,'']]],
-  ['저지연_20실행_1',['튜닝된 저지연 실행',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md742',1,'']]]
+  ['재시작하기_0',['소켓 핸드오프로 무중단 재시작하기',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html',1,'']]],
+  ['재시작_20백업_20복원_1',['4. 재시작, 백업, 복원',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md623',1,'']]]
 ];

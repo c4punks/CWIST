@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['테스트에서_20런타임_20knob_20쌍_20덮기_0',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md380',1,'']]]
+  ['코드가_20만들지_20않는_20것_0',['2.4 코드가 만들지 않는 것',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md392',1,'']]],
+  ['코드에_20쓰인_20구성법_1',['2. 코드에 쓰인 구성법',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md388',1,'']]]
 ];

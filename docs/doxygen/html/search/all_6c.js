@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['쿼리_20파싱_0',['4. 쿼리 파싱',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md363',1,'']]]
+  ['참고_20문헌_0',['라틴방진 참고 문헌',['../da/d05/md_docs_2ko_2references_2latin__square__references.html',1,'']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['확장_20시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md401',1,'']]]
+  ['프로세스와_20서버_20모드_0',['프로세스와 서버 모드',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md397',1,'']]],
+  ['프로토콜_20설계하기_1',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md410',1,'']]]
 ];

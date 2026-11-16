@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md379',1,'']]],
-  ['쌍_20덮기_1',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md380',1,'']]]
+  ['시그널링과_20임베딩_0',['외부 시그널링과 임베딩',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md359',1,'']]],
+  ['시퀀스_1',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md416',1,'']]],
+  ['시퀀스_20기본_2',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md415',1,'']]]
 ];

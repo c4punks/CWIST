@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['성능_20주의_20사항_0',['알려진 성능 주의 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md649',1,'']]],
-  ['성능_20주장의_20경계_1',['성능 주장의 경계',['../d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md653',1,'']]]
+  ['합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md546',1,'']]],
+  ['합성수_20차수_3a_20macneish_20곱_1',['2.3 합성수 차수: MacNeish 곱',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md391',1,'']]],
+  ['합성_2',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md548',1,'']]]
 ];

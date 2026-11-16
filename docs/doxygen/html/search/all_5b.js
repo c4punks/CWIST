@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['운영하기_0',['3. 안전하게 운영하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md397',1,'']]]
+  ['예제_3a_20othello_20web_0',['예제: Othello Web',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md383',1,'']]]
 ];

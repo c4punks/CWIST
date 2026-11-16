@@ -1,7 +1,19 @@
 <map id="src/net/websocket/ws_async_internal.h" name="src/net/websocket/ws_async_internal.h">
-<area shape="rect" id="Node000001" title="Private wiring between the app layer (C1M upgrade path) and the reactor&#45;driven WebSocket implementati..." alt="" coords="126,5,287,45"/>
-<area shape="rect" id="Node000002" href="$d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="5,93,213,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="174,56,126,95,122,91,171,52"/>
-<area shape="rect" id="Node000003" href="$df/d7f/app_8c.html" title=" " alt="" coords="238,93,373,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="243,52,292,91,289,95,240,56"/>
+<area shape="rect" id="Node000001" title="Private wiring between the app layer (C1M upgrade path) and the reactor&#45;driven WebSocket implementati..." alt="" coords="221,5,382,45"/>
+<area shape="rect" id="Node000002" href="$d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="5,101,213,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="248,53,136,103,134,98,246,49"/>
+<area shape="rect" id="Node000003" href="$da/df2/livemsg_8c.html" title="Experimental transport&#45;independent message dispatch runtime." alt="" coords="80,181,269,207"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="283,58,227,135,187,183,183,179,223,132,279,55"/>
+<area shape="rect" id="Node000004" href="$d4/d57/websocket__async_8c.html" title="Reactor&#45;driven, callback&#45;shaped non&#45;blocking WebSocket path (C1M mode)." alt="" coords="527,93,739,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="388,46,561,91,560,96,387,51"/>
+<area shape="rect" id="Node000005" href="$df/d7f/app_8c.html" title=" " alt="" coords="294,181,429,207"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="309,59,317,95,329,132,355,180,351,182,324,134,312,96,304,60"/>
+<area shape="rect" id="Node000006" href="$d5/d34/app__route__internal_8h.html" title=" " alt="" coords="339,93,503,133"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="341,51,396,91,393,95,338,56"/>
+<area shape="poly" id="edge7_Node000006_Node000003" title=" " alt="" coords="350,140,212,184,210,179,348,135"/>
+<area shape="poly" id="edge9_Node000006_Node000005" title=" " alt="" coords="401,146,372,183,368,179,396,143"/>
+<area shape="rect" id="Node000007" href="$d9/dba/grpc_8c.html" title="Unary gRPC over HTTP/2 support." alt="" coords="453,181,595,207"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="459,140,510,179,507,183,456,144"/>
+<area shape="rect" id="Node000008" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="619,181,776,207"/>
+<area shape="poly" id="edge8_Node000006_Node000008" title=" " alt="" coords="502,135,658,179,656,184,500,140"/>
 </map>

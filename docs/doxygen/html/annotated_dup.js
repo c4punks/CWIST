@@ -57,6 +57,7 @@ var annotated_dup =
     [ "cwist_job_queue_opts", "da/da7/structcwist__job__queue__opts.html", "da/da7/structcwist__job__queue__opts" ],
     [ "cwist_json_builder", "d7/ddf/structcwist__json__builder.html", "d7/ddf/structcwist__json__builder" ],
     [ "cwist_jwt_chunk", "d0/d64/structcwist__jwt__chunk.html", "d0/d64/structcwist__jwt__chunk" ],
+    [ "cwist_livemsg_config", "d4/dba/structcwist__livemsg__config.html", "d4/dba/structcwist__livemsg__config" ],
     [ "cwist_logger", "d0/dd4/structcwist__logger.html", "d0/dd4/structcwist__logger" ],
     [ "cwist_lwip_config", "d5/d41/structcwist__lwip__config.html", "d5/d41/structcwist__lwip__config" ],
     [ "cwist_lwip_conn_info", "d0/db5/structcwist__lwip__conn__info.html", "d0/db5/structcwist__lwip__conn__info" ],
