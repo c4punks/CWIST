@@ -301,6 +301,7 @@ static void proxy_udp_close_sessions(proxy_udp_session *session) {
 static void *proxy_udp_listener(void *arg) {
     proxy_transport_rule *rule = arg;
     proxy_udp_session *sessions = NULL;
+    proxy_udp_session *retired = NULL;
     size_t session_count = 0;
     unsigned char buf[PROXY_UDP_MAX_DGRAM];
     while (proxy_transport_active()) {
@@ -344,8 +345,8 @@ static void *proxy_udp_listener(void *arg) {
                         while ((*oldest)->next) oldest = &(*oldest)->next;
                         proxy_udp_session *victim = *oldest;
                         *oldest = NULL;
-                        close(victim->fd);
-                        cwist_free(victim);
+                        victim->next = retired;
+                        retired = victim;
                         session_count--;
                     }
                     session = proxy_udp_session_new(rule, &client, client_len, now);
@@ -371,6 +372,8 @@ static void *proxy_udp_listener(void *arg) {
                              (struct sockaddr *)&session->client, session->client_len);
             }
         }
+        proxy_udp_close_sessions(retired);
+        retired = NULL;
         proxy_udp_session **link = &sessions;
         while (*link) {
             proxy_udp_session *session = *link;
@@ -385,6 +388,7 @@ static void *proxy_udp_listener(void *arg) {
         }
     }
     proxy_udp_close_sessions(sessions);
+    proxy_udp_close_sessions(retired);
     return NULL;
 }
 
