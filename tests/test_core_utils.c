@@ -161,6 +161,38 @@ static void exercise_query_map(cwist_query_map *m) {
     assert(cwist_query_map_get(m, "a") == NULL);
     assert(strcmp(cwist_query_map_get(m, "e"), "5") == 0);
 
+    /* Decoded NUL rejection (Issue #753) */
+    cwist_query_map *nul_map = cwist_query_map_create();
+    assert(nul_map != NULL);
+
+    /* Encoded NUL in value */
+    assert(cwist_query_map_parse_checked(nul_map, "role=user%00admin&next=ok") == -1);
+    assert(nul_map->count == 0);
+    assert(cwist_query_map_get(nul_map, "role") == NULL);
+    assert(cwist_query_map_get(nul_map, "next") == NULL);
+
+    /* Encoded NUL in key */
+    assert(cwist_query_map_parse_checked(nul_map, "role%00evil=user&next=ok") == -1);
+    assert(nul_map->count == 0);
+    assert(cwist_query_map_get(nul_map, "next") == NULL);
+
+    /* Encoded NUL in duplicate key (second occurrence) */
+    assert(cwist_query_map_parse_checked(nul_map, "role=user&role=admin%00junk") == -1);
+    assert(nul_map->count == 0);
+    assert(cwist_query_map_get(nul_map, "role") == NULL);
+
+    /* Encoded NUL in duplicate key (first occurrence) */
+    assert(cwist_query_map_parse_checked(nul_map, "role=admin%00junk&role=user") == -1);
+    assert(nul_map->count == 0);
+    assert(cwist_query_map_get(nul_map, "role") == NULL);
+
+    /* cwist_query_map_parse compatibility wrapper also leaves map cleared on NUL */
+    cwist_query_map_parse(nul_map, "role=user%00admin&next=ok");
+    assert(nul_map->count == 0);
+    assert(cwist_query_map_get(nul_map, "role") == NULL);
+
+    cwist_query_map_destroy(nul_map);
+
     /* Many keys chain within the fixed buckets. */
     char k[16];
     for (int i = 0; i < 300; i++) {
@@ -276,6 +308,19 @@ static void test_query_params_through_request_parser(void) {
         assert(got && strcmp(got, v) == 0);
     }
     cwist_http_request_destroy(req);
+
+    /* Encoded NUL in request line query rejects with HTTP 400 (Issue #753) */
+    cwist_http_request *bad_req1 =
+        cwist_http_parse_request("GET /search?role=user%00admin HTTP/1.1\r\nHost: x\r\n\r\n");
+    assert(bad_req1 == NULL);
+
+    cwist_http_request *bad_req2 =
+        cwist_http_parse_request("GET /search?role%00admin=user HTTP/1.1\r\nHost: x\r\n\r\n");
+    assert(bad_req2 == NULL);
+
+    cwist_http_request *bad_req3 =
+        cwist_http_parse_request("GET /search?a=1&a=2%00junk HTTP/1.1\r\nHost: x\r\n\r\n");
+    assert(bad_req3 == NULL);
 }
 
 /* The map used to keep 16 buckets forever; it now doubles past a 3/4 load

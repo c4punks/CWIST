@@ -48,6 +48,17 @@ void cwist_query_map_destroy(cwist_query_map *map);
 void cwist_query_map_parse(cwist_query_map *map, const char *raw_query);
 
 /**
+ * @brief Parse raw query strings and report decoding errors.
+ *
+ * Rejects decoded NUL bytes (%00) in parameter names or values.
+ *
+ * @param map Destination query map.
+ * @param raw_query Raw query string.
+ * @return 0 on success, -1 if an encoded NUL or allocation error was encountered.
+ */
+int cwist_query_map_parse_checked(cwist_query_map *map, const char *raw_query);
+
+/**
  * @brief Clear all entries.
  */
 void cwist_query_map_clear(cwist_query_map *map);
