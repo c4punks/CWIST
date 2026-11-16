@@ -11,14 +11,19 @@
 #include <assert.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
+#define TEST_CERT "example/othello-web/server.crt"
+#define TEST_KEY "example/othello-web/server.key"
+
 /* --- test server: loopback listener, one thread per h2c connection --- */
 
 static cwist_app *g_app;
+static bool g_use_tls;
 static int g_listen_fd = -1;
 static pthread_t g_accept_tid;
 
@@ -78,17 +83,53 @@ static void cli_bridge(void *user_ctx, cwist_http_request *req, cwist_http_respo
     cwist_app_dispatch(app, req, res);
 }
 
+static int tls_alpn_select(SSL *ssl, const uint8_t **out, uint8_t *outlen, const uint8_t *in,
+                           unsigned inlen, void *arg) {
+    (void)ssl;
+    (void)in;
+    (void)inlen;
+    (void)arg;
+    *out = (const uint8_t *)"h2";
+    *outlen = 2;
+    return SSL_TLSEXT_ERR_OK;
+}
+
+static SSL_CTX *tls_server_context(void) {
+    SSL_CTX *ctx = SSL_CTX_new(TLS_server_method());
+    assert(ctx != NULL);
+    assert(SSL_CTX_use_certificate_file(ctx, TEST_CERT, SSL_FILETYPE_PEM) == 1);
+    assert(SSL_CTX_use_PrivateKey_file(ctx, TEST_KEY, SSL_FILETYPE_PEM) == 1);
+    SSL_CTX_set_alpn_select_cb(ctx, tls_alpn_select, NULL);
+    return ctx;
+}
+
 static void *serve_one(void *arg) {
     int fd = *(int *)arg;
     cwist_free(arg);
+    SSL_CTX *tls_ctx = NULL;
+    SSL *ssl = NULL;
+    if (g_use_tls) {
+        tls_ctx = tls_server_context();
+        ssl = SSL_new(tls_ctx);
+        assert(ssl != NULL);
+        assert(SSL_set_fd(ssl, fd) == 1);
+        if (SSL_accept(ssl) != 1) {
+            SSL_free(ssl);
+            SSL_CTX_free(tls_ctx);
+            close(fd);
+            return NULL;
+        }
+    }
     cwist_https_connection conn = {.fd = fd,
-                                   .ssl = NULL,
+                                   .ssl = ssl,
                                    .read_buf = NULL,
                                    .buf_len = 0,
                                    .negotiated_http2 = true,
                                    .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
                                    .http2_sequenced_data = false};
     cwist_http2_serve_connection_ex(&conn, g_app, cli_bridge, cwist_grpc_http2_hooks());
+    if (ssl) SSL_free(ssl);
+    if (tls_ctx) SSL_CTX_free(tls_ctx);
     close(fd);
     return NULL;
 }
@@ -261,6 +302,31 @@ static void test_deadline(uint16_t port) {
     nanosleep(&settle, NULL);
 }
 
+static void test_tls_hostname_verification(uint16_t port) {
+    setenv("SSL_CERT_FILE", TEST_CERT, 1);
+    cwist_grpc_client_options options = {.use_tls = 1, .verify_peer = 1};
+    cwist_grpc_client *client = cwist_grpc_client_connect("localhost", port, &options);
+    assert(client != NULL);
+
+    size_t req_len;
+    uint8_t *req = build_echo_request("tls-ping", &req_len);
+    cwist_grpc_call *call = cwist_grpc_call_start(client, "/cwist.test.Cli/Echo", req, req_len, 0);
+    assert(call != NULL);
+    cwist_grpc_message msg;
+    assert(cwist_grpc_call_recv(call, &msg) == 1);
+    assert_echo_reply(&msg, "tls-ping");
+    assert(cwist_grpc_call_recv(call, &msg) == 0);
+    cwist_grpc_call_destroy(call);
+    cwist_free(req);
+    cwist_grpc_client_close(client);
+
+    options.tls_server_name = "wronghost";
+    assert(cwist_grpc_client_connect("127.0.0.1", port, &options) == NULL);
+    options.tls_server_name = NULL;
+    assert(cwist_grpc_client_connect("127.0.0.1", port, &options) == NULL);
+    puts("  TLS hostname verification: valid DNS accepted, wrong DNS/IP rejected");
+}
+
 int main(void) {
     printf("Testing gRPC client...\n");
 
@@ -279,6 +345,11 @@ int main(void) {
     test_deadline(port);
 
     stop_server();
+    g_use_tls = true;
+    port = start_server();
+    test_tls_hostname_verification(port);
+    stop_server();
+    unsetenv("SSL_CERT_FILE");
     cwist_app_destroy(g_app);
     printf("test_grpc_client: OK\n");
     return 0;
