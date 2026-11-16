@@ -769,6 +769,38 @@ static void test_legacy_sigpipe_contained(void) {
     server_stop(s);
 }
 
+typedef struct direct_legacy_job {
+    cwist_redis_t *r;
+    atomic_bool done;
+} direct_legacy_job;
+
+static void *direct_legacy_reader(void *arg) {
+    direct_legacy_job *job = arg;
+    const void *argv[] = {"STALL", "5000", "close-race"};
+    size_t lens[] = {5, 4, 10};
+    char *out = NULL;
+    size_t out_len = 0;
+    (void)cwist_redis_command_argv(job->r, 3, argv, lens, &out, &out_len);
+    cwist_free(out);
+    atomic_store(&job->done, true);
+    return NULL;
+}
+
+static void test_legacy_close_waits_for_reader(void) {
+    fake_server *s = server_start();
+    direct_legacy_job job = {.r = cwist_redis_connect("127.0.0.1", s->port)};
+    CHECK(job.r != NULL);
+    CHECK(cwist_redis_set_timeout_ms(job.r, 10000) == 0);
+    atomic_init(&job.done, false);
+    pthread_t thread;
+    pthread_create(&thread, NULL, direct_legacy_reader, &job);
+    CHECK(wait_log(s, "STALL close-race", 1000));
+    cwist_redis_close(job.r);
+    pthread_join(thread, NULL);
+    CHECK(atomic_load(&job.done));
+    server_stop(s);
+}
+
 static void test_pool_saturation(void) {
     fake_server *s = server_start();
     cwist_redis_pool_t *p = cwist_redis_pool_create("127.0.0.1", s->port, 1);
@@ -1104,6 +1136,7 @@ int main(int argc, char **argv) {
     RUN(test_write_deadline);
     RUN(test_sigpipe_contained);
     RUN(test_legacy_sigpipe_contained);
+    RUN(test_legacy_close_waits_for_reader);
     RUN(test_pool_saturation);
     RUN(test_no_wake_pipe_deadline);
     RUN(test_reconnect_cached_peer);

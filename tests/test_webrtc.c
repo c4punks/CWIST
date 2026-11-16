@@ -239,9 +239,27 @@ static void unit_checks(void) {
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "wrongpassword000000000") == 0);
 
+        uint8_t injected[512];
+        memcpy(injected, req, 44);
+        memmove(injected + 32, injected + 36, 8);
+        injected[2] = 0;
+        injected[3] = 20;
+        int injected_len =
+            cwist_ice_stun_sign_request(injected, sizeof(injected), 40, "testpassword0123456789");
+        assert(injected_len > 0);
+        memset(injected + injected_len, 0, 4);
+        injected[injected_len + 1] = 0x25;
+        injected_len += 4;
+        uint16_t body_len = (uint16_t)(injected_len - 20);
+        injected[2] = (uint8_t)(body_len >> 8);
+        injected[3] = (uint8_t)body_len;
+        assert(cwist_ice_stun_validate_request(injected, (size_t)injected_len,
+                                               "testpassword0123456789") == 1);
+        assert(!cwist_ice_stun_has_use_candidate(injected, (size_t)injected_len));
+
         /* Exercise every mismatch position across the 20-byte HMAC (Issue #747) */
         size_t mi_pos = 0;
-        for (size_t off = 20; off + 24 <= (size_t)len; ) {
+        for (size_t off = 20; off + 24 <= (size_t)len;) {
             uint16_t atype = (uint16_t)((req[off] << 8) | req[off + 1]);
             uint16_t alen = (uint16_t)((req[off + 2] << 8) | req[off + 3]);
             if (atype == 0x0008 && alen == 20) {
@@ -253,7 +271,8 @@ static void unit_checks(void) {
         assert(mi_pos > 0);
         for (size_t byte_idx = 0; byte_idx < 20; byte_idx++) {
             req[mi_pos + byte_idx] ^= 0x5A;
-            assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 0);
+            assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") ==
+                   0);
             req[mi_pos + byte_idx] ^= 0x5A;
         }
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);

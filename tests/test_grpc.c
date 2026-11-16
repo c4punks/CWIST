@@ -390,16 +390,20 @@ static void test_unregister(void) {
     assert(cwist_app_grpc_unary(app, "cwist.test.Unreg", "Unary", unreg_unary, &unary) == 0);
     assert(cwist_app_grpc_stream(app, "cwist.test.Unreg", "Stream", unreg_stream, &stream) == 0);
     assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
-                             sizeof(status)), "0") == 0);
+                             sizeof(status)),
+                  "0") == 0);
     assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Stream", frame, frame_len, status,
-                             sizeof(status)), "0") == 0);
+                             sizeof(status)),
+                  "0") == 0);
     assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Unary", unreg_release) == 0);
     assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Stream", unreg_release) == 0);
     assert(unary.released == 1 && stream.released == 1);
     assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
-                             sizeof(status)), "12") == 0);
+                             sizeof(status)),
+                  "12") == 0);
     assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Stream", frame, frame_len, status,
-                             sizeof(status)), "12") == 0);
+                             sizeof(status)),
+                  "12") == 0);
     assert(unary.calls == 1 && stream.calls == 1);
 
     /* Unknown methods and bad arguments fail without side effects. */
@@ -414,7 +418,8 @@ static void test_unregister(void) {
     unreg_ctx again = {0};
     assert(cwist_app_grpc_stream(app, "cwist.test.Unreg", "Unary", unreg_stream, &again) == 0);
     assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
-                             sizeof(status)), "0") == 0);
+                             sizeof(status)),
+                  "0") == 0);
     assert(again.calls == 1 && unary.calls == 1);
     assert(cwist_app_grpc_unregister(app, "cwist.test.Unreg", "Unary", NULL) == 0);
 
@@ -424,9 +429,11 @@ static void test_unregister(void) {
     assert(cwist_app_grpc_stream(app, "cwist.test.Unreg", "Stream", unreg_stream, &self_stream) ==
            0);
     assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Unary", frame, frame_len, status,
-                             sizeof(status)), "0") == 0);
+                             sizeof(status)),
+                  "0") == 0);
     assert(strcmp(unreg_call(client, "/cwist.test.Unreg/Stream", frame, frame_len, status,
-                             sizeof(status)), "0") == 0);
+                             sizeof(status)),
+                  "0") == 0);
     assert(self_unary.released_during_call == 0 && self_unary.released == 1);
     assert(self_stream.released_during_call == 0 && self_stream.released == 1);
 
@@ -438,7 +445,8 @@ static void test_unregister(void) {
     assert(cwist_app_grpc_health_set_status(app, "cwist.test.Unreg", 1) == -1);
     assert(cwist_app_grpc_health_watchers(app) == -1);
     assert(strcmp(unreg_call(client, "/grpc.health.v1.Health/Check", frame, frame_len, status,
-                             sizeof(status)), "12") == 0);
+                             sizeof(status)),
+                  "12") == 0);
     assert(cwist_app_grpc_unregister(app, "grpc.health.v1.Health", "Check", NULL) == -1);
     assert(cwist_app_grpc_health(app) == 0);
     assert(cwist_app_grpc_health_watchers(app) == 0);
@@ -446,8 +454,7 @@ static void test_unregister(void) {
 
     /* Built-ins own their context: an application handler cannot overwrite one. */
     unreg_ctx hijack = {0};
-    assert(cwist_app_grpc_unary(app, "grpc.health.v1.Health", "Check", unreg_unary, &hijack) ==
-           -1);
+    assert(cwist_app_grpc_unary(app, "grpc.health.v1.Health", "Check", unreg_unary, &hijack) == -1);
     assert(cwist_app_grpc_reflection(app) == 0);
     assert(cwist_app_grpc_reflection(app) == 0);
     assert(cwist_app_grpc_unregister(app, "grpc.reflection.v1alpha.ServerReflection",
@@ -673,12 +680,46 @@ int main(void) {
         assert(stream_size.message_len == 1024);
         cwist_http_response_destroy(res);
 
-        res = request_gzip_zeros(client, "/cwist.test.Echo/SizeStream",
-                                 CWIST_HTTP_MAX_BODY_SIZE + 1);
+        res =
+            request_gzip_zeros(client, "/cwist.test.Echo/SizeStream", CWIST_HTTP_MAX_BODY_SIZE + 1);
         assert(res != NULL);
         assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "8") == 0);
         assert(stream_size.calls == 1);
         cwist_http_response_destroy(res);
+
+        uint8_t *plain = cwist_alloc(CWIST_HTTP_MAX_BODY_SIZE);
+        assert(plain != NULL);
+        memset(plain, 0, CWIST_HTTP_MAX_BODY_SIZE);
+        uint8_t *zipped = NULL;
+        size_t zipped_len = 0;
+        gzip_compress(plain, CWIST_HTTP_MAX_BODY_SIZE, &zipped, &zipped_len);
+        uint8_t *first = NULL, *second = NULL;
+        size_t first_len = 0, second_len = 0;
+        assert(cwist_grpc_encode_message(zipped, zipped_len, 1, &first, &first_len) == 0);
+        assert(cwist_grpc_encode_message(zipped, zipped_len, 1, &second, &second_len) == 0);
+        char *pair = cwist_alloc(first_len + second_len);
+        assert(pair != NULL);
+        memcpy(pair, first, first_len);
+        memcpy(pair + first_len, second, second_len);
+        static const cwist_test_client_kv gzip_header[] = {{"grpc-encoding", "gzip"}};
+        cwist_test_client_request_options pair_opts = {
+            .body = pair,
+            .body_len = first_len + second_len,
+            .content_type = "application/grpc",
+            .headers = gzip_header,
+            .header_count = 1,
+        };
+        res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/SizeStream",
+                                           &pair_opts);
+        assert(res != NULL);
+        assert(strcmp(cwist_http_header_get(res->headers, "grpc-status"), "8") == 0);
+        assert(stream_size.calls == 1);
+        cwist_http_response_destroy(res);
+        cwist_free(pair);
+        cwist_free(first);
+        cwist_free(second);
+        cwist_free(zipped);
+        cwist_free(plain);
     }
 
     /* Client sending grpc-accept-encoding: gzip receives a compressed response. */

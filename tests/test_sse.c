@@ -1,9 +1,29 @@
 #include <cwist/net/http/sse.h>
 #include <assert.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+typedef struct {
+    cwist_sse_stream_t *stream;
+    atomic_int done;
+} sse_sender;
+
+static void *blocked_sender(void *arg) {
+    sse_sender *sender = arg;
+    char *payload = malloc(1024 * 1024);
+    assert(payload != NULL);
+    memset(payload, 'x', 1024 * 1024);
+    while (cwist_sse_stream_send(sender->stream, "message", NULL, -1, payload).error.err_i16 == 0) {
+    }
+    free(payload);
+    atomic_store(&sender->done, 1);
+    return NULL;
+}
 
 int main(void) {
     cwist_http_response *res = cwist_http_response_create();
@@ -38,6 +58,24 @@ int main(void) {
     assert(cwist_sse_stream_write(stream, &live_event).error.err_i16 == 0);
     assert(cwist_sse_stream_comment(stream, "keepalive").error.err_i16 == 0);
     cwist_sse_stream_close(stream);
+    cwist_http_request_destroy(req);
+    close(pair[0]);
+    close(pair[1]);
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+    req = cwist_http_request_create();
+    req->client_fd = pair[0];
+    stream = cwist_sse_stream_open(req);
+    assert(stream != NULL);
+    sse_sender sender = {.stream = stream};
+    atomic_init(&sender.done, 0);
+    pthread_t thread;
+    assert(pthread_create(&thread, NULL, blocked_sender, &sender) == 0);
+    struct timespec delay = {.tv_nsec = 10000000};
+    nanosleep(&delay, NULL);
+    cwist_sse_stream_close(stream);
+    assert(pthread_join(thread, NULL) == 0);
+    assert(atomic_load(&sender.done));
     cwist_http_request_destroy(req);
     close(pair[0]);
     close(pair[1]);
