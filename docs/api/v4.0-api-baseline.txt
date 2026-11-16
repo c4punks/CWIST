@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (813) ==
+== functions (816) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -643,6 +643,7 @@ cwist_query_map_destroy
 cwist_query_map_foreach
 cwist_query_map_get
 cwist_query_map_parse
+cwist_query_map_parse_checked
 cwist_query_map_set
 cwist_rdbms_mount_runtime
 cwist_rdbms_probe_port
@@ -819,7 +820,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (814) ==
+== function signatures (817) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1459,6 +1460,7 @@ cwist_query_map_destroy: void (cwist_query_map *)
 cwist_query_map_foreach: void (cwist_query_map *, cwist_query_map_iter_func, void *)
 cwist_query_map_get: const char * (cwist_query_map *, const char *)
 cwist_query_map_parse: void (cwist_query_map *, const char *)
+cwist_query_map_parse_checked: int (cwist_query_map *, const char *)
 cwist_query_map_set: void (cwist_query_map *, const char *, const char *)
 cwist_rdbms_mount_runtime: bool (cwist_app *, cwist_rdbms_provider_t, int)
 cwist_rdbms_probe_port: cwist_rdbms_provider_t (int)

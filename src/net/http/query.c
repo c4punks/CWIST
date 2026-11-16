@@ -299,8 +299,13 @@ static char *url_decode(void *arena, const char *src) {
             i++;
         } else if (i + 2 < len && isxdigit((unsigned char)src[i + 1]) &&
                    isxdigit((unsigned char)src[i + 2])) {
-            out[j++] = (char)((url_decode_hex[(unsigned char)src[i + 1]] << 4) |
+            char dec = (char)((url_decode_hex[(unsigned char)src[i + 1]] << 4) |
                               url_decode_hex[(unsigned char)src[i + 2]]);
+            if (dec == '\0') {
+                query_release(arena, out);
+                return NULL;
+            }
+            out[j++] = dec;
             i += 3;
         } else {
             out[j++] = src[i];
@@ -312,18 +317,18 @@ static char *url_decode(void *arena, const char *src) {
 }
 
 /**
- * @brief Parse a raw `a=1&b=2` query string into the existing map.
+ * @brief Parse a raw `a=1&b=2` query string into the existing map, reporting errors.
  * @param map Destination map that receives decoded keys and values.
  * @param raw_query Raw query substring without the leading question mark.
+ * @return 0 on success, -1 if an encoded NUL or allocation failure was encountered.
  */
-void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
-    if (!map || !raw_query || strlen(raw_query) == 0) return;
+int cwist_query_map_parse_checked(cwist_query_map *map, const char *raw_query) {
+    if (!map || !raw_query || raw_query[0] == '\0') return 0;
 
     char *buffer = query_strdup(map->arena, raw_query);
-    if (!buffer) return;
+    if (!buffer) return -1;
 
-    /* Single pass over buffer splitting on '&' and '='; strtok_r's empty
-     * token collapsing is reproduced by skipping zero-length segments. */
+    int status = 0;
     char *seg = buffer;
     char *end = buffer + strlen(buffer);
     while (seg < end) {
@@ -346,8 +351,15 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
         char *key_dec = url_decode(map->arena, key_raw);
         char *value_dec = url_decode(map->arena, value_raw);
 
-        if (key_dec && cwist_query_map_get(map, key_dec) == NULL) {
-            cwist_query_map_set(map, key_dec, value_dec ? value_dec : "");
+        if (!key_dec || !value_dec) {
+            query_release(map->arena, key_dec);
+            query_release(map->arena, value_dec);
+            status = -1;
+            break;
+        }
+
+        if (cwist_query_map_get(map, key_dec) == NULL) {
+            cwist_query_map_set(map, key_dec, value_dec);
         }
 
         query_release(map->arena, key_dec);
@@ -355,4 +367,13 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
     }
 
     query_release(map->arena, buffer);
+
+    if (status != 0) {
+        cwist_query_map_clear(map);
+    }
+    return status;
+}
+
+void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
+    (void)cwist_query_map_parse_checked(map, raw_query);
 }

@@ -4669,7 +4669,11 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
                                             (size_t)(path_end - (query_sep + 1)));
             req->query_params = cwist_query_map_create_in_arena(req->arena);
             if (req->query_params) {
-                cwist_query_map_parse(req->query_params, req->query->data);
+                if (cwist_query_map_parse_checked(req->query_params, req->query->data) != 0) {
+                    cwist_http_request_destroy(req);
+                    if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+                    return NULL;
+                }
             }
         } else {
             cwist_http_sstring_assign_arena(req->path, (cwist_arena_t *)req->arena, path_start,
