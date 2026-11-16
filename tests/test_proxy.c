@@ -268,6 +268,15 @@ static void upstream_teapot(cwist_http_request *req, cwist_http_response *res) {
     cwist_sstring_assign(res->body, "short and stout");
 }
 
+static void upstream_many_headers(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    for (int i = 0; i < 201; i++) {
+        char name[32];
+        snprintf(name, sizeof(name), "X-Filler-%d", i);
+        cwist_http_header_add(&res->headers, name, "value");
+    }
+}
+
 static void upstream_big(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
     static char big[200000];
@@ -309,6 +318,7 @@ static void run_upstream(void) {
     cwist_app_get(app, "/v1/redirect", upstream_redirect);
     cwist_app_get(app, "/v1/teapot", upstream_teapot);
     cwist_app_get(app, "/v1/big", upstream_big);
+    cwist_app_get(app, "/v1/many-headers", upstream_many_headers);
     cwist_app_get(app, "/fwd/echo", upstream_echo);
     cwist_app_listen_ex(app, UPSTREAM_PORT, 1, -1);
 }
@@ -563,6 +573,12 @@ static void test_end_to_end(void) {
     r = exchange(PROXY_PORT,
                  "GET /api/big HTTP/1.1\r\nHost: front.test:19962\r\nConnection: close\r\n\r\n");
     CHECK(status_is(r, 502), "oversized upstream body -> 502");
+    free(r);
+
+    r = exchange(
+        PROXY_PORT,
+        "GET /api/many-headers HTTP/1.1\r\nHost: front.test:19962\r\nConnection: close\r\n\r\n");
+    CHECK(status_is(r, 502), "oversized upstream headers -> 502");
     free(r);
 
     r = exchange(PROXY_PORT,
@@ -879,8 +895,7 @@ static void test_ws_passthrough(void) {
     CHECK(status_is(r, 421), "CONNECT to unregistered authority -> 421");
     free(r);
 
-    r = exchange(WS_PROXY_PORT,
-                 "CONNECT other.test:19967 HTTP/1.1\r\nHost: ws.test:19967\r\n\r\n");
+    r = exchange(WS_PROXY_PORT, "CONNECT other.test:19967 HTTP/1.1\r\nHost: ws.test:19967\r\n\r\n");
     CHECK(status_is(r, 400), "CONNECT target mismatch with Host -> 400");
     free(r);
 

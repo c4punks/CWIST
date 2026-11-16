@@ -37,7 +37,8 @@ int cwist_app_use_session(cwist_app *app, const char *secret);
 void cwist_app_set_session_name(cwist_app *app, const char *name);
 
 /**
- * @brief Set session cookie max-age in seconds. Defaults to 86400 (1 day).
+ * @brief Set session lifetime in seconds. Defaults to 86400 (1 day).
+ * The expiry is authenticated in the cookie and enforced by the server.
  */
 void cwist_app_set_session_max_age(cwist_app *app, int seconds);
 

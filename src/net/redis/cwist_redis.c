@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdatomic.h>
 #include <string.h>
 #include <limits.h>
 #include <time.h>
@@ -21,6 +22,7 @@
 #include <netdb.h>
 #include <poll.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -28,6 +30,8 @@
 
 #define CWIST_REDIS_BUF_SIZE 65536
 #define CWIST_REDIS_LINE_MAX 8192
+#define CWIST_REDIS_CONNECT_TIMEOUT_MS 5000
+#define CWIST_REDIS_IO_TIMEOUT_MS 30000
 /* Maximum accepted bulk-string byte count (512 MiB). Redis's own protocol
  * limit is 512 MiB; cap here so a rogue server can't force a huge alloc. */
 #define CWIST_REDIS_MAX_BULK_BYTES ((long long)(512 * 1024 * 1024))
@@ -59,6 +63,7 @@ struct cwist_redis {
     int port;
     char recv_buf[CWIST_REDIS_BUF_SIZE];
     size_t recv_len;
+    atomic_int closing;
     pthread_mutex_t mtx;
 };
 
@@ -110,12 +115,36 @@ static int redis_open_socket(const char *host, int port) {
     int one = 1;
     (void)setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
 #endif
-    if (connect(fd, res->ai_addr, res->ai_addrlen) != 0) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
         close(fd);
         freeaddrinfo(res);
         return -1;
     }
+    int rc = connect(fd, res->ai_addr, res->ai_addrlen);
+    if (rc != 0 && errno == EINPROGRESS) {
+        struct pollfd pfd = {.fd = fd, .events = POLLOUT};
+        do {
+            rc = poll(&pfd, 1, CWIST_REDIS_CONNECT_TIMEOUT_MS);
+        } while (rc < 0 && errno == EINTR);
+        int error = 0;
+        socklen_t error_len = sizeof(error);
+        if (rc > 0 && getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &error_len) == 0 && error == 0)
+            rc = 0;
+        else
+            rc = -1;
+    }
     freeaddrinfo(res);
+    struct timeval timeout = {
+        .tv_sec = CWIST_REDIS_IO_TIMEOUT_MS / 1000,
+        .tv_usec = (CWIST_REDIS_IO_TIMEOUT_MS % 1000) * 1000,
+    };
+    if (rc != 0 || fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != 0 ||
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0 ||
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0) {
+        close(fd);
+        return -1;
+    }
     return fd;
 }
 
@@ -696,22 +725,35 @@ cwist_redis_t *cwist_redis_connect(const char *host, int port) {
     r->host = cwist_strdup(host);
     r->port = port;
     r->recv_len = 0;
+    atomic_init(&r->closing, 0);
     pthread_mutex_init(&r->mtx, NULL);
     return r;
+}
+
+int cwist_redis_set_timeout_ms(cwist_redis_t *r, int timeout_ms) {
+    if (!r || r->fd < 0 || timeout_ms <= 0) return -1;
+    struct timeval timeout = {
+        .tv_sec = timeout_ms / 1000,
+        .tv_usec = (timeout_ms % 1000) * 1000,
+    };
+    if (setsockopt(r->fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0 ||
+        setsockopt(r->fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0)
+        return -1;
+    return 0;
 }
 
 /** Close a connection and free the handle. Shuts the socket down first to wake
  * a subscriber blocked in recv; this is the documented way to stop
  * cwist_redis_subscribe(). Safe to call with NULL. */
 void cwist_redis_close(cwist_redis_t *r) {
-    if (!r) return;
-    /* shutdown wakes a subscriber blocked in recv before the descriptor is
-     * released.  This is also the documented way to stop subscribe(). */
+    if (!r || atomic_exchange(&r->closing, 1)) return;
+    if (r->fd >= 0) (void)shutdown(r->fd, SHUT_RDWR);
+    pthread_mutex_lock(&r->mtx);
     if (r->fd >= 0) {
-        shutdown(r->fd, SHUT_RDWR);
         close(r->fd);
         r->fd = -1;
     }
+    pthread_mutex_unlock(&r->mtx);
     cwist_free(r->host);
     pthread_mutex_destroy(&r->mtx);
     cwist_free(r);
@@ -808,8 +850,25 @@ fail:
  * @param username Optional ACL username; NULL selects password-only AUTH.
  * @param password Password (required).
  * @return Error value indicating success or failure. */
+static bool redis_peer_is_loopback(const cwist_redis_t *r) {
+    struct sockaddr_storage peer;
+    socklen_t peer_len = sizeof(peer);
+    if (getpeername(r->fd, (struct sockaddr *)&peer, &peer_len) != 0) return false;
+    if (peer.ss_family == AF_INET)
+        return ntohl(((const struct sockaddr_in *)&peer)->sin_addr.s_addr) == INADDR_LOOPBACK;
+    if (peer.ss_family == AF_INET6)
+        return IN6_IS_ADDR_LOOPBACK(&((const struct sockaddr_in6 *)&peer)->sin6_addr);
+    return false;
+}
+
 cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const char *password) {
     if (!r || !password) return make_error(CWIST_ERR_INT16);
+    const char *allow_insecure = getenv("CWIST_REDIS_ALLOW_INSECURE_AUTH");
+    if (!redis_peer_is_loopback(r) && (!allow_insecure || strcmp(allow_insecure, "1") != 0)) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = -EPERM;
+        return err;
+    }
     char *reply = NULL;
     cwist_error_t err;
     if (username) {

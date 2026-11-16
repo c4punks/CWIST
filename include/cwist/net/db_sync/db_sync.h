@@ -8,12 +8,14 @@
  *
  * Wire protocol (per-connection)
  * ================================
- *  Client → Server: 4-byte magic 0x43 0x57 0x53 0x59 ("CWSY")
- *  Server → Client: 8-byte little-endian uint64 blob_length
- *  Server → Client: blob_length bytes  (the sealed blob)
+ *  Client → Server: magic, fresh client nonce, keyed client authenticator
+ *  Server → Client: fresh server nonce, keyed server authenticator
+ *  Server → Client: 8-byte little-endian uint64 blob_length and sealed blob
+ *  Server → Client: keyed authenticator binding the blob to both nonces
  *
- * The client verifies the magic, reads the length, then opens the blob with
- * cwist_db_crypt_open() using its copy of the KEK.
+ * Unauthenticated clients are rejected without consuming the one-shot send.
+ * The client verifies both authenticators before opening the blob with
+ * cwist_db_crypt_open(), preventing recorded sessions from being replayed.
  */
 
 #ifndef __CWIST_DB_SYNC_H__

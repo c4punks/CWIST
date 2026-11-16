@@ -85,6 +85,18 @@ static void test_expired_token(void) {
     assert(claims == NULL); /* must be rejected as expired */
 
     cwist_free(token);
+
+    char recent_payload[128];
+    snprintf(recent_payload, sizeof(recent_payload), "{\"sub\":\"old\",\"exp\":%ld}",
+             (long)(time(NULL) - 10));
+    token = cwist_jwt_sign(recent_payload, "secret", 0);
+    assert(token != NULL);
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    claims = cwist_jwt_verify_with_leeway(token, "secret", 30);
+    assert(claims != NULL);
+    cwist_jwt_claims_destroy(claims);
+    assert(cwist_jwt_verify_with_leeway(token, "secret", -1) == NULL);
+    cwist_free(token);
     printf("  Passed expired token rejection.\n");
 }
 

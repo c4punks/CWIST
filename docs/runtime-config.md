@@ -100,6 +100,12 @@ Each variable has one status. The status says what v4 promises about it.
 | `CWIST_REACTOR_ROUND_BUDGET_US` | tuning | microseconds ≥ 0 | `2000` | Once a reactor round runs longer than this, parked re-arms are flushed to the kernel every 64 callbacks instead of at the end of the round. The round still runs to completion. `0` disables the bound. |
 | `CWIST_REACTOR_CQ_GRACE_NS` | tuning | nanoseconds ≥ 0 | `20000` | How long the reactor spins on the completion ring before it sleeps in the kernel. `0` disables the spin. |
 
+## Redis
+
+| Variable | Status | Values | Default | Effect |
+|----------|--------|--------|---------|--------|
+| `CWIST_REDIS_ALLOW_INSECURE_AUTH` | supported | `1` enables | unset | Permit plaintext Redis AUTH to a non-loopback peer. Set only when a trusted tunnel protects the connection; loopback AUTH does not require this override. |
+
 ## Diagnostics
 
 | Variable | Status | Values | Default | Effect |

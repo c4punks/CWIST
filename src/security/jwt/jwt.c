@@ -171,9 +171,9 @@ typedef enum {
 
 static const char *jwt_alg_name(jwt_alg_t alg) {
     switch (alg) {
-    case JWT_ALG_HS256: return "HS256";
-    case JWT_ALG_ES256: return "ES256";
-    case JWT_ALG_ED25519: return "EdDSA";
+        case JWT_ALG_HS256: return "HS256";
+        case JWT_ALG_ES256: return "ES256";
+        case JWT_ALG_ED25519: return "EdDSA";
     }
     return NULL;
 }
@@ -182,9 +182,8 @@ static const char *jwt_alg_name(jwt_alg_t alg) {
 static bool hmac_sha256(const char *key, size_t key_len, const char *msg, size_t msg_len,
                         unsigned char out[32]) {
 #if defined(CWIST_TLS_MBEDTLS)
-    return mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256),
-                           (const unsigned char *)key, key_len,
-                           (const unsigned char *)msg, msg_len, out) == 0;
+    return mbedtls_md_hmac(mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), (const unsigned char *)key,
+                           key_len, (const unsigned char *)msg, msg_len, out) == 0;
 #else
     unsigned int out_len = 0;
     unsigned char *r =
@@ -398,8 +397,7 @@ static unsigned char *jwt_sign_bytes(jwt_alg_t alg, const char *key, const char 
             }
             const BIGNUM *r, *s;
             ECDSA_SIG_get0(ecsig, &r, &s);
-            if (BN_bn2bin_padded(sig, 32, r) != 1 ||
-                BN_bn2bin_padded(sig + 32, 32, s) != 1) {
+            if (BN_bn2bin_padded(sig, 32, r) != 1 || BN_bn2bin_padded(sig + 32, 32, s) != 1) {
                 ECDSA_SIG_free(ecsig);
                 cwist_free(sig);
                 sig = NULL;
@@ -583,8 +581,8 @@ static char *jwt_sign_common(jwt_alg_t alg, const char *payload_json, const char
 
     /* --- Compute the signature -------------------------------------------- */
     size_t sig_len = 0;
-    unsigned char *sig_raw = jwt_sign_bytes(alg, key, signing_input->data, signing_input->size,
-                                            &sig_len);
+    unsigned char *sig_raw =
+        jwt_sign_bytes(alg, key, signing_input->data, signing_input->size, &sig_len);
     if (!sig_raw) {
         cwist_sstring_destroy(signing_input);
         return NULL;
@@ -627,8 +625,8 @@ char *cwist_jwt_sign_es256(const char *payload_json, const char *pem_private_key
     return jwt_sign_common(JWT_ALG_ES256, payload_json, pem_private_key, kid, exp_seconds);
 }
 
-char *cwist_jwt_sign_ed25519(const char *payload_json, const char *pem_private_key,
-                             const char *kid, long exp_seconds) {
+char *cwist_jwt_sign_ed25519(const char *payload_json, const char *pem_private_key, const char *kid,
+                             long exp_seconds) {
     return jwt_sign_common(JWT_ALG_ED25519, payload_json, pem_private_key, kid, exp_seconds);
 }
 
@@ -639,8 +637,9 @@ char *cwist_jwt_sign_ed25519(const char *payload_json, const char *pem_private_k
  * @param key HMAC secret (HS256) or PEM public/private key (ES256/Ed25519).
  * @return Heap-allocated claims object, or NULL when verification/parsing fails.
  */
-static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, const char *key) {
-    if (!token || !key) return NULL;
+static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, const char *key,
+                                           time_t leeway) {
+    if (!token || !key || leeway < 0) return NULL;
 
     /* --- Split the token into three parts --------------------------------- */
     /* We need mutable copies to split on '.' */
@@ -696,8 +695,7 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
 
     /* --- Verify over the original "hdr_enc.pay_enc" signing input --------- */
     size_t first_two_len = (size_t)(dot2 - tok_copy);
-    bool sig_ok = jwt_verify_bytes(alg, key, token, first_two_len, provided_sig,
-                                   provided_sig_len);
+    bool sig_ok = jwt_verify_bytes(alg, key, token, first_two_len, provided_sig, provided_sig_len);
     cwist_free(provided_sig);
     if (!sig_ok) {
         cwist_free(tok_copy);
@@ -716,8 +714,8 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
 
     if (!json) return NULL;
 
-    /* --- Validate "exp" and "nbf" claims with leeway for clock skew/high-RTT --- */
-#define CWIST_JWT_TIME_LEEWAY 300
+    /* Expiry and not-before claims are exact unless the caller explicitly
+     * configures clock-skew leeway. */
     time_t now = time(NULL);
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
     if (exp_item && (!cJSON_IsNumber(exp_item) || !isfinite(exp_item->valuedouble))) {
@@ -726,7 +724,7 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
     }
     if (exp_item) {
         time_t exp_time = (time_t)exp_item->valuedouble;
-        if (now > CWIST_JWT_TIME_LEEWAY && exp_time < now - CWIST_JWT_TIME_LEEWAY) {
+        if (now > leeway && exp_time < now - leeway) {
             cJSON_Delete(json);
             return NULL; /* token expired */
         }
@@ -738,7 +736,7 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
     }
     if (nbf_item) {
         time_t nbf_time = (time_t)nbf_item->valuedouble;
-        if (nbf_time > now && (nbf_time - now) > CWIST_JWT_TIME_LEEWAY) {
+        if (nbf_time > now && (nbf_time - now) > leeway) {
             cJSON_Delete(json);
             return NULL; /* token not yet valid */
         }
@@ -755,15 +753,20 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
 }
 
 cwist_jwt_claims *cwist_jwt_verify(const char *token, const char *secret) {
-    return jwt_verify_common(JWT_ALG_HS256, token, secret);
+    return jwt_verify_common(JWT_ALG_HS256, token, secret, 0);
+}
+
+cwist_jwt_claims *cwist_jwt_verify_with_leeway(const char *token, const char *secret,
+                                               long leeway_seconds) {
+    return jwt_verify_common(JWT_ALG_HS256, token, secret, (time_t)leeway_seconds);
 }
 
 cwist_jwt_claims *cwist_jwt_verify_es256(const char *token, const char *pem_key) {
-    return jwt_verify_common(JWT_ALG_ES256, token, pem_key);
+    return jwt_verify_common(JWT_ALG_ES256, token, pem_key, 0);
 }
 
 cwist_jwt_claims *cwist_jwt_verify_ed25519(const char *token, const char *pem_key) {
-    return jwt_verify_common(JWT_ALG_ED25519, token, pem_key);
+    return jwt_verify_common(JWT_ALG_ED25519, token, pem_key, 0);
 }
 
 /**

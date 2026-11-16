@@ -37,6 +37,9 @@ typedef void (*cwist_redis_msg_cb)(const char *channel, const char *message, voi
  */
 cwist_redis_t *cwist_redis_connect(const char *host, int port);
 
+/** Set the legacy connection send/receive timeout in milliseconds. */
+int cwist_redis_set_timeout_ms(cwist_redis_t *r, int timeout_ms);
+
 /**
  * @brief Close a Redis connection.
  */
@@ -61,10 +64,10 @@ cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void
 
 /** Authenticate/select a logical Redis database on this connection.
  *
- * @warning AUTH credentials are sent over plaintext TCP (RESP has no
- * encryption by itself). Only use this over loopback, a trusted private
- * network, or behind a TLS-terminating proxy (stunnel/spiped) in front of
- * Redis. */
+ * @warning AUTH uses plaintext RESP. Non-loopback peers are rejected unless
+ * CWIST_REDIS_ALLOW_INSECURE_AUTH=1 is explicitly set for a trusted tunnel.
+ * Connect uses a 5-second deadline; legacy I/O defaults to 30 seconds and can
+ * be changed with cwist_redis_set_timeout_ms(). */
 cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const char *password);
 cwist_error_t cwist_redis_select(cwist_redis_t *r, unsigned int database);
 
@@ -159,9 +162,9 @@ cwist_error_t cwist_redis_pool_command_argv(cwist_redis_pool_t *pool, size_t arg
  *
  * One CLOCK_MONOTONIC budget of @p timeout_ms covers
  * waiting for a free pool connection, reconnecting a discarded connection,
- * writing the request, and reading the complete reply. The pool's legacy
- * blocking APIs keep their unbounded behavior; pool creation still performs
- * blocking DNS and connects.
+ * writing the request, and reading the complete reply. Legacy APIs use the
+ * configured socket timeouts; pool creation performs blocking DNS and
+ * deadline-bounded connects.
  *
  * Connection safety: an idle connection with buffered or readable bytes, a
  * hang-up, or a previous failure is discarded before use and replaced by a

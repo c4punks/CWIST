@@ -643,6 +643,7 @@ static void grpc_dispatch_stream_route(cwist_http_request *req, cwist_http_respo
     size_t offset = 0;
     size_t cap = 4;
     size_t count = 0;
+    size_t decoded_bytes = 0;
     cwist_grpc_message *messages = (cwist_grpc_message *)cwist_alloc(cap * sizeof(*messages));
     if (!messages) {
         cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
@@ -669,6 +670,15 @@ static void grpc_dispatch_stream_route(cwist_http_request *req, cwist_http_respo
             cwist_grpc_set_error(res, CWIST_GRPC_INVALID_ARGUMENT, "malformed gRPC stream frame");
             return;
         }
+        if (!messages[count].compressed) {
+            if (messages[count].len > CWIST_HTTP_MAX_BODY_SIZE - decoded_bytes) {
+                cwist_free(messages);
+                cwist_grpc_set_error(res, CWIST_GRPC_RESOURCE_EXHAUSTED,
+                                     "decoded gRPC stream exceeds aggregate size limit");
+                return;
+            }
+            decoded_bytes += messages[count].len;
+        }
         count++;
     }
 
@@ -691,6 +701,9 @@ static void grpc_dispatch_stream_route(cwist_http_request *req, cwist_http_respo
         memset(owned, 0, count * sizeof(*owned));
         for (size_t i = 0; i < count; i++) {
             int inflate_rc = grpc_message_inflate(req, &messages[i], &owned[i]);
+            if (inflate_rc == 0 && messages[i].len > CWIST_HTTP_MAX_BODY_SIZE - decoded_bytes)
+                inflate_rc = -2;
+            if (inflate_rc == 0) decoded_bytes += messages[i].len;
             if (inflate_rc != 0) {
                 for (size_t j = 0; j < count; j++) cwist_free(owned[j]);
                 cwist_free(messages);
@@ -1314,11 +1327,11 @@ int cwist_app_grpc_health(cwist_app *app) {
     atomic_store(&reg->watchers, 0);
     atomic_store(&reg->refs, 1); /* dropped below; each route adds its own */
     int rc = -1;
-    if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0, grpc_health_check, NULL,
-                            reg, 1) != 0)
+    if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0, grpc_health_check, NULL, reg,
+                            1) != 0)
         goto out;
-    if (grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1, NULL, grpc_health_watch,
-                            reg, 2) != 0) {
+    if (grpc_register_route(app, "grpc.health.v1.Health", "Watch", 1, NULL, grpc_health_watch, reg,
+                            2) != 0) {
         grpc_remove_route(app, "/grpc.health.v1.Health/Check");
         goto out;
     }
@@ -1348,13 +1361,14 @@ int cwist_app_grpc_health_set_status(cwist_app *app, const char *service, int se
     grpc_route_view view;
     cwist_grpc_route *route = grpc_route_acquire(app, "/grpc.health.v1.Health/Check", &view);
     if (!route) return -1;
-    int rc = view.builtin == 1 ? grpc_health_registry_set_status(view.user_ctx, service, serving) : -1;
+    int rc =
+        view.builtin == 1 ? grpc_health_registry_set_status(view.user_ctx, service, serving) : -1;
     grpc_route_release(route);
     return rc;
 }
 
 static int grpc_health_registry_set_status(cwist_grpc_health_registry *reg, const char *service,
-                                         int serving) {
+                                           int serving) {
     pthread_mutex_lock(&reg->mu);
     for (cwist_grpc_health_state *it = reg->states; it; it = it->next)
         if (it->service && strcmp(it->service, service) == 0) {
@@ -1514,8 +1528,7 @@ static int grpc_register_route(cwist_app *app, const char *service, const char *
     cwist_grpc_route *existing = grpc_find_route(app, path);
     if (existing) {
         /* A built-in owns its context; it must be unregistered, not overwritten. */
-        if (existing->builtin != builtin || !cwist_app_post_checked(app, path, dispatch))
-            goto out;
+        if (existing->builtin != builtin || !cwist_app_post_checked(app, path, dispatch)) goto out;
         existing->streaming = streaming;
         existing->handler = unary_handler;
         existing->stream_handler = stream_handler;
@@ -1612,9 +1625,9 @@ int cwist_app_grpc_unregister(cwist_app *app, const char *service, const char *m
     cwist_grpc_route *sibling = NULL;
     if (route && (route->builtin == 1 || route->builtin == 2)) {
         /* Check and Watch share one registry: the health service goes as a unit. */
-        sibling = grpc_unlink_route_locked(app, route->builtin == 1
-                                                    ? "/grpc.health.v1.Health/Watch"
-                                                    : "/grpc.health.v1.Health/Check");
+        sibling =
+            grpc_unlink_route_locked(app, route->builtin == 1 ? "/grpc.health.v1.Health/Watch"
+                                                              : "/grpc.health.v1.Health/Check");
         cwist_grpc_health_registry *reg = route->user_ctx;
         pthread_mutex_lock(&reg->mu);
         reg->shutdown = 1;

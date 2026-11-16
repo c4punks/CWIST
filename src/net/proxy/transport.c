@@ -24,6 +24,7 @@
 #define PROXY_TRANSPORT_CONNECT_TIMEOUT_MS 5000
 #define PROXY_TRANSPORT_IDLE_TIMEOUT_MS 120000
 #define PROXY_TRANSPORT_POLL_MS 100
+#define PROXY_TCP_MAX_CONNECTIONS 256
 #define PROXY_UDP_MAX_SESSIONS 1024
 #define PROXY_UDP_MAX_DGRAM 65535
 
@@ -56,6 +57,7 @@ static pthread_mutex_t g_transport_lock = PTHREAD_MUTEX_INITIALIZER;
 static proxy_transport_rule *g_transport_rules;
 static size_t g_transport_rule_count;
 static atomic_int g_transport_running;
+static atomic_size_t g_tcp_connection_count;
 static int g_transport_connect_timeout_ms = PROXY_TRANSPORT_CONNECT_TIMEOUT_MS;
 
 static uint64_t proxy_transport_now_ms(void) {
@@ -177,13 +179,17 @@ static void *proxy_tcp_relay(void *arg) {
     cwist_free(target_host);
     if (upstream_fd < 0) {
         close(client_fd);
+        atomic_fetch_sub(&g_tcp_connection_count, 1);
         return NULL;
     }
     proxy_transport_set_nonblock(client_fd);
     bool client_open = true;
     bool upstream_open = true;
+    uint64_t last_active_ms = proxy_transport_now_ms();
     unsigned char buf[16384];
     while (upstream_open && proxy_transport_active()) {
+        uint64_t now = proxy_transport_now_ms();
+        if (now - last_active_ms >= PROXY_TRANSPORT_IDLE_TIMEOUT_MS) break;
         struct pollfd fds[2] = {
             {.fd = client_open ? client_fd : -1, .events = POLLIN},
             {.fd = upstream_fd, .events = POLLIN},
@@ -197,6 +203,7 @@ static void *proxy_tcp_relay(void *arg) {
         if (client_open && (fds[0].revents & (POLLIN | POLLHUP | POLLERR))) {
             ssize_t n = recv(client_fd, buf, sizeof(buf), 0);
             if (n > 0) {
+                last_active_ms = proxy_transport_now_ms();
                 if (!proxy_transport_send_all(upstream_fd, buf, (size_t)n)) break;
             } else if (n == 0) {
                 client_open = false;
@@ -208,6 +215,7 @@ static void *proxy_tcp_relay(void *arg) {
         if (upstream_open && (fds[1].revents & (POLLIN | POLLHUP | POLLERR))) {
             ssize_t n = recv(upstream_fd, buf, sizeof(buf), 0);
             if (n > 0) {
+                last_active_ms = proxy_transport_now_ms();
                 if (!proxy_transport_send_all(client_fd, buf, (size_t)n)) break;
             } else if (n == 0) {
                 upstream_open = false;
@@ -219,6 +227,7 @@ static void *proxy_tcp_relay(void *arg) {
     }
     close(client_fd);
     close(upstream_fd);
+    atomic_fetch_sub(&g_tcp_connection_count, 1);
     return NULL;
 }
 
@@ -238,8 +247,15 @@ static void *proxy_tcp_listener(void *arg) {
                 continue;
             break;
         }
+        size_t active = atomic_fetch_add(&g_tcp_connection_count, 1) + 1;
+        if (active > PROXY_TCP_MAX_CONNECTIONS) {
+            atomic_fetch_sub(&g_tcp_connection_count, 1);
+            close(client_fd);
+            continue;
+        }
         proxy_tcp_conn *conn = cwist_alloc(sizeof(*conn));
         if (!conn) {
+            atomic_fetch_sub(&g_tcp_connection_count, 1);
             close(client_fd);
             continue;
         }
@@ -247,6 +263,7 @@ static void *proxy_tcp_listener(void *arg) {
         conn->target_host = cwist_strdup(rule->target_host);
         conn->target_port = rule->target_port;
         if (!conn->target_host) {
+            atomic_fetch_sub(&g_tcp_connection_count, 1);
             close(client_fd);
             cwist_free(conn);
             continue;
@@ -255,6 +272,7 @@ static void *proxy_tcp_listener(void *arg) {
         cwist_gc_scope_disown(conn->target_host);
         pthread_t thread;
         if (pthread_create(&thread, NULL, proxy_tcp_relay, conn) != 0) {
+            atomic_fetch_sub(&g_tcp_connection_count, 1);
             close(client_fd);
             cwist_free(conn->target_host);
             cwist_free(conn);
