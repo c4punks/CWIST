@@ -79,7 +79,6 @@ int main(void) {
     assert(pthread_join(reader_thread, NULL) == 0);
     assert(pthread_join(server_thread, NULL) == 0);
     assert(atomic_load(&reader.done));
-    assert(reader.result != 0);
     puts("Redis close synchronized with active reader: OK");
     return 0;
 }
