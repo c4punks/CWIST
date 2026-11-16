@@ -68,7 +68,7 @@ var searchData=
   ['method_65',['method',['../dd/d68/structcwist__http__request.html#afa70fc531f9a23cfef539b091f2d7559',1,'cwist_http_request::method'],['../dc/d91/structcwist__mux__route.html#a95b92082d7be964fddab21cdbc1b281f',1,'cwist_mux_route::method']]],
   ['method_20helpers_66',['Method helpers',['../d1/d7e/md_docs_2api-quickref.html#autotoc_md41',1,'']]],
   ['method_20notes_67',['Method notes',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md430',1,'']]],
-  ['methodology_68',['methodology',['..//home/yjlee/cwist-v43-main/docs/README.md#autotoc_md449',1,'5. Benchmarks and methodology'],['../d6/d42/md_docs_2webserver-benchmark.html',1,'Web Server Benchmark Methodology']]],
+  ['methodology_68',['methodology',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md449',1,'5. Benchmarks and methodology'],['../d6/d42/md_docs_2webserver-benchmark.html',1,'Web Server Benchmark Methodology']]],
   ['metrics_20middleware_69',['Prometheus Metrics Middleware',['../da/dbc/md_docs_2api_2middleware.html#autotoc_md157',1,'']]],
   ['metrics_2ec_70',['metrics.c',['../db/d59/metrics_8c.html',1,'']]],
   ['metrics_2eh_71',['metrics.h',['../df/d34/metrics_8h.html',1,'']]],
