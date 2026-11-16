@@ -1,5 +1,7 @@
 var NAVTREEINDEX21 =
 {
+"de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e":[96,0,1,0,0,8,0,4],
+"de/db8/template_8h_source.html":[96,0,1,0,0,8,0],
 "de/dc2/baremetal__time_8c.html":[96,0,2,4,6,1],
 "de/dc2/baremetal__time_8c_source.html":[96,0,2,4,6,1],
 "de/ddb/structcwist__bind__result.html":[95,0,9],
@@ -247,7 +249,5 @@ var NAVTREEINDEX21 =
 "df/d6d/ssl_8h.html#aa59350689a919b278cad91bd4c29f697":[96,0,2,3,2,0,0,7,104],
 "df/d6d/ssl_8h.html#aa7611069fbad9e8c84bbafc77b58f369":[96,0,2,3,2,0,0,7,15],
 "df/d6d/ssl_8h.html#aa8f4af23aeb7221348f44edd642e773d":[96,0,2,3,2,0,0,7,47],
-"df/d6d/ssl_8h.html#aae01334b75d611d754e107ac6f1d9965":[96,0,2,3,2,0,0,7,93],
-"df/d6d/ssl_8h.html#aae68723650f0ed53b36894d426afdbc9":[96,0,2,3,2,0,0,7,53],
-"df/d6d/ssl_8h.html#ab40bb8e87a708c463702cd451c8da8c3":[96,0,2,3,2,0,0,7,27]
+"df/d6d/ssl_8h.html#aae01334b75d611d754e107ac6f1d9965":[96,0,2,3,2,0,0,7,93]
 };

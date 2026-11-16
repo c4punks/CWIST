@@ -1,5 +1,7 @@
 var NAVTREEINDEX24 =
 {
+"globals_type_o.html":[96,1,3,9],
+"globals_type_p.html":[96,1,3,10],
 "globals_type_q.html":[96,1,3,11],
 "globals_type_r.html":[96,1,3,12],
 "globals_type_s.html":[96,1,3,13],

@@ -1,5 +1,6 @@
 var NAVTREEINDEX6 =
 {
+"d4/d54/grpc__client_8c.html#a0b83c8cb004a0ec021b689b3b5f8bb75":[96,0,2,2,2,2,24],
 "d4/d54/grpc__client_8c.html#a0d97f8840021aac0328be920e4f1893e":[96,0,2,2,2,2,11],
 "d4/d54/grpc__client_8c.html#a1a84af38980e798c265d83158c2d059f":[96,0,2,2,2,2,18],
 "d4/d54/grpc__client_8c.html#a2e0132bb80fa44e2fa88ada51cf1ee77":[96,0,2,2,2,2,7],
@@ -248,6 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d08/buffer_8h.html":[96,0,2,0,10,0],
 "d5/d08/buffer_8h.html#ab7a4189776df265a20a2cb76c23d3806":[96,0,2,0,10,0,1],
 "d5/d08/buffer_8h_source.html":[96,0,2,0,10,0],
-"d5/d08/md_docs_2ko_2runtime-config.html":[68],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md702":[68,0]
+"d5/d08/md_docs_2ko_2runtime-config.html":[68]
 };

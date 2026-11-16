@@ -314,6 +314,9 @@ Functions</h2></td></tr>
 <tr class="memitem:afc1bffaa7da52b648d4306067c8d21b8" id="r_afc1bffaa7da52b648d4306067c8d21b8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d7a/net_2http_2query_8h.html#afc1bffaa7da52b648d4306067c8d21b8">cwist_query_map_parse</a> (<a class="el" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map, const char *raw_query)</td></tr>
 <tr class="memdesc:afc1bffaa7da52b648d4306067c8d21b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse raw query strings (e.g., "a=1&amp;b=2") into the map.  <br /></td></tr>
 <tr class="separator:afc1bffaa7da52b648d4306067c8d21b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af8294f26aaa4dee4a99a5b2004664821" id="r_af8294f26aaa4dee4a99a5b2004664821"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d7a/net_2http_2query_8h.html#af8294f26aaa4dee4a99a5b2004664821">cwist_query_map_parse_checked</a> (<a class="el" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map, const char *raw_query)</td></tr>
+<tr class="memdesc:af8294f26aaa4dee4a99a5b2004664821"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse raw query strings and report decoding errors.  <br /></td></tr>
+<tr class="separator:af8294f26aaa4dee4a99a5b2004664821"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a93292394e0096daa1a997758f0346a93" id="r_a93292394e0096daa1a997758f0346a93"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/d7a/net_2http_2query_8h.html#a93292394e0096daa1a997758f0346a93">cwist_query_map_clear</a> (<a class="el" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map)</td></tr>
 <tr class="memdesc:a93292394e0096daa1a997758f0346a93"><td class="mdescLeft">&#160;</td><td class="mdescRight">Clear all entries.  <br /></td></tr>
 <tr class="separator:a93292394e0096daa1a997758f0346a93"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -382,7 +385,7 @@ Functions</h2></td></tr>
 
 <p>Iterator callback signature. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00078">78</a> of file <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html">query.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00089">89</a> of file <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html">query.h</a>.</p>
 
 </div>
 </div>
@@ -416,7 +419,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00022">cwist_query_map::arena</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">cwist_query_map::buckets</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00023">cwist_query_map::count</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00013">cwist_query_bucket::key</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00015">cwist_query_bucket::next</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">cwist_query_map::size</a>, and <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00014">cwist_query_bucket::value</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d1/d4d/flash_8c_source.html#l00088">cwist_flash_pop_all_json()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00081">cwist_query_map_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d1/d4d/flash_8c_source.html#l00088">cwist_flash_pop_all_json()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00081">cwist_query_map_destroy()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00325">cwist_query_map_parse_checked()</a>.</p>
 
 </div>
 </div>
@@ -651,7 +654,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">cwist_query_map::buckets</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00013">cwist_query_bucket::key</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00015">cwist_query_bucket::next</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00021">cwist_query_map::seed</a>, <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00052">siphash24()</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">cwist_query_map::size</a>, and <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00014">cwist_query_bucket::value</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00118">cwist_cookie_get()</a>, <a class="el" href="../../d1/d4d/flash_8c_source.html#l00039">cwist_flash_peek()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00319">cwist_query_map_parse()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00414">cwist_session_get()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02504">cwist_url_for()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00118">cwist_cookie_get()</a>, <a class="el" href="../../d1/d4d/flash_8c_source.html#l00039">cwist_flash_peek()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00325">cwist_query_map_parse_checked()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00414">cwist_session_get()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02504">cwist_url_for()</a>.</p>
 
 </div>
 </div>
@@ -682,7 +685,50 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Parse raw query strings (e.g., "a=1&amp;b=2") into the map. </p>
-<p>Parse raw query strings (e.g., "a=1&amp;b=2") into the map.</p>
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d7f/query_8c_source.html#l00377">377</a> of file <a class="el" href="../../dd/d7f/query_8c_source.html">query.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00325">cwist_query_map_parse_checked()</a>.</p>
+
+</div>
+</div>
+<a id="af8294f26aaa4dee4a99a5b2004664821" name="af8294f26aaa4dee4a99a5b2004664821"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af8294f26aaa4dee4a99a5b2004664821">&#9670;&#160;</a></span>cwist_query_map_parse_checked()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int cwist_query_map_parse_checked </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *&#160;</td>
+          <td class="paramname"><em>map</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>raw_query</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Parse raw query strings and report decoding errors. </p>
+<p>Rejects decoded NUL bytes (%00) in parameter names or values.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">map</td><td>Destination query map. </td></tr>
+    <tr><td class="paramname">raw_query</td><td>Raw query string. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>0 on success, -1 if an encoded NUL or allocation error was encountered.</dd></dl>
+<p>Parse raw query strings and report decoding errors.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">map</td><td>Destination map that receives decoded keys and values. </td></tr>
@@ -690,10 +736,13 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>0 on success, -1 if an encoded NUL or allocation failure was encountered. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d7f/query_8c_source.html#l00319">319</a> of file <a class="el" href="../../dd/d7f/query_8c_source.html">query.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d7f/query_8c_source.html#l00325">325</a> of file <a class="el" href="../../dd/d7f/query_8c_source.html">query.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00022">cwist_query_map::arena</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00022">cwist_query_map::arena</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00093">cwist_query_map_clear()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../dd/d7f/query_8c_source.html#l00377">cwist_query_map_parse()</a>.</p>
 
 </div>
 </div>
@@ -744,7 +793,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00022">cwist_query_map::arena</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">cwist_query_map::buckets</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00023">cwist_query_map::count</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00013">cwist_query_bucket::key</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00015">cwist_query_bucket::next</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00021">cwist_query_map::seed</a>, <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00052">siphash24()</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">cwist_query_map::size</a>, and <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00014">cwist_query_bucket::value</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00081">cwist_cookie_parse()</a>, <a class="el" href="../../d1/d4d/flash_8c_source.html#l00020">cwist_flash_set()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00319">cwist_query_map_parse()</a>, and <a class="el" href="../../de/d67/session_8c_source.html#l00428">cwist_session_set()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00081">cwist_cookie_parse()</a>, <a class="el" href="../../d1/d4d/flash_8c_source.html#l00020">cwist_flash_set()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00325">cwist_query_map_parse_checked()</a>, and <a class="el" href="../../de/d67/session_8c_source.html#l00428">cwist_session_set()</a>.</p>
 
 </div>
 </div>
