@@ -21,7 +21,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define TIMEOUT_MS 10000
+#define TIMEOUT_MS 30000
 
 static int raw_port;
 static int json_port;
