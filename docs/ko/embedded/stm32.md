@@ -7,10 +7,19 @@ C1M 리액터는 이식하지 않습니다.
 
 ## 지원 대상과 검증 범위
 
-- **참조 통합:** NUCLEO-H743ZI2(STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM,
+아래의 모든 보드는 정확히 하나의 라벨을 가집니다: **실기기 검증 완료(physical-board validated)**, **참조 통합(reference integration: cross-build / QEMU)**, 또는 **계획됨(planned)**.
+
+| 보드 | 라벨 |
+|------|------|
+| STM32F769I-DISCO | 실기기 검증 완료 (현재 유일함) |
+| NUCLEO-H743ZI2 | 참조 통합 (cross-build / QEMU); 실기기 미구동 |
+| STM32F429I-DISCO | 계획된 저사양 대상; 하드웨어 확보됨, 미검증 |
+
+- **참조 통합 (cross-build / QEMU):** NUCLEO-H743ZI2(STM32H743, Cortex-M7, 2 MB flash, 1 MB SRAM,
   RMII Ethernet, TRNG). `example/stm32/`에 애플리케이션, HAL 포트 훅, lwIP
-  옵션, CubeMX 통합 및 플래싱 방법이 있습니다.
-- **검증된 보드:** STM32F769I-DISCO(STM32F769NI, Cortex-M7, 2 MB flash,
+  옵션, CubeMX 통합 및 플래싱 방법이 있습니다. 크로스 빌드되었으나 실기기에서는
+  구동되지 않았습니다.
+- **실기기 검증 완료:** STM32F769I-DISCO(STM32F769NI, Cortex-M7, 2 MB flash,
   512 KB SRAM, LAN8742 RMII PHY). `example/stm32f769/`는 CubeMX 없이 빌드되는
   자급식 예제(업스트림 STM32CubeF7 HAL + CWIST 베어메탈 아카이브)로, 실제
   Ethernet 위에서 HTML wire inspector를 서빙하며 ping, keep-alive `curl`,
@@ -19,9 +28,14 @@ C1M 리액터는 이식하지 않습니다.
 - **LCD 및 부하 데모:** `example/stm32f769-fortress/`는 실제 연결 풀 슬롯 288개를
   보드의 800x480 LCD와 브라우저 대시보드에 표시하고, 192바이트 TX 버퍼로 최대
   1 MiB 응답을 스트리밍합니다. 포함된 호스트 스크립트로 실기기 동시 연결을 측정합니다.
-- **CI 대상:** `arm-none-eabi-gcc`로 빌드한 Cortex-M7 Thumb-2 펌웨어를
-  `qemu-arm` semihosting으로 실행합니다. 명령어와 HTTP/lwIP/TLS 동작을 검증하지만
-  실제 보드의 NVIC, PHY, 클럭 트리, RNG는 검증하지 않습니다.
+- **CI 대상 (하드웨어 검증 아님):**
+  - `.github/workflows/baremetal.yml`: `arm-none-eabi-gcc`로 빌드한 Cortex-M7 Thumb-2 펌웨어를
+    `qemu-arm` semihosting으로 실행합니다 (`make baremetal-smoke`, `make baremetal-size-gate`).
+    명령어와 HTTP/lwIP/TLS 동작을 검증하지만 실제 보드의 NVIC, PHY, 클럭 트리, RNG는 검증하지 않습니다.
+  - `.github/workflows/cross-compile.yml`: 임베디드 Linux 트립렛(현재 `aarch64-linux-gnu`)용
+    `make fat-dist` 크로스 빌드 및 qemu-user 링크 스모크를 수행합니다. 툴체인 및 링크 파손만 다룹니다.
+- **계획됨:** 저사양 대상으로서의 STM32F429I-DISCO (Cortex-M4F). `example/stm32/README.md`의
+  하드웨어 스모크 및 네트워크 테스트를 통과한 후에만 실기기 검증 완료로 전환됩니다.
 - **메모리 후보:** STM32H7을 우선으로 하고, 충분한 SRAM을 갖춘 F767/F429급을
   검토할 수 있습니다. Cortex-M4F와 F429/F767은 아직 검증된 대상이 아닙니다.
   실제 보드 수용 테스트는 수동 단계이며 QEMU 성공을 보드 성공으로 간주하면 안 됩니다.
