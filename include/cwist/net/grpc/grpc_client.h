@@ -22,7 +22,8 @@ typedef struct cwist_grpc_call cwist_grpc_call;
 typedef struct cwist_grpc_client_options {
     const char *authority;        /* :authority header; defaults to host:port */
     int use_tls;                  /* 0 = h2c cleartext, 1 = TLS (ALPN "h2") */
-    int verify_peer;              /* TLS only: verify server certificate (default 1) */
+    int verify_peer;              /* TLS only: >=0 verifies certificate and hostname;
+                                   * <0 explicitly disables verification */
     uint64_t connect_timeout_ms;  /* 0 = 10000 */
     const char *tls_server_name;  /* TLS only: SNI hostname; defaults to the
                                   * connect host (channels set this to the

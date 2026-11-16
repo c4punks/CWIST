@@ -67,7 +67,8 @@ typedef struct cwist_grpc_retry_throttle {
 typedef struct cwist_grpc_channel_options {
     const char *authority;        /* :authority header; defaults to the target host:port */
     int use_tls;                  /* 0 = h2c cleartext, 1 = TLS (ALPN "h2") */
-    int verify_peer;              /* TLS only: verify server certificate (default 1) */
+    int verify_peer;              /* TLS only: >=0 verifies certificate and hostname;
+                                   * <0 explicitly disables verification */
     uint64_t connect_timeout_ms;  /* 0 = 10000 */
     cwist_grpc_lb_policy lb_policy;                      /* default pick_first */
     const cwist_grpc_retry_policy *retry_policy; /* NULL = retries disabled (A6 default) */

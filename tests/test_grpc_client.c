@@ -327,6 +327,20 @@ static void test_tls_hostname_verification(uint16_t port) {
     puts("  TLS hostname verification: valid DNS accepted, wrong DNS/IP rejected");
 }
 
+static void test_tls_default_verification(uint16_t port) {
+    cwist_grpc_client_options options = {.use_tls = 1};
+    cwist_grpc_client *client = cwist_grpc_client_connect("localhost", port, &options);
+    assert(client != NULL);
+    cwist_grpc_client_close(client);
+
+    assert(cwist_grpc_client_connect("127.0.0.1", port, &options) == NULL);
+    options.verify_peer = -1;
+    client = cwist_grpc_client_connect("127.0.0.1", port, &options);
+    assert(client != NULL);
+    cwist_grpc_client_close(client);
+    puts("  TLS default verification: zero options secure, negative opt-out accepted");
+}
+
 int main(void) {
     printf("Testing gRPC client...\n");
 
@@ -348,6 +362,7 @@ int main(void) {
     g_use_tls = true;
     port = start_server();
     test_tls_hostname_verification(port);
+    test_tls_default_verification(port);
     stop_server();
     unsetenv("SSL_CERT_FILE");
     cwist_app_destroy(g_app);

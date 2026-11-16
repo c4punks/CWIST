@@ -550,7 +550,8 @@ static int grpc_client_tcp_connect(const char *host, uint16_t port) {
  * @brief Set up TLS on the connected socket and perform the handshake.
  * @param c Client; c->fd must already be connected.
  * @param host Server name for SNI.
- * @param verify_peer Nonzero to verify the peer certificate against default paths.
+ * @param verify_peer Nonnegative to verify the peer certificate against default paths and host;
+ *        negative to disable verification explicitly.
  * @param deadline_ms Monotonic handshake deadline in ms.
  * @retval 0 Handshake done and ALPN negotiated "h2".
  * @retval -1 Setup, handshake, or ALPN negotiation failure.
@@ -559,7 +560,7 @@ static int grpc_client_tls_setup(cwist_grpc_client *c, const char *host, int ver
                                  uint64_t deadline_ms) {
     c->ssl_ctx = SSL_CTX_new(TLS_client_method());
     if (!c->ssl_ctx) return -1;
-    if (verify_peer) {
+    if (verify_peer >= 0) {
         SSL_CTX_set_verify(c->ssl_ctx, SSL_VERIFY_PEER, NULL);
         SSL_CTX_set_default_verify_paths(c->ssl_ctx);
     } else {
@@ -571,7 +572,7 @@ static int grpc_client_tls_setup(cwist_grpc_client *c, const char *host, int ver
     if (!c->ssl) return -1;
     SSL_set_fd(c->ssl, c->fd);
     SSL_set_tlsext_host_name(c->ssl, host);
-    if (verify_peer) {
+    if (verify_peer >= 0) {
         uint8_t ip[16];
         if (inet_pton(AF_INET, host, ip) == 1) {
             if (X509_VERIFY_PARAM_set1_ip(SSL_get0_param(c->ssl), ip, 4) != 1) return -1;
