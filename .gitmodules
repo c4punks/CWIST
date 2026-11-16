@@ -20,7 +20,7 @@
 	branch = main
 [submodule "lib/lsquic"]
 	path = lib/lsquic
-	url = https://github.com/litespeedtech/lsquic.git
+	url = https://github.com/c4punks/lsquic.git
 	branch = master
 [submodule "lib/multipart-parser-c"]
 	path = lib/multipart-parser-c
