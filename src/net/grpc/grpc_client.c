@@ -29,7 +29,9 @@
 #include <time.h>
 #include <unistd.h>
 #include <openssl/ssl.h>
+#ifndef CWIST_TLS_MBEDTLS
 #include <openssl/x509.h>
+#endif
 
 #define GRPC_CLIENT_FRAME_HEADER 9
 /* RFC 9113: the default maximum frame size is 2^14 octets.  The client sends
@@ -572,6 +574,7 @@ static int grpc_client_tls_setup(cwist_grpc_client *c, const char *host, int ver
     if (!c->ssl) return -1;
     SSL_set_fd(c->ssl, c->fd);
     SSL_set_tlsext_host_name(c->ssl, host);
+#ifndef CWIST_TLS_MBEDTLS
     if (verify_peer >= 0) {
         uint8_t ip[16];
         if (inet_pton(AF_INET, host, ip) == 1) {
@@ -582,6 +585,7 @@ static int grpc_client_tls_setup(cwist_grpc_client *c, const char *host, int ver
             return -1;
         }
     }
+#endif
     for (;;) {
         int rc = SSL_connect(c->ssl);
         if (rc == 1) break;
