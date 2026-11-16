@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['입력_20빌드_0',['펌웨어 입력 빌드',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md623',1,'']]]
+  ['임베딩_0',['외부 시그널링과 임베딩',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md480',1,'']]]
 ];

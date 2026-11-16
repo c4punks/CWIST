@@ -106,6 +106,7 @@ $(document).ready(function(){initNavTree('db/dec/ws__async__internal_8h.html','.
 
 <div class="header">
   <div class="summary">
+<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">ws_async_internal.h File Reference</div></div>
 </div><!--header-->
@@ -217,16 +218,33 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../df/d53/ws__async__internal_8h__dep__incl.png" border="0" usemap="#asrc_2net_2websocket_2ws__async__internal_8hdep" alt=""/></div>
 <map name="asrc_2net_2websocket_2ws__async__internal_8hdep" id="asrc_2net_2websocket_2ws__async__internal_8hdep">
-<area shape="rect" title="Private wiring between the app layer (C1M upgrade path) and the reactor&#45;driven WebSocket implementati..." alt="" coords="126,5,287,45"/>
-<area shape="rect" href="../../d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="5,93,213,119"/>
-<area shape="poly" title=" " alt="" coords="174,56,126,95,122,91,171,52"/>
-<area shape="rect" href="../../df/d7f/app_8c.html" title=" " alt="" coords="238,93,373,119"/>
-<area shape="poly" title=" " alt="" coords="243,52,292,91,289,95,240,56"/>
+<area shape="rect" title="Private wiring between the app layer (C1M upgrade path) and the reactor&#45;driven WebSocket implementati..." alt="" coords="221,5,382,45"/>
+<area shape="rect" href="../../d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="5,101,213,126"/>
+<area shape="poly" title=" " alt="" coords="248,53,136,103,134,98,246,49"/>
+<area shape="rect" href="../../da/df2/livemsg_8c.html" title="Experimental transport&#45;independent message dispatch runtime." alt="" coords="80,181,269,207"/>
+<area shape="poly" title=" " alt="" coords="283,58,227,135,187,183,183,179,223,132,279,55"/>
+<area shape="rect" href="../../d4/d57/websocket__async_8c.html" title="Reactor&#45;driven, callback&#45;shaped non&#45;blocking WebSocket path (C1M mode)." alt="" coords="527,93,739,133"/>
+<area shape="poly" title=" " alt="" coords="388,46,561,91,560,96,387,51"/>
+<area shape="rect" href="../../df/d7f/app_8c.html" title=" " alt="" coords="294,181,429,207"/>
+<area shape="poly" title=" " alt="" coords="309,59,317,95,329,132,355,180,351,182,324,134,312,96,304,60"/>
+<area shape="rect" href="../../d5/d34/app__route__internal_8h.html" title=" " alt="" coords="339,93,503,133"/>
+<area shape="poly" title=" " alt="" coords="341,51,396,91,393,95,338,56"/>
+<area shape="poly" title=" " alt="" coords="350,140,212,184,210,179,348,135"/>
+<area shape="poly" title=" " alt="" coords="401,146,372,183,368,179,396,143"/>
+<area shape="rect" href="../../d9/dba/grpc_8c.html" title="Unary gRPC over HTTP/2 support." alt="" coords="453,181,595,207"/>
+<area shape="poly" title=" " alt="" coords="459,140,510,179,507,183,456,144"/>
+<area shape="rect" href="../../dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="619,181,776,207"/>
+<area shape="poly" title=" " alt="" coords="502,135,658,179,656,184,500,140"/>
 </map>
 </div>
 </div>
 <p><a href="../../db/dec/ws__async__internal_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
+Typedefs</h2></td></tr>
+<tr class="memitem:a068f8ccd04a7a2350ca978cb2496af0d" id="r_a068f8ccd04a7a2350ca978cb2496af0d"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dec/ws__async__internal_8h.html#a068f8ccd04a7a2350ca978cb2496af0d">cwist_ws_on_open_t</a>) (cwist_websocket_async *ws, void *user_data)</td></tr>
+<tr class="separator:a068f8ccd04a7a2350ca978cb2496af0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a73e36956d0653cb9ca562cadaaa53851" id="r_a73e36956d0653cb9ca562cadaaa53851"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dec/ws__async__internal_8h.html#a73e36956d0653cb9ca562cadaaa53851">cwist_websocket_async_attach</a> (int fd, <a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e">cwist_ws_on_message_t</a> on_message, void *user_data, const uint8_t *initial, size_t initial_len)</td></tr>
@@ -238,13 +256,36 @@ Functions</h2></td></tr>
 <tr class="memitem:a599b5da71481d4e0f293ea4261c45561" id="r_a599b5da71481d4e0f293ea4261c45561"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dec/ws__async__internal_8h.html#a599b5da71481d4e0f293ea4261c45561">cwist_websocket_async_close_code</a> (cwist_websocket_async *ws, uint16_t code)</td></tr>
 <tr class="memdesc:a599b5da71481d4e0f293ea4261c45561"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initiate the WebSocket close handshake with a CLOSE frame carrying a status code.  <br /></td></tr>
 <tr class="separator:a599b5da71481d4e0f293ea4261c45561"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9de5ca340ce3e4ff09fac7190a51564f" id="r_a9de5ca340ce3e4ff09fac7190a51564f"><td class="memItemLeft" align="right" valign="top">cwist_websocket_async *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dec/ws__async__internal_8h.html#a9de5ca340ce3e4ff09fac7190a51564f">cwist_websocket_async_attach_full</a> (int fd, <a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="el" href="../../d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e">cwist_ws_on_message_t</a> on_message, <a class="el" href="../../db/dec/ws__async__internal_8h.html#a068f8ccd04a7a2350ca978cb2496af0d">cwist_ws_on_open_t</a> on_open, <a class="el" href="../../d6/dad/websocket__async_8h.html#af86e8fc7b87bc28e693009fabff2842f">cwist_ws_on_close_t</a> on_close, void *user_data, const uint8_t *initial, size_t initial_len, size_t max_message_bytes)</td></tr>
+<tr class="memdesc:a9de5ca340ce3e4ff09fac7190a51564f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Attach an upgraded, HTTP-connection-owned fd to the reactor as an async WebSocket connection.  <br /></td></tr>
+<tr class="separator:a9de5ca340ce3e4ff09fac7190a51564f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa70b3433a47ff8fe7523d0d4c1f78e4b" id="r_aa70b3433a47ff8fe7523d0d4c1f78e4b"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dec/ws__async__internal_8h.html#aa70b3433a47ff8fe7523d0d4c1f78e4b">cwist_websocket_async_buffered_amount</a> (const cwist_websocket_async *ws)</td></tr>
+<tr class="separator:aa70b3433a47ff8fe7523d0d4c1f78e4b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Private wiring between the app layer (C1M upgrade path) and the reactor-driven WebSocket implementation in <a class="el" href="../../d4/d57/websocket__async_8c.html" title="Reactor-driven, callback-shaped non-blocking WebSocket path (C1M mode).">websocket_async.c</a>. </p>
 <p>Not part of the public API; native-only (pulls in <a class="el" href="../../dc/d85/reactor_8h.html">reactor.h</a> / sockets). </p>
 
 <p class="definition">Definition in file <a class="el" href="../../db/dec/ws__async__internal_8h_source.html">ws_async_internal.h</a>.</p>
-</div><h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Typedef Documentation</h2>
+<a id="a068f8ccd04a7a2350ca978cb2496af0d" name="a068f8ccd04a7a2350ca978cb2496af0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a068f8ccd04a7a2350ca978cb2496af0d">&#9670;&#160;</a></span>cwist_ws_on_open_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef void(* cwist_ws_on_open_t) (cwist_websocket_async *ws, void *user_data)</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Called after connection state is ready and before initial bytes are parsed. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../db/dec/ws__async__internal_8h_source.html#l00062">62</a> of file <a class="el" href="../../db/dec/ws__async__internal_8h_source.html">ws_async_internal.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="a73e36956d0653cb9ca562cadaaa53851" name="a73e36956d0653cb9ca562cadaaa53851"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a73e36956d0653cb9ca562cadaaa53851">&#9670;&#160;</a></span>cwist_websocket_async_attach()</h2>
 
@@ -330,9 +371,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01247">1247</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01258">1258</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01150">cwist_websocket_async_attach_ex()</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01230">cwist_websocket_async_attach_ex()</a>.</p>
 
 </div>
 </div>
@@ -394,9 +435,87 @@ Functions</h2></td></tr>
 
 <p>Attach variant that reports the connection handle and teardown. </p>
 <p>Identical to <a class="el" href="../../db/dec/ws__async__internal_8h.html#a73e36956d0653cb9ca562cadaaa53851" title="Take ownership of a connected, upgraded fd and drive it reactively.">cwist_websocket_async_attach()</a> plus an optional on_close hook invoked exactly once on the reactor thread at final teardown (before the connection state is freed), and a return value exposing the handle to the caller.</p>
-<dl class="section return"><dt>Returns</dt><dd>Connection handle on success, NULL on failure (fd closed and all state freed before returning).</dd></dl>
-<p>Attach variant that reports the connection handle and teardown.</p>
-<p>Sets the fd non-blocking, feeds any bytes already read past the upgrade request through the parser (delivery can happen inline here, including a close from the on_message callback), arms the one-shot read slot, and joins the reactor's idle sweep. On any failure the fd is closed and all state is freed; on_close does not fire because the attach itself failed.</p>
+<dl class="section return"><dt>Returns</dt><dd>Connection handle on success, NULL on failure (fd closed and all state freed before returning). </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01230">1230</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01156">cwist_websocket_async_attach_full()</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00800">cwist_graphql_ws_attach()</a>, and <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01258">cwist_websocket_async_attach()</a>.</p>
+
+</div>
+</div>
+<a id="a9de5ca340ce3e4ff09fac7190a51564f" name="a9de5ca340ce3e4ff09fac7190a51564f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9de5ca340ce3e4ff09fac7190a51564f">&#9670;&#160;</a></span>cwist_websocket_async_attach_full()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">cwist_websocket_async * cwist_websocket_async_attach_full </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>fd</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *&#160;</td>
+          <td class="paramname"><em>reactor</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d6/dad/websocket__async_8h.html#ab124d32a1729a18003160bace463d30e">cwist_ws_on_message_t</a>&#160;</td>
+          <td class="paramname"><em>on_message</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../db/dec/ws__async__internal_8h.html#a068f8ccd04a7a2350ca978cb2496af0d">cwist_ws_on_open_t</a>&#160;</td>
+          <td class="paramname"><em>on_open</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../d6/dad/websocket__async_8h.html#af86e8fc7b87bc28e693009fabff2842f">cwist_ws_on_close_t</a>&#160;</td>
+          <td class="paramname"><em>on_close</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>user_data</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const uint8_t *&#160;</td>
+          <td class="paramname"><em>initial</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>initial_len</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>max_message_bytes</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Attach an upgraded, HTTP-connection-owned fd to the reactor as an async WebSocket connection. </p>
+<p>Attach with open notification and a lower per-message receive limit.</p>
+<p>Sets the fd non-blocking, feeds any bytes already read past the upgrade request through the parser (delivery can happen inline here, including a close from the on_message callback), arms the one-shot read slot, and joins the reactor's idle sweep. On any failure the fd is closed and all state is freed. If on_open ran, on_close balances it before this returns.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">fd</td><td>Upgraded socket fd (owned by the new connection on success). </td></tr>
@@ -411,11 +530,32 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The new async connection, or NULL on invalid arguments or failure (fd is closed in the latter case). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01150">1150</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01156">1156</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d5/d23/writer__fast_8c_source.html#l00200">cwist_fast_monotonic_sec()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01358">cwist_reactor_add()</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d5/d23/writer__fast_8c_source.html#l00200">cwist_fast_monotonic_sec()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01358">cwist_reactor_add()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>, and <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l00039">WS_ASYNC_MAX_MESSAGE_BYTES</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00800">cwist_graphql_ws_attach()</a>, and <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01247">cwist_websocket_async_attach()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01230">cwist_websocket_async_attach_ex()</a>.</p>
+
+</div>
+</div>
+<a id="aa70b3433a47ff8fe7523d0d4c1f78e4b" name="aa70b3433a47ff8fe7523d0d4c1f78e4b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa70b3433a47ff8fe7523d0d4c1f78e4b">&#9670;&#160;</a></span>cwist_websocket_async_buffered_amount()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t cwist_websocket_async_buffered_amount </td>
+          <td>(</td>
+          <td class="paramtype">const cwist_websocket_async *&#160;</td>
+          <td class="paramname"><em>ws</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Bytes queued for a non-blocking send on the owning reactor thread. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01239">1239</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
 
 </div>
 </div>
@@ -456,7 +596,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l00782">782</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l00783">783</a> of file <a class="el" href="../../d4/d57/websocket__async_8c_source.html">websocket_async.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">CWIST_WS_FRAME_CLOSE</a>.</p>
 

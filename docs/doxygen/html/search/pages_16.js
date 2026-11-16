@@ -8,7 +8,7 @@ var searchData=
   ['references_5',['references',['../df/d22/md_docs_2references_2latin__square__references.html',1,'Latin Square References'],['../d6/d9f/md_docs_2references_2mux__algorithm__references.html',1,'Mux Algorithm References']]],
   ['regression_2025_6',['io_uring posted-work wake-up regression (#25)',['../dd/d56/md_docs_2reactor-wakeup-regression.html',1,'']]],
   ['release_20assets_7',['Prebuilt release assets',['../d1/da3/md_docs_2deployment_2release-assets.html',1,'']]],
-  ['release_20codename_20sequencing_20specification_8',['release codename sequencing specification',['../d0/db4/md_docs_2versioning.html',1,'Release Codename Sequencing Specification'],['../d6/de8/md_docs_2ko_2versioning.html',1,'Release Codename Sequencing Specification']]],
+  ['release_20codename_20sequencing_20specification_8',['release codename sequencing specification',['../d6/de8/md_docs_2ko_2versioning.html',1,'Release Codename Sequencing Specification'],['../d0/db4/md_docs_2versioning.html',1,'Release Codename Sequencing Specification']]],
   ['reload_20keeps_20the_20session_20ticket_20key_20stek_20unchanged_9',['ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged',['../d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html',1,'']]],
   ['required_20gate_10',['Durable queue required gate',['../d3/dd5/md_docs_2durable-queue-gate.html',1,'']]],
   ['resource_20reclamation_20in_20cwist_11',['Full GC: Automatic Resource Reclamation in CWIST',['../d9/dd1/md_docs_2GC.html',1,'']]],
@@ -17,5 +17,6 @@ var searchData=
   ['restore_20http_20response_20caching_20through_20an_20explicit_20public_20fixed_20contract_14',['ADR-0001: Restore HTTP response caching through an explicit public FIXED contract',['../de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]],
   ['ring_20vs_20growable_20ring_15',['HTTPS pool task queue: static ring vs growable ring',['../df/d28/md_docs_2performance_2https-pool-dynamic-queue.html',1,'']]],
   ['runtime_20configuration_16',['Runtime configuration',['../d9/dfa/md_docs_2runtime-config.html',1,'']]],
-  ['ryzen_205600x_17',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
+  ['runtime_20experimental_17',['Live message runtime (experimental)',['../db/dbb/md_docs_2api_2livemsg.html',1,'']]],
+  ['ryzen_205600x_18',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
 ];

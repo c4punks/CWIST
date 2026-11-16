@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
+  ['위의_20cwist_0',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
+  ['위의_20cwist_20emscripten_1',['WASM 위의 CWIST (Emscripten)',['../d2/d56/md_docs_2ko_2api_2wasm.html',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['작업_20깨우기_20회귀_2025_0',['io_uring 게시 작업 깨우기 회귀 (#25)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html',1,'']]]
+  ['이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]]
 ];

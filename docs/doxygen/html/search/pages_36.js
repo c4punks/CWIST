@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['벤치마크_20측정_20방법_0',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
+  ['범위_20css_20프래그먼트와_20자산_0',['HTML 컴포넌트, 범위 CSS, 프래그먼트와 자산',['../d1/df9/md_docs_2ko_2api_2html.html',1,'']]]
 ];

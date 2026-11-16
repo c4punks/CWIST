@@ -1,8 +1,6 @@
 var searchData=
 [
-  ['쿠키_0',['세션과 쿠키',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md547',1,'']]],
-  ['쿠키_20쓰기_1',['쿠키 쓰기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md400',1,'']]],
-  ['쿠키_20읽기_2',['쿠키 읽기',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md397',1,'']]],
-  ['쿠키_20저장소_3',['쿠키 저장소',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md394',1,'']]],
-  ['쿠키_20api_4',['쿠키 API',['../db/d04/md_docs_2ko_2api_2cookie.html',1,'']]]
+  ['컴포넌트_0',['컴포넌트',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md416',1,'']]],
+  ['컴포넌트_20모델_20위의_20cwist_1',['WASM 컴포넌트 모델 위의 CWIST',['../dd/d41/md_docs_2ko_2api_2wasm-component.html',1,'']]],
+  ['컴포넌트_20범위_20css_20프래그먼트와_20자산_2',['HTML 컴포넌트, 범위 CSS, 프래그먼트와 자산',['../d1/df9/md_docs_2ko_2api_2html.html',1,'']]]
 ];

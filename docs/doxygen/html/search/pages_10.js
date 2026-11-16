@@ -6,5 +6,6 @@ var searchData=
   ['library_20reference_3',['CWIST Library Reference',['../da/dca/md_docs_2REFERENCE.html',1,'']]],
   ['limits_4',['C1M file limits',['../db/d4d/md_docs_2c1m-file-limits.html',1,'']]],
   ['list_5',['Deprecated List',['../da/d58/deprecated.html',1,'']]],
-  ['local_2012_20core_20ryzen_205600x_6',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
+  ['live_20message_20runtime_20experimental_6',['Live message runtime (experimental)',['../db/dbb/md_docs_2api_2livemsg.html',1,'']]],
+  ['local_2012_20core_20ryzen_205600x_7',['Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html',1,'']]]
 ];

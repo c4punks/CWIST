@@ -1,0 +1,5 @@
+<map id="include/cwist/livemsg.h" name="include/cwist/livemsg.h">
+<area shape="rect" id="Node000001" title="Experimental message runtime over WebSocket and WebRTC DataChannel." alt="" coords="13,5,187,31"/>
+<area shape="rect" id="Node000002" href="$da/df2/livemsg_8c.html" title="Experimental transport&#45;independent message dispatch runtime." alt="" coords="5,79,195,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="103,44,103,79,97,79,97,44"/>
+</map>

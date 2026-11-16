@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['필수_20게이트_0',['영속 큐 필수 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'']]]
+  ['풀의_20버스트_20기아_2025_20후속_0',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]]
 ];

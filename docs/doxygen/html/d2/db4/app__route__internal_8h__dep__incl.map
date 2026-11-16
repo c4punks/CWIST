@@ -1,9 +1,11 @@
 <map id="src/sys/app/app_route_internal.h" name="src/sys/app/app_route_internal.h">
-<area shape="rect" id="Node000001" title=" " alt="" coords="167,5,331,45"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="282,5,446,45"/>
 <area shape="rect" id="Node000002" href="$d9/dba/grpc_8c.html" title="Unary gRPC over HTTP/2 support." alt="" coords="5,93,147,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="196,53,103,96,101,91,194,49"/>
-<area shape="rect" id="Node000003" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="171,93,328,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="252,59,252,93,247,93,247,59"/>
-<area shape="rect" id="Node000004" href="$df/d7f/app_8c.html" title=" " alt="" coords="353,93,487,119"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="304,49,396,91,394,96,301,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="283,51,119,96,117,91,281,46"/>
+<area shape="rect" id="Node000003" href="$da/df2/livemsg_8c.html" title="Experimental transport&#45;independent message dispatch runtime." alt="" coords="171,93,360,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="331,56,282,95,278,91,328,52"/>
+<area shape="rect" id="Node000004" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="384,93,541,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="400,52,450,91,446,95,397,56"/>
+<area shape="rect" id="Node000005" href="$df/d7f/app_8c.html" title=" " alt="" coords="566,93,701,119"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="442,47,595,91,593,96,441,52"/>
 </map>

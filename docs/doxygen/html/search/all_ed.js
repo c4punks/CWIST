@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['해결됨_3a_20wasip3에서의_20소켓_20요청_20경로_202026_2009_2022_20감사_0',['해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md535',1,'']]],
-  ['해결하지_20않는_20것_1',['이 수정이 해결하지 않는 것',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md587',1,'']]],
-  ['해석하기_2',['컨텍스트 스위치 열 해석하기',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md741',1,'']]],
-  ['해석_3',['출력과 해석',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md657',1,'']]]
+  ['한계_0',['한계',['../d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md584',1,'검증과 한계'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md764',1,'알려진 한계'],['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md595',1,'HTTP 측정과 한계']]],
+  ['한도_1',['C1M 파일 한도',['../db/dc4/md_docs_2ko_2c1m-file-limits.html',1,'']]]
 ];

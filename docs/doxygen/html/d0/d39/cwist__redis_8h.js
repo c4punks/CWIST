@@ -27,6 +27,7 @@ var cwist__redis_8h =
     [ "cwist_redis_reply_free", "d0/d39/cwist__redis_8h.html#ac1acbfb11055b6a1a2caf21b41802f99", null ],
     [ "cwist_redis_select", "d0/d39/cwist__redis_8h.html#aae2624e481cdd89780cff2e96316bbe1", null ],
     [ "cwist_redis_set", "d0/d39/cwist__redis_8h.html#af47033893cd7f80f457610f1a155a10a", null ],
+    [ "cwist_redis_set_timeout_ms", "d0/d39/cwist__redis_8h.html#a590a6d56e9ddf7e875b76f2d58c557fc", null ],
     [ "cwist_redis_setex", "d0/d39/cwist__redis_8h.html#a9e0ba5b12c0ec2c507e70972d81a2230", null ],
     [ "cwist_redis_subscribe", "d0/d39/cwist__redis_8h.html#abc6e0fe90ac671129ddc653f55d4e8da", null ]
 ];

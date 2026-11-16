@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['에셋_0',['릴리스 사전 빌드 에셋',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html',1,'']]]
+  ['알고리즘_20참고_20자료_0',['Mux 알고리즘 참고 자료',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['점검_20목록_0',['3. 신뢰성 점검 목록',['../dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md720',1,'']]]
+  ['전에_0',['프로덕션에 맞게 고치기 전에',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md624',1,'']]],
+  ['전역_20스위치_1',['1. cwist_full_gc(bool) - 전역 스위치',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md654',1,'']]]
 ];

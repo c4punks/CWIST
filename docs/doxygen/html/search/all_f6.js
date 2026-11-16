@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['홀수_20소수_20거듭제곱_20p_20e_20e_202_0',['2.2 홀수 소수 거듭제곱 p^e, e &gt;= 2',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md689',1,'']]]
+  ['현재_20동작_0',['FIXED 엔드포인트 캐싱: 현재 동작',['../d7/dab/md_docs_2ko_2fixed-cache-status.html',1,'']]],
+  ['현황_202026_2009_2021_20측정_1',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md546',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['있는_20것_0',['WASM 빌드에 들어 있는 것',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md542',1,'']]]
+  ['입력_20빌드_0',['펌웨어 입력 빌드',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md637',1,'']]]
 ];

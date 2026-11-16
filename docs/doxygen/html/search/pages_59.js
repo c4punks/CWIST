@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['튜토리얼_20a_20to_20z_0',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]]
+  ['쿼리와_20uri_20api_0',['쿼리와 URI API',['../dd/da8/md_docs_2ko_2api_2query.html',1,'']]]
 ];

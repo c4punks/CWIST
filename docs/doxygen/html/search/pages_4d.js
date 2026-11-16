@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['자동_20자원_20회수_0',['Full GC: CWIST의 자동 자원 회수',['../d1/dde/md_docs_2ko_2GC.html',1,'']]],
-  ['자료_1',['Mux 알고리즘 참고 자료',['../d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html',1,'']]],
-  ['자산_2',['HTML 컴포넌트, 범위 CSS, 프래그먼트와 자산',['../d1/df9/md_docs_2ko_2api_2html.html',1,'']]],
-  ['자원_20회수_3',['Full GC: CWIST의 자동 자원 회수',['../d1/dde/md_docs_2ko_2GC.html',1,'']]]
+  ['응답_20캐싱_20복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]]
 ];

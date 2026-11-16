@@ -1,7 +1,8 @@
 var searchData=
 [
-  ['통과하는_20스트리밍_0',['경계를 통과하는 스트리밍',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md548',1,'']]],
-  ['통신_1',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md869',1,'']]],
-  ['통합_2',['systemd 통합',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md614',1,'']]],
-  ['통합_20게이트_3',['격리된 통합 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md619',1,'']]]
+  ['테스트에서_20런타임_20knob_20쌍_20덮기_0',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md707',1,'']]],
+  ['테스트하기_1',['4. API 테스트하기',['../d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md731',1,'']]],
+  ['테스트_2',['테스트',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md593',1,'결정론적 회귀 테스트'],['../d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md666',1,'동작 회귀 테스트'],['../db/ddd/md_docs_2ko_2api_2http.html#autotoc_md449',1,'회귀 테스트'],['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md675',1,'회귀 테스트']]],
+  ['테스트_20단언_20매크로_3',['테스트 단언 매크로',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md402',1,'']]],
+  ['테스트_20클라이언트_4',['인메모리 테스트 클라이언트',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md398',1,'']]]
 ];

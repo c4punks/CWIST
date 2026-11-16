@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['파이프라인_20공정성과_20프레이밍_0',['HTTP/1.1 파이프라인 공정성과 프레이밍',['../d4/dd7/md_docs_2ko_2http-reactor-fairness.html',1,'']]],
-  ['파일_20한도_1',['C1M 파일 한도',['../db/dc4/md_docs_2ko_2c1m-file-limits.html',1,'']]]
+  ['큐잉_20이슈_2025_0',['C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)',['../da/d90/md_docs_2ko_2cooperative-queuing.html',1,'']]],
+  ['큐_20필수_20게이트_1',['영속 큐 필수 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'']]]
 ];

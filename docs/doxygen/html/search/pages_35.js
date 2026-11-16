@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['범위_20css_20프래그먼트와_20자산_0',['HTML 컴포넌트, 범위 CSS, 프래그먼트와 자산',['../d1/df9/md_docs_2ko_2api_2html.html',1,'']]]
+  ['버스트_20기아_2025_20후속_0',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]]
 ];

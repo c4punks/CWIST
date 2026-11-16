@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['전에_0',['프로덕션에 맞게 고치기 전에',['../d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md610',1,'']]],
-  ['전역_20스위치_1',['1. cwist_full_gc(bool) - 전역 스위치',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md640',1,'']]]
+  ['저장소_0',['쿠키 저장소',['../da/dc3/md_docs_2ko_2api_2app.html#autotoc_md401',1,'']]],
+  ['저지연_20실행_1',['튜닝된 저지연 실행',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md757',1,'']]]
 ];

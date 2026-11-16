@@ -192,874 +192,892 @@ var NAVTREE =
       ] ],
       [ "Example", "d8/deb/md_docs_2api_2json.html#autotoc_md146", null ]
     ] ],
+    [ "Live message runtime (experimental)", "db/dbb/md_docs_2api_2livemsg.html", [
+      [ "Minimal server", "db/dbb/md_docs_2api_2livemsg.html#autotoc_md148", null ],
+      [ "Configuration", "db/dbb/md_docs_2api_2livemsg.html#autotoc_md149", null ],
+      [ "Message and result ownership", "db/dbb/md_docs_2api_2livemsg.html#autotoc_md150", null ],
+      [ "Replies, push, and backpressure", "db/dbb/md_docs_2api_2livemsg.html#autotoc_md151", null ],
+      [ "External signaling and embedding", "db/dbb/md_docs_2api_2livemsg.html#autotoc_md152", null ],
+      [ "Validation", "db/dbb/md_docs_2api_2livemsg.html#autotoc_md153", null ]
+    ] ],
     [ "Middleware API", "da/dbc/md_docs_2api_2middleware.html", [
-      [ "Functions", "da/dbc/md_docs_2api_2middleware.html#autotoc_md148", [
-        [ "cwist_app_use", "da/dbc/md_docs_2api_2middleware.html#autotoc_md149", null ]
+      [ "Functions", "da/dbc/md_docs_2api_2middleware.html#autotoc_md155", [
+        [ "cwist_app_use", "da/dbc/md_docs_2api_2middleware.html#autotoc_md156", null ]
       ] ],
-      [ "Built-in Middlewares", "da/dbc/md_docs_2api_2middleware.html#autotoc_md150", [
-        [ "Request ID Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md151", null ],
-        [ "Access Log Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md152", [
-          [ "Async log output", "da/dbc/md_docs_2api_2middleware.html#autotoc_md153", null ]
+      [ "Built-in Middlewares", "da/dbc/md_docs_2api_2middleware.html#autotoc_md157", [
+        [ "Request ID Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md158", null ],
+        [ "Access Log Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md159", [
+          [ "Async log output", "da/dbc/md_docs_2api_2middleware.html#autotoc_md160", null ]
         ] ],
-        [ "Rate Limiter Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md154", null ],
-        [ "Redis-backed shared rate limiter", "da/dbc/md_docs_2api_2middleware.html#autotoc_md155", null ],
-        [ "CORS Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md156", null ],
-        [ "Prometheus Metrics Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md157", null ],
-        [ "JWT Auth Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md158", null ],
-        [ "Compression Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md159", null ]
+        [ "Rate Limiter Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md161", null ],
+        [ "Redis-backed shared rate limiter", "da/dbc/md_docs_2api_2middleware.html#autotoc_md162", null ],
+        [ "CORS Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md163", null ],
+        [ "Prometheus Metrics Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md164", null ],
+        [ "JWT Auth Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md165", null ],
+        [ "Compression Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md166", null ]
       ] ],
-      [ "Creating Custom Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md160", null ]
+      [ "Creating Custom Middleware", "da/dbc/md_docs_2api_2middleware.html#autotoc_md167", null ]
     ] ],
     [ "Query & URI API", "dc/d49/md_docs_2api_2query.html", null ],
     [ "Database API", "d5/d11/md_docs_2api_2sql.html", [
-      [ "Schema Migrations", "d5/d11/md_docs_2api_2sql.html#autotoc_md170", [
-        [ "cwist_db_open", "d5/d11/md_docs_2api_2sql.html#autotoc_md165", null ],
-        [ "cwist_db_open_memory", "d5/d11/md_docs_2api_2sql.html#autotoc_md166", null ],
-        [ "cwist_db_serialize", "d5/d11/md_docs_2api_2sql.html#autotoc_md167", null ],
-        [ "cwist_db_exec", "d5/d11/md_docs_2api_2sql.html#autotoc_md168", null ],
-        [ "cwist_db_query", "d5/d11/md_docs_2api_2sql.html#autotoc_md169", null ],
-        [ "Return codes", "d5/d11/md_docs_2api_2sql.html#autotoc_md171", null ],
-        [ "cwist_migration_t", "d5/d11/md_docs_2api_2sql.html#autotoc_md172", null ],
-        [ "cwist_migrate_up", "d5/d11/md_docs_2api_2sql.html#autotoc_md173", null ],
-        [ "cwist_migrate_down", "d5/d11/md_docs_2api_2sql.html#autotoc_md174", null ],
-        [ "cwist_migrate_version", "d5/d11/md_docs_2api_2sql.html#autotoc_md175", null ]
+      [ "Schema Migrations", "d5/d11/md_docs_2api_2sql.html#autotoc_md177", [
+        [ "cwist_db_open", "d5/d11/md_docs_2api_2sql.html#autotoc_md172", null ],
+        [ "cwist_db_open_memory", "d5/d11/md_docs_2api_2sql.html#autotoc_md173", null ],
+        [ "cwist_db_serialize", "d5/d11/md_docs_2api_2sql.html#autotoc_md174", null ],
+        [ "cwist_db_exec", "d5/d11/md_docs_2api_2sql.html#autotoc_md175", null ],
+        [ "cwist_db_query", "d5/d11/md_docs_2api_2sql.html#autotoc_md176", null ],
+        [ "Return codes", "d5/d11/md_docs_2api_2sql.html#autotoc_md178", null ],
+        [ "cwist_migration_t", "d5/d11/md_docs_2api_2sql.html#autotoc_md179", null ],
+        [ "cwist_migrate_up", "d5/d11/md_docs_2api_2sql.html#autotoc_md180", null ],
+        [ "cwist_migrate_down", "d5/d11/md_docs_2api_2sql.html#autotoc_md181", null ],
+        [ "cwist_migrate_version", "d5/d11/md_docs_2api_2sql.html#autotoc_md182", null ]
       ] ]
     ] ],
     [ "Server-Sent Events API", "d0/d89/md_docs_2api_2sse.html", [
-      [ "Types", "d0/d89/md_docs_2api_2sse.html#autotoc_md177", [
-        [ "cwist_sse_event_t", "d0/d89/md_docs_2api_2sse.html#autotoc_md178", null ],
-        [ "cwist_sse_stream_t", "d0/d89/md_docs_2api_2sse.html#autotoc_md179", null ]
+      [ "Types", "d0/d89/md_docs_2api_2sse.html#autotoc_md184", [
+        [ "cwist_sse_event_t", "d0/d89/md_docs_2api_2sse.html#autotoc_md185", null ],
+        [ "cwist_sse_stream_t", "d0/d89/md_docs_2api_2sse.html#autotoc_md186", null ]
       ] ],
-      [ "Response mode", "d0/d89/md_docs_2api_2sse.html#autotoc_md180", [
-        [ "cwist_sse_response_init", "d0/d89/md_docs_2api_2sse.html#autotoc_md181", null ],
-        [ "cwist_sse_response_event", "d0/d89/md_docs_2api_2sse.html#autotoc_md182", null ],
-        [ "cwist_sse_response_write", "d0/d89/md_docs_2api_2sse.html#autotoc_md183", null ],
-        [ "cwist_sse_response_comment", "d0/d89/md_docs_2api_2sse.html#autotoc_md184", null ]
+      [ "Response mode", "d0/d89/md_docs_2api_2sse.html#autotoc_md187", [
+        [ "cwist_sse_response_init", "d0/d89/md_docs_2api_2sse.html#autotoc_md188", null ],
+        [ "cwist_sse_response_event", "d0/d89/md_docs_2api_2sse.html#autotoc_md189", null ],
+        [ "cwist_sse_response_write", "d0/d89/md_docs_2api_2sse.html#autotoc_md190", null ],
+        [ "cwist_sse_response_comment", "d0/d89/md_docs_2api_2sse.html#autotoc_md191", null ]
       ] ],
-      [ "Stream mode", "d0/d89/md_docs_2api_2sse.html#autotoc_md185", [
-        [ "cwist_sse_stream_open", "d0/d89/md_docs_2api_2sse.html#autotoc_md186", null ],
-        [ "cwist_sse_stream_send", "d0/d89/md_docs_2api_2sse.html#autotoc_md187", null ],
-        [ "cwist_sse_stream_write", "d0/d89/md_docs_2api_2sse.html#autotoc_md188", null ],
-        [ "cwist_sse_stream_comment", "d0/d89/md_docs_2api_2sse.html#autotoc_md189", null ],
-        [ "cwist_sse_stream_close", "d0/d89/md_docs_2api_2sse.html#autotoc_md190", null ]
+      [ "Stream mode", "d0/d89/md_docs_2api_2sse.html#autotoc_md192", [
+        [ "cwist_sse_stream_open", "d0/d89/md_docs_2api_2sse.html#autotoc_md193", null ],
+        [ "cwist_sse_stream_send", "d0/d89/md_docs_2api_2sse.html#autotoc_md194", null ],
+        [ "cwist_sse_stream_write", "d0/d89/md_docs_2api_2sse.html#autotoc_md195", null ],
+        [ "cwist_sse_stream_comment", "d0/d89/md_docs_2api_2sse.html#autotoc_md196", null ],
+        [ "cwist_sse_stream_close", "d0/d89/md_docs_2api_2sse.html#autotoc_md197", null ]
       ] ],
-      [ "Convenience macros", "d0/d89/md_docs_2api_2sse.html#autotoc_md191", null ],
-      [ "Example", "d0/d89/md_docs_2api_2sse.html#autotoc_md192", null ]
+      [ "Convenience macros", "d0/d89/md_docs_2api_2sse.html#autotoc_md198", null ],
+      [ "Example", "d0/d89/md_docs_2api_2sse.html#autotoc_md199", null ]
     ] ],
     [ "SString API", "db/d14/md_docs_2api_2sstring.html", null ],
     [ "WASI targets", "d6/d26/md_docs_2api_2wasi.html", [
-      [ "Flavour detection", "d6/d26/md_docs_2api_2wasi.html#autotoc_md203", null ],
-      [ "WASI 0.2 socket server", "d6/d26/md_docs_2api_2wasi.html#autotoc_md204", null ],
-      [ "WASI preview1 (retired)", "d6/d26/md_docs_2api_2wasi.html#autotoc_md205", [
-        [ "What the preview1 build did differently", "d6/d26/md_docs_2api_2wasi.html#autotoc_md206", null ],
-        [ "Verification (historical)", "d6/d26/md_docs_2api_2wasi.html#autotoc_md207", null ]
+      [ "Flavour detection", "d6/d26/md_docs_2api_2wasi.html#autotoc_md210", null ],
+      [ "WASI 0.2 socket server", "d6/d26/md_docs_2api_2wasi.html#autotoc_md211", null ],
+      [ "WASI preview1 (retired)", "d6/d26/md_docs_2api_2wasi.html#autotoc_md212", [
+        [ "What the preview1 build did differently", "d6/d26/md_docs_2api_2wasi.html#autotoc_md213", null ],
+        [ "Verification (historical)", "d6/d26/md_docs_2api_2wasi.html#autotoc_md214", null ]
       ] ]
     ] ],
     [ "CWIST on the WASM component model", "d8/d77/md_docs_2api_2wasm-component.html", [
-      [ "Why", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md209", null ],
-      [ "The boundary", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md210", null ],
-      [ "Toolchain status (measured 2026-09-21)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md211", null ],
-      [ "Evaluated: preview3-shim (2026-09-23)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md212", null ],
-      [ "Landed: native async for streaming/SSE (2026-09-23)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md213", null ],
-      [ "Resolved: socket request path under wasip3 (audited 2026-09-22)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md214", null ],
-      [ "Stages", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md215", null ],
-      [ "Browser runtime gate (WASI 0.2)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md216", null ],
-      [ "Measured while building stage 2", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md217", null ],
-      [ "Non-goals", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md218", null ]
+      [ "Why", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md216", null ],
+      [ "The boundary", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md217", null ],
+      [ "Toolchain status (measured 2026-09-21)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md218", null ],
+      [ "Evaluated: preview3-shim (2026-09-23)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md219", null ],
+      [ "Landed: native async for streaming/SSE (2026-09-23)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md220", null ],
+      [ "Resolved: socket request path under wasip3 (audited 2026-09-22)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md221", null ],
+      [ "Stages", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md222", null ],
+      [ "Browser runtime gate (WASI 0.2)", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md223", null ],
+      [ "Measured while building stage 2", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md224", null ],
+      [ "Non-goals", "d8/d77/md_docs_2api_2wasm-component.html#autotoc_md225", null ]
     ] ],
     [ "CWIST on WASM (Legacy Emscripten)", "d5/d0e/md_docs_2api_2wasm.html", [
-      [ "Building", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md220", null ],
-      [ "What is in the WASM build", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md221", null ],
-      [ "Request dispatch from JS", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md222", null ],
-      [ "Zero-copy views: cwist/wasm/typedarray.h", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md223", null ],
-      [ "Databases under WASM", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md224", null ],
-      [ "Bundle size impact of cwist_db", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md225", null ],
-      [ "Sessions and cookies", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md226", null ],
-      [ "Streaming through the boundary", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md227", null ],
-      [ "Runnable example: Service Worker app", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md228", null ],
-      [ "Not covered (yet)", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md229", null ],
-      [ "Streaming producer (handlers generate the body chunk-by-chunk)", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md230", null ]
+      [ "Building", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md227", null ],
+      [ "What is in the WASM build", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md228", null ],
+      [ "Request dispatch from JS", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md229", null ],
+      [ "Zero-copy views: cwist/wasm/typedarray.h", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md230", null ],
+      [ "Databases under WASM", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md231", null ],
+      [ "Bundle size impact of cwist_db", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md232", null ],
+      [ "Sessions and cookies", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md233", null ],
+      [ "Streaming through the boundary", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md234", null ],
+      [ "Runnable example: Service Worker app", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md235", null ],
+      [ "Not covered (yet)", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md236", null ],
+      [ "Streaming producer (handlers generate the body chunk-by-chunk)", "d5/d0e/md_docs_2api_2wasm.html#autotoc_md237", null ]
     ] ],
     [ "WebSocket API", "db/dc5/md_docs_2api_2websocket.html", [
-      [ "Functions", "db/dc5/md_docs_2api_2websocket.html#autotoc_md232", [
-        [ "cwist_websocket_upgrade", "db/dc5/md_docs_2api_2websocket.html#autotoc_md233", null ],
-        [ "cwist_websocket_receive", "db/dc5/md_docs_2api_2websocket.html#autotoc_md234", null ],
-        [ "cwist_websocket_send", "db/dc5/md_docs_2api_2websocket.html#autotoc_md235", null ]
+      [ "Functions", "db/dc5/md_docs_2api_2websocket.html#autotoc_md239", [
+        [ "cwist_websocket_upgrade", "db/dc5/md_docs_2api_2websocket.html#autotoc_md240", null ],
+        [ "cwist_websocket_receive", "db/dc5/md_docs_2api_2websocket.html#autotoc_md241", null ],
+        [ "cwist_websocket_send", "db/dc5/md_docs_2api_2websocket.html#autotoc_md242", null ]
       ] ],
-      [ "Opcode Types", "db/dc5/md_docs_2api_2websocket.html#autotoc_md236", null ],
-      [ "Integration with cwist_app", "db/dc5/md_docs_2api_2websocket.html#autotoc_md237", null ],
-      [ "Async (C1M) WebSocket API", "db/dc5/md_docs_2api_2websocket.html#autotoc_md238", [
-        [ "cwist_app_ws_async", "db/dc5/md_docs_2api_2websocket.html#autotoc_md239", null ],
-        [ "cwist_ws_on_message_t", "db/dc5/md_docs_2api_2websocket.html#autotoc_md240", null ],
-        [ "cwist_websocket_async_send", "db/dc5/md_docs_2api_2websocket.html#autotoc_md241", null ],
-        [ "cwist_websocket_async_close", "db/dc5/md_docs_2api_2websocket.html#autotoc_md242", null ]
+      [ "Opcode Types", "db/dc5/md_docs_2api_2websocket.html#autotoc_md243", null ],
+      [ "Integration with cwist_app", "db/dc5/md_docs_2api_2websocket.html#autotoc_md244", null ],
+      [ "Async (C1M) WebSocket API", "db/dc5/md_docs_2api_2websocket.html#autotoc_md245", [
+        [ "cwist_app_ws_async", "db/dc5/md_docs_2api_2websocket.html#autotoc_md246", null ],
+        [ "cwist_ws_on_message_t", "db/dc5/md_docs_2api_2websocket.html#autotoc_md247", null ],
+        [ "cwist_websocket_async_send", "db/dc5/md_docs_2api_2websocket.html#autotoc_md248", null ],
+        [ "cwist_websocket_async_close", "db/dc5/md_docs_2api_2websocket.html#autotoc_md249", null ]
       ] ],
-      [ "GraphQL subscriptions (graphql-ws)", "db/dc5/md_docs_2api_2websocket.html#autotoc_md243", null ]
+      [ "GraphQL subscriptions (graphql-ws)", "db/dc5/md_docs_2api_2websocket.html#autotoc_md250", null ]
     ] ],
     [ "Deferred HTTP ownership under full GC", "df/dc5/md_docs_2async-gc-ownership.html", [
-      [ "Handoff sequence", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md245", null ],
-      [ "Ownership inventory", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md246", [
-        [ "Borrowed and external state", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md247", null ]
+      [ "Handoff sequence", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md252", null ],
+      [ "Ownership inventory", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md253", [
+        [ "Borrowed and external state", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md254", null ]
       ] ],
-      [ "HTTP/2 queue ownership", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md248", null ],
-      [ "Verification and limits", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md249", null ],
-      [ "Scheduler and IO queue ownership", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md250", null ]
+      [ "HTTP/2 queue ownership", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md255", null ],
+      [ "Verification and limits", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md256", null ],
+      [ "Scheduler and IO queue ownership", "df/dc5/md_docs_2async-gc-ownership.html#autotoc_md257", null ]
     ] ],
     [ "Compile-time build options", "d5/d9e/md_docs_2build-options.html", null ],
     [ "C1M file limits", "db/d4d/md_docs_2c1m-file-limits.html", [
-      [ "Cause", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md253", null ],
-      [ "Change", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md254", null ],
-      [ "Tuning", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md255", null ],
-      [ "Checks", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md256", null ]
+      [ "Cause", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md260", null ],
+      [ "Change", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md261", null ],
+      [ "Tuning", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md262", null ],
+      [ "Checks", "db/d4d/md_docs_2c1m-file-limits.html#autotoc_md263", null ]
     ] ],
     [ "Classic pool burst starvation (#25 follow-up)", "d9/d56/md_docs_2classic-pool-starvation.html", [
-      [ "Cause and change", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md258", null ],
-      [ "Deterministic regression", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md259", null ],
-      [ "Validation status", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md260", null ],
-      [ "HTTP measurements and limits", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md261", null ]
+      [ "Cause and change", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md265", null ],
+      [ "Deterministic regression", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md266", null ],
+      [ "Validation status", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md267", null ],
+      [ "HTTP measurements and limits", "d9/d56/md_docs_2classic-pool-starvation.html#autotoc_md268", null ]
     ] ],
     [ "Cooperative queuing in the C1M reactor's batch drain (issue #25)", "d1/ddd/md_docs_2cooperative-queuing.html", [
-      [ "Background", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md263", null ],
-      [ "The gap", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md264", null ],
-      [ "The fix", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md265", null ],
-      [ "Measured effect", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md266", null ],
-      [ "What this does not fix", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md267", null ],
-      [ "Tuning", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md268", null ]
+      [ "Background", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md270", null ],
+      [ "The gap", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md271", null ],
+      [ "The fix", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md272", null ],
+      [ "Measured effect", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md273", null ],
+      [ "What this does not fix", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md274", null ],
+      [ "Tuning", "d1/ddd/md_docs_2cooperative-queuing.html#autotoc_md275", null ]
     ] ],
     [ "ADR-0001: Restore HTTP response caching through an explicit public FIXED contract", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html", [
-      [ "Context", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md270", null ],
-      [ "Decision", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md271", [
-        [ "1. One parsed eligibility boundary", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md272", null ],
-        [ "2. Cache representations, not wire responses", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md273", null ],
-        [ "3. Isolate ownership, provenance and capacity", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md274", null ],
-        [ "4. Make the compatibility change explicit", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md275", null ]
+      [ "Context", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md277", null ],
+      [ "Decision", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md278", [
+        [ "1. One parsed eligibility boundary", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md279", null ],
+        [ "2. Cache representations, not wire responses", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md280", null ],
+        [ "3. Isolate ownership, provenance and capacity", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md281", null ],
+        [ "4. Make the compatibility change explicit", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md282", null ]
       ] ],
-      [ "Alternatives considered", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md276", null ],
-      [ "Consequences", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md277", null ],
-      [ "Implementation and release gates", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md278", null ],
-      [ "Evidence and source anchors", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md279", null ]
+      [ "Alternatives considered", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md283", null ],
+      [ "Consequences", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md284", null ],
+      [ "Implementation and release gates", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md285", null ],
+      [ "Evidence and source anchors", "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md286", null ]
     ] ],
     [ "ADR-0002: TLS certificate hot reload keeps the session-ticket key (STEK) unchanged", "d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html", [
-      [ "Context", "d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html#autotoc_md281", null ],
-      [ "Decision", "d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html#autotoc_md282", null ],
-      [ "Consequences", "d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html#autotoc_md283", null ]
+      [ "Context", "d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html#autotoc_md288", null ],
+      [ "Decision", "d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html#autotoc_md289", null ],
+      [ "Consequences", "d1/dd3/md_docs_2decisions_20002-tls-hot-reload-stek.html#autotoc_md290", null ]
     ] ],
     [ "Prebuilt release assets", "d1/da3/md_docs_2deployment_2release-assets.html", [
-      [ "Release branch policy", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md286", null ],
-      [ "Platform coverage in release notes", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md287", null ],
-      [ "Using a fat bundle", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md288", null ],
-      [ "Using the amalgamation", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md289", null ],
-      [ "Re-running", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md290", null ]
+      [ "Release branch policy", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md293", null ],
+      [ "Platform coverage in release notes", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md294", null ],
+      [ "Using a fat bundle", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md295", null ],
+      [ "Using the amalgamation", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md296", null ],
+      [ "Re-running", "d1/da3/md_docs_2deployment_2release-assets.html#autotoc_md297", null ]
     ] ],
     [ "Deploy the WASI 0.2 example with Wasmtime", "db/de3/md_docs_2deployment_2wasmtime-appliance.html", [
-      [ "Scope and safety", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md292", null ],
-      [ "1. Build a known revision", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md293", null ],
-      [ "2. Separate the artifact from state", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md294", null ],
-      [ "3. Start and verify", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md295", null ],
-      [ "4. Restart, back up, and restore", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md296", null ],
-      [ "Before adapting this for production", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md297", null ]
+      [ "Scope and safety", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md299", null ],
+      [ "1. Build a known revision", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md300", null ],
+      [ "2. Separate the artifact from state", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md301", null ],
+      [ "3. Start and verify", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md302", null ],
+      [ "4. Restart, back up, and restore", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md303", null ],
+      [ "Before adapting this for production", "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md304", null ]
     ] ],
     [ "Zero-downtime restart via socket handoff", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html", [
-      [ "Requirements", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md299", null ],
-      [ "Handoff sequence", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md300", null ],
-      [ "systemd integration", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md301", null ],
-      [ "UDP and HTTP/3", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md302", null ],
-      [ "Verifying a deploy", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md303", null ]
+      [ "Requirements", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md306", null ],
+      [ "Handoff sequence", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md307", null ],
+      [ "systemd integration", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md308", null ],
+      [ "UDP and HTTP/3", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md309", null ],
+      [ "Verifying a deploy", "d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md310", null ]
     ] ],
     [ "Durable queue required gate", "d3/dd5/md_docs_2durable-queue-gate.html", [
-      [ "Local runs", "d3/dd5/md_docs_2durable-queue-gate.html#autotoc_md305", null ],
-      [ "Isolated integration gate", "d3/dd5/md_docs_2durable-queue-gate.html#autotoc_md306", null ],
-      [ "CI", "d3/dd5/md_docs_2durable-queue-gate.html#autotoc_md307", null ]
+      [ "Local runs", "d3/dd5/md_docs_2durable-queue-gate.html#autotoc_md312", null ],
+      [ "Isolated integration gate", "d3/dd5/md_docs_2durable-queue-gate.html#autotoc_md313", null ],
+      [ "CI", "d3/dd5/md_docs_2durable-queue-gate.html#autotoc_md314", null ]
     ] ],
     [ "Bare-metal STM32 with CWIST", "de/d87/md_docs_2embedded_2stm32.html", [
-      [ "Supported targets and validation", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md309", null ],
-      [ "Build the firmware inputs", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md310", null ],
-      [ "Port hooks and runtime contract", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md311", null ],
-      [ "HTTP over raw lwIP", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md312", null ],
-      [ "Memory sizing", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md313", [
-        [ "Request arenas", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md314", null ],
-        [ "Connections and responses", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md315", null ],
-        [ "lwIP pools", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md316", null ]
+      [ "Supported targets and validation", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md316", null ],
+      [ "Build the firmware inputs", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md317", null ],
+      [ "Port hooks and runtime contract", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md318", null ],
+      [ "HTTP over raw lwIP", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md319", null ],
+      [ "Memory sizing", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md320", [
+        [ "Request arenas", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md321", null ],
+        [ "Connections and responses", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md322", null ],
+        [ "lwIP pools", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md323", null ]
       ] ],
-      [ "HTTPS", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md317", null ],
-      [ "Limitations", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md318", null ]
+      [ "HTTPS", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md324", null ],
+      [ "Limitations", "de/d87/md_docs_2embedded_2stm32.html#autotoc_md325", null ]
     ] ],
     [ "FIXED endpoint caching: current behavior", "d3/ddd/md_docs_2fixed-cache-status.html", [
-      [ "What the runtime actually does today", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md320", null ],
-      [ "Evidence", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md321", null ],
-      [ "Why the learning block is not simply moved", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md322", null ],
-      [ "Recommended handling", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md323", null ]
+      [ "What the runtime actually does today", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md327", null ],
+      [ "Evidence", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md328", null ],
+      [ "Why the learning block is not simply moved", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md329", null ],
+      [ "Recommended handling", "d3/ddd/md_docs_2fixed-cache-status.html#autotoc_md330", null ]
     ] ],
     [ "Full GC: Automatic Resource Reclamation in CWIST", "d9/dd1/md_docs_2GC.html", [
-      [ "Motivation", "d9/dd1/md_docs_2GC.html#autotoc_md325", null ],
-      [ "Design", "d9/dd1/md_docs_2GC.html#autotoc_md326", [
-        [ "1. cwist_full_gc(bool) — the global toggle", "d9/dd1/md_docs_2GC.html#autotoc_md327", null ],
-        [ "2. Reclamation engine: libttak epoch GC", "d9/dd1/md_docs_2GC.html#autotoc_md328", null ],
-        [ "3. Thread/process exit sweeps", "d9/dd1/md_docs_2GC.html#autotoc_md329", null ],
-        [ "4. Pseudo-RAII for handle-like locals", "d9/dd1/md_docs_2GC.html#autotoc_md330", null ],
-        [ "5. Transparent malloc interception", "d9/dd1/md_docs_2GC.html#autotoc_md331", null ],
-        [ "6. cwist_alloc internals", "d9/dd1/md_docs_2GC.html#autotoc_md332", null ],
-        [ "7. Explicit flushes and reclamation", "d9/dd1/md_docs_2GC.html#autotoc_md333", null ]
+      [ "Motivation", "d9/dd1/md_docs_2GC.html#autotoc_md332", null ],
+      [ "Design", "d9/dd1/md_docs_2GC.html#autotoc_md333", [
+        [ "1. cwist_full_gc(bool) — the global toggle", "d9/dd1/md_docs_2GC.html#autotoc_md334", null ],
+        [ "2. Reclamation engine: libttak epoch GC", "d9/dd1/md_docs_2GC.html#autotoc_md335", null ],
+        [ "3. Thread/process exit sweeps", "d9/dd1/md_docs_2GC.html#autotoc_md336", null ],
+        [ "4. Pseudo-RAII for handle-like locals", "d9/dd1/md_docs_2GC.html#autotoc_md337", null ],
+        [ "5. Transparent malloc interception", "d9/dd1/md_docs_2GC.html#autotoc_md338", null ],
+        [ "6. cwist_alloc internals", "d9/dd1/md_docs_2GC.html#autotoc_md339", null ],
+        [ "7. Explicit flushes and reclamation", "d9/dd1/md_docs_2GC.html#autotoc_md340", null ]
       ] ],
-      [ "Semantics summary", "d9/dd1/md_docs_2GC.html#autotoc_md334", null ],
-      [ "Non-goals and notes", "d9/dd1/md_docs_2GC.html#autotoc_md335", null ],
-      [ "Known performance caveat", "d9/dd1/md_docs_2GC.html#autotoc_md336", null ]
+      [ "Semantics summary", "d9/dd1/md_docs_2GC.html#autotoc_md341", null ],
+      [ "Non-goals and notes", "d9/dd1/md_docs_2GC.html#autotoc_md342", null ],
+      [ "Known performance caveat", "d9/dd1/md_docs_2GC.html#autotoc_md343", null ]
     ] ],
     [ "HTTP/1.1 pipeline fairness and framing", "d2/dc2/md_docs_2http-reactor-fairness.html", [
-      [ "Scope", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md338", null ],
-      [ "Behavioral regression tests", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md339", null ],
-      [ "Performance claim boundary", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md340", null ],
-      [ "Internal API compatibility", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md341", null ]
+      [ "Scope", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md345", null ],
+      [ "Behavioral regression tests", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md346", null ],
+      [ "Performance claim boundary", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md347", null ],
+      [ "Internal API compatibility", "d2/dc2/md_docs_2http-reactor-fairness.html#autotoc_md348", null ]
     ] ],
     [ "HTTP/3 connection migration", "d8/d64/md_docs_2http3-migration.html", [
-      [ "Result for issue #407", "d8/d64/md_docs_2http3-migration.html#autotoc_md343", null ],
-      [ "Run the test", "d8/d64/md_docs_2http3-migration.html#autotoc_md344", null ],
-      [ "Test coverage", "d8/d64/md_docs_2http3-migration.html#autotoc_md345", null ],
-      [ "Limits", "d8/d64/md_docs_2http3-migration.html#autotoc_md346", null ]
+      [ "Result for issue #407", "d8/d64/md_docs_2http3-migration.html#autotoc_md350", null ],
+      [ "Run the test", "d8/d64/md_docs_2http3-migration.html#autotoc_md351", null ],
+      [ "Test coverage", "d8/d64/md_docs_2http3-migration.html#autotoc_md352", null ],
+      [ "Limits", "d8/d64/md_docs_2http3-migration.html#autotoc_md353", null ]
     ] ],
     [ "CWIST API 레퍼런스", "d3/d38/md_docs_2ko_2api-quickref.html", [
-      [ "에러 처리", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md348", [
-        [ "make_error", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md349", null ],
-        [ "cwist_error_is_ok / cwist_error_is_ok_extern", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md350", null ],
-        [ "그 밖에 내보낸 inline 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md351", null ]
+      [ "에러 처리", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md355", [
+        [ "make_error", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md356", null ],
+        [ "cwist_error_is_ok / cwist_error_is_ok_extern", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md357", null ],
+        [ "그 밖에 내보낸 inline 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md358", null ]
       ] ],
-      [ "SString (cwist_sstring)", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md352", [
-        [ "수명 주기", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md353", null ],
-        [ "핵심 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md354", null ],
-        [ "공백 제거", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md355", null ],
-        [ "덧붙이기 / 복사", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md356", null ],
-        [ "비교 / 조회", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md357", null ]
+      [ "SString (cwist_sstring)", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md359", [
+        [ "수명 주기", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md360", null ],
+        [ "핵심 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md361", null ],
+        [ "공백 제거", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md362", null ],
+        [ "덧붙이기 / 복사", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md363", null ],
+        [ "비교 / 조회", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md364", null ]
       ] ],
-      [ "HTTP", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md358", [
-        [ "요청 수명 주기", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md359", null ],
-        [ "응답 수명 주기", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md360", null ],
-        [ "헤더 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md361", null ],
-        [ "메서드 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md362", null ],
-        [ "소켓 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md363", null ]
+      [ "HTTP", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md365", [
+        [ "요청 수명 주기", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md366", null ],
+        [ "응답 수명 주기", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md367", null ],
+        [ "헤더 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md368", null ],
+        [ "메서드 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md369", null ],
+        [ "소켓 도우미", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md370", null ]
       ] ],
-      [ "세션 매니저", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md364", [
-        [ "아레나", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md365", null ],
-        [ "공유 세션 (침습적 참조 카운트)", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md366", null ],
-        [ "매니저", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md367", null ]
+      [ "세션 매니저", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md371", [
+        [ "아레나", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md372", null ],
+        [ "공유 세션 (침습적 참조 카운트)", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md373", null ],
+        [ "매니저", "d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md374", null ]
       ] ]
     ] ],
     [ "CWIST API 문서", "dc/d79/md_docs_2ko_2API.html", [
-      [ "모듈", "dc/d79/md_docs_2ko_2API.html#autotoc_md369", null ],
-      [ "함께 보기", "dc/d79/md_docs_2ko_2API.html#autotoc_md370", null ]
+      [ "모듈", "dc/d79/md_docs_2ko_2API.html#autotoc_md376", null ],
+      [ "함께 보기", "dc/d79/md_docs_2ko_2API.html#autotoc_md377", null ]
     ] ],
     [ "프레임워크와 앱 API", "da/dc3/md_docs_2ko_2api_2app.html", [
-      [ "라우팅", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md377", [
-        [ "cwist_app_create", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md372", null ],
-        [ "cwist_app_use_https", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md373", null ],
-        [ "cwist_app_use_https2 / cwist_use_https2", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md374", null ],
-        [ "cwist_app_use_pqc_layer", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md375", null ],
-        [ "cwist_app_use_db", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md376", null ],
-        [ "cwist_app_get / cwist_app_post", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md378", null ],
-        [ "cwist_app_get_ex / _post_ex / _put_ex / _delete_ex / _patch_ex", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md379", null ],
-        [ "cwist_app_dispatch_memory", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md380", null ],
-        [ "cwist_app_ws", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md381", null ],
-        [ "cwist_endpoint_opt_t", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md382", null ]
+      [ "라우팅", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md384", [
+        [ "cwist_app_create", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md379", null ],
+        [ "cwist_app_use_https", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md380", null ],
+        [ "cwist_app_use_https2 / cwist_use_https2", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md381", null ],
+        [ "cwist_app_use_pqc_layer", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md382", null ],
+        [ "cwist_app_use_db", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md383", null ],
+        [ "cwist_app_get / cwist_app_post", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md385", null ],
+        [ "cwist_app_get_ex / _post_ex / _put_ex / _delete_ex / _patch_ex", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md386", null ],
+        [ "cwist_app_dispatch_memory", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md387", null ],
+        [ "cwist_app_ws", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md388", null ],
+        [ "cwist_endpoint_opt_t", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md389", null ]
       ] ],
-      [ "정적 자산", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md383", [
-        [ "cwist_app_static", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md384", null ]
+      [ "정적 자산", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md390", [
+        [ "cwist_app_static", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md391", null ]
       ] ],
-      [ "에러 처리", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md385", [
-        [ "cwist_app_set_error_handler", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md386", null ],
-        [ "사용하지 않는 변수", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md387", null ]
+      [ "에러 처리", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md392", [
+        [ "cwist_app_set_error_handler", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md393", null ],
+        [ "사용하지 않는 변수", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md394", null ]
       ] ],
-      [ "동시성과 스레드 안전성", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md388", null ],
-      [ "메모리 소유권 규칙", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md389", [
-        [ "cwist_app_listen", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md390", null ]
+      [ "동시성과 스레드 안전성", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md395", null ],
+      [ "메모리 소유권 규칙", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md396", [
+        [ "cwist_app_listen", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md397", null ]
       ] ],
-      [ "인메모리 테스트 클라이언트", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md391", [
-        [ "cwist_test_client_create / cwist_test_client_destroy", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md392", null ],
-        [ "요청 도우미", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md393", null ],
-        [ "쿠키 저장소", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md394", null ],
-        [ "테스트 단언 매크로", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md395", null ]
+      [ "인메모리 테스트 클라이언트", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md398", [
+        [ "cwist_test_client_create / cwist_test_client_destroy", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md399", null ],
+        [ "요청 도우미", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md400", null ],
+        [ "쿠키 저장소", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md401", null ],
+        [ "테스트 단언 매크로", "da/dc3/md_docs_2ko_2api_2app.html#autotoc_md402", null ]
       ] ]
     ] ],
     [ "쿠키 API", "db/d04/md_docs_2ko_2api_2cookie.html", [
-      [ "쿠키 읽기", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md397", [
-        [ "cwist_cookie_parse", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md398", null ],
-        [ "cwist_cookie_get", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md399", null ]
+      [ "쿠키 읽기", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md404", [
+        [ "cwist_cookie_parse", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md405", null ],
+        [ "cwist_cookie_get", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md406", null ]
       ] ],
-      [ "쿠키 쓰기", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md400", [
-        [ "cwist_cookie_options", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md401", null ],
-        [ "cwist_cookie_set", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md402", null ],
-        [ "cwist_cookie_delete", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md403", null ]
+      [ "쿠키 쓰기", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md407", [
+        [ "cwist_cookie_options", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md408", null ],
+        [ "cwist_cookie_set", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md409", null ],
+        [ "cwist_cookie_delete", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md410", null ]
       ] ],
-      [ "인코딩", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md404", [
-        [ "cwist_cookie_encode", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md405", null ],
-        [ "cwist_cookie_decode", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md406", null ]
+      [ "인코딩", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md411", [
+        [ "cwist_cookie_encode", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md412", null ],
+        [ "cwist_cookie_decode", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md413", null ]
       ] ],
-      [ "예제", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md407", null ]
+      [ "예제", "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md414", null ]
     ] ],
     [ "HTML 컴포넌트, 범위 CSS, 프래그먼트와 자산", "d1/df9/md_docs_2ko_2api_2html.html", [
-      [ "컴포넌트", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md409", [
-        [ "cwist_html_component_create / cwist_html_component_destroy", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md410", null ],
-        [ "cwist_html_component_instantiate", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md411", null ]
+      [ "컴포넌트", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md416", [
+        [ "cwist_html_component_create / cwist_html_component_destroy", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md417", null ],
+        [ "cwist_html_component_instantiate", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md418", null ]
       ] ],
-      [ "범위 CSS", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md412", [
-        [ "cwist_css_scope_init / cwist_css_scope_destroy", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md413", null ],
-        [ "cwist_css_scope_class", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md414", null ],
-        [ "cwist_css_scope_add_rule", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md415", null ],
-        [ "cwist_css_scope_generate_stylesheet", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md416", null ]
+      [ "범위 CSS", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md419", [
+        [ "cwist_css_scope_init / cwist_css_scope_destroy", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md420", null ],
+        [ "cwist_css_scope_class", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md421", null ],
+        [ "cwist_css_scope_add_rule", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md422", null ],
+        [ "cwist_css_scope_generate_stylesheet", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md423", null ]
       ] ],
-      [ "HTML over the wire", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md417", [
-        [ "cwist_http_request_wants_fragment / cwist_http_request_fragment_target", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md418", null ],
-        [ "cwist_http_response_set_view", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md419", null ],
-        [ "cwist_http_response_set_html", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md420", null ],
-        [ "cwist_http_response_add_oob", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md421", null ],
-        [ "cwist_http_response_html_redirect", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md422", null ],
-        [ "핸들러 예제", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md423", null ]
+      [ "HTML over the wire", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md424", [
+        [ "cwist_http_request_wants_fragment / cwist_http_request_fragment_target", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md425", null ],
+        [ "cwist_http_response_set_view", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md426", null ],
+        [ "cwist_http_response_set_html", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md427", null ],
+        [ "cwist_http_response_add_oob", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md428", null ],
+        [ "cwist_http_response_html_redirect", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md429", null ],
+        [ "핸들러 예제", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md430", null ]
       ] ],
-      [ "자산 파이프라인", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md424", [
-        [ "cwist_css_minify / cwist_css_bundle", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md425", null ],
-        [ "cwist_app_asset_add / cwist_app_asset_add_file / cwist_app_asset_url", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md426", null ],
-        [ "모두 합치기", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md427", null ]
+      [ "자산 파이프라인", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md431", [
+        [ "cwist_css_minify / cwist_css_bundle", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md432", null ],
+        [ "cwist_app_asset_add / cwist_app_asset_add_file / cwist_app_asset_url", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md433", null ],
+        [ "모두 합치기", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md434", null ]
       ] ],
-      [ "WASM에서 같은 뷰 렌더링하기", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md428", null ],
-      [ "예제", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md429", null ]
+      [ "WASM에서 같은 뷰 렌더링하기", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md435", null ],
+      [ "예제", "d1/df9/md_docs_2ko_2api_2html.html#autotoc_md436", null ]
     ] ],
     [ "HTTP 코어 API", "db/ddd/md_docs_2ko_2api_2http.html", [
-      [ "상수", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md431", [
-        [ "cwist_http_request_create", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md432", null ],
-        [ "cwist_http_parse_request", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md433", null ],
-        [ "cwist_http_receive_request", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md434", null ],
-        [ "cwist_http_response_create", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md435", null ],
-        [ "cwist_http_response_send_file", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md436", null ],
-        [ "cwist_http_header_add", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md437", null ],
-        [ "cwist_http_response_header_add", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md438", null ],
-        [ "cwist_http_header_get", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md439", null ]
+      [ "상수", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md438", [
+        [ "cwist_http_request_create", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md439", null ],
+        [ "cwist_http_parse_request", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md440", null ],
+        [ "cwist_http_receive_request", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md441", null ],
+        [ "cwist_http_response_create", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md442", null ],
+        [ "cwist_http_response_send_file", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md443", null ],
+        [ "cwist_http_header_add", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md444", null ],
+        [ "cwist_http_response_header_add", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md445", null ],
+        [ "cwist_http_header_get", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md446", null ]
       ] ],
-      [ "서버 코어", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md440", [
-        [ "Keep-alive 처리", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md441", null ],
-        [ "회귀 테스트", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md442", null ],
-        [ "cwist_http_server_loop", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md443", null ],
-        [ "cwist_accept_socket", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md444", null ],
-        [ "cwist_http_continuation_shed_count", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md445", null ]
+      [ "서버 코어", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md447", [
+        [ "Keep-alive 처리", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md448", null ],
+        [ "회귀 테스트", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md449", null ],
+        [ "cwist_http_server_loop", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md450", null ],
+        [ "cwist_accept_socket", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md451", null ],
+        [ "cwist_http_continuation_shed_count", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md452", null ]
       ] ],
-      [ "보안 헤더", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md446", [
-        [ "cwist_http_response_add_security_headers", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md447", null ],
-        [ "cwist_http_response_add_hsts", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md448", null ]
+      [ "보안 헤더", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md453", [
+        [ "cwist_http_response_add_security_headers", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md454", null ],
+        [ "cwist_http_response_add_hsts", "db/ddd/md_docs_2ko_2api_2http.html#autotoc_md455", null ]
       ] ]
     ] ],
     [ "HTTPS API", "d2/d2f/md_docs_2ko_2api_2https.html", null ],
     [ "JSON 빌더 API", "d8/d3f/md_docs_2ko_2api_2json.html", [
-      [ "함수", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md457", [
-        [ "cwist_json_builder_create", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md458", null ],
-        [ "cwist_json_begin_object / cwist_json_end_object", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md459", null ],
-        [ "cwist_json_add_string", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md460", null ],
-        [ "cwist_json_add_int", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md461", null ],
-        [ "cwist_json_add_bool", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md462", null ],
-        [ "cwist_json_add_null", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md463", null ],
-        [ "cwist_json_begin_array / cwist_json_end_array", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md464", null ],
-        [ "cwist_json_get_raw", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md465", null ],
-        [ "cwist_json_builder_destroy", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md466", null ]
+      [ "함수", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md464", [
+        [ "cwist_json_builder_create", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md465", null ],
+        [ "cwist_json_begin_object / cwist_json_end_object", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md466", null ],
+        [ "cwist_json_add_string", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md467", null ],
+        [ "cwist_json_add_int", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md468", null ],
+        [ "cwist_json_add_bool", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md469", null ],
+        [ "cwist_json_add_null", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md470", null ],
+        [ "cwist_json_begin_array / cwist_json_end_array", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md471", null ],
+        [ "cwist_json_get_raw", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md472", null ],
+        [ "cwist_json_builder_destroy", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md473", null ]
       ] ],
-      [ "예제", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md467", null ]
+      [ "예제", "d8/d3f/md_docs_2ko_2api_2json.html#autotoc_md474", null ]
+    ] ],
+    [ "라이브 메시지 런타임(실험적)", "d2/daa/md_docs_2ko_2api_2livemsg.html", [
+      [ "최소 서버", "d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md476", null ],
+      [ "설정", "d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md477", null ],
+      [ "메시지와 결과 소유권", "d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md478", null ],
+      [ "응답, 푸시, 백프레셔", "d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md479", null ],
+      [ "외부 시그널링과 임베딩", "d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md480", null ],
+      [ "검증", "d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md481", null ]
     ] ],
     [ "미들웨어 API", "d5/d3e/md_docs_2ko_2api_2middleware.html", [
-      [ "함수", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md469", [
-        [ "cwist_app_use", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md470", null ]
+      [ "함수", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md483", [
+        [ "cwist_app_use", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md484", null ]
       ] ],
-      [ "내장 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md471", [
-        [ "Request ID 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md472", null ],
-        [ "액세스 로그 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md473", [
-          [ "비동기 로그 출력", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md474", null ]
+      [ "내장 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md485", [
+        [ "Request ID 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md486", null ],
+        [ "액세스 로그 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md487", [
+          [ "비동기 로그 출력", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md488", null ]
         ] ],
-        [ "속도 제한 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md475", null ],
-        [ "Redis 기반 공유 rate limiter", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md476", null ],
-        [ "CORS 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md477", null ],
-        [ "Prometheus 메트릭 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md478", null ],
-        [ "JWT 인증 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md479", null ],
-        [ "압축 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md480", null ]
+        [ "속도 제한 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md489", null ],
+        [ "Redis 기반 공유 rate limiter", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md490", null ],
+        [ "CORS 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md491", null ],
+        [ "Prometheus 메트릭 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md492", null ],
+        [ "JWT 인증 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md493", null ],
+        [ "압축 미들웨어", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md494", null ]
       ] ],
-      [ "사용자 정의 미들웨어 만들기", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md481", null ]
+      [ "사용자 정의 미들웨어 만들기", "d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md495", null ]
     ] ],
     [ "쿼리와 URI API", "dd/da8/md_docs_2ko_2api_2query.html", null ],
     [ "데이터베이스 API", "d5/d75/md_docs_2ko_2api_2sql.html", [
-      [ "스키마 마이그레이션", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md491", [
-        [ "cwist_db_open", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md486", null ],
-        [ "cwist_db_open_memory", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md487", null ],
-        [ "cwist_db_serialize", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md488", null ],
-        [ "cwist_db_exec", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md489", null ],
-        [ "cwist_db_query", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md490", null ],
-        [ "반환 코드", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md492", null ],
-        [ "cwist_migration_t", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md493", null ],
-        [ "cwist_migrate_up", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md494", null ],
-        [ "cwist_migrate_down", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md495", null ],
-        [ "cwist_migrate_version", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md496", null ]
+      [ "스키마 마이그레이션", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md505", [
+        [ "cwist_db_open", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md500", null ],
+        [ "cwist_db_open_memory", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md501", null ],
+        [ "cwist_db_serialize", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md502", null ],
+        [ "cwist_db_exec", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md503", null ],
+        [ "cwist_db_query", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md504", null ],
+        [ "반환 코드", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md506", null ],
+        [ "cwist_migration_t", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md507", null ],
+        [ "cwist_migrate_up", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md508", null ],
+        [ "cwist_migrate_down", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md509", null ],
+        [ "cwist_migrate_version", "d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md510", null ]
       ] ]
     ] ],
     [ "Server-Sent Events API", "d3/df7/md_docs_2ko_2api_2sse.html", [
-      [ "타입", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md498", [
-        [ "cwist_sse_event_t", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md499", null ],
-        [ "cwist_sse_stream_t", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md500", null ]
+      [ "타입", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md512", [
+        [ "cwist_sse_event_t", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md513", null ],
+        [ "cwist_sse_stream_t", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md514", null ]
       ] ],
-      [ "응답 모드", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md501", [
-        [ "cwist_sse_response_init", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md502", null ],
-        [ "cwist_sse_response_event", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md503", null ],
-        [ "cwist_sse_response_write", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md504", null ],
-        [ "cwist_sse_response_comment", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md505", null ]
+      [ "응답 모드", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md515", [
+        [ "cwist_sse_response_init", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md516", null ],
+        [ "cwist_sse_response_event", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md517", null ],
+        [ "cwist_sse_response_write", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md518", null ],
+        [ "cwist_sse_response_comment", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md519", null ]
       ] ],
-      [ "스트림 모드", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md506", [
-        [ "cwist_sse_stream_open", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md507", null ],
-        [ "cwist_sse_stream_send", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md508", null ],
-        [ "cwist_sse_stream_write", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md509", null ],
-        [ "cwist_sse_stream_comment", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md510", null ],
-        [ "cwist_sse_stream_close", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md511", null ]
+      [ "스트림 모드", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md520", [
+        [ "cwist_sse_stream_open", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md521", null ],
+        [ "cwist_sse_stream_send", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md522", null ],
+        [ "cwist_sse_stream_write", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md523", null ],
+        [ "cwist_sse_stream_comment", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md524", null ],
+        [ "cwist_sse_stream_close", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md525", null ]
       ] ],
-      [ "편의 매크로", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md512", null ],
-      [ "예제", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md513", null ]
+      [ "편의 매크로", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md526", null ],
+      [ "예제", "d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md527", null ]
     ] ],
     [ "SString API", "d6/d66/md_docs_2ko_2api_2sstring.html", null ],
     [ "WASI 대상", "d0/d3c/md_docs_2ko_2api_2wasi.html", [
-      [ "종류 감지", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md524", null ],
-      [ "WASI 0.2 소켓 서버", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md525", null ],
-      [ "WASI preview1 (폐기됨)", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md526", [
-        [ "preview1 빌드가 다르게 했던 것", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md527", null ],
-        [ "검증 (기록)", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md528", null ]
+      [ "종류 감지", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md538", null ],
+      [ "WASI 0.2 소켓 서버", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md539", null ],
+      [ "WASI preview1 (폐기됨)", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md540", [
+        [ "preview1 빌드가 다르게 했던 것", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md541", null ],
+        [ "검증 (기록)", "d0/d3c/md_docs_2ko_2api_2wasi.html#autotoc_md542", null ]
       ] ]
     ] ],
     [ "WASM 컴포넌트 모델 위의 CWIST", "dd/d41/md_docs_2ko_2api_2wasm-component.html", [
-      [ "이유", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md530", null ],
-      [ "경계", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md531", null ],
-      [ "도구 체인 현황 (2026-09-21 측정)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md532", null ],
-      [ "평가 완료: preview3-shim (2026-09-23)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md533", null ],
-      [ "반영 완료: 스트리밍/SSE를 위한 네이티브 비동기 (2026-09-23)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md534", null ],
-      [ "해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md535", null ],
-      [ "단계", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md536", null ],
-      [ "브라우저 런타임 관문 (WASI 0.2)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md537", null ],
-      [ "2단계를 만들며 측정한 것", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md538", null ],
-      [ "목표가 아닌 것", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md539", null ]
+      [ "이유", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md544", null ],
+      [ "경계", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md545", null ],
+      [ "도구 체인 현황 (2026-09-21 측정)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md546", null ],
+      [ "평가 완료: preview3-shim (2026-09-23)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md547", null ],
+      [ "반영 완료: 스트리밍/SSE를 위한 네이티브 비동기 (2026-09-23)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md548", null ],
+      [ "해결됨: wasip3에서의 소켓 요청 경로 (2026-09-22 감사)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md549", null ],
+      [ "단계", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md550", null ],
+      [ "브라우저 런타임 관문 (WASI 0.2)", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md551", null ],
+      [ "2단계를 만들며 측정한 것", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md552", null ],
+      [ "목표가 아닌 것", "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md553", null ]
     ] ],
     [ "WASM 위의 CWIST (Emscripten)", "d2/d56/md_docs_2ko_2api_2wasm.html", [
-      [ "빌드하기", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md541", null ],
-      [ "WASM 빌드에 들어 있는 것", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md542", null ],
-      [ "JS에서 요청 디스패치하기", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md543", null ],
-      [ "제로 카피 뷰: cwist/wasm/typedarray.h", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md544", null ],
-      [ "WASM에서의 데이터베이스", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md545", null ],
-      [ "cwist_db가 번들 크기에 주는 영향", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md546", null ],
-      [ "세션과 쿠키", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md547", null ],
-      [ "경계를 통과하는 스트리밍", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md548", null ],
-      [ "실행 가능한 예제: Service Worker 앱", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md549", null ],
-      [ "(아직) 다루지 않는 것", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md550", null ],
-      [ "스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md551", null ]
+      [ "빌드하기", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md555", null ],
+      [ "WASM 빌드에 들어 있는 것", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md556", null ],
+      [ "JS에서 요청 디스패치하기", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md557", null ],
+      [ "제로 카피 뷰: cwist/wasm/typedarray.h", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md558", null ],
+      [ "WASM에서의 데이터베이스", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md559", null ],
+      [ "cwist_db가 번들 크기에 주는 영향", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md560", null ],
+      [ "세션과 쿠키", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md561", null ],
+      [ "경계를 통과하는 스트리밍", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md562", null ],
+      [ "실행 가능한 예제: Service Worker 앱", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md563", null ],
+      [ "(아직) 다루지 않는 것", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md564", null ],
+      [ "스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)", "d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md565", null ]
     ] ],
     [ "WebSocket API", "d7/dec/md_docs_2ko_2api_2websocket.html", [
-      [ "함수", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md553", [
-        [ "cwist_websocket_upgrade", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md554", null ],
-        [ "cwist_websocket_receive", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md555", null ],
-        [ "cwist_websocket_send", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md556", null ]
+      [ "함수", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md567", [
+        [ "cwist_websocket_upgrade", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md568", null ],
+        [ "cwist_websocket_receive", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md569", null ],
+        [ "cwist_websocket_send", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md570", null ]
       ] ],
-      [ "Opcode 종류", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md557", null ],
-      [ "cwist_app과의 연동", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md558", null ],
-      [ "비동기 (C1M) WebSocket API", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md559", [
-        [ "cwist_app_ws_async", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md560", null ],
-        [ "cwist_ws_on_message_t", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md561", null ],
-        [ "cwist_websocket_async_send", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md562", null ],
-        [ "cwist_websocket_async_close", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md563", null ]
+      [ "Opcode 종류", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md571", null ],
+      [ "cwist_app과의 연동", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md572", null ],
+      [ "비동기 (C1M) WebSocket API", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md573", [
+        [ "cwist_app_ws_async", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md574", null ],
+        [ "cwist_ws_on_message_t", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md575", null ],
+        [ "cwist_websocket_async_send", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md576", null ],
+        [ "cwist_websocket_async_close", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md577", null ]
       ] ],
-      [ "GraphQL 구독 (graphql-ws)", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md564", null ]
+      [ "GraphQL 구독 (graphql-ws)", "d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md578", null ]
     ] ],
     [ "full GC에서의 연기된 HTTP 소유권", "d3/dcc/md_docs_2ko_2async-gc-ownership.html", [
-      [ "인계 순서", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md566", null ],
-      [ "소유권 목록", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md567", [
-        [ "빌린 상태와 외부 상태", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md568", null ]
+      [ "인계 순서", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md580", null ],
+      [ "소유권 목록", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md581", [
+        [ "빌린 상태와 외부 상태", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md582", null ]
       ] ],
-      [ "HTTP/2 큐 소유권", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md569", null ],
-      [ "검증과 한계", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md570", null ],
-      [ "스케줄러와 IO 큐 소유권", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md571", null ]
+      [ "HTTP/2 큐 소유권", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md583", null ],
+      [ "검증과 한계", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md584", null ],
+      [ "스케줄러와 IO 큐 소유권", "d3/dcc/md_docs_2ko_2async-gc-ownership.html#autotoc_md585", null ]
     ] ],
     [ "C1M 파일 한도", "db/dc4/md_docs_2ko_2c1m-file-limits.html", [
-      [ "원인", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md573", null ],
-      [ "변경", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md574", null ],
-      [ "조정", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md575", null ],
-      [ "검증", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md576", null ]
+      [ "원인", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md587", null ],
+      [ "변경", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md588", null ],
+      [ "조정", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md589", null ],
+      [ "검증", "db/dc4/md_docs_2ko_2c1m-file-limits.html#autotoc_md590", null ]
     ] ],
     [ "Classic 풀의 버스트 기아 (#25 후속)", "da/d07/md_docs_2ko_2classic-pool-starvation.html", [
-      [ "원인과 변경", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md578", null ],
-      [ "결정론적 회귀 테스트", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md579", null ],
-      [ "검증 상태", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md580", null ],
-      [ "HTTP 측정과 한계", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md581", null ]
+      [ "원인과 변경", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md592", null ],
+      [ "결정론적 회귀 테스트", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md593", null ],
+      [ "검증 상태", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md594", null ],
+      [ "HTTP 측정과 한계", "da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md595", null ]
     ] ],
     [ "C1M 리액터 묶음 비우기에서의 협력적 큐잉 (이슈 #25)", "da/d90/md_docs_2ko_2cooperative-queuing.html", [
-      [ "배경", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md583", null ],
-      [ "빈틈", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md584", null ],
-      [ "수정", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md585", null ],
-      [ "측정된 효과", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md586", null ],
-      [ "이 수정이 해결하지 않는 것", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md587", null ],
-      [ "조정", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md588", null ]
+      [ "배경", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md597", null ],
+      [ "빈틈", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md598", null ],
+      [ "수정", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md599", null ],
+      [ "측정된 효과", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md600", null ],
+      [ "이 수정이 해결하지 않는 것", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md601", null ],
+      [ "조정", "da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md602", null ]
     ] ],
     [ "ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html", [
-      [ "배경", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md590", null ],
-      [ "결정", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md591", [
-        [ "1. 하나의 파싱된 자격 경계", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md592", null ],
-        [ "2. 와이어 응답이 아니라 표현을 캐시하기", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md593", null ],
-        [ "3. 소유권, 출처, 용량 격리하기", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md594", null ],
-        [ "4. 호환성 변경을 명시하기", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md595", null ]
+      [ "배경", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md604", null ],
+      [ "결정", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md605", [
+        [ "1. 하나의 파싱된 자격 경계", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md606", null ],
+        [ "2. 와이어 응답이 아니라 표현을 캐시하기", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md607", null ],
+        [ "3. 소유권, 출처, 용량 격리하기", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md608", null ],
+        [ "4. 호환성 변경을 명시하기", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md609", null ]
       ] ],
-      [ "검토한 대안", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md596", null ],
-      [ "결과", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md597", null ],
-      [ "구현과 릴리스 관문", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md598", null ],
-      [ "근거와 소스 기준점", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md599", null ]
+      [ "검토한 대안", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md610", null ],
+      [ "결과", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md611", null ],
+      [ "구현과 릴리스 관문", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md612", null ],
+      [ "근거와 소스 기준점", "d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md613", null ]
     ] ],
     [ "릴리스 사전 빌드 에셋", "da/dcd/md_docs_2ko_2deployment_2release-assets.html", [
-      [ "fat 번들 사용하기", "da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md601", null ],
-      [ "amalgamation 사용하기", "da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md602", null ],
-      [ "다시 실행하기", "da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md603", null ]
+      [ "fat 번들 사용하기", "da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md615", null ],
+      [ "amalgamation 사용하기", "da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md616", null ],
+      [ "다시 실행하기", "da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md617", null ]
     ] ],
     [ "Wasmtime으로 WASI 0.2 예제 배포하기", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html", [
-      [ "범위와 안전", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md605", null ],
-      [ "1. 알려진 리비전 빌드하기", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md606", null ],
-      [ "2. 산출물과 상태 분리하기", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md607", null ],
-      [ "3. 시작하고 검증하기", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md608", null ],
-      [ "4. 재시작, 백업, 복원", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md609", null ],
-      [ "프로덕션에 맞게 고치기 전에", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md610", null ]
+      [ "범위와 안전", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md619", null ],
+      [ "1. 알려진 리비전 빌드하기", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md620", null ],
+      [ "2. 산출물과 상태 분리하기", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md621", null ],
+      [ "3. 시작하고 검증하기", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md622", null ],
+      [ "4. 재시작, 백업, 복원", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md623", null ],
+      [ "프로덕션에 맞게 고치기 전에", "d1/dc3/md_docs_2ko_2deployment_2wasmtime-appliance.html#autotoc_md624", null ]
     ] ],
     [ "소켓 핸드오프로 무중단 재시작하기", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html", [
-      [ "요구 사항", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md612", null ],
-      [ "핸드오프 순서", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md613", null ],
-      [ "systemd 통합", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md614", null ],
-      [ "UDP와 HTTP/3", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md615", null ],
-      [ "배포 검증", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md616", null ]
+      [ "요구 사항", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md626", null ],
+      [ "핸드오프 순서", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md627", null ],
+      [ "systemd 통합", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md628", null ],
+      [ "UDP와 HTTP/3", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md629", null ],
+      [ "배포 검증", "d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md630", null ]
     ] ],
     [ "영속 큐 필수 게이트", "dd/dd4/md_docs_2ko_2durable-queue-gate.html", [
-      [ "로컬 실행", "dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md618", null ],
-      [ "격리된 통합 게이트", "dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md619", null ],
-      [ "CI", "dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md620", null ]
+      [ "로컬 실행", "dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md632", null ],
+      [ "격리된 통합 게이트", "dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md633", null ],
+      [ "CI", "dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md634", null ]
     ] ],
     [ "CWIST bare-metal STM32", "d4/dc9/md_docs_2ko_2embedded_2stm32.html", [
-      [ "지원 대상과 검증 범위", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md622", null ],
-      [ "펌웨어 입력 빌드", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md623", null ],
-      [ "포트 훅과 런타임 계약", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md624", null ],
-      [ "raw lwIP HTTP", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md625", null ],
-      [ "메모리 크기", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md626", [
-        [ "요청 arena", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md627", null ],
-        [ "연결과 응답", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md628", null ],
-        [ "lwIP pool", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md629", null ]
+      [ "지원 대상과 검증 범위", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md636", null ],
+      [ "펌웨어 입력 빌드", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md637", null ],
+      [ "포트 훅과 런타임 계약", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md638", null ],
+      [ "raw lwIP HTTP", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md639", null ],
+      [ "메모리 크기", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md640", [
+        [ "요청 arena", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md641", null ],
+        [ "연결과 응답", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md642", null ],
+        [ "lwIP pool", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md643", null ]
       ] ],
-      [ "HTTPS", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md630", null ],
-      [ "제한사항", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md631", null ]
+      [ "HTTPS", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md644", null ],
+      [ "제한사항", "d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md645", null ]
     ] ],
     [ "FIXED 엔드포인트 캐싱: 현재 동작", "d7/dab/md_docs_2ko_2fixed-cache-status.html", [
-      [ "지금 런타임이 실제로 하는 일", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md633", null ],
-      [ "근거", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md634", null ],
-      [ "학습 블록을 그냥 옮기지 않는 이유", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md635", null ],
-      [ "계약이 복원될 때까지의 권장 처리", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md636", null ]
+      [ "지금 런타임이 실제로 하는 일", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md647", null ],
+      [ "근거", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md648", null ],
+      [ "학습 블록을 그냥 옮기지 않는 이유", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md649", null ],
+      [ "계약이 복원될 때까지의 권장 처리", "d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md650", null ]
     ] ],
     [ "Full GC: CWIST의 자동 자원 회수", "d1/dde/md_docs_2ko_2GC.html", [
-      [ "동기", "d1/dde/md_docs_2ko_2GC.html#autotoc_md638", null ],
-      [ "설계", "d1/dde/md_docs_2ko_2GC.html#autotoc_md639", [
-        [ "1. cwist_full_gc(bool) - 전역 스위치", "d1/dde/md_docs_2ko_2GC.html#autotoc_md640", null ],
-        [ "2. 회수 엔진: libttak 에포크 GC", "d1/dde/md_docs_2ko_2GC.html#autotoc_md641", null ],
-        [ "3. 스레드/프로세스 종료 정리", "d1/dde/md_docs_2ko_2GC.html#autotoc_md642", null ],
-        [ "4. 핸들 같은 지역 변수를 위한 의사 RAII", "d1/dde/md_docs_2ko_2GC.html#autotoc_md643", null ],
-        [ "5. 투명한 malloc 가로채기", "d1/dde/md_docs_2ko_2GC.html#autotoc_md644", null ],
-        [ "6. cwist_alloc 내부", "d1/dde/md_docs_2ko_2GC.html#autotoc_md645", null ],
-        [ "7. 명시적 flush와 회수", "d1/dde/md_docs_2ko_2GC.html#autotoc_md646", null ]
+      [ "동기", "d1/dde/md_docs_2ko_2GC.html#autotoc_md652", null ],
+      [ "설계", "d1/dde/md_docs_2ko_2GC.html#autotoc_md653", [
+        [ "1. cwist_full_gc(bool) - 전역 스위치", "d1/dde/md_docs_2ko_2GC.html#autotoc_md654", null ],
+        [ "2. 회수 엔진: libttak 에포크 GC", "d1/dde/md_docs_2ko_2GC.html#autotoc_md655", null ],
+        [ "3. 스레드/프로세스 종료 정리", "d1/dde/md_docs_2ko_2GC.html#autotoc_md656", null ],
+        [ "4. 핸들 같은 지역 변수를 위한 의사 RAII", "d1/dde/md_docs_2ko_2GC.html#autotoc_md657", null ],
+        [ "5. 투명한 malloc 가로채기", "d1/dde/md_docs_2ko_2GC.html#autotoc_md658", null ],
+        [ "6. cwist_alloc 내부", "d1/dde/md_docs_2ko_2GC.html#autotoc_md659", null ],
+        [ "7. 명시적 flush와 회수", "d1/dde/md_docs_2ko_2GC.html#autotoc_md660", null ]
       ] ],
-      [ "의미 요약", "d1/dde/md_docs_2ko_2GC.html#autotoc_md647", null ],
-      [ "목표가 아닌 것과 참고 사항", "d1/dde/md_docs_2ko_2GC.html#autotoc_md648", null ],
-      [ "알려진 성능 주의 사항", "d1/dde/md_docs_2ko_2GC.html#autotoc_md649", null ]
+      [ "의미 요약", "d1/dde/md_docs_2ko_2GC.html#autotoc_md661", null ],
+      [ "목표가 아닌 것과 참고 사항", "d1/dde/md_docs_2ko_2GC.html#autotoc_md662", null ],
+      [ "알려진 성능 주의 사항", "d1/dde/md_docs_2ko_2GC.html#autotoc_md663", null ]
     ] ],
     [ "HTTP/1.1 파이프라인 공정성과 프레이밍", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html", [
-      [ "범위", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md651", null ],
-      [ "동작 회귀 테스트", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md652", null ],
-      [ "성능 주장의 경계", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md653", null ],
-      [ "내부 API 호환성", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md654", null ]
+      [ "범위", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md665", null ],
+      [ "동작 회귀 테스트", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md666", null ],
+      [ "성능 주장의 경계", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md667", null ],
+      [ "내부 API 호환성", "d4/dd7/md_docs_2ko_2http-reactor-fairness.html#autotoc_md668", null ]
     ] ],
     [ "선택적 wrk 원시/보정 지연 히스토그램", "d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html", [
-      [ "버려도 되는 wrk 체크아웃에서 빌드하기", "d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md656", null ],
-      [ "출력과 해석", "d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md657", null ],
-      [ "검증", "d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md658", null ]
+      [ "버려도 되는 wrk 체크아웃에서 빌드하기", "d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md670", null ],
+      [ "출력과 해석", "d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md671", null ],
+      [ "검증", "d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html#autotoc_md672", null ]
     ] ],
     [ "io_uring 게시 작업 깨우기 회귀 (#25)", "dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html", [
-      [ "범위와 원인", "dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md660", null ],
-      [ "회귀 테스트", "dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md661", null ],
-      [ "구성 요소 측정 (2026-09-12)", "dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md662", null ]
+      [ "범위와 원인", "dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md674", null ],
+      [ "회귀 테스트", "dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md675", null ],
+      [ "구성 요소 측정 (2026-09-12)", "dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md676", null ]
     ] ],
     [ "CWIST 라이브러리 레퍼런스", "d3/d19/md_docs_2ko_2REFERENCE.html", [
-      [ "모듈", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md672", [
-        [ "1. SString (스마트 문자열)", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md673", null ],
-        [ "2. HTTP 서버", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md674", null ],
-        [ "3. HTTPS 지원", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md675", null ],
-        [ "4. 쿼리 파싱", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md676", null ],
-        [ "5. 데이터베이스 (SQL)", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md677", null ],
-        [ "6. SipHash", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md678", null ],
-        [ "7. 에러 처리", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md679", null ],
-        [ "8. Big Dumb Reply (BDR)", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md680", null ]
+      [ "모듈", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md686", [
+        [ "1. SString (스마트 문자열)", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md687", null ],
+        [ "2. HTTP 서버", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md688", null ],
+        [ "3. HTTPS 지원", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md689", null ],
+        [ "4. 쿼리 파싱", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md690", null ],
+        [ "5. 데이터베이스 (SQL)", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md691", null ],
+        [ "6. SipHash", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md692", null ],
+        [ "7. 에러 처리", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md693", null ],
+        [ "8. Big Dumb Reply (BDR)", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md694", null ]
       ] ],
-      [ "LibTTAK 메모리 기능", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md681", null ],
-      [ "예제: Othello Web", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md682", null ],
-      [ "의존성", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md683", null ],
-      [ "빌드", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md684", null ]
+      [ "LibTTAK 메모리 기능", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md695", null ],
+      [ "예제: Othello Web", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md696", null ],
+      [ "의존성", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md697", null ],
+      [ "빌드", "d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md698", null ]
     ] ],
     [ "라틴방진 참고 문헌", "da/d05/md_docs_2ko_2references_2latin__square__references.html", [
-      [ "1. 정의", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md686", null ],
-      [ "2. 코드에 쓰인 구성법", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md687", [
-        [ "2.1 유한체 (소수 거듭제곱)", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md688", null ],
-        [ "2.2 홀수 소수 거듭제곱 p^e, e >= 2", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md689", null ],
-        [ "2.3 합성수 차수: MacNeish 곱", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md690", null ],
-        [ "2.4 코드가 만들지 않는 것", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md691", null ]
+      [ "1. 정의", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md700", null ],
+      [ "2. 코드에 쓰인 구성법", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md701", [
+        [ "2.1 유한체 (소수 거듭제곱)", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md702", null ],
+        [ "2.2 홀수 소수 거듭제곱 p^e, e >= 2", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md703", null ],
+        [ "2.3 합성수 차수: MacNeish 곱", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md704", null ],
+        [ "2.4 코드가 만들지 않는 것", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md705", null ]
       ] ],
-      [ "3. 역사적 표: Gusuryak 9차 쌍", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md692", null ],
-      [ "4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md693", null ]
+      [ "3. 역사적 표: Gusuryak 9차 쌍", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md706", null ],
+      [ "4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기", "da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md707", null ]
     ] ],
     [ "Mux 알고리즘 참고 자료", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html", [
-      [ "1. 낙서 마방진 (洛書)", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md695", null ],
-      [ "2. 직교 라틴 방진 순열", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md696", null ],
-      [ "3. 계수 행렬과 선형 연립방정식 풀이", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md697", null ],
-      [ "4. 반복적인 크기 정제", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md698", null ],
-      [ "5. 단일 단계 선형 외삽", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md699", null ],
-      [ "이름을 바꾼 이유", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md700", null ]
+      [ "1. 낙서 마방진 (洛書)", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md709", null ],
+      [ "2. 직교 라틴 방진 순열", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md710", null ],
+      [ "3. 계수 행렬과 선형 연립방정식 풀이", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md711", null ],
+      [ "4. 반복적인 크기 정제", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md712", null ],
+      [ "5. 단일 단계 선형 외삽", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md713", null ],
+      [ "이름을 바꾼 이유", "d4/d7c/md_docs_2ko_2references_2mux__algorithm__references.html#autotoc_md714", null ]
     ] ],
     [ "런타임 설정", "d5/d08/md_docs_2ko_2runtime-config.html", [
-      [ "상태", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md702", null ],
-      [ "프로세스와 서버 모드", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md703", null ],
-      [ "Classic 스레드 풀", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md704", null ],
-      [ "HTTP/1.1", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md705", null ],
-      [ "HTTPS", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md706", null ],
-      [ "HTTP/2", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md707", null ],
-      [ "HTTP/3", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md708", null ],
-      [ "WebSocket", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md709", null ],
-      [ "Reactor", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md710", null ],
-      [ "진단", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md711", null ]
+      [ "상태", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md716", null ],
+      [ "프로세스와 서버 모드", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md717", null ],
+      [ "Classic 스레드 풀", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md718", null ],
+      [ "HTTP/1.1", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md719", null ],
+      [ "HTTPS", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md720", null ],
+      [ "HTTP/2", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md721", null ],
+      [ "HTTP/3", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md722", null ],
+      [ "WebSocket", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md723", null ],
+      [ "Reactor", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md724", null ],
+      [ "Redis", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md725", null ],
+      [ "진단", "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md726", null ]
     ] ],
     [ "CWIST로 CRUD 블로그 만들기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html", [
-      [ "1. 애플리케이션 만들기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md713", null ],
-      [ "2. 라우트 정의하기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md714", null ],
-      [ "3. JSON을 검증하고 HTTP 의미에 맞게 응답하기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md715", null ],
-      [ "4. API 테스트하기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md716", null ]
+      [ "1. 애플리케이션 만들기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md728", null ],
+      [ "2. 라우트 정의하기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md729", null ],
+      [ "3. JSON을 검증하고 HTTP 의미에 맞게 응답하기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md730", null ],
+      [ "4. API 테스트하기", "d6/d25/md_docs_2ko_2tutorials_2blog-crud.html#autotoc_md731", null ]
     ] ],
     [ "CWIST와 NATS 연동하기", "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html", [
-      [ "1. 요청과 워커의 책임 나누기", "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md718", null ],
-      [ "2. 라우트에서 게시하기", "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md719", null ],
-      [ "3. 신뢰성 점검 목록", "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md720", null ]
+      [ "1. 요청과 워커의 책임 나누기", "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md733", null ],
+      [ "2. 라우트에서 게시하기", "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md734", null ],
+      [ "3. 신뢰성 점검 목록", "dd/d38/md_docs_2ko_2tutorials_2nats-integration.html#autotoc_md735", null ]
     ] ],
     [ "OpenAPI와 Swagger UI로 API 문서화하기", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html", [
-      [ "1. 라우트에 주석 달기", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md722", [
-        [ "주석 태그", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md723", null ]
+      [ "1. 라우트에 주석 달기", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md737", [
+        [ "주석 태그", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md738", null ]
       ] ],
-      [ "2. openapi.json 생성하기", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md724", null ],
-      [ "3. UI 제공하기", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md725", null ]
+      [ "2. openapi.json 생성하기", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md739", null ],
+      [ "3. UI 제공하기", "dc/dbf/md_docs_2ko_2tutorials_2openapi-swagger.html#autotoc_md740", null ]
     ] ],
     [ "CWIST로 WebTransport 서버 만들기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html", [
-      [ "빌드", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md727", null ],
-      [ "1. HTTP/3과 세션 핸들러 설정하기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md728", null ],
-      [ "2. 세션 프로토콜 설계하기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md729", [
-        [ "WebTransport와 raw 데이터그램 함께 쓰기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md730", null ]
+      [ "빌드", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md742", null ],
+      [ "1. HTTP/3과 세션 핸들러 설정하기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md743", null ],
+      [ "2. 세션 프로토콜 설계하기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md744", [
+        [ "WebTransport와 raw 데이터그램 함께 쓰기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md745", null ]
       ] ],
-      [ "3. 안전하게 운영하기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md731", null ]
+      [ "3. 안전하게 운영하기", "df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md746", null ]
     ] ],
     [ "Release Codename Sequencing Specification", "d6/de8/md_docs_2ko_2versioning.html", [
-      [ "1. 기본 원칙", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md733", null ],
-      [ "2. 2자리 시퀀스 (기본)", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md734", null ],
-      [ "3. 3자리 확장 시퀀스", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md735", null ],
-      [ "4. 표기", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md736", null ],
-      [ "5. API 안정성 게이트 (v4 LTS부터)", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md737", null ],
-      [ "6. 메이저 버전의 첫 상승", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md738", null ]
+      [ "1. 기본 원칙", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md748", null ],
+      [ "2. 2자리 시퀀스 (기본)", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md749", null ],
+      [ "3. 3자리 확장 시퀀스", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md750", null ],
+      [ "4. 표기", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md751", null ],
+      [ "5. API 안정성 게이트 (v4 LTS부터)", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md752", null ],
+      [ "6. 메이저 버전의 첫 상승", "d6/de8/md_docs_2ko_2versioning.html#autotoc_md753", null ]
     ] ],
     [ "웹 서버 벤치마크 측정 방법", "d8/d7e/md_docs_2ko_2webserver-benchmark.html", [
-      [ "부하 프로필", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md740", [
-        [ "컨텍스트 스위치 열 해석하기", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md741", null ],
-        [ "튜닝된 저지연 실행", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md742", null ]
+      [ "부하 프로필", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md755", [
+        [ "컨텍스트 스위치 열 해석하기", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md756", null ],
+        [ "튜닝된 저지연 실행", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md757", null ]
       ] ],
-      [ "CWIST", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md743", null ],
-      [ "Axum", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md744", null ],
-      [ "Gin (Go)", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md745", null ],
-      [ "Spring Boot (JVM 공정성 설정)", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md746", null ],
-      [ "기록하는 메타데이터", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md747", null ],
-      [ "지연 분포 차트", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md748", null ],
-      [ "알려진 한계", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md749", null ]
+      [ "CWIST", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md758", null ],
+      [ "Axum", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md759", null ],
+      [ "Gin (Go)", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md760", null ],
+      [ "Spring Boot (JVM 공정성 설정)", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md761", null ],
+      [ "기록하는 메타데이터", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md762", null ],
+      [ "지연 분포 차트", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md763", null ],
+      [ "알려진 한계", "d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md764", null ]
     ] ],
     [ "HTTPS C100k gate", "d0/d49/md_docs_2performance_2https-c100k.html", [
-      [ "What runs", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md751", null ],
-      [ "Loopback port space", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md752", null ],
-      [ "Results (2026-10-17, dev)", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md753", null ],
-      [ "Results (2026-10-18, dev): C1M over TLS", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md754", null ],
-      [ "Results (2026-10-11, dev)", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md755", [
-        [ "Where the memory goes", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md756", null ]
+      [ "What runs", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md766", null ],
+      [ "Loopback port space", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md767", null ],
+      [ "Results (2026-10-17, dev)", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md768", null ],
+      [ "Results (2026-10-18, dev): C1M over TLS", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md769", null ],
+      [ "Results (2026-10-11, dev)", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md770", [
+        [ "Where the memory goes", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md771", null ]
       ] ],
-      [ "Scaling past the gate on a single host", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md757", null ],
-      [ "Running it", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md758", null ]
+      [ "Scaling past the gate on a single host", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md772", null ],
+      [ "Running it", "d0/d49/md_docs_2performance_2https-c100k.html#autotoc_md773", null ]
     ] ],
     [ "HTTPS pool task queue: static ring vs growable ring", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html", [
-      [ "What changed", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md760", null ],
-      [ "Setup", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md761", null ],
-      [ "1. RSS of https_pool_init() alone", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md762", null ],
-      [ "2. 4 workers, steady and churn load (3 alternating rounds)", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md763", null ],
-      [ "3. Forcing the ring to grow: 1 worker, 2 pool threads, 6000 simultaneous connections", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md764", null ],
-      [ "4. Order and loss under growth: tests/test_https_pool_queue.c", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md765", null ],
-      [ "Not done / open", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md766", null ]
+      [ "What changed", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md775", null ],
+      [ "Setup", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md776", null ],
+      [ "1. RSS of https_pool_init() alone", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md777", null ],
+      [ "2. 4 workers, steady and churn load (3 alternating rounds)", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md778", null ],
+      [ "3. Forcing the ring to grow: 1 worker, 2 pool threads, 6000 simultaneous connections", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md779", null ],
+      [ "4. Order and loss under growth: tests/test_https_pool_queue.c", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md780", null ],
+      [ "Not done / open", "df/d28/md_docs_2performance_2https-pool-dynamic-queue.html#autotoc_md781", null ]
     ] ],
     [ "Issue #297 syscall-reduction audit (local, 12-core Ryzen 5600X)", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html", [
-      [ "Baseline syscall profile", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md768", null ],
-      [ "Item results", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md769", [
-        [ "1.1 io_uring multishot accept — NEGATIVE (reverted)", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md770", null ],
-        [ "1.2 Larger SQE batches / fewer io_uring_enter — ALREADY IMPLEMENTED / BLOCKED", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md771", null ],
-        [ "1.3 Per-accept setsockopt removal — NEGATIVE (reverted)", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md772", null ],
-        [ "1.4 Time caching — ALREADY IMPLEMENTED", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md773", null ]
+      [ "Baseline syscall profile", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md783", null ],
+      [ "Item results", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md784", [
+        [ "1.1 io_uring multishot accept — NEGATIVE (reverted)", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md785", null ],
+        [ "1.2 Larger SQE batches / fewer io_uring_enter — ALREADY IMPLEMENTED / BLOCKED", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md786", null ],
+        [ "1.3 Per-accept setsockopt removal — NEGATIVE (reverted)", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md787", null ],
+        [ "1.4 Time caching — ALREADY IMPLEMENTED", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md788", null ]
       ] ],
-      [ "What the profile says to do instead (ranked)", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md774", null ],
-      [ "Method notes", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md775", null ]
+      [ "What the profile says to do instead (ranked)", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md789", null ],
+      [ "Method notes", "d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md790", null ]
     ] ],
     [ "Pluggable TLS backend (CWIST_TLS)", "d9/dda/md_docs_2performance_2tls-backends.html", [
-      [ "The seam", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md777", null ],
-      [ "Forced-off features under CWIST_TLS=mbedtls", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md778", null ],
-      [ "Degraded features under CWIST_TLS=mbedtls", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md779", null ],
-      [ "Embedded bundle", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md780", null ]
+      [ "The seam", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md792", null ],
+      [ "Forced-off features under CWIST_TLS=mbedtls", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md793", null ],
+      [ "Degraded features under CWIST_TLS=mbedtls", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md794", null ],
+      [ "Embedded bundle", "d9/dda/md_docs_2performance_2tls-backends.html#autotoc_md795", null ]
     ] ],
     [ "Opt-in wrk raw/corrected latency histograms", "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html", [
-      [ "Build in a disposable wrk checkout", "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md782", null ],
-      [ "Output and interpretation", "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md783", null ],
-      [ "Verification", "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md784", null ]
+      [ "Build in a disposable wrk checkout", "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md797", null ],
+      [ "Output and interpretation", "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md798", null ],
+      [ "Verification", "d1/dfd/md_docs_2performance_2wrk-dual-histogram.html#autotoc_md799", null ]
     ] ],
     [ "io_uring posted-work wake-up regression (#25)", "dd/d56/md_docs_2reactor-wakeup-regression.html", [
-      [ "Scope and cause", "dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md786", null ],
-      [ "Regression test", "dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md787", null ],
-      [ "Component measurement (2026-09-12)", "dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md788", null ]
+      [ "Scope and cause", "dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md801", null ],
+      [ "Regression test", "dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md802", null ],
+      [ "Component measurement (2026-09-12)", "dd/d56/md_docs_2reactor-wakeup-regression.html#autotoc_md803", null ]
     ] ],
     [ "CWIST Library Reference", "da/dca/md_docs_2REFERENCE.html", [
-      [ "Modules", "da/dca/md_docs_2REFERENCE.html#autotoc_md797", [
-        [ "1. SString (Smart String)", "da/dca/md_docs_2REFERENCE.html#autotoc_md798", null ],
-        [ "2. HTTP Server", "da/dca/md_docs_2REFERENCE.html#autotoc_md799", null ],
-        [ "3. HTTPS Support", "da/dca/md_docs_2REFERENCE.html#autotoc_md800", null ],
-        [ "4. Query Parsing", "da/dca/md_docs_2REFERENCE.html#autotoc_md801", null ],
-        [ "5. Database (SQL)", "da/dca/md_docs_2REFERENCE.html#autotoc_md802", null ],
-        [ "6. SipHash", "da/dca/md_docs_2REFERENCE.html#autotoc_md803", null ],
-        [ "7. Error Handling", "da/dca/md_docs_2REFERENCE.html#autotoc_md804", null ],
-        [ "8. Big Dumb Reply (BDR)", "da/dca/md_docs_2REFERENCE.html#autotoc_md805", null ]
+      [ "Modules", "da/dca/md_docs_2REFERENCE.html#autotoc_md812", [
+        [ "1. SString (Smart String)", "da/dca/md_docs_2REFERENCE.html#autotoc_md813", null ],
+        [ "2. HTTP Server", "da/dca/md_docs_2REFERENCE.html#autotoc_md814", null ],
+        [ "3. HTTPS Support", "da/dca/md_docs_2REFERENCE.html#autotoc_md815", null ],
+        [ "4. Query Parsing", "da/dca/md_docs_2REFERENCE.html#autotoc_md816", null ],
+        [ "5. Database (SQL)", "da/dca/md_docs_2REFERENCE.html#autotoc_md817", null ],
+        [ "6. SipHash", "da/dca/md_docs_2REFERENCE.html#autotoc_md818", null ],
+        [ "7. Error Handling", "da/dca/md_docs_2REFERENCE.html#autotoc_md819", null ],
+        [ "8. Big Dumb Reply (BDR)", "da/dca/md_docs_2REFERENCE.html#autotoc_md820", null ]
       ] ],
-      [ "LibTTAK Memory Features", "da/dca/md_docs_2REFERENCE.html#autotoc_md806", null ],
-      [ "Example: Othello Web", "da/dca/md_docs_2REFERENCE.html#autotoc_md807", null ],
-      [ "Dependencies", "da/dca/md_docs_2REFERENCE.html#autotoc_md808", null ],
-      [ "Build", "da/dca/md_docs_2REFERENCE.html#autotoc_md809", null ]
+      [ "LibTTAK Memory Features", "da/dca/md_docs_2REFERENCE.html#autotoc_md821", null ],
+      [ "Example: Othello Web", "da/dca/md_docs_2REFERENCE.html#autotoc_md822", null ],
+      [ "Dependencies", "da/dca/md_docs_2REFERENCE.html#autotoc_md823", null ],
+      [ "Build", "da/dca/md_docs_2REFERENCE.html#autotoc_md824", null ]
     ] ],
     [ "Latin Square References", "df/d22/md_docs_2references_2latin__square__references.html", [
-      [ "1. Definitions", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md811", null ],
-      [ "2. Constructions used in the code", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md812", [
-        [ "2.1 Finite fields (prime powers)", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md813", null ],
-        [ "2.2 Odd prime powers p^e, e >= 2", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md814", null ],
-        [ "2.3 Composite orders: MacNeish's product", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md815", null ],
-        [ "2.4 What the code does not construct", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md816", null ]
+      [ "1. Definitions", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md826", null ],
+      [ "2. Constructions used in the code", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md827", [
+        [ "2.1 Finite fields (prime powers)", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md828", null ],
+        [ "2.2 Odd prime powers p^e, e >= 2", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md829", null ],
+        [ "2.3 Composite orders: MacNeish's product", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md830", null ],
+        [ "2.4 What the code does not construct", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md831", null ]
       ] ],
-      [ "3. Historical table: the Gusuryak order-9 pair", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md817", null ],
-      [ "4. Use in CWIST: covering runtime knob pairs in tests", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md818", null ]
+      [ "3. Historical table: the Gusuryak order-9 pair", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md832", null ],
+      [ "4. Use in CWIST: covering runtime knob pairs in tests", "df/d22/md_docs_2references_2latin__square__references.html#autotoc_md833", null ]
     ] ],
     [ "Mux Algorithm References", "d6/d9f/md_docs_2references_2mux__algorithm__references.html", [
-      [ "1. Lo Shu Magic Square (Naak-seo / 洛書)", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md820", null ],
-      [ "2. Orthogonal Latin-Square Permutation", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md821", null ],
-      [ "3. Coefficient Matrix & Linear System Solver", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md822", null ],
-      [ "4. Iterative Magnitude Refinement", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md823", null ],
-      [ "5. Single-Step Linear Extrapolation", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md824", null ],
-      [ "Naming Rationale", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md825", null ]
+      [ "1. Lo Shu Magic Square (Naak-seo / 洛書)", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md835", null ],
+      [ "2. Orthogonal Latin-Square Permutation", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md836", null ],
+      [ "3. Coefficient Matrix & Linear System Solver", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md837", null ],
+      [ "4. Iterative Magnitude Refinement", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md838", null ],
+      [ "5. Single-Step Linear Extrapolation", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md839", null ],
+      [ "Naming Rationale", "d6/d9f/md_docs_2references_2mux__algorithm__references.html#autotoc_md840", null ]
     ] ],
     [ "Runtime configuration", "d9/dfa/md_docs_2runtime-config.html", [
-      [ "Status", "d9/dfa/md_docs_2runtime-config.html#autotoc_md827", null ],
-      [ "Processes and server mode", "d9/dfa/md_docs_2runtime-config.html#autotoc_md828", null ],
-      [ "Classic thread pool", "d9/dfa/md_docs_2runtime-config.html#autotoc_md829", null ],
-      [ "HTTP/1.1", "d9/dfa/md_docs_2runtime-config.html#autotoc_md830", null ],
-      [ "HTTPS", "d9/dfa/md_docs_2runtime-config.html#autotoc_md831", null ],
-      [ "HTTP/2", "d9/dfa/md_docs_2runtime-config.html#autotoc_md832", null ],
-      [ "HTTP/3", "d9/dfa/md_docs_2runtime-config.html#autotoc_md833", null ],
-      [ "WebSocket", "d9/dfa/md_docs_2runtime-config.html#autotoc_md834", null ],
-      [ "Reactor", "d9/dfa/md_docs_2runtime-config.html#autotoc_md835", null ],
-      [ "Diagnostics", "d9/dfa/md_docs_2runtime-config.html#autotoc_md836", null ]
+      [ "Status", "d9/dfa/md_docs_2runtime-config.html#autotoc_md842", null ],
+      [ "Processes and server mode", "d9/dfa/md_docs_2runtime-config.html#autotoc_md843", null ],
+      [ "Classic thread pool", "d9/dfa/md_docs_2runtime-config.html#autotoc_md844", null ],
+      [ "HTTP/1.1", "d9/dfa/md_docs_2runtime-config.html#autotoc_md845", null ],
+      [ "HTTPS", "d9/dfa/md_docs_2runtime-config.html#autotoc_md846", null ],
+      [ "HTTP/2", "d9/dfa/md_docs_2runtime-config.html#autotoc_md847", null ],
+      [ "HTTP/3", "d9/dfa/md_docs_2runtime-config.html#autotoc_md848", null ],
+      [ "WebSocket", "d9/dfa/md_docs_2runtime-config.html#autotoc_md849", null ],
+      [ "Reactor", "d9/dfa/md_docs_2runtime-config.html#autotoc_md850", null ],
+      [ "Redis", "d9/dfa/md_docs_2runtime-config.html#autotoc_md851", null ],
+      [ "Diagnostics", "d9/dfa/md_docs_2runtime-config.html#autotoc_md852", null ]
     ] ],
     [ "Soak testing", "db/d05/md_docs_2soak-testing.html", [
-      [ "Environment", "db/d05/md_docs_2soak-testing.html#autotoc_md838", null ],
-      [ "Bench server and workload mix", "db/d05/md_docs_2soak-testing.html#autotoc_md839", null ],
-      [ "Measurement points", "db/d05/md_docs_2soak-testing.html#autotoc_md840", null ],
-      [ "PASS/FAIL criteria", "db/d05/md_docs_2soak-testing.html#autotoc_md841", null ],
-      [ "Interpreting a failure", "db/d05/md_docs_2soak-testing.html#autotoc_md842", null ]
+      [ "Environment", "db/d05/md_docs_2soak-testing.html#autotoc_md854", null ],
+      [ "Bench server and workload mix", "db/d05/md_docs_2soak-testing.html#autotoc_md855", null ],
+      [ "Measurement points", "db/d05/md_docs_2soak-testing.html#autotoc_md856", null ],
+      [ "PASS/FAIL criteria", "db/d05/md_docs_2soak-testing.html#autotoc_md857", null ],
+      [ "Interpreting a failure", "db/d05/md_docs_2soak-testing.html#autotoc_md858", null ]
     ] ],
     [ "CWIST Web Development Tutorial (A to Z)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html", [
-      [ "Table of Contents", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md844", null ],
-      [ "1. Hello World: Starting Your First Server", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md845", null ],
-      [ "2. Routing and Handlers (Mux Router)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md846", null ],
-      [ "3. JSON Parsing and Zod Schema Validation", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md847", null ],
-      [ "4. Middleware (CORS, Logging)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md848", null ],
-      [ "5. Databases and Migrations (SQLite)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md849", null ],
-      [ "6. Authentication (JWT and DB Encryption)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md850", null ],
-      [ "7. PQC TLS (Post-Quantum Hybrid Key Exchange)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md851", [
-        [ "Security Policy Summary", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md852", null ]
+      [ "Table of Contents", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md860", null ],
+      [ "1. Hello World: Starting Your First Server", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md861", null ],
+      [ "2. Routing and Handlers (Mux Router)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md862", null ],
+      [ "3. JSON Parsing and Zod Schema Validation", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md863", null ],
+      [ "4. Middleware (CORS, Logging)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md864", null ],
+      [ "5. Databases and Migrations (SQLite)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md865", null ],
+      [ "6. Authentication (JWT and DB Encryption)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md866", null ],
+      [ "7. PQC TLS (Post-Quantum Hybrid Key Exchange)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md867", [
+        [ "Security Policy Summary", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md868", null ]
       ] ],
-      [ "8. WebSocket Integration (Real-Time Bidirectional Communication)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md853", null ],
-      [ "9. Template Engine and Static File Serving", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md854", null ],
-      [ "10. Dynamic CSS Composer (WASM and SSR)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md855", [
-        [ "Approach A: 100% Server-Side Rendering (SSR)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md856", null ],
-        [ "Approach B: Client-Side Composition with React + WebAssembly (WASM)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md857", null ],
-        [ "Wrapping Up", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md858", null ]
+      [ "8. WebSocket Integration (Real-Time Bidirectional Communication)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md869", null ],
+      [ "9. Template Engine and Static File Serving", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md870", null ],
+      [ "10. Dynamic CSS Composer (WASM and SSR)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md871", [
+        [ "Approach A: 100% Server-Side Rendering (SSR)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md872", null ],
+        [ "Approach B: Client-Side Composition with React + WebAssembly (WASM)", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md873", null ],
+        [ "Wrapping Up", "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md874", null ]
       ] ]
     ] ],
     [ "CWIST 웹 개발 튜토리얼 (A to Z)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html", [
-      [ "목차", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md860", null ],
-      [ "1. Hello World: 첫 서버 띄우기", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md861", null ],
-      [ "2. 라우팅과 핸들러 (Mux Router)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md862", null ],
-      [ "3. JSON 파싱과 Zod 스키마 검증", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md863", null ],
-      [ "4. 미들웨어 (CORS, Logging)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md864", null ],
-      [ "5. 데이터베이스와 마이그레이션 (SQLite)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md865", null ],
-      [ "6. 인증 (JWT 및 DB 암호화)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md866", null ],
-      [ "7. PQC TLS (양자내성 하이브리드 키 교환)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md867", [
-        [ "보안 정책 요약", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md868", null ]
+      [ "목차", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md876", null ],
+      [ "1. Hello World: 첫 서버 띄우기", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md877", null ],
+      [ "2. 라우팅과 핸들러 (Mux Router)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md878", null ],
+      [ "3. JSON 파싱과 Zod 스키마 검증", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md879", null ],
+      [ "4. 미들웨어 (CORS, Logging)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md880", null ],
+      [ "5. 데이터베이스와 마이그레이션 (SQLite)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md881", null ],
+      [ "6. 인증 (JWT 및 DB 암호화)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md882", null ],
+      [ "7. PQC TLS (양자내성 하이브리드 키 교환)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md883", [
+        [ "보안 정책 요약", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md884", null ]
       ] ],
-      [ "8. 웹소켓 연동 (실시간 양방향 통신)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md869", null ],
-      [ "9. 템플릿 엔진과 정적 파일 제공", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md870", null ],
-      [ "10. 동적 CSS 합성기 (WASM 및 SSR)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md871", [
-        [ "방법 A: 100% Server-Side Rendering (SSR)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md872", null ],
-        [ "방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md873", null ],
-        [ "마치며", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md874", null ]
+      [ "8. 웹소켓 연동 (실시간 양방향 통신)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md885", null ],
+      [ "9. 템플릿 엔진과 정적 파일 제공", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md886", null ],
+      [ "10. 동적 CSS 합성기 (WASM 및 SSR)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md887", [
+        [ "방법 A: 100% Server-Side Rendering (SSR)", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md888", null ],
+        [ "방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md889", null ],
+        [ "마치며", "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md890", null ]
       ] ]
     ] ],
     [ "Build a CRUD blog with CWIST", "d4/db0/md_docs_2tutorials_2blog-crud.html", [
-      [ "1. Create the application", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md876", null ],
-      [ "2. Define the routes", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md877", null ],
-      [ "3. Validate JSON and return HTTP semantics", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md878", null ],
-      [ "4. Test the API", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md879", null ]
+      [ "1. Create the application", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md892", null ],
+      [ "2. Define the routes", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md893", null ],
+      [ "3. Validate JSON and return HTTP semantics", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md894", null ],
+      [ "4. Test the API", "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md895", null ]
     ] ],
     [ "Integrate NATS with CWIST", "da/d48/md_docs_2tutorials_2nats-integration.html", [
-      [ "1. Separate request and worker responsibilities", "da/d48/md_docs_2tutorials_2nats-integration.html#autotoc_md881", null ],
-      [ "2. Publish from a route", "da/d48/md_docs_2tutorials_2nats-integration.html#autotoc_md882", null ],
-      [ "3. Reliability checklist", "da/d48/md_docs_2tutorials_2nats-integration.html#autotoc_md883", null ]
+      [ "1. Separate request and worker responsibilities", "da/d48/md_docs_2tutorials_2nats-integration.html#autotoc_md897", null ],
+      [ "2. Publish from a route", "da/d48/md_docs_2tutorials_2nats-integration.html#autotoc_md898", null ],
+      [ "3. Reliability checklist", "da/d48/md_docs_2tutorials_2nats-integration.html#autotoc_md899", null ]
     ] ],
     [ "Document an API with OpenAPI and Swagger UI", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html", [
-      [ "1. Annotate the routes", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md885", [
-        [ "Annotation tags", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md886", null ]
+      [ "1. Annotate the routes", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md901", [
+        [ "Annotation tags", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md902", null ]
       ] ],
-      [ "2. Generate openapi.json", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md887", null ],
-      [ "3. Serve the UI", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md888", null ]
+      [ "2. Generate openapi.json", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md903", null ],
+      [ "3. Serve the UI", "d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md904", null ]
     ] ],
     [ "Build a WebTransport server with CWIST", "d2/dcb/md_docs_2tutorials_2webtransport-server.html", [
-      [ "Build", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md890", null ],
-      [ "1. Configure HTTP/3 and a session handler", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md891", null ],
-      [ "2. Design the session protocol", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md892", [
-        [ "Raw datagrams next to WebTransport", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md893", null ]
+      [ "Build", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md906", null ],
+      [ "1. Configure HTTP/3 and a session handler", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md907", null ],
+      [ "2. Design the session protocol", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md908", [
+        [ "Raw datagrams next to WebTransport", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md909", null ]
       ] ],
-      [ "3. Operate safely", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md894", null ]
+      [ "3. Operate safely", "d2/dcb/md_docs_2tutorials_2webtransport-server.html#autotoc_md910", null ]
     ] ],
     [ "Release Codename Sequencing Specification", "d0/db4/md_docs_2versioning.html", [
-      [ "1. Principles", "d0/db4/md_docs_2versioning.html#autotoc_md896", null ],
-      [ "2. Two-letter sequence (default)", "d0/db4/md_docs_2versioning.html#autotoc_md897", null ],
-      [ "3. Three-letter extension", "d0/db4/md_docs_2versioning.html#autotoc_md898", null ],
-      [ "4. Notation", "d0/db4/md_docs_2versioning.html#autotoc_md899", null ],
-      [ "5. API stability gate (from the v4 LTS)", "d0/db4/md_docs_2versioning.html#autotoc_md900", null ],
-      [ "6. First ascent of a major version", "d0/db4/md_docs_2versioning.html#autotoc_md901", null ]
+      [ "1. Principles", "d0/db4/md_docs_2versioning.html#autotoc_md912", null ],
+      [ "2. Two-letter sequence (default)", "d0/db4/md_docs_2versioning.html#autotoc_md913", null ],
+      [ "3. Three-letter extension", "d0/db4/md_docs_2versioning.html#autotoc_md914", null ],
+      [ "4. Notation", "d0/db4/md_docs_2versioning.html#autotoc_md915", null ],
+      [ "5. API stability gate (from the v4 LTS)", "d0/db4/md_docs_2versioning.html#autotoc_md916", null ],
+      [ "6. First ascent of a major version", "d0/db4/md_docs_2versioning.html#autotoc_md917", null ]
     ] ],
     [ "Web Server Benchmark Methodology", "d6/d42/md_docs_2webserver-benchmark.html", [
-      [ "Load profile", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md903", [
-        [ "Interpreting the context-switch column", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md904", null ],
-        [ "Tuned low-latency run", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md905", null ]
+      [ "Load profile", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md919", [
+        [ "Interpreting the context-switch column", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md920", null ],
+        [ "Tuned low-latency run", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md921", null ]
       ] ],
-      [ "CWIST", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md906", null ],
-      [ "Actix", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md907", null ],
-      [ "Axum", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md908", null ],
-      [ "Gin (Go)", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md909", null ],
-      [ "Spring Boot (JVM fairness configuration)", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md910", null ],
-      [ "Recorded metadata", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md911", null ],
-      [ "Latency distribution chart", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md912", null ],
-      [ "Known limitations", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md913", null ]
+      [ "CWIST", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md922", null ],
+      [ "Actix", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md923", null ],
+      [ "Axum", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md924", null ],
+      [ "Gin (Go)", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md925", null ],
+      [ "Spring Boot (JVM fairness configuration)", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md926", null ],
+      [ "Recorded metadata", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md927", null ],
+      [ "Latency distribution chart", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md928", null ],
+      [ "Known limitations", "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md929", null ]
     ] ],
     [ "Deprecated List", "da/d58/deprecated.html", null ],
     [ "Classes", "annotated.html", [
@@ -1089,30 +1107,30 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d0/d82/structcwist__test__client__cookie.html#a6ec84d0070acc5b8bf414f87d247d915",
-"d1/d4d/flash_8c.html#abe3d3740a8857b0ff3df93f60478c7cc",
-"d1/df5/cwist__io_8h_source.html",
-"d2/db5/db_8c.html#a0e82c15c6fae4fef553c0f17bf985cb9",
-"d3/d79/multipart_8c_source.html",
-"d4/d54/grpc__client_8c.html#a0b83c8cb004a0ec021b689b3b5f8bb75",
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md702",
-"d5/da8/protobuf_8c.html#af4f4e77a913528d1f4bbe07d1532c692",
-"d6/d9b/orm_8h.html#a38075ab36ec6acd5b83092fb23c2e45e",
-"d7/d67/net_2http_2https_8h.html#a4b319725b7db7206ea04a8350285c314ad8ffb334c1ac2be3ea396ff6b6e1bf54",
-"d8/d16/gc_8c.html#a555a946c1e2bb6d5685d4f4dd153c8bc",
-"d9/d76/proxy_8h.html",
-"d9/dab/net_2http_2http_8h.html#ad5e721abc6a6d21ff0678514184ecedb",
-"da/d39/shutdown_8h.html#a3e09cfe577c8855dafc10053c7c0d15e",
-"da/dca/md_docs_2REFERENCE.html#autotoc_md809",
-"db/d8a/structcwist__http__async__conn.html#a9b96713b430493a686e80bb0377f6200",
-"dc/d85/reactor_8h.html#a3672497adf44052b571dcedf9b67250d",
-"dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e",
-"dd/d56/http_8h.html#a4d9cb2d2fb1e7ea1475c1bef7aeb7e5f",
-"dd/dff/http3_8h.html#a9a695f75adeebd16dc32da914364a27e",
-"de/db8/template_8h.html#ac506fb8f038486882fc9f0e4757d4b4e",
-"df/d6d/ssl_8h.html#aae68723650f0ed53b36894d426afdbc9",
-"df/dd0/structcwist__proxy__config.html#ac85f1930eb738553f6c2c5055f0703c9",
-"globals_type_o.html"
+"d0/d82/structcwist__test__client__cookie.html#a3e09f1890a2df2844d1f506273e26700",
+"d1/d4d/flash_8c.html#a91c592fe6997115126994e431c235ec9",
+"d1/df5/cwist__io_8h.html#af8273eb32d71938b4faca82ed325b9aa",
+"d2/db2/https_8c.html#ae1a607cc121b06863bad72554a793e0a",
+"d3/d65/tls__chain_8c.html#a402fcbdd8e93c407e64d09ff4c405eb1",
+"d3/df7/md_docs_2ko_2api_2sse.html#autotoc_md522",
+"d4/dca/cwist__redis_8c.html#abd893b57c85af562bbcf5661a3323eb0",
+"d5/d7a/grpc__channel_8c.html#a08482dabdb94ccfc30cab16cec5c8405",
+"d6/d56/structcwist__bdr__cursor.html#a365ee28fd2bf574b37164cb3c93db84b",
+"d7/d1d/assets__internal_8h.html",
+"d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md574",
+"d9/d1b/structquic__stream__fc.html",
+"d9/dab/net_2http_2http_8h.html#a99b5ad0e71431205a397a336983f4f4daa90ba07e8a9d8d4f5a054614cd041afc",
+"da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md707",
+"da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27acc9e073c23737b48149e3fa5e4fdfa4f",
+"db/d5b/protobuf_8h.html#aaf002e6c1d5485583f6c37a196425968",
+"db/de3/test__client_8h.html#aeb4e3f151109782952cc364363bad306",
+"dc/da3/big__dumb__reply_8c.html",
+"dd/d43/http_8c.html#a9e1dbb26e490c6b24d9279daf46d6ec2",
+"dd/d92/graphql_8c.html#a693bf250b425aac6b6bd211e30a443b9",
+"de/d91/async_8h.html#a8d9ff737a1c4079316cf024d6e0e33a9",
+"df/d58/net_2http_2sse_8h_source.html",
+"df/dad/http3__client_8h.html#aa1d340de2bbd28818a84029643edc888",
+"functions_vars_d.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

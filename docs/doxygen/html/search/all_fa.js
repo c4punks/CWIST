@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['후속_0',['Classic 풀의 버스트 기아 (#25 후속)',['../da/d07/md_docs_2ko_2classic-pool-starvation.html',1,'']]]
+  ['확장_20시퀀스_0',['3. 3자리 확장 시퀀스',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md750',1,'']]]
 ];

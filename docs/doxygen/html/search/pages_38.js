@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]]
+  ['보정_20지연_20히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]]
 ];

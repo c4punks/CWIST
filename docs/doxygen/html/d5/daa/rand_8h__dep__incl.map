@@ -1,17 +1,19 @@
 <map id="src/security/tls/shim/openssl/rand.h" name="src/security/tls/shim/openssl/rand.h">
-<area shape="rect" id="Node000001" title="mbedTLS TLS backend: RAND_bytes over mbedTLS CTR&#45;DRBG." alt="" coords="527,5,680,45"/>
-<area shape="rect" id="Node000002" href="$de/daf/http3_8c.html" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="5,101,151,126"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="513,41,350,65,164,96,128,103,127,98,163,91,350,60,513,36"/>
-<area shape="rect" id="Node000003" href="$d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="175,101,319,126"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="514,51,296,103,294,98,513,46"/>
-<area shape="rect" id="Node000004" href="$db/dba/ice_8c.html" title="Minimal STUN/ICE (RFC 5389 / RFC 8445) for the ICE&#45;lite agent." alt="" coords="344,101,492,126"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="551,54,444,103,442,98,549,49"/>
-<area shape="rect" id="Node000005" href="$d3/d90/webrtc_8c.html" title="WebRTC DataChannel context: UDP I/O, ICE&#45;lite, DTLS, SCTP driving." alt="" coords="517,101,690,126"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="606,59,606,100,601,100,601,59"/>
-<area shape="rect" id="Node000006" href="$dc/d64/db__crypt_8c.html" title=" " alt="" coords="714,93,871,133"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="658,49,752,91,750,96,656,53"/>
-<area shape="rect" id="Node000007" href="$db/d2e/backend__mbedtls_8c.html" title="mbedTLS implementation of the CWIST TLS backend seam." alt="" coords="896,93,1071,133"/>
-<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="694,44,901,91,899,96,693,49"/>
-<area shape="rect" id="Node000008" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="1095,101,1229,126"/>
-<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="694,34,875,57,1084,91,1118,98,1117,103,1083,96,874,62,694,39"/>
+<area shape="rect" id="Node000001" title="mbedTLS TLS backend: RAND_bytes over mbedTLS CTR&#45;DRBG." alt="" coords="600,5,753,45"/>
+<area shape="rect" id="Node000002" href="$d4/d48/db__sync_8c.html" title="Minimal TCP protocol for shipping encrypted SQLite snapshots between peers." alt="" coords="5,93,148,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="586,38,390,61,160,96,149,98,148,93,159,91,389,56,586,33"/>
+<area shape="rect" id="Node000003" href="$de/daf/http3_8c.html" title="lsquic/BoringSSL&#45;based HTTP/3 server for CWIST." alt="" coords="172,101,317,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="587,46,331,96,296,103,295,98,329,91,586,41"/>
+<area shape="rect" id="Node000004" href="$d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="342,101,486,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="607,52,450,103,448,98,605,47"/>
+<area shape="rect" id="Node000005" href="$db/dba/ice_8c.html" title="Minimal STUN/ICE (RFC 5389 / RFC 8445) for the ICE&#45;lite agent." alt="" coords="511,101,659,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="648,57,599,102,596,98,645,53"/>
+<area shape="rect" id="Node000006" href="$d3/d90/webrtc_8c.html" title="WebRTC DataChannel context: UDP I/O, ICE&#45;lite, DTLS, SCTP driving." alt="" coords="683,101,857,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="709,53,759,98,755,102,706,57"/>
+<area shape="rect" id="Node000007" href="$dc/d64/db__crypt_8c.html" title=" " alt="" coords="881,93,1038,133"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="753,47,898,91,897,96,751,52"/>
+<area shape="rect" id="Node000008" href="$db/d2e/backend__mbedtls_8c.html" title="mbedTLS implementation of the CWIST TLS backend seam." alt="" coords="1063,93,1237,133"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="767,40,1050,91,1063,93,1062,98,1050,96,766,45"/>
+<area shape="rect" id="Node000009" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="1261,101,1396,126"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="767,31,988,53,1119,70,1250,91,1285,98,1284,103,1250,96,1119,75,987,59,767,37"/>
 </map>

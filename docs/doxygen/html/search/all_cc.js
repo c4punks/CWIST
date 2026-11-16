@@ -1,5 +1,9 @@
 var searchData=
 [
-  ['카운트_0',['공유 세션 (침습적 참조 카운트)',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md366',1,'']]],
-  ['카피_20뷰_3a_20cwist_20wasm_20typedarray_20h_1',['제로 카피 뷰: cwist/wasm/typedarray.h',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md544',1,'']]]
+  ['측정과_20한계_0',['HTTP 측정과 한계',['../da/d07/md_docs_2ko_2classic-pool-starvation.html#autotoc_md595',1,'']]],
+  ['측정된_20효과_1',['측정된 효과',['../da/d90/md_docs_2ko_2cooperative-queuing.html#autotoc_md600',1,'']]],
+  ['측정한_20것_2',['2단계를 만들며 측정한 것',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md552',1,'']]],
+  ['측정_3',['도구 체인 현황 (2026-09-21 측정)',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md546',1,'']]],
+  ['측정_20방법_4',['측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'웹 서버 벤치마크 측정 방법'],['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md682',1,'5. 벤치마크와 측정 방법']]],
+  ['측정_202026_2009_2012_5',['구성 요소 측정 (2026-09-12)',['../dc/dd4/md_docs_2ko_2reactor-wakeup-regression.html#autotoc_md676',1,'']]]
 ];

@@ -1,10 +1,7 @@
 var searchData=
 [
-  ['핸드오프로_20무중단_20재시작하기_0',['소켓 핸드오프로 무중단 재시작하기',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html',1,'']]],
-  ['핸드오프_20순서_1',['핸드오프 순서',['../d1/d45/md_docs_2ko_2deployment_2zero-downtime-restart.html#autotoc_md613',1,'']]],
-  ['핸들러가_20본문을_20청크_20단위로_20생성_2',['스트리밍 생산자 (핸들러가 본문을 청크 단위로 생성)',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md551',1,'']]],
-  ['핸들러_20설정하기_3',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md728',1,'']]],
-  ['핸들러_20예제_4',['핸들러 예제',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md423',1,'']]],
-  ['핸들러_20mux_20router_5',['2. 라우팅과 핸들러 (Mux Router)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md862',1,'']]],
-  ['핸들_20같은_20지역_20변수를_20위한_20의사_20raii_6',['4. 핸들 같은 지역 변수를 위한 의사 RAII',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md643',1,'']]]
+  ['합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md887',1,'']]],
+  ['합성수_20차수_3a_20macneish_20곱_1',['2.3 합성수 차수: MacNeish 곱',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md704',1,'']]],
+  ['합성_2',['방법 B: React + WebAssembly (WASM) 클라이언트 사이드 합성',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md889',1,'']]],
+  ['합치기_3',['모두 합치기',['../d1/df9/md_docs_2ko_2api_2html.html#autotoc_md434',1,'']]]
 ];

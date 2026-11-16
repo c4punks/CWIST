@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['쿼리와_20uri_20api_0',['쿼리와 URI API',['../dd/da8/md_docs_2ko_2api_2query.html',1,'']]]
+  ['코어_20api_0',['HTTP 코어 API',['../db/ddd/md_docs_2ko_2api_2http.html',1,'']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['응답_20캐싱_20복원하기_0',['ADR-0001: 명시적인 공개 FIXED 계약으로 HTTP 응답 캐싱 복원하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html',1,'']]]
+  ['웹_20개발_20튜토리얼_20a_20to_20z_0',['CWIST 웹 개발 튜토리얼 (A to Z)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html',1,'']]],
+  ['웹_20서버_20벤치마크_20측정_20방법_1',['웹 서버 벤치마크 측정 방법',['../d8/d7e/md_docs_2ko_2webserver-benchmark.html',1,'']]]
 ];

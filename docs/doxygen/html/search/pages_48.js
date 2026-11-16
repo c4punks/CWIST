@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['원시_20보정_20지연_20히스토그램_0',['선택적 wrk 원시/보정 지연 히스토그램',['../d2/de4/md_docs_2ko_2performance_2wrk-dual-histogram.html',1,'']]]
+  ['영속_20큐_20필수_20게이트_0',['영속 큐 필수 게이트',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html',1,'']]]
 ];
