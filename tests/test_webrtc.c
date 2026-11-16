@@ -239,6 +239,25 @@ static void unit_checks(void) {
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "wrongpassword000000000") == 0);
 
+        /* Exercise every mismatch position across the 20-byte HMAC (Issue #747) */
+        size_t mi_pos = 0;
+        for (size_t off = 20; off + 24 <= (size_t)len; ) {
+            uint16_t atype = (uint16_t)((req[off] << 8) | req[off + 1]);
+            uint16_t alen = (uint16_t)((req[off + 2] << 8) | req[off + 3]);
+            if (atype == 0x0008 && alen == 20) {
+                mi_pos = off + 4;
+                break;
+            }
+            off += 4 + ((alen + 3) & ~3);
+        }
+        assert(mi_pos > 0);
+        for (size_t byte_idx = 0; byte_idx < 20; byte_idx++) {
+            req[mi_pos + byte_idx] ^= 0x5A;
+            assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 0);
+            req[mi_pos + byte_idx] ^= 0x5A;
+        }
+        assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);
+
         uint8_t truncated[19] = {0};
         assert(cwist_ice_stun_sign_request(truncated, sizeof(truncated), 0,
                                            "testpassword0123456789") == -1);
