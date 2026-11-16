@@ -4681,13 +4681,19 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
             cwist_http_sstring_assign_arena(req->query, (cwist_arena_t *)req->arena, "", 0);
         }
 
-        cwist_http_sstring_assign_arena(req->version, (cwist_arena_t *)req->arena, sp2 + 1,
-                                        (size_t)(line_end - (sp2 + 1)));
-        if (strncmp(sp2 + 1, "HTTP/1.1", 8) == 0) {
+        size_t ver_len = (size_t)(line_end - (sp2 + 1));
+        const char *ver_start = sp2 + 1;
+        if (ver_len == 8 && memcmp(ver_start, "HTTP/1.1", 8) == 0) {
             req->keep_alive = true;
-        } else {
+        } else if (ver_len == 8 && memcmp(ver_start, "HTTP/1.0", 8) == 0) {
             req->keep_alive = false;
+        } else {
+            cwist_http_request_destroy(req);
+            if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+            return NULL;
         }
+        cwist_http_sstring_assign_arena(req->version, (cwist_arena_t *)req->arena, ver_start,
+                                        ver_len);
     }
 
     // 2. Headers (SIMD colon and CRLF scanning + SWAR)
@@ -4697,7 +4703,8 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
     size_t cl_value = 0;
     bool te_seen = false;
     bool expect_100 = false, expect_bad = false;
-    const bool is_http11 = req->version->data && strncmp(req->version->data, "HTTP/1.1", 8) == 0;
+    const bool is_http11 = req->version->data && req->version->size == 8 &&
+                           memcmp(req->version->data, "HTTP/1.1", 8) == 0;
 
     line_start = line_end + 2;
     while (line_start < header_end) {

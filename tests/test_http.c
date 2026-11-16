@@ -314,6 +314,43 @@ void test_malformed_request_line() {
     printf("Passed malformed request-line.\n");
 }
 
+void test_request_version_rules() {
+    printf("Testing HTTP/1 request version rules (Issue #742)...\n");
+
+    /* Trailing junk after HTTP/1.1 -> 400 */
+    expect_parse_rejection("GET / HTTP/1.1junk\r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.10\r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1extra\r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.0junk\r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.2\r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/2.0\r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.\r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1 \r\nHost: localhost\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+
+    /* Valid exact HTTP/1.1 and HTTP/1.0 -> accepted */
+    cwist_http_request *r1 = expect_parse_success("GET /test HTTP/1.1\r\nHost: localhost\r\n\r\n");
+    assert(r1 != NULL);
+    assert(strcmp(r1->version->data, "HTTP/1.1") == 0);
+    assert(r1->keep_alive == true);
+    cwist_http_request_destroy(r1);
+
+    cwist_http_request *r0 = expect_parse_success("GET /test HTTP/1.0\r\n\r\n");
+    assert(r0 != NULL);
+    assert(strcmp(r0->version->data, "HTTP/1.0") == 0);
+    assert(r0->keep_alive == false);
+    cwist_http_request_destroy(r0);
+
+    printf("Passed HTTP/1 request version rules.\n");
+}
+
 typedef struct {
     int fd;
     char buf[4096];
@@ -575,6 +612,7 @@ int main() {
     test_host_header_rules();
     test_cl_te_smuggling_rules();
     test_malformed_request_line();
+    test_request_version_rules();
     test_expect_100_continue_flow();
     test_head_response_headers_only();
     test_no_content_statuses();
