@@ -100,6 +100,21 @@ void cwist_http3_client_enable_0rtt(cwist_http3_client *client, int enabled);
 void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled);
 
 /**
+ * @brief Checked variant of cwist_http3_client_enable_datagrams().
+ *
+ * Configures QUIC datagram support (RFC 9221) and reports errors if the
+ * client handle is invalid, an active connection exists, or engine recreation
+ * fails.
+ *
+ * @param client Client handle.
+ * @param enabled Non-zero to enable (default: 0).
+ * @return cwist_error_t Success (err_i16 == 0), EINVAL if client is NULL,
+ *         EBUSY if an active connection exists, or ENOMEM if engine
+ *         recreation failed.
+ */
+cwist_error_t cwist_http3_client_enable_datagrams_checked(cwist_http3_client *client, int enabled);
+
+/**
  * @brief Use raw datagrams and WebTransport on the same connection.
  *
  * Enables raw datagrams (as cwist_http3_client_enable_datagrams()) while
@@ -125,6 +140,20 @@ void cwist_http3_client_enable_datagrams(cwist_http3_client *client, int enabled
  *         compiled in.
  */
 int cwist_http3_client_enable_datagram_channel(cwist_http3_client *client, int enabled);
+
+/**
+ * @brief Checked variant of cwist_http3_client_enable_datagram_channel().
+ *
+ * Reports detailed errors for invalid arguments, active connection conflicts,
+ * or engine recreation failure.
+ *
+ * @param client Client handle.
+ * @param enabled Non-zero to enable (default: 0).
+ * @return cwist_error_t Success (err_i16 == 0), EINVAL if client is NULL,
+ *         EBUSY if an active connection exists, ENOMEM if engine recreation
+ *         failed, or ENOSYS if WebTransport client support is disabled.
+ */
+cwist_error_t cwist_http3_client_enable_datagram_channel_checked(cwist_http3_client *client, int enabled);
 
 /**
  * @brief Set the maximum number of request retries on transient failure.
