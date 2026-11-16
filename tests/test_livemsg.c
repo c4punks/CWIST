@@ -84,7 +84,7 @@ static int ws_connect(uint16_t port, const char *path) {
     while (used < sizeof(response) - 1) {
         struct pollfd pfd = {.fd = fd, .events = POLLIN};
         assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
-        ssize_t n = recv(fd, response + used, sizeof(response) - 1 - used, 0);
+        ssize_t n = recv(fd, response + used, 1, 0);
         assert(n > 0);
         used += (size_t)n;
         response[used] = 0;
