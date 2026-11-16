@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -170,6 +171,93 @@ static void test_registration_validation(void) {
     cwist_proxy_reset();
 }
 
+#define EVICTION_CLIENTS 1025
+
+static atomic_int eviction_response_sent;
+static atomic_int eviction_requests_seen;
+
+static void wait_eviction_requests(int expected) {
+    for (int i = 0; i < 3000 && atomic_load(&eviction_requests_seen) < expected; i++)
+        usleep(10000);
+    assert(atomic_load(&eviction_requests_seen) == expected);
+}
+
+static void *udp_eviction_upstream_run(void *arg) {
+    (void)arg;
+    struct sockaddr_storage first_peer;
+    socklen_t first_peer_len = 0;
+    unsigned char byte;
+    for (int i = 0; i < EVICTION_CLIENTS - 1; i++) {
+        struct sockaddr_storage peer;
+        socklen_t peer_len = sizeof(peer);
+        ssize_t n = recvfrom(upstream_udp_fd, &byte, 1, 0, (struct sockaddr *)&peer, &peer_len);
+        assert(n == 1);
+        atomic_fetch_add(&eviction_requests_seen, 1);
+        if (i == 0) {
+            first_peer = peer;
+            first_peer_len = peer_len;
+        }
+    }
+    assert(sendto(upstream_udp_fd, &byte, 1, MSG_NOSIGNAL, (struct sockaddr *)&first_peer,
+                  first_peer_len) == 1);
+    atomic_store(&eviction_response_sent, 1);
+    close(upstream_udp_fd);
+    return NULL;
+}
+
+static void test_udp_eviction_overlap(void) {
+    upstream_udp_fd = loopback_socket(SOCK_DGRAM, &upstream_udp_port);
+    proxy_udp_port = unused_port(SOCK_DGRAM);
+    atomic_store(&eviction_response_sent, 0);
+    atomic_store(&eviction_requests_seen, 0);
+
+    pthread_t upstream;
+    assert(pthread_create(&upstream, NULL, udp_eviction_upstream_run, NULL) == 0);
+    assert(cwist_proxy_udp_forward(proxy_udp_port, "127.0.0.1", upstream_udp_port).error.err_i16 ==
+           0);
+    cwist_shutdown_reset();
+    pthread_t proxy;
+    assert(pthread_create(&proxy, NULL, proxy_run, NULL) == 0);
+    usleep(50000);
+
+    struct sockaddr_in proxy_addr = {
+        .sin_family = AF_INET,
+        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+        .sin_port = htons(proxy_udp_port),
+    };
+    int clients[EVICTION_CLIENTS];
+    unsigned char request = 0x5a;
+    for (int i = 0; i < EVICTION_CLIENTS - 1; i++) {
+        uint16_t client_port;
+        clients[i] = loopback_socket(SOCK_DGRAM, &client_port);
+        assert(sendto(clients[i], &request, 1, MSG_NOSIGNAL, (struct sockaddr *)&proxy_addr,
+                      sizeof(proxy_addr)) == 1);
+        wait_eviction_requests(i + 1);
+    }
+    for (int i = 0; i < 3000 && !atomic_load(&eviction_response_sent); i++) usleep(10000);
+    assert(atomic_load(&eviction_response_sent));
+
+    uint16_t client_port;
+    clients[EVICTION_CLIENTS - 1] = loopback_socket(SOCK_DGRAM, &client_port);
+    assert(sendto(clients[EVICTION_CLIENTS - 1], &request, 1, MSG_NOSIGNAL,
+                  (struct sockaddr *)&proxy_addr, sizeof(proxy_addr)) == 1);
+
+    struct timeval timeout = {.tv_sec = 2};
+    assert(setsockopt(clients[0], SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == 0);
+    unsigned char response = 0;
+    assert(recv(clients[0], &response, 1, 0) == 1);
+    assert(response == request);
+
+    for (int i = 0; i < EVICTION_CLIENTS; i++) close(clients[i]);
+    assert(pthread_join(upstream, NULL) == 0);
+    cwist_shutdown_request();
+    assert(pthread_join(proxy, NULL) == 0);
+    assert(proxy_result == 0);
+    cwist_proxy_reset();
+    cwist_shutdown_reset();
+    puts("test_proxy_transport: UDP eviction with a pending upstream response passed");
+}
+
 int main(void) {
     test_registration_validation();
 
@@ -220,6 +308,7 @@ int main(void) {
     assert(proxy_result == 0);
     cwist_proxy_reset();
     cwist_shutdown_reset();
+    test_udp_eviction_overlap();
     puts("test_proxy_transport: TCP Redis/NATS/Memcached and UDP DNS/NTP passed");
     return 0;
 }
