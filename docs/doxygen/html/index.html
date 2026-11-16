@@ -135,7 +135,7 @@ Supported platforms</h2>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>WASI 0.2 and browser Service Worker</b>   </td><td class="markdownTableBodyNone">The same routes and handlers on Wasmtime or in the browser   </td><td class="markdownTableBodyNone"><a href="example/wasip2-kv">wasip2-kv</a>, <a href="example/wasm-service-worker">wasm-service-worker</a>    </td></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>; STM32F769I-DISCO <a href="example/stm32f769-fortress">fortress</a> (physical-board validated); NUCLEO-H743ZI2 <a href="example/stm32">example</a> (reference integration: cross-build / QEMU)   </td></tr>
+<td class="markdownTableBodyNone"><b>Bare-metal STM32 and Cortex-M</b>   </td><td class="markdownTableBodyNone">Raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded streamed responses   </td><td class="markdownTableBodyNone"><a class="el" href="de/d87/md_docs_2embedded_2stm32.html">STM32 guide</a>; STM32F769I-DISCO <a href="example/stm32f769-fortress">fortress</a> (physical-board validated); NUCLEO-H743ZI2 <a href="example/stm32">example</a> (reference integration: cross-build / QEMU); STM32F429I-DISCO (planned)   </td></tr>
 </table>
 <h2><a class="anchor" id="autotoc_md4"></a>
 Quick start</h2>
@@ -190,7 +190,7 @@ What CWIST includes</h2>
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Layer   </th><th class="markdownTableHeadNone">What you get    </th></tr>
 <tr class="markdownTableRowOdd">
-<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds, STM32F769I-DISCO (physical-board validated) and NUCLEO-H743ZI2 (reference integration) examples, raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
+<td class="markdownTableBodyNone"><b>Embedded / bare metal</b>   </td><td class="markdownTableBodyNone">Cortex-M Thumb-2 builds; STM32F769I-DISCO (physical-board validated), NUCLEO-H743ZI2 (reference integration), and STM32F429I-DISCO (planned) examples; raw-lwIP HTTP, optional mbedTLS HTTPS, static connection pools, bounded response streaming    </td></tr>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone"><b>Protocols</b>   </td><td class="markdownTableBodyNone">HTTP/1.1, HTTP/2 (h2/h2c), HTTP/3 (QUIC, via lsquic), WebSocket, WebTransport, WebRTC data channels    </td></tr>
 <tr class="markdownTableRowOdd">
@@ -214,8 +214,8 @@ What CWIST includes</h2>
 </table>
 <h2><a class="anchor" id="autotoc_md7"></a>
 Performance, including where it loses</h2>
-<p>Every push and pull request runs CWIST against Actix, Axum, Gin and Spring Boot under <code>wrk -t12 -c400 -d10s</code> on a GitHub runner.</p>
-<p><b><a href="https://github.com/c4punks/CWIST/actions/runs/42153892833">Latest completed CI benchmark</a></b> (2026-11-06, commit <code>b3834e0d</code>, 4 vCPU AMD EPYC 9V74):</p>
+<p>Every push and pull request runs CWIST against Actix, Axum, Gin and Spring Boot under <code>wrk -t12 -c400 -d10s</code> on a GitHub runner. Methodology and fairness settings are in <a class="el" href="d6/d42/md_docs_2webserver-benchmark.html">docs/webserver-benchmark.md</a>; the raw numbers for every run are in <a href="benchmarks/webserver.json">benchmarks/webserver.json</a>.</p>
+<p><b><a href="https://github.com/c4punks/CWIST/actions/runs/42153892833">Latest completed CI benchmark</a></b> (2026-11-06, commit <code>b3834e0d</code>, 4 vCPU AMD EPYC 9V74, <a href="https://github.com/c4punks/CWIST/actions/runs/42153892833">download <code>webserver-result</code> artifact</a>):</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone"></th><th class="markdownTableHeadRight">CWIST reactor   </th><th class="markdownTableHeadRight">CWIST Classic   </th><th class="markdownTableHeadRight">Actix   </th><th class="markdownTableHeadRight">Axum   </th><th class="markdownTableHeadRight">Gin   </th><th class="markdownTableHeadRight">Spring Boot    </th></tr>
@@ -234,7 +234,7 @@ Performance, including where it loses</h2>
 <tr class="markdownTableRowOdd">
 <td class="markdownTableBodyNone">Context switches   </td><td class="markdownTableBodyRight"><b>123,365</b>   </td><td class="markdownTableBodyRight">1,244,131   </td><td class="markdownTableBodyRight">155,742   </td><td class="markdownTableBodyRight">244,680   </td><td class="markdownTableBodyRight">310,205   </td><td class="markdownTableBodyRight">277,009   </td></tr>
 </table>
-<p>In this run the reactor is within runner variance of Actix on throughput (~2% apart) with fewer context switches, and the Classic pool answers the median request in about half of Axum's time and has the lowest p99. <b>Actix and Axum have the tighter extreme tail (P99.999) and the smaller memory footprint</b>; closing the tail gap is open work. The benchmark section below is regenerated by CI (<code>Latency</code> in that summary line is <code>wrk</code> mean latency), so it shows the most recent run, which may be newer than this table. Methodology and fairness settings are in <a class="el" href="d6/d42/md_docs_2webserver-benchmark.html">docs/webserver-benchmark.md</a>.</p>
+<p>In this run the reactor is within runner variance of Actix on throughput (~2% apart) with fewer context switches, and the Classic pool answers the median request in about half of Axum's time and has the lowest p99. <b>Actix and Axum have the tighter extreme tail (P99.999) and the smaller memory footprint</b>; closing the tail gap is open work. The benchmark section below is regenerated by CI (<code>Latency</code> in that summary line is <code>wrk</code> mean latency), so it shows the most recent run, which may be newer than this table.</p>
 <h3><a class="anchor" id="autotoc_md8"></a>
 Two server modes</h3>
 <p>The mode is one environment variable; pick per workload.</p>
@@ -244,7 +244,7 @@ Two server modes</h3>
 </ul>
 <h3><a class="anchor" id="autotoc_md9"></a>
 Holding a million connections</h3>
-<p>Measured on one 12-core machine (Ryzen 5 5600X, 62 GB, Linux 6.12, loopback):</p>
+<p>Measured on one 12-core machine (Ryzen 5 5600X, 62 GB, Linux 6.12, loopback); commands and kernel prerequisites to reproduce each run are in <a class="el" href="d0/d49/md_docs_2performance_2https-c100k.html">docs/performance/https-c100k.md</a> and <a class="el" href="db/d4d/md_docs_2c1m-file-limits.html">docs/c1m-file-limits.md</a>:</p>
 <table class="markdownTable">
 <tr class="markdownTableHead">
 <th class="markdownTableHeadNone">Run   </th><th class="markdownTableHeadNone">Result   </th><th class="markdownTableHeadNone">Server memory    </th></tr>
@@ -257,7 +257,7 @@ Holding a million connections</h3>
 <tr class="markdownTableRowEven">
 <td class="markdownTableBodyNone">C1M over TLS HTTP/1.1 and HTTP/2 via <a href="https://github.com/gg582/fly.board#scalability-benchmark">fly.board</a>   </td><td class="markdownTableBodyNone">1,000,000 / 1,000,000 held and served, zero failures   </td><td class="markdownTableBodyNone">19.9 GB / 30.1 GB PSS   </td></tr>
 </table>
-<p>The HTTPS ramp is handshake-bound (~2,900 full P-256 handshakes/s, so ~340 s to open 1M connections). Kernel prerequisites, the client tooling fixes the runs needed, and the per-run details are in <a class="el" href="d0/d49/md_docs_2performance_2https-c100k.html">docs/performance/https-c100k.md</a> and <a class="el" href="db/d4d/md_docs_2c1m-file-limits.html">docs/c1m-file-limits.md</a>.</p>
+<p>The HTTPS ramp is handshake-bound (~2,900 full P-256 handshakes/s, so ~340 s to open 1M connections).</p>
 <p>On the async path, established HTTP/1.1 TLS connections are served on the C1M reactor by default (<code>CWIST_HTTPS_REACTOR=1</code>). TLS handshakes and HTTP/2 requests continue to use HTTPS pool threads; setting <code>CWIST_HTTPS_REACTOR=0</code> restores pool-based HTTP/1.1 handling. A handler that writes faster than the socket drains waits inside the reactor thread (bounded by <code>CWIST_HTTP_TIMEOUT_MS</code>). Idle cleartext keep-alive connections are closed by a per-worker sweep timer once they wait longer than <code>CWIST_HTTP_KEEP_ALIVE_TIMEOUT</code> (default 15 s), counted in <code>cwist_http_idle_reaped_total</code>.</p>
 <h2><a class="anchor" id="autotoc_md10"></a>
 Why C, when Axum and Gin exist?</h2>

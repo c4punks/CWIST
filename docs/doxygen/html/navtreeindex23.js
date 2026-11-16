@@ -1,5 +1,13 @@
 var NAVTREEINDEX23 =
 {
+"df/dd0/structcwist__proxy__config.html#affdde68fa29ae9cb9b8d21e63b538654":[95,0,80,6],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html":[87],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md860":[87,0],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md861":[87,1],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md862":[87,2],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md863":[87,3],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md864":[87,4],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md865":[87,5],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md866":[87,6],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md867":[87,7],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md868":[87,7,0],
@@ -117,8 +125,8 @@ var NAVTREEINDEX23 =
 "dir_fd06e4bf241e37eebda02ebf3082c3eb.html":[96,0,2,3,0],
 "dir_fd94c5c8b4925c340f10cd382b3978ca.html":[96,0,1,0,0,9],
 "files.html":[96,0],
-"functions.html":[95,2,0],
 "functions.html":[95,2,0,0],
+"functions.html":[95,2,0],
 "functions_a.html":[95,2,0,1],
 "functions_b.html":[95,2,0,2],
 "functions_c.html":[95,2,0,3],
@@ -142,8 +150,8 @@ var NAVTREEINDEX23 =
 "functions_t.html":[95,2,0,20],
 "functions_u.html":[95,2,0,21],
 "functions_v.html":[95,2,0,22],
-"functions_vars.html":[95,2,2],
 "functions_vars.html":[95,2,2,0],
+"functions_vars.html":[95,2,2],
 "functions_vars_b.html":[95,2,2,1],
 "functions_vars_c.html":[95,2,2,2],
 "functions_vars_d.html":[95,2,2,3],
@@ -241,13 +249,5 @@ var NAVTREEINDEX23 =
 "globals_type_j.html":[96,1,3,7],
 "globals_type_n.html":[96,1,3,8],
 "globals_type_o.html":[96,1,3,9],
-"globals_type_p.html":[96,1,3,10],
-"globals_type_q.html":[96,1,3,11],
-"globals_type_r.html":[96,1,3,12],
-"globals_type_s.html":[96,1,3,13],
-"globals_type_w.html":[96,1,3,14],
-"globals_u.html":[96,1,0,20],
-"globals_vars.html":[96,1,2],
-"globals_w.html":[96,1,0,21],
-"index.html":[]
+"globals_type_p.html":[96,1,3,10]
 };

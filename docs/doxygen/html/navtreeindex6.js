@@ -1,5 +1,11 @@
 var NAVTREEINDEX6 =
 {
+"d4/d54/grpc__client_8c.html#a0d97f8840021aac0328be920e4f1893e":[96,0,2,2,2,2,11],
+"d4/d54/grpc__client_8c.html#a1a84af38980e798c265d83158c2d059f":[96,0,2,2,2,2,18],
+"d4/d54/grpc__client_8c.html#a2e0132bb80fa44e2fa88ada51cf1ee77":[96,0,2,2,2,2,7],
+"d4/d54/grpc__client_8c.html#a3024ccd4a9af5109d24e6c57565d74a1":[96,0,2,2,2,2,0],
+"d4/d54/grpc__client_8c.html#a3b7e98d05bbe50b693b4f9dfd00d142d":[96,0,2,2,2,2,38],
+"d4/d54/grpc__client_8c.html#a4a065a339c04b8e001af34ce80b3824a":[96,0,2,2,2,2,35],
 "d4/d54/grpc__client_8c.html#a4b7aa04f11824c9865930345c714794b":[96,0,2,2,2,2,39],
 "d4/d54/grpc__client_8c.html#a4d8d9d4880c667d8f8cb8143bc859ad0":[96,0,2,2,2,2,31],
 "d4/d54/grpc__client_8c.html#a4f7f02c9675cdcd2fc1264364f6bc19c":[96,0,2,2,2,2,10],
@@ -243,11 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d08/buffer_8h.html#ab7a4189776df265a20a2cb76c23d3806":[96,0,2,0,10,0,1],
 "d5/d08/buffer_8h_source.html":[96,0,2,0,10,0],
 "d5/d08/md_docs_2ko_2runtime-config.html":[68],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md702":[68,0],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md703":[68,1],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md704":[68,2],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md705":[68,3],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md706":[68,4],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md707":[68,5],
-"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md708":[68,6]
+"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md702":[68,0]
 };
