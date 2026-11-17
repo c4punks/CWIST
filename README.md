@@ -310,6 +310,24 @@ The formula builds from the release source tarball
 `libcwist.a`, public headers, the `cwist` CLI, and `cwist.pc` pkg-config
 metadata under the Homebrew prefix.
 
+### Nix
+
+Nix users on NixOS, Linux, or macOS can run or build CWIST using the in-tree derivation or flake:
+
+```sh
+# Run the cwist CLI directly
+nix run github:c4punks/CWIST
+
+# Drop into a development shell with all build dependencies
+nix develop github:c4punks/CWIST
+```
+
+Or add the derivation from `packaging/nix/package.nix` to your NixOS configuration or `flake.nix` `buildInputs`:
+
+```nix
+cwist = pkgs.callPackage ./packaging/nix/package.nix { };
+```
+
 ## Platform support
 
 CWIST builds on Linux, macOS, and BSD. On Linux the reactor uses `io_uring`
