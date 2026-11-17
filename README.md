@@ -121,7 +121,9 @@ settings are in [docs/webserver-benchmark.md](docs/webserver-benchmark.md);
 the raw numbers for every run are in
 [benchmarks/webserver.json](benchmarks/webserver.json).
 
-**Current CI snapshot (2026-11-17, 4 vCPU Intel Xeon 6975P-C).** Each branch
+**[Current CI snapshot](https://github.com/c4punks/CWIST/actions/runs/43985202645)**
+(2026-11-17, commit `5db33fbdf`, 4 vCPU Intel Xeon 6975P-C,
+[download `webserver-result` artifact](https://github.com/c4punks/CWIST/actions/runs/43985202645)). Each branch
 uses the final entry in its own benchmark history, repeated in
 [Latest benchmark run](#latest-benchmark-run). The profile is
 `wrk -t12 -c400 -d10s` after a discarded 10-second warmup:
