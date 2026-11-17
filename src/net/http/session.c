@@ -401,7 +401,9 @@ void cwist_session_app_destroy(cwist_app *app) {
 /**
  * @brief Create a session for a request, loading data from the signed
  * session cookie if present and valid. If the app has no secret yet, one
- * is generated. The session is stored in req->session.
+ * is generated. The session is stored in req->session. Repeated calls for
+ * the same app return the existing session; another app's session is not
+ * replaced.
  * @param app Application holding session configuration.
  * @param req Request to attach the session to.
  * @param res Response used for cookie parsing context.
@@ -413,6 +415,10 @@ cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
                                      cwist_http_response *res) {
     if (!app || !req || !res) return NULL;
     if (!app->session_secret && cwist_app_use_session(app, NULL) != 0) return NULL;
+    if (req->session) {
+        cwist_session_t *existing = (cwist_session_t *)req->session;
+        return existing->app == app ? existing : NULL;
+    }
 
     cwist_session_t *session = cwist_alloc(sizeof(*session));
     if (!session) return NULL;

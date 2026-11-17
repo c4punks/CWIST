@@ -119,7 +119,7 @@ static void test_session_create_and_commit(void) {
     app->use_ssl = true;
     cwist_http_response *secure_res = cwist_http_response_create();
     cwist_session_t *secure_session = cwist_session_start(app, req, secure_res);
-    assert(secure_session != NULL);
+    assert(secure_session == session);
     assert(cwist_session_set(secure_session, "user_id", "42") == 0);
     assert(cwist_session_commit(secure_session, secure_res) == 0);
     assert(header_contains(secure_res->headers, "Set-Cookie", "Secure"));

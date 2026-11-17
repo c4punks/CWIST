@@ -46,7 +46,9 @@ void cwist_app_set_session_max_age(cwist_app *app, int seconds);
  * @brief Load or create a session for the current request.
  *
  * Usually called automatically by the session middleware. Handlers can call
- * this if they need session access without the middleware.
+ * this if they need session access without the middleware. Repeated calls for
+ * the same app and request return the existing session. A request that already
+ * belongs to another app returns NULL without replacing that session.
  */
 cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
                                      cwist_http_response *res);
