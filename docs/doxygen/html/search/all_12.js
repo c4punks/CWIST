@@ -26,7 +26,7 @@ var searchData=
   ['get_5fcpu_5fcores_23',['get_cpu_cores',['../d9/dab/net_2http_2http_8h.html#a2393019be867d510503593429e2049de',1,'get_cpu_cores(void):&#160;http.c'],['../dd/d43/http_8c.html#a2393019be867d510503593429e2049de',1,'get_cpu_cores(void):&#160;http.c']]],
   ['get_5foptimal_5fthread_5fcount_24',['get_optimal_thread_count',['../d9/dab/net_2http_2http_8h.html#a8bc51aa11f3b08db86b8e617786b2b9f',1,'get_optimal_thread_count(void):&#160;http.c'],['../dd/d43/http_8c.html#a8bc51aa11f3b08db86b8e617786b2b9f',1,'get_optimal_thread_count(void):&#160;http.c']]],
   ['get_5fsize_25',['get_size',['../d5/ddc/structcwist__sstring.html#ab07dd4ec3ba6f33f00b038dc5012c802',1,'cwist_sstring']]],
-  ['getting_20started_26',['1. Getting started',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md805',1,'']]],
+  ['getting_20started_26',['1. Getting started',['..//home/yjlee/cwist/docs/README.md#autotoc_md805',1,'']]],
   ['gin_20exist_27',['Why C, when Axum and Gin exist?',['../index.html#autotoc_md10',1,'']]],
   ['gin_20go_28',['gin go',['../d6/d42/md_docs_2webserver-benchmark.html#autotoc_md925',1,'Gin (Go)'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md760',1,'Gin (Go)']]],
   ['global_20toggle_29',['1. cwist_full_gc(bool) — the global toggle',['../d9/dd1/md_docs_2GC.html#autotoc_md334',1,'']]],
@@ -86,7 +86,7 @@ var searchData=
   ['grpc_5fqnode_83',['grpc_qnode',['../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d',1,'grpc.c']]],
   ['grpc_5froute_5fview_84',['grpc_route_view',['../d9/dba/grpc_8c.html#a2832d700232e75b80ecf8501c8d3a878',1,'grpc.c']]],
   ['grpc_5froutes_85',['grpc_routes',['../dc/da0/structcwist__app.html#afc9fa598fee9f0a01b9f94883436918c',1,'cwist_app']]],
-  ['guides_86',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md806',1,'']]],
+  ['guides_86',['2. Task-oriented guides',['..//home/yjlee/cwist/docs/README.md#autotoc_md806',1,'']]],
   ['gusuryak_209차_20쌍_87',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md706',1,'']]],
   ['gusuryak_20order_209_20pair_88',['3. Historical table: the Gusuryak order-9 pair',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md832',1,'']]]
 ];

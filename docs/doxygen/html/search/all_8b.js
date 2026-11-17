@@ -4,7 +4,7 @@ var searchData=
   ['실제로_20하는_20일_1',['지금 런타임이 실제로 하는 일',['../d7/dab/md_docs_2ko_2fixed-cache-status.html#autotoc_md647',1,'']]],
   ['실행하기_2',['다시 실행하기',['../da/dcd/md_docs_2ko_2deployment_2release-assets.html#autotoc_md617',1,'']]],
   ['실행_3',['실행',['../dd/dd4/md_docs_2ko_2durable-queue-gate.html#autotoc_md632',1,'로컬 실행'],['../d8/d7e/md_docs_2ko_2webserver-benchmark.html#autotoc_md757',1,'튜닝된 저지연 실행']]],
-  ['실행_20가능한_20예제_4',['4. 실행 가능한 예제',['..//home/runner/work/CWIST/CWIST/docs/ko/README.md#autotoc_md681',1,'']]],
+  ['실행_20가능한_20예제_4',['4. 실행 가능한 예제',['..//home/yjlee/cwist/docs/ko/README.md#autotoc_md681',1,'']]],
   ['실행_20가능한_20예제_3a_20service_20worker_20앱_5',['실행 가능한 예제: Service Worker 앱',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md563',1,'']]],
   ['실험적_6',['라이브 메시지 런타임(실험적)',['../d2/daa/md_docs_2ko_2api_2livemsg.html',1,'']]]
 ];
