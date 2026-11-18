@@ -86,6 +86,21 @@ static void test_sstring_self_alias(void) {
     const char *alias = s->data;
     assert(ok(cwist_sstring_append_len(s, alias, 3)));
     assert(strcmp(s->data, "abcabc") == 0);
+
+    /* Self-assignment alias test (Issue #799) */
+    char *owned2 = cwist_alloc(4);
+    assert(owned2 != NULL);
+    memcpy(owned2, "abc", 4);
+    assert(ok(cwist_sstring_adopt_len(s, owned2, 3)));
+    assert(ok(cwist_sstring_assign_len(s, s->data, 3)));
+    assert(strcmp(s->data, "abc") == 0);
+    assert(s->size == 3);
+
+    /* Self-assignment from an interior alias */
+    assert(ok(cwist_sstring_assign_len(s, s->data + 1, 2)));
+    assert(strcmp(s->data, "bc") == 0);
+    assert(s->size == 2);
+
     cwist_sstring_destroy(s);
 }
 
