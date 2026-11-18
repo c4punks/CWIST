@@ -78,6 +78,8 @@ static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t pre
     return grown + lead;
 }
 
+static bool sstring_aliases(const cwist_sstring *str, const char *p);
+
 /**
  * @brief Replace the string contents with an arbitrary byte range.
  * @param str Target string object.
@@ -89,6 +91,21 @@ cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, siz
     if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
+    }
+    if (data && len > 0 && sstring_aliases(str, data)) {
+        char *copy = (char *)cwist_alloc(len + 1);
+        if (!copy) {
+            cwist_error_t err = make_error(CWIST_ERR_JSON);
+            err.error.err_json = cJSON_CreateObject();
+            cJSON_AddStringToObject(err.error.err_json, "err",
+                                    "cannot assign string: memory is full");
+            return err;
+        }
+        memcpy(copy, data, len);
+        copy[len] = '\0';
+        cwist_error_t err = cwist_sstring_assign_len(str, copy, len);
+        cwist_free(copy);
         return err;
     }
 
@@ -201,8 +218,6 @@ cwist_error_t cwist_sstring_adopt_region(cwist_sstring *str, char *base, size_t 
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
-
-static bool sstring_aliases(const cwist_sstring *str, const char *p);
 
 /**
  * @brief Append an arbitrary byte range to the end of the string.
