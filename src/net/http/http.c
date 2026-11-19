@@ -27,6 +27,7 @@
 #include <ttak/priority/scheduler.h>
 #include "simd_parser.h"
 #include "async_internal.h"
+#include "cond_clock.h"
 #include "http_live.h"
 #include "sockopts.h"
 
@@ -418,7 +419,11 @@ static pthread_mutex_t g_live_lock = PTHREAD_MUTEX_INITIALIZER;
 static http_live_conn_t *g_live_head;
 static _Atomic bool g_draining = false;
 static pthread_mutex_t g_drain_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t g_drain_cond = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t g_drain_cond;
+static pthread_once_t g_drain_cond_once = PTHREAD_ONCE_INIT;
+static void http_drain_cond_init(void) {
+    cwist_cond_init_clock(&g_drain_cond);
+}
 #endif
 static _Atomic long g_live_count;
 static __thread http_live_conn_t *t_live_conn;
@@ -505,13 +510,14 @@ static void http_live_drain(void) {
     return;
 #else
     if (atomic_load_explicit(&g_live_count, memory_order_acquire) == 0) return;
+    pthread_once(&g_drain_cond_once, http_drain_cond_init);
 
     pthread_mutex_lock(&g_drain_lock);
     atomic_store_explicit(&g_draining, true, memory_order_release);
     http_live_kick(SHUT_RD, true);
 
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    clock_gettime(cwist_cond_clockid(), &ts);
     ts.tv_sec += g_cwist_drain_timeout_sec;
 
     while (atomic_load_explicit(&g_live_count, memory_order_acquire) > 0) {
@@ -534,7 +540,7 @@ static void http_live_drain(void) {
     /* Wait for handlers stuck in route code before tearing down the app. */
     long waited_sec = 0;
     while ((left = atomic_load_explicit(&g_live_count, memory_order_acquire)) > 0) {
-        clock_gettime(CLOCK_REALTIME, &ts);
+        clock_gettime(cwist_cond_clockid(), &ts);
         ts.tv_sec += 5;
         int rc = pthread_cond_timedwait(&g_drain_cond, &g_drain_lock, &ts);
         if (rc == ETIMEDOUT &&
@@ -586,7 +592,7 @@ static void *http_dynamic_worker_loop(void) {
                 rc = pthread_cond_wait(&g_dyn_pool.cond, &g_dyn_pool.lock);
             } else {
                 struct timespec ts;
-                clock_gettime(CLOCK_REALTIME, &ts);
+                clock_gettime(cwist_cond_clockid(), &ts);
                 ts.tv_sec += ms / 1000;
                 ts.tv_nsec += (ms % 1000) * 1000000L;
                 if (ts.tv_nsec >= 1000000000L) {
@@ -757,7 +763,7 @@ int cwist_http_pool_init_mode(bool use_c1m) {
          * lock/cond alive for them; keep using those. */
         if (!g_dyn_pool.primitives_live) {
             pthread_mutex_init(&g_dyn_pool.lock, NULL);
-            pthread_cond_init(&g_dyn_pool.cond, NULL);
+            cwist_cond_init_clock(&g_dyn_pool.cond);
             g_dyn_pool.primitives_live = true;
         }
 

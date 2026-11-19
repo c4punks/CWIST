@@ -28,6 +28,7 @@
 #include <cwist/net/http/http2_flow_control.h>
 #include <cwist/net/http/async.h>
 #include "async_internal.h"
+#include "cond_clock.h"
 #include "h2_wire.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
@@ -540,7 +541,7 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     hc->hpack_capacity = CWIST_HTTP2_HEADER_TABLE_SIZE;
     hc->out_mu_init = (pthread_mutex_init(&hc->out_mu, NULL) == 0);
     hc->fc_mu_init = (pthread_mutex_init(&hc->fc_mu, NULL) == 0);
-    if (hc->fc_mu_init && pthread_cond_init(&hc->fc_cond, NULL) != 0) {
+    if (hc->fc_mu_init && cwist_cond_init_clock(&hc->fc_cond) != 0) {
         pthread_mutex_destroy(&hc->fc_mu);
         hc->fc_mu_init = false;
     }
@@ -1287,7 +1288,7 @@ static int h2_fc_wait_credit(h2_conn *hc, h2_stream *s) {
         }
         if (h2_now_ms() - hc->last_activity >= (uint64_t)h2_idle_timeout_ms()) break;
         struct timespec ts;
-        clock_gettime(CLOCK_REALTIME, &ts);
+        clock_gettime(cwist_cond_clockid(), &ts);
         ts.tv_nsec += 100000000L; /* 100ms recheck: covers pacing-token refill */
         if (ts.tv_nsec >= 1000000000L) {
             ts.tv_sec++;
