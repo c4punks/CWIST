@@ -189,6 +189,41 @@ int main(void) {
     assert(query_count == 7);
     cwist_sstring_destroy(out);
 
+    out = NULL;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet greet }\"}", &out).error.err_i16 == 0);
+    const char *first = strstr(out->data, "\"greet\":");
+    assert(first != NULL && strstr(first + 1, "\"greet\":") == NULL);
+    cwist_sstring_destroy(out);
+
+    out = NULL;
+    assert(cwist_graphql_execute(
+               schema, "{\"query\":\"{ greet(name: \\\"}\\\") { child } other: greet }\"}", &out)
+                   .error.err_i16 == 0);
+    assert(strstr(out->data, "Selection set cannot be applied to a scalar value"));
+    assert(strstr(out->data, "\"other\":\"hello world\""));
+    cwist_sstring_destroy(out);
+
+    out = NULL;
+    assert(cwist_graphql_execute(
+               schema, "{\"query\":\"mutation { createUser(name: \\\"bob\\\") { id name } }\"}",
+               &out)
+                   .error.err_i16 == 0);
+    assert(strstr(out->data, "\"id\":42"));
+    assert(strstr(out->data, "\"name\":\"bob\""));
+    cwist_sstring_destroy(out);
+
+    out = NULL;
+    assert(cwist_graphql_execute(
+               schema,
+               "{\"query\":\"mutation { createUser(name: \\\"bob\\\") { id } createUser(name: \\\"bob\\\") { name } }\"}",
+               &out)
+                   .error.err_i16 == 0);
+    assert(strstr(out->data, "\"id\":42"));
+    assert(strstr(out->data, "\"name\":\"bob\""));
+    const char *create = strstr(out->data, "\"createUser\":");
+    assert(create != NULL && strstr(create + 1, "\"createUser\":") == NULL);
+    cwist_sstring_destroy(out);
+
     cwist_graphql_schema_destroy(schema);
     puts("All GraphQL advanced tests passed successfully.");
     return 0;

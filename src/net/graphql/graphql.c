@@ -456,23 +456,64 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
     return p;
 }
 
+/** Advance past a selection set without treating braces in strings as structure. */
+static const char *skip_selection_set(const char *p) {
+    unsigned int depth = 0;
+    bool in_string = false;
+    bool escaped = false;
+    while (*p) {
+        if (in_string) {
+            if (escaped)
+                escaped = false;
+            else if (*p == '\\')
+                escaped = true;
+            else if (*p == '"')
+                in_string = false;
+        } else if (*p == '"') {
+            in_string = true;
+        } else if (*p == '{') {
+            depth++;
+        } else if (*p == '}' && --depth == 0) {
+            return p + 1;
+        }
+        p++;
+    }
+    return p;
+}
+
+static void gql_add_or_merge(cJSON *parent, const char *key, cJSON *value) {
+    cJSON *existing = cJSON_GetObjectItem(parent, key);
+    if (!existing) {
+        cJSON_AddItemToObject(parent, key, value);
+        return;
+    }
+    if (cJSON_IsObject(existing) && cJSON_IsObject(value)) {
+        cJSON *child = value->child;
+        while (child) {
+            cJSON *next = child->next;
+            cJSON_DetachItemViaPointer(value, child);
+            gql_add_or_merge(existing, child->string, child);
+            child = next;
+        }
+        cJSON_Delete(value);
+    } else {
+        if (!value->string) value->string = cwist_strdup(key);
+        if (!value->string) {
+            cJSON_Delete(value);
+            return;
+        }
+        cJSON_ReplaceItemViaPointer(parent, existing, value);
+    }
+}
+
 /**
- * @brief Parse and execute field selections recursively.
- * @details Each selected field is resolved through @p schema_fields and its
- *          value added to @p parent_data. Recursion depth and field count are
- *          bounded by CWIST_GRAPHQL_MAX_DEPTH / CWIST_GRAPHQL_MAX_FIELDS, and
- *          unknown fields are reported in @p errors.
- * @param p Cursor positioned at '{'.
- * @param schema_fields Field list used to resolve selections.
- * @param variables Optional cJSON object of variable values.
- * @param parent_data cJSON object receiving resolved field values.
- * @param errors cJSON array receiving error entries.
- * @param depth Current recursion depth (1 for the root selection set).
- * @return Advanced cursor past the closing '}'.
+ * Parse and execute field selections recursively. parent_value is the object
+ * returned by the parent resolver, or NULL at the operation root.
  */
 static const char *parse_selection_set(const char *p, graphql_field_t *schema_fields,
                                        const cJSON *variables, cJSON *parent_data, cJSON *errors,
-                                       unsigned int depth, bool validate_only) {
+                                       const cJSON *parent_value, unsigned int depth,
+                                       bool validate_only) {
     if (depth > CWIST_GRAPHQL_MAX_DEPTH) {
         gql_add_error(errors, "Query selection depth exceeds maximum allowed");
         return p;
@@ -545,8 +586,9 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
 
         cJSON *val = NULL;
         graphql_field_t *f = gql_lookup(schema_fields, field_name);
+        bool parent_has_field = parent_value && cJSON_HasObjectItem(parent_value, field_name);
         if (validate_only) {
-            if (!f) {
+            if (!f && !parent_has_field && !parent_value) {
                 size_t err_len = strlen(field_name) + 32;
                 char *err_buf = cwist_alloc(err_len);
                 if (err_buf) {
@@ -556,6 +598,8 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
                 }
             }
             val = cJSON_CreateObject();
+        } else if (!f && parent_has_field) {
+            val = cJSON_Duplicate(cJSON_GetObjectItem(parent_value, field_name), true);
         } else if (!f) {
             size_t err_len = strlen(field_name) + 32;
             char *err_buf = cwist_alloc(err_len);
@@ -574,26 +618,15 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
         p = skip_ws_comments(p);
         if (*p == '{') {
             if (cJSON_IsObject(val)) {
-                p = parse_selection_set(p, schema_fields, variables, val, errors, depth + 1,
+                p = parse_selection_set(p, schema_fields, variables, val, errors, val, depth + 1,
                                         validate_only);
             } else {
-                int brace_count = 0;
-                while (*p) {
-                    if (*p == '{')
-                        brace_count++;
-                    else if (*p == '}') {
-                        brace_count--;
-                        if (brace_count == 0) {
-                            p++;
-                            break;
-                        }
-                    }
-                    p++;
-                }
+                gql_add_error(errors, "Selection set cannot be applied to a scalar value");
+                p = skip_selection_set(p);
             }
         }
 
-        if (val) cJSON_AddItemToObject(parent_data, output_key, val);
+        if (val) gql_add_or_merge(parent_data, output_key, val);
         cwist_free(token1);
         cwist_free(field_name);
         cwist_free(output_key);
@@ -669,11 +702,11 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
                 gql_add_error(errors, "Internal memory error validating query");
             } else {
                 const char *end =
-                    parse_selection_set(p, target_schema, variables, validated, errors, 1, true);
+                    parse_selection_set(p, target_schema, variables, validated, errors, NULL, 1, true);
                 end = skip_ws_comments(end);
                 if (*end) gql_add_error(errors, "Unexpected trailing content after operation");
                 if (cJSON_GetArraySize(errors) == 0)
-                    (void)parse_selection_set(p, target_schema, variables, data, errors, 1, false);
+                    (void)parse_selection_set(p, target_schema, variables, data, errors, NULL, 1, false);
                 cJSON_Delete(validated);
             }
         }
