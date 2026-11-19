@@ -8,7 +8,8 @@
  * - `<prefix>s`   stream; entries carry `type` + `payload` fields
  * - `<prefix>a`   hash: entry id -> delivery count (visibility-timeout
  *                 redeliveries increment it; ack/nack/dead-letter remove it)
- * - `<prefix>delay` zset: nacked jobs parked until their due time; the blob
+ * - `<prefix>delay` zset: nacked jobs parked until their due time; each member
+ *                 is [entry_id | blob] to keep identical jobs distinct. The blob
  *                 is [type_len:4BE][attempts:4BE][type][payload]
  * - `<prefix>dead`  list: dead-lettered blobs
  *
@@ -53,7 +54,7 @@ static const char *JQ_NACK_SCRIPT = "local ok = redis.call('XACK', KEYS[1], KEYS
                                     "  redis.call('RPUSH', KEYS[3], ARGV[4])\n"
                                     "  return 2\n"
                                     "end\n"
-                                    "redis.call('ZADD', KEYS[4], ARGV[5], ARGV[4])\n"
+                                    "redis.call('ZADD', KEYS[4], ARGV[5], ARGV[1] .. '|' .. ARGV[4])\n"
                                     "return 1\n";
 
 /* Moves due delayed blobs back onto the stream. The attempts hash is
@@ -61,7 +62,9 @@ static const char *JQ_NACK_SCRIPT = "local ok = redis.call('XACK', KEYS[1], KEYS
 static const char *JQ_REAP_SCRIPT =
     "local items = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', ARGV[1], "
     "'LIMIT', 0, 128)\n"
-    "for _, blob in ipairs(items) do\n"
+    "for _, item in ipairs(items) do\n"
+    "  local sep = string.find(item, '|', 1, true)\n"
+    "  local blob = sep and string.sub(item, sep + 1) or item\n"
     "  local tl = string.byte(blob,1)*16777216 + string.byte(blob,2)*65536 + "
     "string.byte(blob,3)*256 + string.byte(blob,4)\n"
     "  local at = string.byte(blob,5)*16777216 + string.byte(blob,6)*65536 + "
@@ -69,7 +72,7 @@ static const char *JQ_REAP_SCRIPT =
     "  local id = redis.call('XADD', KEYS[2], '*', 'type', "
     "string.sub(blob, 9, 8 + tl), 'payload', string.sub(blob, 9 + tl))\n"
     "  redis.call('HSET', KEYS[3], id, at - 1)\n"
-    "  redis.call('ZREM', KEYS[1], blob)\n"
+    "  redis.call('ZREM', KEYS[1], item)\n"
     "end\n"
     "return #items\n";
 
