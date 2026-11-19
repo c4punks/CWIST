@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (818) ==
+== functions (819) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -362,6 +362,7 @@ cwist_http_client_enable_altsvc
 cwist_http_client_request
 cwist_http_client_set_altsvc_db
 cwist_http_client_set_ca_bundle
+cwist_http_client_set_file_root
 cwist_http_client_set_follow_redirects
 cwist_http_client_set_timeout_ms
 cwist_http_coalesce_append
@@ -824,7 +825,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (819) ==
+== function signatures (820) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1183,6 +1184,7 @@ cwist_http_client_enable_altsvc: void (cwist_http_client *, int)
 cwist_http_client_request: cwist_error_t (cwist_http_client *, const char *, cwist_http_method_t, cwist_http_header_node *, const char *, size_t, cwist_http_response **)
 cwist_http_client_set_altsvc_db: void (cwist_http_client *, const char *)
 cwist_http_client_set_ca_bundle: void (cwist_http_client *, const char *)
+cwist_http_client_set_file_root: int (cwist_http_client *, const char *)
 cwist_http_client_set_follow_redirects: void (cwist_http_client *, int)
 cwist_http_client_set_timeout_ms: void (cwist_http_client *, int)
 cwist_http_coalesce_append: int (cwist_http_async_conn_t *, const void *, size_t)
