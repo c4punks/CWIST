@@ -4,10 +4,12 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/http/session.h>
+#include <cwist/net/http/async.h>
 #include "../../core/utils/number_internal.h"
 #include <cwist/net/http/cookie.h>
 #include <cwist/core/mem/alloc.h>
 #include "async_gc.h"
+#include "async_internal.h"
 #include <cjson/cJSON.h>
 #include <cwist/sys/platform.h>
 #ifdef CWIST_BAREMETAL
@@ -748,6 +750,14 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
 
 /* Middleware ------------------------------------------------------------- */
 
+static void cwist_session_complete(cwist_async *a, void *ctx) {
+    (void)ctx;
+    cwist_http_request *req = cwist_async_request(a);
+    if (req && req->session) {
+        cwist_session_commit(req->session, cwist_async_final_response(a));
+    }
+}
+
 /**
  * @brief Middleware handler: start a session for the request, run the next
  * handler, then commit the session back to the response. Skips session
@@ -765,6 +775,10 @@ static void cwist_mw_session_handler(cwist_http_request *req, cwist_http_respons
     }
     cwist_session_start(app, req, res);
     next(req, res);
+    if (cwist_async_res_deferred(res)) {
+        cwist_async_add_completion_hook(res->async, cwist_session_complete, NULL);
+        return;
+    }
     if (req->session) {
         cwist_session_commit(req->session, res);
     }

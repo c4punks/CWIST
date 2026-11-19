@@ -97,6 +97,10 @@ typedef struct cwist_http_carry {
  * and retries instead of waiting on requests that were dropped.
  */
 void cwist_async_set_carry(struct cwist_async *a, const char *bytes, size_t len);
+cwist_http_request *cwist_async_request(struct cwist_async *a);
+cwist_http_response *cwist_async_final_response(struct cwist_async *a);
+bool cwist_async_add_completion_hook(struct cwist_async *a,
+                                     void (*fn)(struct cwist_async *, void *), void *ctx);
 
 /** Classic pool handler that first serves a cwist_http_carry (app.c); takes ownership of @p ctx. */
 void cwist_app_http_handler_resume(int client_fd, void *ctx);

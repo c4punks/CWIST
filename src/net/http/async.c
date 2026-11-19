@@ -53,6 +53,12 @@ enum {
     CWIST_ASYNC_NOKEEP = 1u << 3,    /* The winner refused keep-alive (abort). */
 };
 
+typedef struct cwist_async_completion_hook {
+    void (*fn)(struct cwist_async *, void *);
+    void *ctx;
+    struct cwist_async_completion_hook *next;
+} cwist_async_completion_hook;
+
 struct cwist_async {
     _Atomic size_t refs;          /* Completion plus retained producers/timers. */
     _Atomic unsigned st;          /* CWIST_ASYNC_* bits; see the file header. */
@@ -84,8 +90,31 @@ struct cwist_async {
     uint32_t h2_stream_id;
     struct cwist_h3_async_queue *h3_queue; /* Engine queue on the HTTP/3 path. */
     struct cwist_h3_pending *h3_pending;   /* Stream token on the HTTP/3 path. */
+    cwist_async_completion_hook *hooks;
     cwist_reactor_post_t post;
 };
+
+cwist_http_request *cwist_async_request(cwist_async *a) {
+    return a ? a->req : NULL;
+}
+
+cwist_http_response *cwist_async_final_response(cwist_async *a) {
+    return a ? (a->final_res ? a->final_res : a->res) : NULL;
+}
+
+bool cwist_async_add_completion_hook(cwist_async *a, void (*fn)(cwist_async *, void *), void *ctx) {
+    if (!a || !fn) return false;
+    cwist_async_completion_hook *hook = cwist_alloc(sizeof(*hook));
+    if (!hook) return false;
+    hook->fn = fn;
+    hook->ctx = ctx;
+    hook->next = NULL;
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(hook);
+    cwist_async_completion_hook **tail = &a->hooks;
+    while (*tail) tail = &(*tail)->next;
+    *tail = hook;
+    return true;
+}
 
 static void cwist_async_reactor_complete(void *ctx);
 static void cwist_async_deliver(cwist_async *a);
@@ -224,6 +253,11 @@ void cwist_async_release(cwist_async *a) {
         cwist_async_forget_handle(a);
         free(a->carry);
         cwist_free(a->r_block);
+        while (a->hooks) {
+            cwist_async_completion_hook *next = a->hooks->next;
+            cwist_free(a->hooks);
+            a->hooks = next;
+        }
 #ifdef CWIST_HTTP3
         /* A handle released without completing (cannot happen through the
          * public API, which always completes once) still drops its refs. */
@@ -430,11 +464,24 @@ static void cwist_async_reactor_complete(void *ctx) {
     cwist_async_complete((cwist_async *)ctx);
 }
 
+static void cwist_async_run_hooks(cwist_async *a) {
+    cwist_async_completion_hook *hook = a->hooks;
+    a->hooks = NULL;
+    while (hook) {
+        cwist_async_completion_hook *next = hook->next;
+        hook->fn(a, hook->ctx);
+        cwist_free(hook);
+        hook = next;
+    }
+}
+
 /* Send the completed exchange: post it to the owning reactor, or finish
  * inline on the classic/TLS/orphaned paths. Runs exactly once, on whichever
  * of the producer and the dispatch ack arrived second. */
 static void cwist_async_deliver(cwist_async *a) {
     cwist_async_apply_result(a);
+    cwist_async_run_hooks(a);
+    cwist_http_async_disown_response(a->final_res);
     if (a->reactor) {
         if (cwist_http_reactor_post_live(a->reactor, a->reactor_gen, &a->post)) return;
         /* The pool that owned the reactor has been destroyed (the server

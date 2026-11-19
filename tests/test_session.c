@@ -3,6 +3,9 @@
 #include <cwist/net/http/session.h>
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/cookie.h>
+#include <cwist/net/http/async.h>
+#include <cwist/core/mem/gc.h>
+#include "../src/net/http/async_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -284,35 +287,6 @@ static void test_session_invalid_signature(void) {
     printf("[session] invalid signature rejected OK\n");
 }
 
-static void test_session_secret_reconfiguration(void) {
-    cwist_app *app = cwist_app_create();
-    assert(cwist_app_use_session(app, "initial-secret-12345") == 0);
-    assert(app->session_secret != NULL);
-    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
-
-    /* Self-aliasing reconfiguration with exact pointer (Issue #767) */
-    assert(cwist_app_use_session(app, app->session_secret) == 0);
-    assert(app->session_secret != NULL);
-    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
-
-    /* Self-aliasing reconfiguration with interior pointer */
-    assert(cwist_app_use_session(app, app->session_secret + 8) == 0);
-    assert(app->session_secret != NULL);
-    assert(strcmp(app->session_secret, "secret-12345") == 0);
-
-    /* Reconfiguration with a new distinct secret */
-    assert(cwist_app_use_session(app, "replacement-secret") == 0);
-    assert(strcmp(app->session_secret, "replacement-secret") == 0);
-
-    /* Reconfiguration generating a random secret */
-    assert(cwist_app_use_session(app, NULL) == 0);
-    assert(app->session_secret != NULL);
-    assert(strlen(app->session_secret) > 0);
-
-    cwist_app_destroy(app);
-    printf("[session] secret reconfiguration OK\n");
-}
-
 static void test_session_repeated_commit_revokes_every_cookie(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
@@ -361,7 +335,71 @@ static void test_session_repeated_commit_revokes_every_cookie(void) {
     puts("[session] repeated commits revoke every cookie OK");
 }
 
+static void test_session_secret_reconfiguration(void) {
+    cwist_app *app = cwist_app_create();
+    assert(cwist_app_use_session(app, "initial-secret-12345") == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
+
+    /* Self-aliasing reconfiguration with exact pointer (Issue #767) */
+    assert(cwist_app_use_session(app, app->session_secret) == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
+
+    /* Self-aliasing reconfiguration with interior pointer */
+    assert(cwist_app_use_session(app, app->session_secret + 8) == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "secret-12345") == 0);
+
+    /* Reconfiguration with a new distinct secret */
+    assert(cwist_app_use_session(app, "replacement-secret") == 0);
+    assert(strcmp(app->session_secret, "replacement-secret") == 0);
+
+    /* Reconfiguration generating a random secret */
+    assert(cwist_app_use_session(app, NULL) == 0);
+    assert(app->session_secret != NULL);
+    assert(strlen(app->session_secret) > 0);
+
+    cwist_app_destroy(app);
+    printf("[session] secret reconfiguration OK\n");
+}
+
+static void deferred_next(cwist_http_request *req, cwist_http_response *res) {
+    cwist_async_defer(req, res);
+}
+
+static char deferred_cookie[4096];
+
+static void capture_deferred_cookie(cwist_async *a, void *ctx) {
+    (void)ctx;
+    cwist_http_response *res = cwist_async_final_response(a);
+    const char *cookie = cwist_http_header_get(res->headers, "Set-Cookie");
+    snprintf(deferred_cookie, sizeof(deferred_cookie), "%s", cookie ? cookie : "");
+}
+
+static void test_session_deferred_commit(void) {
+    cwist_app *app = cwist_app_create();
+    assert(cwist_app_use_session(app, "deferred-session-secret") == 0);
+    cwist_middleware_func mw = cwist_mw_session(app);
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    req->app = app;
+    cwist_full_gc(true);
+    mw(req, res, deferred_next);
+    cwist_async *a = res->async;
+    assert(a != NULL);
+    assert(cwist_async_add_completion_hook(a, capture_deferred_cookie, NULL));
+    cwist_async_dispatch_ack(a);
+    cwist_http_response *final_res = cwist_http_response_create();
+    assert(final_res != NULL);
+    assert(cwist_async_respond_with(a, final_res));
+    cwist_full_gc(false);
+    assert(deferred_cookie[0] != '\0');
+    cwist_app_destroy(app);
+}
+
 int main(void) {
+    test_session_deferred_commit();
     test_session_repeated_commit_revokes_every_cookie();
     test_session_create_and_commit();
     test_session_round_trip();
