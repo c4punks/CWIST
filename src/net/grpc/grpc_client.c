@@ -15,6 +15,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/grpc/grpc_client.h>
 #include <cwist/core/mem/alloc.h>
+#include "grpc_status_message.h"
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -802,8 +803,7 @@ static void grpc_client_on_header(void *ctx, const char *name, const char *value
         hc->call->status_seen = 1;
     } else if (strcmp(name, "grpc-message") == 0) {
         cwist_free(hc->call->status_message);
-        hc->call->status_message = cwist_alloc(strlen(value) + 1);
-        if (hc->call->status_message) strcpy(hc->call->status_message, value);
+        hc->call->status_message = cwist_grpc_status_message_decode(value);
     } else if (strcmp(name, "grpc-retry-pushback-ms") == 0) {
         /* gRFC A6 pushback: ASCII signed 32-bit; negative or unparseable
          * means the server asks the client not to retry at all. */

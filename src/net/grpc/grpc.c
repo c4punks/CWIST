@@ -8,6 +8,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/core/mem/alloc.h>
 #include "../../sys/app/app_route_internal.h"
+#include "grpc_status_message.h"
 #include <ctype.h>
 #include <limits.h>
 #include <pthread.h>
@@ -850,7 +851,11 @@ void cwist_grpc_set_response(cwist_http_response *res, cwist_grpc_status_t statu
     snprintf(status_buf, sizeof(status_buf), "%d", (int)status);
     cwist_http_header_add(&res->headers, "grpc-status", status_buf);
     if (message) {
-        cwist_http_header_add(&res->headers, "grpc-message", message);
+        char *encoded = cwist_grpc_status_message_encode(message);
+        if (encoded) {
+            cwist_http_header_add(&res->headers, "grpc-message", encoded);
+            cwist_free(encoded);
+        }
     }
 
     uint8_t *frame = NULL;
@@ -1005,7 +1010,11 @@ void cwist_grpc_stream_close(cwist_grpc_stream *stream, cwist_grpc_status_t stat
     snprintf(status_buf, sizeof(status_buf), "%d", (int)status);
     cwist_http_header_add(&stream->res->headers, "grpc-status", status_buf);
     if (message) {
-        cwist_http_header_add(&stream->res->headers, "grpc-message", message);
+        char *encoded = cwist_grpc_status_message_encode(message);
+        if (encoded) {
+            cwist_http_header_add(&stream->res->headers, "grpc-message", encoded);
+            cwist_free(encoded);
+        }
     }
 }
 
@@ -1724,6 +1733,7 @@ static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_s
     char pushback_buf[20];
     if (session->stream.retry_pushback_set)
         snprintf(pushback_buf, sizeof(pushback_buf), "%d", (int)session->stream.retry_pushback_ms);
+    char *encoded_message = message ? cwist_grpc_status_message_encode(message) : NULL;
     pthread_mutex_lock(&session->wmu);
     if (session->h2s && !__atomic_load_n(&session->trailers_sent, __ATOMIC_ACQUIRE)) {
         if (!session->headers_sent && status != CWIST_GRPC_OK) {
@@ -1735,7 +1745,8 @@ static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_s
             hdrs[count++] = (cwist_http2_header){"content-type", "application/grpc"};
             hdrs[count++] = (cwist_http2_header){"grpc-accept-encoding", "gzip, identity"};
             hdrs[count++] = (cwist_http2_header){"grpc-status", status_buf};
-            if (message) hdrs[count++] = (cwist_http2_header){"grpc-message", message};
+            if (encoded_message)
+                hdrs[count++] = (cwist_http2_header){"grpc-message", encoded_message};
             if (session->stream.retry_pushback_set)
                 hdrs[count++] = (cwist_http2_header){"grpc-retry-pushback-ms", pushback_buf};
             if (cwist_http2_stream_send_headers(session->h2s, 200, hdrs, count, 1) == 0)
@@ -1747,9 +1758,9 @@ static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_s
             pairs[count].name = "grpc-status";
             pairs[count].value = status_buf;
             count++;
-            if (message) {
+            if (encoded_message) {
                 pairs[count].name = "grpc-message";
-                pairs[count].value = message;
+                pairs[count].value = encoded_message;
                 count++;
             }
             if (session->stream.retry_pushback_set) {
@@ -1765,6 +1776,7 @@ static void grpc_session_send_trailers(cwist_grpc_session *session, cwist_grpc_s
         }
     }
     pthread_mutex_unlock(&session->wmu);
+    cwist_free(encoded_message);
 }
 
 /** @brief write_frame hook: emit a framed message as an HTTP/2 DATA frame.
