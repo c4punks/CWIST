@@ -32,6 +32,10 @@ cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
     (void)fd;
     return NULL;
 }
+cwist_sstring *cwist_http_request_client_ip(const cwist_http_request *req) {
+    (void)req;
+    return NULL;
+}
 const char *cwist_http_method_to_string(cwist_http_method_t m) {
     (void)m;
     return "GET";

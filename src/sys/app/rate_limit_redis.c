@@ -37,25 +37,6 @@ static const char rate_script[] = "local n=redis.call('INCR',KEYS[1]);"
                                   "if n==1 or redis.call('PTTL',KEYS[1])<0 then "
                                   "redis.call('PEXPIRE',KEYS[1],60000);end;return n";
 
-static bool peer_ip(int fd, char ip[INET6_ADDRSTRLEN]) {
-    struct sockaddr_storage peer = {0};
-    socklen_t size = sizeof(peer);
-    if (getpeername(fd, (struct sockaddr *)&peer, &size) != 0) return false;
-    if (peer.ss_family == AF_INET && size >= sizeof(struct sockaddr_in)) {
-        return inet_ntop(AF_INET, &((struct sockaddr_in *)&peer)->sin_addr, ip, INET6_ADDRSTRLEN) !=
-               NULL;
-    }
-    if (peer.ss_family == AF_INET6 && size >= sizeof(struct sockaddr_in6)) {
-        struct in6_addr *addr = &((struct sockaddr_in6 *)&peer)->sin6_addr;
-        if (IN6_IS_ADDR_V4MAPPED(addr)) {
-            return inet_ntop(AF_INET, (const unsigned char *)addr + 12, ip, INET6_ADDRSTRLEN) !=
-                   NULL;
-        }
-        return inet_ntop(AF_INET6, addr, ip, INET6_ADDRSTRLEN) != NULL;
-    }
-    return false;
-}
-
 static void backend_failure(const redis_rate_cfg *cfg, cwist_http_request *req,
                             cwist_http_response *res, cwist_handler_func next, int code) {
     size_t slot = (size_t)(cfg - rate_cfgs);
@@ -78,10 +59,15 @@ static void redis_rate_handler(size_t slot, cwist_http_request *req, cwist_http_
                                cwist_handler_func next) {
     const redis_rate_cfg *cfg = &rate_cfgs[slot];
     char ip[INET6_ADDRSTRLEN];
-    if (!peer_ip(req->client_fd, ip)) {
+    cwist_sstring *peer = cwist_http_request_client_ip(req);
+    if (!peer || !peer->data || peer->size >= sizeof(ip)) {
+        cwist_sstring_destroy(peer);
         backend_failure(cfg, req, res, next, -ENOTCONN);
         return;
     }
+    memcpy(ip, peer->data, peer->size);
+    ip[peer->size] = '\0';
+    cwist_sstring_destroy(peer);
     char key[REDIS_RATE_PREFIX_MAX + 1 + INET6_ADDRSTRLEN];
     snprintf(key, sizeof(key), "%s%s", cfg->prefix, ip);
     const void *args[] = {"EVAL", rate_script, "1", key};

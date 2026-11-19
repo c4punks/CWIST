@@ -41,6 +41,9 @@ static void http3_test_datagram(const void *data, size_t len, void *user_ctx) {
 static void http3_test_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     if (user_ctx) atomic_fetch_add((_Atomic int *)user_ctx, 1);
     g_handler_called = 1;
+    cwist_sstring *peer_ip = cwist_http_request_client_ip(req);
+    assert(peer_ip && strcmp(peer_ip->data, "127.0.0.1") == 0);
+    cwist_sstring_destroy(peer_ip);
     if (req->path && strcmp(req->path->data, "/over-limit") == 0) {
         cwist_http_response_set_body_ptr(res, g_large_response, sizeof(g_large_response));
     }
