@@ -9,13 +9,15 @@
 #include <cwist/net/http/http.h>
 
 /**
- * @brief Set a flash message on the request.
+ * @brief Set a flash message on the request and its active session, if any.
+ * Session-backed messages survive a redirect and are consumed on the next read.
  */
 void cwist_flash_set(cwist_http_request *req, const char *key, const char *value);
 
 /**
  * @brief Get a flash message and consume it (one-time read).
- * @return The message value, or NULL if not found.
+ * @return Newly owned message value that the caller must free with cwist_free(),
+ *         or NULL if not found.
  */
 const char *cwist_flash_get(cwist_http_request *req, const char *key);
 

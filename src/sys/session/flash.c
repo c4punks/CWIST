@@ -2,11 +2,54 @@
  * @brief flash.c interface.
  */
 #include <cwist/sys/session/flash.h>
+#include <cwist/net/http/session.h>
 #include <cwist/core/mem/alloc.h>
 #include <string.h>
 #include <stdio.h>
 
 #include <cwist/core/siphash/siphash.h>
+
+#define CWIST_FLASH_SESSION_KEY "_cwist_flash"
+
+static void flash_session_store(cwist_http_request *req) {
+    if (!req || !req->session || !req->flash) return;
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return;
+    for (size_t i = 0; i < req->flash->size; i++) {
+        for (cwist_query_bucket *b = req->flash->buckets[i]; b; b = b->next) {
+            if (!cJSON_AddStringToObject(root, b->key, b->value)) {
+                cJSON_Delete(root);
+                return;
+            }
+        }
+    }
+    char *json = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (!json) return;
+    cwist_session_set(req->session, CWIST_FLASH_SESSION_KEY, json);
+    cJSON_free(json);
+}
+
+static void flash_session_load(cwist_http_request *req, bool consume) {
+    if (!req || !req->session) return;
+    const char *json = cwist_session_get(req->session, CWIST_FLASH_SESSION_KEY);
+    if (!json) return;
+    cJSON *root = cJSON_Parse(json);
+    if (consume) cwist_session_delete(req->session, CWIST_FLASH_SESSION_KEY);
+    if (!root || !cJSON_IsObject(root)) {
+        cJSON_Delete(root);
+        return;
+    }
+    if (!req->flash) req->flash = cwist_query_map_create();
+    if (!req->flash) {
+        cJSON_Delete(root);
+        return;
+    }
+    for (cJSON *item = root->child; item; item = item->next) {
+        if (item->string && cJSON_IsString(item)) cwist_query_map_set(req->flash, item->string, item->valuestring);
+    }
+    cJSON_Delete(root);
+}
 
 /** @brief Store a flash entry on the request.
  *
@@ -24,6 +67,7 @@ void cwist_flash_set(cwist_http_request *req, const char *key, const char *value
     }
     if (req->flash) {
         cwist_query_map_set(req->flash, key, value ? value : "");
+        flash_session_store(req);
     }
 }
 
@@ -37,7 +81,9 @@ void cwist_flash_set(cwist_http_request *req, const char *key, const char *value
  *         key is not present. The pointer stays owned by the flash map.
  */
 const char *cwist_flash_peek(cwist_http_request *req, const char *key) {
-    if (!req || !key || !req->flash) return NULL;
+    if (!req || !key) return NULL;
+    flash_session_load(req, false);
+    if (!req->flash) return NULL;
     return cwist_query_map_get(req->flash, key);
 }
 
@@ -53,7 +99,9 @@ const char *cwist_flash_peek(cwist_http_request *req, const char *key) {
  *         req/key are NULL, the flash map is empty, or the key is missing.
  */
 const char *cwist_flash_get(cwist_http_request *req, const char *key) {
-    if (!req || !key || !req->flash || !req->flash->buckets || req->flash->size == 0) return NULL;
+    if (!req || !key) return NULL;
+    flash_session_load(req, true);
+    if (!req->flash || !req->flash->buckets || req->flash->size == 0) return NULL;
     uint64_t hash = siphash24(key, strlen(key), req->flash->seed);
     size_t idx = hash % req->flash->size;
 
@@ -86,7 +134,9 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
  *         allocation fails (in which case the flash map is left unchanged).
  */
 char *cwist_flash_pop_all_json(cwist_http_request *req) {
-    if (!req || !req->flash || !req->flash->buckets || req->flash->size == 0 ||
+    if (!req) return NULL;
+    flash_session_load(req, true);
+    if (!req->flash || !req->flash->buckets || req->flash->size == 0 ||
         req->flash->count == 0)
         return NULL;
     cJSON *root = cJSON_CreateObject();
