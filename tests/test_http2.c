@@ -931,12 +931,25 @@ static void test_http2_decoded_header_list_limit(void) {
     test_http2_stop_client(client, sv[1], tid);
 }
 
+typedef struct {
+    cwist_http_request *req;
+} test_http2_hook_stream;
+
 static void *test_http2_take_stream(void *conn_ctx, cwist_http_request *req,
                                     cwist_h2_stream *stream) {
     (void)conn_ctx;
-    (void)req;
     (void)stream;
-    return (void *)1;
+    test_http2_hook_stream *hook = malloc(sizeof(*hook));
+    assert(hook != NULL);
+    hook->req = req;
+    return hook;
+}
+
+static void test_http2_close_stream(void *conn_ctx, void *stream_ctx) {
+    (void)conn_ctx;
+    test_http2_hook_stream *hook = stream_ctx;
+    cwist_http_request_destroy(hook->req);
+    free(hook);
 }
 
 static int test_http2_fail_data(void *conn_ctx, void *stream_ctx, const unsigned char *data,
@@ -953,6 +966,7 @@ static void test_http2_hook_error_sends_reset(void) {
     cwist_http2_stream_hooks hooks = {0};
     hooks.on_headers = test_http2_take_stream;
     hooks.on_data = test_http2_fail_data;
+    hooks.on_close = test_http2_close_stream;
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
     test_http2_server_ctx server = {.fd = sv[0], .handler = http2_test_handler, .hooks = &hooks};
