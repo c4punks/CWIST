@@ -12,6 +12,9 @@
 #include <time.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#ifdef CWIST_TLS_MBEDTLS
+#include <mbedtls/base64.h>
+#endif
 #include <stdlib.h>
 
 static void test_sign_and_verify(void) {
@@ -312,7 +315,14 @@ static void test_input_shape_and_time_bounds(void) {
 }
 
 static void test_b64url(const unsigned char *input, size_t len, char *out) {
+#ifdef CWIST_TLS_MBEDTLS
+    size_t written;
+    assert(mbedtls_base64_encode((unsigned char *)out, 4 * ((len + 2) / 3) + 1, &written, input,
+                                 len) == 0);
+    out[written] = '\0';
+#else
     EVP_EncodeBlock((unsigned char *)out, input, (int)len);
+#endif
     for (char *p = out; *p; p++) {
         if (*p == '+') *p = '-';
         if (*p == '/') *p = '_';
