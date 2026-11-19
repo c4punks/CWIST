@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <math.h>
+#include <ctype.h>
 
 /* -------------------------------------------------------------------------
  * Internal helpers
@@ -33,13 +34,84 @@ static void bind_add_error(cwist_bind_result_t *r, const char *key, const char *
  * Looks for: local@domain.tld with sane length limits.
  */
 static bool is_email_like(const char *s, size_t len) {
-    if (!s || len < 5) return false;
-    const char *at = strchr(s, '@');
-    if (!at) return false;
-    if (at == s) return false;
-    const char *dot = strrchr(at, '.');
-    if (!dot || dot <= at + 1) return false;
-    if (dot + 1 == s + len) return false; /* trailing dot */
+    if (!s || len < 5 || len > 254) return false;
+    size_t at = len;
+    for (size_t i = 0; i < len; i++) {
+        if (s[i] == '@') {
+            if (at != len) return false;
+            at = i;
+        }
+    }
+    if (at == 0 || at >= len - 3 || at > 64) return false;
+
+    bool local_dot = false;
+    for (size_t i = 0; i < at; i++) {
+        unsigned char c = (unsigned char)s[i];
+        if (c == '.') {
+            if (i == 0 || local_dot) return false;
+            local_dot = true;
+        } else {
+            local_dot = false;
+            if (!(isalnum(c) || strchr("!#$%&'*+/=?^_`{|}~-", c))) return false;
+        }
+    }
+    if (local_dot) return false;
+
+    bool have_dot = false;
+    size_t label_start = at + 1;
+    for (size_t i = label_start; i <= len; i++) {
+        if (i != len && s[i] != '.') continue;
+        size_t label_len = i - label_start;
+        if (label_len == 0 || label_len > 63 || !isalnum((unsigned char)s[label_start]) ||
+            !isalnum((unsigned char)s[i - 1]))
+            return false;
+        for (size_t j = label_start + 1; j + 1 < i; j++) {
+            unsigned char c = (unsigned char)s[j];
+            if (!isalnum(c) && c != '-') return false;
+        }
+        if (i != len) have_dot = true;
+        label_start = i + 1;
+    }
+    return have_dot;
+}
+
+static bool utf8_length(const char *s, size_t len, size_t *count) {
+    size_t i = 0;
+    *count = 0;
+    while (i < len) {
+        unsigned char c = (unsigned char)s[i];
+        if (c < 0x80) {
+            i++;
+        } else {
+            size_t n;
+            uint32_t cp;
+            uint32_t min;
+            if (c >= 0xc2 && c <= 0xdf) {
+                n = 2;
+                cp = c & 0x1f;
+                min = 0x80;
+            } else if (c >= 0xe0 && c <= 0xef) {
+                n = 3;
+                cp = c & 0x0f;
+                min = 0x800;
+            } else if (c >= 0xf0 && c <= 0xf4) {
+                n = 4;
+                cp = c & 0x07;
+                min = 0x10000;
+            } else {
+                return false;
+            }
+            if (i + n > len) return false;
+            for (size_t j = 1; j < n; j++) {
+                unsigned char next = (unsigned char)s[i + j];
+                if ((next & 0xc0) != 0x80) return false;
+                cp = (cp << 6) | (next & 0x3f);
+            }
+            if (cp < min || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff)) return false;
+            i += n;
+        }
+        (*count)++;
+    }
     return true;
 }
 
@@ -61,23 +133,27 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
             }
             break;
 
-        case CWIST_BIND_RULE_MIN_LEN:
-            if (!value || len < rule->u.min_len) {
+        case CWIST_BIND_RULE_MIN_LEN: {
+            size_t char_len = 0;
+            if (!value || !utf8_length(value, len, &char_len) || char_len < rule->u.min_len) {
                 snprintf(buf, sizeof(buf), "%s: minimum length is %zu",
                          rule->error_message ? rule->error_message : "too short", rule->u.min_len);
                 bind_add_error(r, key, buf);
                 return false;
             }
             break;
+        }
 
-        case CWIST_BIND_RULE_MAX_LEN:
-            if (value && len > rule->u.max_len) {
+        case CWIST_BIND_RULE_MAX_LEN: {
+            size_t char_len = 0;
+            if (value && (!utf8_length(value, len, &char_len) || char_len > rule->u.max_len)) {
                 snprintf(buf, sizeof(buf), "%s: maximum length is %zu",
                          rule->error_message ? rule->error_message : "too long", rule->u.max_len);
                 bind_add_error(r, key, buf);
                 return false;
             }
             break;
+        }
 
         case CWIST_BIND_RULE_MIN_VAL: {
             long double v = 0.0L;
@@ -121,14 +197,15 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
                 return false;
             }
             regex_t re;
-            int rc = regcomp(&re, rule->u.pattern, REG_EXTENDED | REG_NOSUB);
+            int rc = regcomp(&re, rule->u.pattern, REG_EXTENDED);
             if (rc != 0) {
                 bind_add_error(r, key, "invalid regex pattern");
                 return false;
             }
-            rc = regexec(&re, value, 0, NULL, 0);
+            regmatch_t match;
+            rc = regexec(&re, value, 1, &match, 0);
             regfree(&re);
-            if (rc != 0) {
+            if (rc != 0 || match.rm_so != 0 || (size_t)match.rm_eo != len) {
                 snprintf(buf, sizeof(buf), "%s",
                          rule->error_message ? rule->error_message
                                              : "value does not match pattern");

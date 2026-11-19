@@ -32,12 +32,12 @@ extern "C" {
 /** @brief Supported validation constraint types. */
 typedef enum cwist_bind_rule_type {
     CWIST_BIND_RULE_REQUIRED,   ///< Field must be present and non-empty.
-    CWIST_BIND_RULE_MIN_LEN,    ///< Minimum string length.
-    CWIST_BIND_RULE_MAX_LEN,    ///< Maximum string length.
+    CWIST_BIND_RULE_MIN_LEN,    ///< Minimum UTF-8 code-point count.
+    CWIST_BIND_RULE_MAX_LEN,    ///< Maximum UTF-8 code-point count.
     CWIST_BIND_RULE_MIN_VAL,    ///< Minimum numeric value.
     CWIST_BIND_RULE_MAX_VAL,    ///< Maximum numeric value.
-    CWIST_BIND_RULE_REGEX,      ///< Must match POSIX extended regular expression.
-    CWIST_BIND_RULE_EMAIL,      ///< Must conform to RFC 5322 simplified email shape.
+    CWIST_BIND_RULE_REGEX,      ///< Must fully match a POSIX extended regular expression.
+    CWIST_BIND_RULE_EMAIL,      ///< Must conform to a practical ASCII email subset.
     CWIST_BIND_RULE_CUSTOM,     ///< User-supplied predicate.
 } cwist_bind_rule_type_t;
 
