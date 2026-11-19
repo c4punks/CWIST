@@ -109,6 +109,22 @@ static void assert_rendered(cwist_sstring *rendered, const char *expected) {
     cwist_sstring_destroy(rendered);
 }
 
+static void test_autoescape_filters(const cJSON *context) {
+    assert(cJSON_AddStringToObject(context, "html", "<script>alert(1)</script>") != NULL);
+    assert_rendered(cwist_template_render("{{ html }}", context),
+                    "&lt;script&gt;alert(1)&lt;/script&gt;");
+    assert_rendered(cwist_template_render("{{ html | safe }}", context),
+                    "<script>alert(1)</script>");
+    assert_rendered(cwist_template_render("{{ html | upper | e }}", context),
+                    "&lt;SCRIPT&gt;ALERT(1)&lt;/SCRIPT&gt;");
+    assert_rendered(cwist_template_render("{{ html | upper | safe }}", context),
+                    "<SCRIPT>ALERT(1)</SCRIPT>");
+    assert_rendered(cwist_template_render("{{ html | unknown }}", context),
+                    "&lt;script&gt;alert(1)&lt;/script&gt;");
+    assert_rendered(cwist_template_render("{{ html | e }}", context),
+                    "&lt;script&gt;alert(1)&lt;/script&gt;");
+}
+
 static void test_include_root(const cJSON *context) {
     char base[] = "/tmp/cwist-template-root-XXXXXX";
     assert(mkdtemp(base) != NULL);
@@ -228,6 +244,7 @@ int main(void) {
     assert(cJSON_AddItemToObject(context, "items", cJSON_CreateArray()));
     assert(cJSON_AddItemToArray(cJSON_GetObjectItem(context, "items"), cJSON_CreateNumber(1)));
     test_string_diagnostics(context);
+    test_autoescape_filters(context);
     test_include_root(context);
 
     cwist_sstring *rendered = cwist_template_render("Hello {{ name }}", context);

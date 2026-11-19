@@ -304,6 +304,47 @@ static cwist_sstring *apply_filter(const char *value, const char *filter) {
     return out;
 }
 
+static cwist_sstring *apply_filters(const char *value, char *filters) {
+    if (!value) return NULL;
+    cwist_sstring *current = cwist_sstring_create();
+    if (!current) return NULL;
+    cwist_sstring_append(current, value);
+
+    bool autoescape = true;
+    bool escaped = false;
+    char *saveptr = NULL;
+    char *filter = filters ? strtok_r(filters, "|", &saveptr) : NULL;
+    while (filter) {
+        while (isspace((unsigned char)*filter)) filter++;
+        char *end = filter + strlen(filter);
+        while (end > filter && isspace((unsigned char)end[-1])) *--end = '\0';
+        if (strcmp(filter, "safe") == 0 || strcmp(filter, "raw") == 0) {
+            autoescape = false;
+        } else if (*filter) {
+            cwist_sstring *next = apply_filter(current->data, filter);
+            if (!next) {
+                cwist_sstring_destroy(current);
+                return NULL;
+            }
+            cwist_sstring_destroy(current);
+            current = next;
+            escaped = strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0;
+        }
+        filter = strtok_r(NULL, "|", &saveptr);
+    }
+    if (autoescape && !escaped) {
+        cwist_sstring *next = cwist_sstring_create();
+        if (!next) {
+            cwist_sstring_destroy(current);
+            return NULL;
+        }
+        cwist_sstring_append_escaped(next, current->data);
+        cwist_sstring_destroy(current);
+        current = next;
+    }
+    return current;
+}
+
 /**
  * @brief Resolve a value from the current JSON context using dotted lookup syntax.
  * @param context Current object/array context used for template expansion.
@@ -425,14 +466,12 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 const cJSON *value = get_value_from_context(context, trimmed_var);
                 char num_str[64] = {0};
                 const char *raw = value ? json_scalar_text(value, num_str, sizeof(num_str)) : NULL;
-                if (raw && filter) {
-                    cwist_sstring *filtered = apply_filter(raw, filter);
+                if (raw) {
+                    cwist_sstring *filtered = apply_filters(raw, filter);
                     if (filtered) {
                         cwist_sstring_append(output, filtered->data);
                         cwist_sstring_destroy(filtered);
                     }
-                } else if (raw) {
-                    cwist_sstring_append(output, raw);
                 }
                 p += 2;
                 start = p;
