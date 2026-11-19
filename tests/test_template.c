@@ -249,6 +249,21 @@ int main(void) {
     assert(rendered != NULL && (!rendered->data || strcmp(rendered->data, "") == 0));
     cwist_sstring_destroy(rendered);
 
+    char long_text[1201], escaped_text[601];
+    memset(long_text, 'a', 1200);
+    memset(escaped_text, '<', 600);
+    long_text[1200] = escaped_text[600] = '\0';
+    assert(cJSON_AddStringToObject(context, "long_text", long_text) != NULL);
+    assert(cJSON_AddStringToObject(context, "escaped_text", escaped_text) != NULL);
+    rendered = cwist_template_render("{{ long_text|upper }}", context);
+    assert(rendered != NULL && rendered->size == 1200);
+    for (size_t i = 0; i < 1200; i++) assert(rendered->data[i] == 'A');
+    cwist_sstring_destroy(rendered);
+    rendered = cwist_template_render("{{ escaped_text|escape }}", context);
+    assert(rendered != NULL && rendered->size == 2400);
+    for (size_t i = 0; i < 2400; i++) assert(rendered->data[i] == "&lt;"[i % 4]);
+    cwist_sstring_destroy(rendered);
+
     char directory[] = "/tmp/cwist-template-XXXXXX";
     assert(mkdtemp(directory) != NULL);
     char partial[PATH_MAX];

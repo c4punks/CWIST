@@ -163,8 +163,6 @@
 1	src/net/http/http3_client.c:st->req_body = malloc(body_len);
 1	src/net/http/http3_client.c:st->req_path = strdup(path);
 1	src/net/http/http_client.c:char *tmp = realloc(body->data, new_cap);
-1	src/net/http/http_client.c:client->altsvc_db = path ? strdup(path) : NULL;
-1	src/net/http/http_client.c:client->ca_bundle = path ? strdup(path) : NULL;
 3	src/net/http/http_client.c:free(resp_body.data);
 1	src/net/http/session.c:free(raw);
 1	src/net/http/tls_chain.c:char *url = (char *)malloc((size_t)uri_len + 1);
@@ -203,6 +201,9 @@
 1	src/sys/app/compress.c:merged = (uint8_t *)malloc(total_in_len);
 1	src/sys/app/compress.c:uint8_t *encoded = (uint8_t *)malloc(encoded_size);
 2	src/sys/app/compress.c:z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
+1	src/sys/port/baremetal.c:buffer = malloc(capacity);
+1	src/sys/port/baremetal.c:char *next = realloc(buffer, grown);
+2	src/sys/port/baremetal.c:if (!*lineptr) free(buffer);
 1	src/sys/app/config.c:free(line);
 1	src/sys/metrics/metrics.c:char *buf = malloc(cap);
 1	src/sys/metrics/metrics.c:char *nb = realloc(buf, new_cap);

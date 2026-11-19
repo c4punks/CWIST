@@ -284,12 +284,91 @@ static void test_session_invalid_signature(void) {
     printf("[session] invalid signature rejected OK\n");
 }
 
+static void test_session_repeated_commit_revokes_every_cookie(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    assert(cwist_app_use_session(app, "stable-jti-secret") == 0);
+
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_session_t *session = cwist_session_start(app, req, res);
+    assert(session != NULL);
+    assert(cwist_session_set(session, "role", "admin") == 0);
+    assert(cwist_session_commit(session, res) == 0);
+    char first[4096];
+    session_cookie_value(res, first, sizeof(first));
+
+    assert(cwist_session_set(session, "role", "admin") == 0);
+    assert(cwist_session_commit(session, res) == 0);
+    char second[4096];
+    session_cookie_value(res, second, sizeof(second));
+
+    cwist_http_response *idle_res = cwist_http_response_create();
+    assert(cwist_session_commit(session, idle_res) == 0);
+    assert(cwist_http_header_get(idle_res->headers, "Set-Cookie") == NULL);
+    cwist_http_response_destroy(idle_res);
+
+    cwist_session_invalidate(session);
+    assert(cwist_session_commit(session, res) == 0);
+    const char *cookies[] = {first, second};
+    for (size_t i = 0; i < 2; i++) {
+        cwist_http_request *replayed = cwist_http_request_create();
+        cwist_http_response *replay_res = cwist_http_response_create();
+        session_set_cookie(replayed, cookies[i]);
+        cwist_session_t *loaded = cwist_session_start(app, replayed, replay_res);
+        assert(loaded != NULL);
+        assert(cwist_session_get(loaded, "role") == NULL);
+        cwist_session_destroy(loaded);
+        replayed->session = NULL;
+        cwist_http_response_destroy(replay_res);
+        cwist_http_request_destroy(replayed);
+    }
+
+    cwist_session_destroy(session);
+    req->session = NULL;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    cwist_app_destroy(app);
+    puts("[session] repeated commits revoke every cookie OK");
+}
+
+static void test_session_secret_reconfiguration(void) {
+    cwist_app *app = cwist_app_create();
+    assert(cwist_app_use_session(app, "initial-secret-12345") == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
+
+    /* Self-aliasing reconfiguration with exact pointer (Issue #767) */
+    assert(cwist_app_use_session(app, app->session_secret) == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
+
+    /* Self-aliasing reconfiguration with interior pointer */
+    assert(cwist_app_use_session(app, app->session_secret + 8) == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "secret-12345") == 0);
+
+    /* Reconfiguration with a new distinct secret */
+    assert(cwist_app_use_session(app, "replacement-secret") == 0);
+    assert(strcmp(app->session_secret, "replacement-secret") == 0);
+
+    /* Reconfiguration generating a random secret */
+    assert(cwist_app_use_session(app, NULL) == 0);
+    assert(app->session_secret != NULL);
+    assert(strlen(app->session_secret) > 0);
+
+    cwist_app_destroy(app);
+    printf("[session] secret reconfiguration OK\n");
+}
+
 int main(void) {
+    test_session_repeated_commit_revokes_every_cookie();
     test_session_create_and_commit();
     test_session_round_trip();
     test_session_large_round_trip();
     test_session_invalid_signature();
     test_session_expiry_and_revocation();
+    test_session_secret_reconfiguration();
     printf("All session tests passed.\n");
     return 0;
 }

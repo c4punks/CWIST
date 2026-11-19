@@ -15,6 +15,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/core/log.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 
 #ifndef MSG_NOSIGNAL
 #define MSG_NOSIGNAL 0
@@ -181,6 +182,7 @@ bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, 
         CWIST_LOG_ERROR("RDBMS mount: out of memory");
         return false;
     }
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(rt);
 
     rt->provider = provider;
     rt->port = port;

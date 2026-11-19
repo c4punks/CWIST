@@ -11,6 +11,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/shutdown.h>
 #include "../src/net/http/http_client.c"
+#include <assert.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -450,6 +451,51 @@ static void test_closed_port(cwist_http_client *client) {
     }
 }
 
+static void test_file_scheme(cwist_http_client *client) {
+    int before = g_failures;
+    char path[] = "cwist-http-file-XXXXXX";
+    int fd = mkstemp(path);
+    CHECK(fd >= 0, "mkstemp failed");
+    if (fd < 0) return;
+    const char payload[] = "file-body";
+    CHECK(write(fd, payload, sizeof(payload) - 1) == (ssize_t)(sizeof(payload) - 1),
+          "could not write file fixture");
+    close(fd);
+
+    char cwd[512];
+    assert(getcwd(cwd, sizeof(cwd)) != NULL);
+    char url[1024];
+    snprintf(url, sizeof(url), "file://%s/%s", cwd, path);
+    cwist_http_response *res = request(client, url, CWIST_HTTP_GET, NULL, 0);
+    if (res) {
+        CHECK(res->status_code == CWIST_HTTP_OK, "file GET: status %d", (int)res->status_code);
+        CHECK(body_equals(res, payload, sizeof(payload) - 1), "file GET: wrong body");
+        cwist_http_response_destroy(res);
+    }
+    res = request(client, url, CWIST_HTTP_HEAD, NULL, 0);
+    if (res) {
+        CHECK(res->status_code == CWIST_HTTP_OK && res->body && res->body->size == 0,
+              "file HEAD: expected an empty body");
+        cwist_http_response_destroy(res);
+    }
+
+    res = NULL;
+    cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_POST, NULL, "x", 1, &res);
+    CHECK(!cwist_error_is_ok(&err) && res == NULL, "file POST was not rejected");
+    cwist_error_dispose(&err);
+    err = cwist_http_client_request(client, "file://example.com/tmp/a", CWIST_HTTP_GET, NULL, NULL,
+                                    0, &res);
+    CHECK(!cwist_error_is_ok(&err) && res == NULL, "remote file authority was not rejected");
+    cwist_error_dispose(&err);
+    err = cwist_http_client_request(client, "gopher://example.com/", CWIST_HTTP_GET, NULL, NULL, 0,
+                                    &res);
+    CHECK(!cwist_error_is_ok(&err) && res == NULL, "non-HTTP protocol was not rejected");
+    cwist_error_dispose(&err);
+    if (res) cwist_http_response_destroy(res);
+    unlink(path);
+    report(before, "file scheme uses the Unix file adapter");
+}
+
 static void test_status_line_is_length_delimited(void) {
     int before = g_failures;
     char status[12];
@@ -489,6 +535,12 @@ int main(void) {
     CHECK(client != NULL, "cwist_http_client_create failed");
     if (client) {
         cwist_http_client_set_timeout_ms(client, 10000);
+        cwist_http_client_set_ca_bundle(client, "/dev/null");
+        cwist_http_client_set_ca_bundle(client, NULL);
+        cwist_http_client_enable_altsvc(client, 1);
+        cwist_http_client_set_altsvc_db(client, "alt-svc-cache.db");
+        cwist_http_client_set_altsvc_db(client, NULL);
+        cwist_http_client_enable_altsvc(client, 0);
         char base[64];
         snprintf(base, sizeof(base), "http://127.0.0.1:%d", port);
         test_get(client, base);
@@ -506,6 +558,7 @@ int main(void) {
 
     if (client) {
         test_closed_port(client);
+        test_file_scheme(client);
         cwist_http_client_destroy(client);
     }
 

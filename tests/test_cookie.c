@@ -52,6 +52,11 @@ static void test_cookie_decode(void) {
     int rc = cwist_cookie_decode("toolongstring", small, sizeof(small));
     assert(rc == -1);
 
+    /* Encoded NUL rejection (Issue #768) */
+    assert(cwist_cookie_decode("expected%00ignored", out, sizeof(out)) == -1);
+    assert(cwist_cookie_decode("%00", out, sizeof(out)) == -1);
+    assert(cwist_cookie_decode("prefix%00", out, sizeof(out)) == -1);
+
     printf("  Passed decode.\n");
 }
 
@@ -79,6 +84,10 @@ static void test_cookie_parse_and_get(void) {
     /* Empty name or missing cookies should return NULL */
     assert(cwist_cookie_get(map, "") == NULL);
     assert(cwist_cookie_get(map, "missing") == NULL);
+
+    /* Encoded NUL cookie value is rejected and not stored (Issue #768) */
+    cwist_cookie_parse(map, "evil=expected%00ignored");
+    assert(cwist_cookie_get(map, "evil") == NULL);
 
     cwist_query_map_destroy(map);
     printf("  Passed parse and get.\n");

@@ -278,6 +278,7 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
     }
 
     s->workers = (pthread_t *)cwist_alloc_array(worker_count, sizeof(pthread_t));
+    if (s->workers && cwist_full_gc_enabled()) cwist_gc_scope_disown(s->workers);
     if (!s->workers) {
         cwist_io_queue_destroy(s->queue);
         cwist_free(s);
@@ -427,8 +428,7 @@ size_t cwist_scheduler_pending_count(cwist_scheduler_t *s) {
  * @param drop_cb Destructor called once per cancelled job's arg; may be NULL.
  * @return        Number of jobs cancelled.
  */
-size_t cwist_scheduler_cancel_pending(cwist_scheduler_t *s,
-                                      cwist_scheduler_drop_cb drop_cb) {
+size_t cwist_scheduler_cancel_pending(cwist_scheduler_t *s, cwist_scheduler_drop_cb drop_cb) {
     if (!s) return 0;
 
     pthread_mutex_lock(&s->delayed_mtx);

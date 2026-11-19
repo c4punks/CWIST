@@ -7,6 +7,7 @@
 #include <cwist/sys/health/healthz.h>
 #include <cwist/net/http/http.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -174,7 +175,28 @@ void test_metrics_continuation_shed(void) {
     printf("  OK\n");
 }
 
+static void *registry_thread(void *arg) {
+    (void)arg;
+    return cwist_metrics_registry();
+}
+
+static void test_metrics_concurrent_registry(void) {
+    enum { THREADS = 16 };
+    pthread_t threads[THREADS];
+    cwist_metrics_registry_t *reg = cwist_metrics_registry();
+    assert(reg != NULL);
+    for (size_t i = 0; i < THREADS; i++) {
+        assert(pthread_create(&threads[i], NULL, registry_thread, NULL) == 0);
+    }
+    for (size_t i = 0; i < THREADS; i++) {
+        void *result = NULL;
+        assert(pthread_join(threads[i], &result) == 0);
+        assert(result == reg);
+    }
+}
+
 int main(void) {
+    test_metrics_concurrent_registry();
     test_metrics_counter();
     test_metrics_gauge();
     test_metrics_continuation_shed();

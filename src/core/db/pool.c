@@ -2,6 +2,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/core/db/pool.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -32,7 +33,8 @@ static cwist_error_t pool_error(void) {
 }
 
 /** @brief Pick the clock used for pool condition-variable deadlines.
- * @return @c CLOCK_REALTIME on BSD/macOS (no monotonic condvar support), otherwise @c CLOCK_MONOTONIC. */
+ * @return @c CLOCK_REALTIME on BSD/macOS (no monotonic condvar support), otherwise @c
+ * CLOCK_MONOTONIC. */
 static clockid_t pool_cond_clock(void) {
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
     return CLOCK_REALTIME;
@@ -100,6 +102,9 @@ cwist_db_pool_t *cwist_db_pool_create(const char *path, size_t max_conns) {
     pool->conns = cwist_alloc_array(max_conns, sizeof(*pool->conns));
     pool->idle_slots = cwist_alloc_array(max_conns, sizeof(*pool->idle_slots));
     pool->leased = cwist_alloc_array(max_conns, sizeof(*pool->leased));
+    if (pool->conns && cwist_full_gc_enabled()) cwist_gc_scope_disown(pool->conns);
+    if (pool->idle_slots && cwist_full_gc_enabled()) cwist_gc_scope_disown(pool->idle_slots);
+    if (pool->leased && cwist_full_gc_enabled()) cwist_gc_scope_disown(pool->leased);
     bool mutex_ready = false;
     bool cond_ready = false;
     if (!pool->path || !pool->open_path || !pool->conns || !pool->idle_slots || !pool->leased)
@@ -152,8 +157,8 @@ static cwist_db *pool_acquire_locked(cwist_db_pool_t *pool) {
 
 /** @brief Lease a pooled connection, blocking indefinitely until one is available.
  * @param pool Pool to lease from; must not be NULL.
- * @return Leased connection to pass to cwist_db_pool_release(), or NULL if the pool is NULL or closing.
- *         Thread-safe; the caller must not use the connection after releasing it. */
+ * @return Leased connection to pass to cwist_db_pool_release(), or NULL if the pool is NULL or
+ * closing. Thread-safe; the caller must not use the connection after releasing it. */
 cwist_db *cwist_db_pool_acquire(cwist_db_pool_t *pool) {
     if (!pool) return NULL;
     pthread_mutex_lock(&pool->mtx);
@@ -215,10 +220,10 @@ size_t cwist_db_pool_in_use(cwist_db_pool_t *pool) {
  * @param pool Pool to destroy; must not be NULL.
  * @param timeout_ms Wait limit in milliseconds, or -1 to wait indefinitely for all
  *                   connections to be released.
- * @retval true All connections were released and the pool (and every connection) was closed and freed.
- * @retval false The wait timed out with connections still leased; the pool is left alive and closing,
- *               so further acquires fail and the caller must retry the destroy.
- * Thread-safe. */
+ * @retval true All connections were released and the pool (and every connection) was closed and
+ * freed.
+ * @retval false The wait timed out with connections still leased; the pool is left alive and
+ * closing, so further acquires fail and the caller must retry the destroy. Thread-safe. */
 bool cwist_db_pool_destroy_timeout(cwist_db_pool_t *pool, int timeout_ms) {
     if (!pool || timeout_ms < -1) return false;
     pthread_mutex_lock(&pool->mtx);

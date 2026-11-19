@@ -366,6 +366,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http2_flow_control.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
+       src/net/http/http_client_file.c \
        src/net/proxy/proxy.c \
        src/net/proxy/transport.c \
        src/net/http/https.c \
@@ -1482,6 +1483,7 @@ TEST_TARGETS = test_worker_affinity \
                test_db_pool \
                test_db_memory \
                test_db_sync \
+               test_db_sync_deadline \
                test_sqlite_fts5 \
                test_redis \
                test_scheduler \
@@ -2566,9 +2568,13 @@ test_db_memory: $(LIB_NAME) tests/test_db_memory.c
 test_db_sync: $(LIB_NAME) tests/test_db_sync.c
 	$(CC) $(CFLAGS) -o test_db_sync tests/test_db_sync.c $(LIB_NAME) $(LIBS)
 	./test_db_sync
+
+test_db_sync_deadline: $(LIB_NAME) tests/test_db_sync_deadline.c
+	$(CC) $(CFLAGS) -o test_db_sync_deadline tests/test_db_sync_deadline.c $(LIB_NAME) $(LIBS)
+	./test_db_sync_deadline
 else
 # CWIST_DB=0: the module and its tests are compiled out.
-test_db_pool test_db_memory test_db_sync:
+test_db_pool test_db_memory test_db_sync test_db_sync_deadline:
 	@echo "CWIST_DB=0: skipping $@"
 endif
 

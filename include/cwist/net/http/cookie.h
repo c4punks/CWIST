@@ -35,7 +35,7 @@ char *cwist_cookie_encode(const char *value);
  * @param in  Encoded value.
  * @param out Output buffer.
  * @param out_len Size of output buffer.
- * @return Number of bytes written, or -1 on overflow.
+ * @return Number of bytes written, or -1 on overflow or encoded NUL.
  */
 int cwist_cookie_decode(const char *in, char *out, size_t out_len);
 
