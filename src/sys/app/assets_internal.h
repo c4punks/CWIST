@@ -17,6 +17,9 @@ typedef struct cwist_asset_match {
     bool immutable;
 } cwist_asset_match;
 
+/** Whether an If-None-Match list names an ETag (weak or strong) or is "*". */
+bool cwist_assets_etag_matches(const char *if_none_match, const char *etag);
+
 /** Resolve a GET/HEAD request path to a registered asset. */
 bool cwist_assets_match(cwist_app *app, const cwist_http_request *req, cwist_asset_match *out);
 
