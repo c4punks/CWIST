@@ -280,17 +280,14 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
     if (!a->have_state) {
         a->total = chunk->total;
         a->chunk_size = chunk->chunk_size;
-        /* The first packet may be the short final packet.  Allocate for the
-         * full layout and determine total_len only after seq == total is
-         * actually received; deriving it from arrival order was the source of
-         * false protocol errors on reordered HTTP/2/3-adjacent transports. */
+        /* The first packet may be the short final packet. Reserve no more than
+         * the configured ceiling and determine total_len only after seq == total
+         * arrives. Non-final chunks cannot make the real message shorter than
+         * their own end offset, so the same bounds check remains safe. */
         if ((size_t)chunk->total > SIZE_MAX / (size_t)chunk->chunk_size) return false;
-        a->data_cap = (size_t)chunk->total * chunk->chunk_size;
+        size_t full_cap = (size_t)chunk->total * chunk->chunk_size;
         size_t ceiling = a->max_data_len ? a->max_data_len : CWIST_SEQ_MAX_REASSEMBLED_SIZE;
-        if (a->data_cap > ceiling) {
-            a->data_cap = 0;
-            return false;
-        }
+        a->data_cap = full_cap < ceiling ? full_cap : ceiling;
         a->data = (uint8_t *)cwist_alloc(a->data_cap);
         a->received = (bool *)cwist_alloc_array(chunk->total, sizeof(bool));
         a->payload_lens = (uint16_t *)cwist_alloc_array(chunk->total, sizeof(uint16_t));
