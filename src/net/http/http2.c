@@ -522,9 +522,9 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     hc->peer_max_frame_size = CWIST_HTTP2_MAX_FRAME_SIZE;
     hc->peer_initial_window_size = 65535;
     /* Start at the RFC-default 65535 on the send side; the startup code
-     * bumps our receive credit to 2GB on the wire and mirrors that into
+     * bumps our receive credit to 16 MiB on the wire and mirrors that into
      * fc.receive_window. */
-    cwist_http2_flow_control_init(&hc->fc, 0, CWIST_HTTP2_MAX_WINDOW);
+    cwist_http2_flow_control_init(&hc->fc, 0, CWIST_HTTP2_MAX_RECEIVE_WINDOW);
     hc->fc.send_window = 65535;
     hc->cont_end_stream = false;
     hc->last_activity = h2_now_ms();
@@ -742,7 +742,7 @@ static h2_stream *h2_stream_find(h2_conn *hc, uint32_t stream_id) {
 
 /**
  * @brief Allocate and register a new stream on the connection.
- * Receive credit is seeded to the 2GB INITIAL_WINDOW_SIZE we advertise;
+ * Receive credit is seeded to the 16 MiB INITIAL_WINDOW_SIZE we advertise;
  * send credit starts at the peer's initial window.  Pushes the stream onto
  * the connection's list and bumps active_streams.
  * @param hc Connection to attach the stream to.
@@ -756,10 +756,10 @@ static h2_stream *h2_stream_create(h2_conn *hc, uint32_t stream_id) {
     memset(s, 0, sizeof(*s));
     s->stream_id = stream_id;
     s->hc = hc;
-    /* Receive credit matches the INITIAL_WINDOW_SIZE=2GB we advertise in
+    /* Receive credit matches the INITIAL_WINDOW_SIZE=16 MiB we advertise in
      * SETTINGS; send credit starts at the peer's initial window. */
-    cwist_http2_stream_flow_control_init(&s->fc, stream_id, CWIST_HTTP2_MAX_WINDOW,
-                                         CWIST_HTTP2_MAX_WINDOW);
+    cwist_http2_stream_flow_control_init(&s->fc, stream_id, CWIST_HTTP2_MAX_RECEIVE_WINDOW,
+                                         CWIST_HTTP2_MAX_RECEIVE_WINDOW);
     s->fc.send_window = hc->peer_initial_window_size;
     s->next = hc->streams;
     hc->streams = s;
@@ -1174,10 +1174,10 @@ static int h2_send_goaway(h2_conn *hc, uint32_t last_stream_id, uint32_t error_c
 static void h2_drain_peer_goaway(cwist_https_connection *conn) {
     if (!conn || conn->fd < 0) return;
     shutdown(conn->fd, SHUT_WR);
-    struct timeval timeout = {.tv_usec = 50000};
+    struct timeval timeout = {.tv_usec = 250000};
     setsockopt(conn->fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
     unsigned char buf[2048];
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 64; i++) {
         ssize_t n = recv(conn->fd, buf, sizeof(buf), 0);
         if (n == 0) break;
         if (n < 0 && errno != EINTR) break;
@@ -3597,7 +3597,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
     unsigned char settings[24] = {
         0x00, 0x01, 0x00, 0x00, 0x10, 0x00, // SETTINGS_HEADER_TABLE_SIZE = 4096 (CWIST_HTTP2_HEADER_TABLE_SIZE; HPACK dynamic table enabled)
         0x00, 0x03, 0x00, 0x00, 0x00, 0x64, // SETTINGS_MAX_CONCURRENT_STREAMS = 100 (CWIST_HTTP2_MAX_CONCURRENT_STREAMS)
-        0x00, 0x04, 0x7f, 0xff, 0xff, 0xff, // SETTINGS_INITIAL_WINDOW_SIZE = 2147483647 (2GB)
+        0x00, 0x04, 0x00, 0xff, 0xff, 0xff, // SETTINGS_INITIAL_WINDOW_SIZE = 16777215 (16 MiB)
         0x00, 0x06, 0x00, 0x01, 0x00, 0x00  // SETTINGS_MAX_HEADER_LIST_SIZE = 65536
     };
         // clang-format on
@@ -3609,9 +3609,9 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             return result;
         }
 
-        /* Upgrade connection flow control window to 2GB */
-        h2_send_window_update(hc, 0, 2147483647 - 65535);
-        hc->fc.receive_window = CWIST_HTTP2_MAX_WINDOW;
+        /* Upgrade connection flow control window to 16 MiB */
+        h2_send_window_update(hc, 0, CWIST_HTTP2_MAX_RECEIVE_WINDOW - 65535);
+        hc->fc.receive_window = CWIST_HTTP2_MAX_RECEIVE_WINDOW;
 
         /* Kick off RTT sampling for the adaptive flow control; the ACK arrives
          * in the main loop below.  Failure is non-fatal: pacing simply stays
