@@ -1,5 +1,6 @@
 var NAVTREEINDEX19 =
 {
+"dd/dec/net_2websocket_2websocket_8h.html#a972fc2f9a831e71fa91f87b96339fb1f":[63,0,1,0,2,7,0,16],
 "dd/dec/net_2websocket_2websocket_8h.html#ad0076021ccbab9a5990c269dca59df99":[63,0,1,0,2,7,0,9],
 "dd/dec/net_2websocket_2websocket_8h.html#adfa3c97f06abeb3ba1a0fe252b8e4eac":[63,0,1,0,2,7,0,8],
 "dd/dec/net_2websocket_2websocket_8h_source.html":[63,0,1,0,2,7,0],
@@ -248,6 +249,5 @@ var NAVTREEINDEX19 =
 "de/daf/http3_8c.html#aa80fe318a84397a0e364a3fdc854996d":[63,0,2,2,3,14,2],
 "de/daf/http3_8c.html#aaa33ab3d022975e27d5e9e3f22b2b385":[63,0,2,2,3,14,59],
 "de/daf/http3_8c.html#aac8d324c67e3535e01af26eebef182d7":[63,0,2,2,3,14,11],
-"de/daf/http3_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376":[63,0,2,2,3,14,12],
-"de/daf/http3_8c.html#ab3d036544ab8151674cbf65af2ada7d5":[63,0,2,2,3,14,40]
+"de/daf/http3_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376":[63,0,2,2,3,14,12]
 };

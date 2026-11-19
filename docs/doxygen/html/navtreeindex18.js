@@ -1,5 +1,6 @@
 var NAVTREEINDEX18 =
 {
+"dd/d4c/md_docs_2tutorial_2cwist__tutorial.html":[53],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md522":[53,0],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md523":[53,1],
 "dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md524":[53,2],
@@ -248,6 +249,5 @@ var NAVTREEINDEX18 =
 "dd/dec/net_2websocket_2websocket_8h.html#a8095ae87a6487e56281d92a11c419254ae9a1b08e8e2d749c8b22288bd1756606":[63,0,1,0,2,7,0,6,1],
 "dd/dec/net_2websocket_2websocket_8h.html#a81ea5930173790e2b2157c5c3693f641":[63,0,1,0,2,7,0,7],
 "dd/dec/net_2websocket_2websocket_8h.html#a84b014c343b059d06c899fd2b9285966":[63,0,1,0,2,7,0,12],
-"dd/dec/net_2websocket_2websocket_8h.html#a89fcb0410ea4c7aabc529702bfcdd6a1":[63,0,1,0,2,7,0,11],
-"dd/dec/net_2websocket_2websocket_8h.html#a972fc2f9a831e71fa91f87b96339fb1f":[63,0,1,0,2,7,0,16]
+"dd/dec/net_2websocket_2websocket_8h.html#a89fcb0410ea4c7aabc529702bfcdd6a1":[63,0,1,0,2,7,0,11]
 };

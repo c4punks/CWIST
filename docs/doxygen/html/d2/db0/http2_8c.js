@@ -19,6 +19,7 @@ var http2_8c =
     [ "CWIST_HTTP2_FRAME_HEADER_SIZE", "d2/db0/http2_8c.html#af947339ce7556b760b01c18b3699e50c", null ],
     [ "CWIST_HTTP2_FRAME_HEADERS", "d2/db0/http2_8c.html#a12d40e8a42a4e9e25539f4362d4ffdd7", null ],
     [ "CWIST_HTTP2_FRAME_PING", "d2/db0/http2_8c.html#ab6a882f3f0a002effe51c5c2dd034270", null ],
+    [ "CWIST_HTTP2_FRAME_PRIORITY", "d2/db0/http2_8c.html#aeecde2500151501630e3c3e817c25b35", null ],
     [ "CWIST_HTTP2_FRAME_PUSH_PROMISE", "d2/db0/http2_8c.html#a847b70bd26a80aa2bb31eaf62de115d2", null ],
     [ "CWIST_HTTP2_FRAME_RST_STREAM", "d2/db0/http2_8c.html#ac3886236599adf33c4dc3221025b5f59", null ],
     [ "CWIST_HTTP2_FRAME_SETTINGS", "d2/db0/http2_8c.html#a36a3069d816f0b3e2d642f387235bea6", null ],

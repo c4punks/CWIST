@@ -1,5 +1,6 @@
 var NAVTREEINDEX23 =
 {
+"globals_func.html":[63,1,1],
 "globals_func.html":[63,1,1,0],
 "globals_func_b.html":[63,1,1,1],
 "globals_func_c.html":[63,1,1,2],
