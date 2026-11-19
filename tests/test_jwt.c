@@ -10,8 +10,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <time.h>
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
+#include <cwist/core/crypto/sha256.h>
 #include <stdlib.h>
 
 static void test_sign_and_verify(void) {
@@ -312,13 +311,19 @@ static void test_input_shape_and_time_bounds(void) {
 }
 
 static void test_b64url(const unsigned char *input, size_t len, char *out) {
-    EVP_EncodeBlock((unsigned char *)out, input, (int)len);
-    for (char *p = out; *p; p++) {
-        if (*p == '+') *p = '-';
-        if (*p == '/') *p = '_';
+    static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    size_t pos = 0;
+    for (size_t i = 0; i < len; i += 3) {
+        size_t remaining = len - i;
+        uint32_t value = (uint32_t)input[i] << 16;
+        if (remaining > 1) value |= (uint32_t)input[i + 1] << 8;
+        if (remaining > 2) value |= input[i + 2];
+        out[pos++] = alphabet[(value >> 18) & 63];
+        out[pos++] = alphabet[(value >> 12) & 63];
+        if (remaining > 1) out[pos++] = alphabet[(value >> 6) & 63];
+        if (remaining > 2) out[pos++] = alphabet[value & 63];
     }
-    size_t out_len = strlen(out);
-    while (out_len && out[out_len - 1] == '=') out[--out_len] = '\0';
+    out[pos] = '\0';
 }
 
 static char *sign_test_token(const char *header, const char *payload, const char *secret) {
@@ -328,11 +333,10 @@ static char *sign_test_token(const char *header, const char *payload, const char
     char signing_input[1024];
     int input_len = snprintf(signing_input, sizeof(signing_input), "%s.%s", header64, payload64);
     assert(input_len > 0 && (size_t)input_len < sizeof(signing_input));
-    unsigned char signature[EVP_MAX_MD_SIZE];
-    unsigned int signature_len = 0;
-    assert(HMAC(EVP_sha256(), secret, (int)strlen(secret), (unsigned char *)signing_input,
-                (size_t)input_len, signature, &signature_len) != NULL);
-    test_b64url(signature, signature_len, signature64);
+    unsigned char signature[CWIST_SHA256_DIGEST_LEN];
+    assert(cwist_hmac_sha256((const uint8_t *)secret, strlen(secret),
+                             (const uint8_t *)signing_input, (size_t)input_len, signature));
+    test_b64url(signature, sizeof(signature), signature64);
     size_t token_len = strlen(signing_input) + strlen(signature64) + 2;
     char *token = malloc(token_len);
     assert(token != NULL);
