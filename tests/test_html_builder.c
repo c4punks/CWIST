@@ -117,7 +117,9 @@ void test_void_elements(void) {
 static void test_invalid_names(void) {
     assert(cwist_html_element_create("x onload=alert(1)") == NULL);
     assert(cwist_html_element_create("a><script>") == NULL);
-    assert(cwist_html_element_create("custom-element") != NULL);
+    cwist_html_element_t *custom = cwist_html_element_create("custom-element");
+    assert(custom != NULL);
+    cwist_html_element_destroy(custom);
     cwist_html_element_t *el = cwist_html_element_create("div");
     assert(el != NULL);
     cwist_html_element_add_attr(el, "x onload=alert(1)", "bad");
