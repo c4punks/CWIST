@@ -332,6 +332,35 @@ static void test_session_repeated_commit_revokes_every_cookie(void) {
     puts("[session] repeated commits revoke every cookie OK");
 }
 
+static void test_session_secret_reconfiguration(void) {
+    cwist_app *app = cwist_app_create();
+    assert(cwist_app_use_session(app, "initial-secret-12345") == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
+
+    /* Self-aliasing reconfiguration with exact pointer (Issue #767) */
+    assert(cwist_app_use_session(app, app->session_secret) == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "initial-secret-12345") == 0);
+
+    /* Self-aliasing reconfiguration with interior pointer */
+    assert(cwist_app_use_session(app, app->session_secret + 8) == 0);
+    assert(app->session_secret != NULL);
+    assert(strcmp(app->session_secret, "secret-12345") == 0);
+
+    /* Reconfiguration with a new distinct secret */
+    assert(cwist_app_use_session(app, "replacement-secret") == 0);
+    assert(strcmp(app->session_secret, "replacement-secret") == 0);
+
+    /* Reconfiguration generating a random secret */
+    assert(cwist_app_use_session(app, NULL) == 0);
+    assert(app->session_secret != NULL);
+    assert(strlen(app->session_secret) > 0);
+
+    cwist_app_destroy(app);
+    printf("[session] secret reconfiguration OK\n");
+}
+
 int main(void) {
     test_session_repeated_commit_revokes_every_cookie();
     test_session_create_and_commit();
@@ -339,6 +368,7 @@ int main(void) {
     test_session_large_round_trip();
     test_session_invalid_signature();
     test_session_expiry_and_revocation();
+    test_session_secret_reconfiguration();
     printf("All session tests passed.\n");
     return 0;
 }
