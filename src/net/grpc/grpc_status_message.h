@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
-static char *cwist_grpc_status_message_encode(const char *message) {
+static inline char *cwist_grpc_status_message_encode(const char *message) {
     if (!message) return NULL;
     static const char hex[] = "0123456789ABCDEF";
     size_t len = strlen(message);
@@ -28,7 +28,7 @@ static char *cwist_grpc_status_message_encode(const char *message) {
     return encoded;
 }
 
-static char *cwist_grpc_status_message_decode(const char *message) {
+static inline char *cwist_grpc_status_message_decode(const char *message) {
     if (!message) return NULL;
     size_t len = strlen(message);
     char *decoded = cwist_alloc(len + 1);
