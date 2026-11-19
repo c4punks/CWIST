@@ -27,18 +27,18 @@
 <area shape="poly" id="edge66_Node000009_Node000012" title=" " alt="" coords="1444,146,1429,183,1427,202,1431,220,1447,246,1468,267,1465,271,1443,249,1426,222,1422,202,1424,181,1439,144"/>
 <area shape="rect" id="Node000014" href="$d7/d67/net_2http_2https_8h.html" title="HTTPS/TLS wrapper interface." alt="" coords="2177,181,2339,221"/>
 <area shape="poly" id="edge14_Node000009_Node000014" title=" " alt="" coords="1553,122,2176,189,2176,194,1552,127"/>
-<area shape="rect" id="Node000036" href="$d6/db1/ech_8c.html" title="ech.c interface." alt="" coords="1941,629,2095,654"/>
-<area shape="poly" id="edge79_Node000009_Node000036" title=" " alt="" coords="1548,136,1584,154,1617,179,1659,225,1685,267,1698,315,1702,376,1702,466,1708,504,1726,535,1752,561,1786,582,1824,599,1864,612,1941,629,1940,634,1862,618,1822,604,1783,587,1749,565,1722,538,1703,505,1697,467,1697,376,1693,316,1680,269,1654,228,1614,183,1582,159,1545,141"/>
-<area shape="rect" id="Node000052" href="$d6/d18/pqc__layer_8c.html" title="Post&#45;Quantum Cryptography (PQC) TLS layer facade." alt="" coords="1889,541,2043,566"/>
-<area shape="poly" id="edge62_Node000009_Node000052" title=" " alt="" coords="1552,115,1650,121,1756,133,1851,151,1889,164,1916,179,1945,208,1961,239,1963,273,1951,311,1936,328,1918,336,1902,343,1888,359,1884,377,1889,397,1903,440,1923,480,1960,539,1955,542,1918,483,1898,442,1883,398,1879,377,1884,356,1899,339,1916,331,1933,324,1946,308,1958,272,1956,240,1940,211,1912,183,1886,169,1850,156,1756,138,1650,126,1552,120"/>
-<area shape="rect" id="Node000060" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="1897,365,2043,390"/>
-<area shape="poly" id="edge64_Node000009_Node000060" title=" " alt="" coords="1552,115,1636,121,1725,132,1801,151,1830,164,1849,180,1856,190,1857,201,1850,223,1834,240,1815,248,1797,255,1783,271,1776,290,1783,308,1806,331,1834,349,1866,360,1898,368,1896,373,1864,366,1832,353,1802,336,1778,311,1771,290,1778,268,1794,251,1813,243,1831,236,1845,220,1852,200,1851,192,1845,183,1827,168,1799,156,1724,137,1636,126,1552,120"/>
+<area shape="rect" id="Node000037" href="$d6/db1/ech_8c.html" title="ech.c interface." alt="" coords="1941,629,2095,654"/>
+<area shape="poly" id="edge79_Node000009_Node000037" title=" " alt="" coords="1548,136,1584,154,1617,179,1659,225,1685,267,1698,315,1702,376,1702,466,1708,504,1726,535,1752,561,1786,582,1824,599,1864,612,1941,629,1940,634,1862,618,1822,604,1783,587,1749,565,1722,538,1703,505,1697,467,1697,376,1693,316,1680,269,1654,228,1614,183,1582,159,1545,141"/>
+<area shape="rect" id="Node000053" href="$d6/d18/pqc__layer_8c.html" title="Post&#45;Quantum Cryptography (PQC) TLS layer facade." alt="" coords="1889,541,2043,566"/>
+<area shape="poly" id="edge62_Node000009_Node000053" title=" " alt="" coords="1552,115,1650,121,1756,133,1851,151,1889,164,1916,179,1945,208,1961,239,1963,273,1951,311,1936,328,1918,336,1902,343,1888,359,1884,377,1889,397,1903,440,1923,480,1960,539,1955,542,1918,483,1898,442,1883,398,1879,377,1884,356,1899,339,1916,331,1933,324,1946,308,1958,272,1956,240,1940,211,1912,183,1886,169,1850,156,1756,138,1650,126,1552,120"/>
+<area shape="rect" id="Node000061" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="1897,365,2043,390"/>
+<area shape="poly" id="edge64_Node000009_Node000061" title=" " alt="" coords="1552,115,1636,121,1725,132,1801,151,1830,164,1849,180,1856,190,1857,201,1850,223,1834,240,1815,248,1797,255,1783,271,1776,290,1783,308,1806,331,1834,349,1866,360,1898,368,1896,373,1864,366,1832,353,1802,336,1778,311,1771,290,1778,268,1794,251,1813,243,1831,236,1845,220,1852,200,1851,192,1845,183,1827,168,1799,156,1724,137,1636,126,1552,120"/>
 <area shape="rect" id="Node000020" href="$d4/d54/grpc__client_8c.html" title="HTTP/2&#45;based gRPC client (h2c cleartext, or TLS with ALPN &quot;h2&quot;)." alt="" coords="1131,189,1315,214"/>
 <area shape="poly" id="edge63_Node000009_Node000020" title=" " alt="" coords="1398,140,1256,191,1254,186,1396,135"/>
-<area shape="rect" id="Node000063" href="$dc/d94/tls__chain_8h.html" title=" " alt="" coords="709,189,879,214"/>
-<area shape="poly" id="edge68_Node000009_Node000063" title=" " alt="" coords="1372,128,920,184,869,191,868,186,919,179,1371,122"/>
-<area shape="rect" id="Node000065" href="$da/d89/webrtc__internal_8h.html" title="Internal types and cross&#45;file helpers for the WebRTC DataChannel module (ICE&#45;lite + DTLS + SCTP over ..." alt="" coords="931,181,1094,221"/>
-<area shape="poly" id="edge72_Node000009_Node000065" title=" " alt="" coords="1373,134,1095,187,1094,182,1372,129"/>
+<area shape="rect" id="Node000064" href="$dc/d94/tls__chain_8h.html" title=" " alt="" coords="709,189,879,214"/>
+<area shape="poly" id="edge68_Node000009_Node000064" title=" " alt="" coords="1372,128,920,184,869,191,868,186,919,179,1371,122"/>
+<area shape="rect" id="Node000066" href="$da/d89/webrtc__internal_8h.html" title="Internal types and cross&#45;file helpers for the WebRTC DataChannel module (ICE&#45;lite + DTLS + SCTP over ..." alt="" coords="931,181,1094,221"/>
+<area shape="poly" id="edge72_Node000009_Node000066" title=" " alt="" coords="1373,134,1095,187,1094,182,1372,129"/>
 <area shape="poly" id="edge11_Node000011_Node000003" title=" " alt="" coords="1554,230,1568,248,1578,269,1582,290,1575,311,1552,335,1523,353,1492,365,1461,372,1460,367,1490,360,1521,348,1548,331,1570,308,1577,290,1573,271,1563,251,1550,233"/>
 <area shape="poly" id="edge12_Node000011_Node000012" title=" " alt="" coords="1514,235,1502,270,1497,268,1509,234"/>
 <area shape="rect" id="Node000013" href="$df/d7f/app_8c.html" title=" " alt="" coords="2525,629,2660,654"/>
@@ -49,27 +49,27 @@
 <area shape="poly" id="edge15_Node000014_Node000015" title=" " alt="" coords="2240,234,2215,271,2210,268,2235,231"/>
 <area shape="rect" id="Node000021" href="$d0/d77/sys_2app_2app_8h.html" title="Core Application Structure and Lifecycle Management." alt="" coords="3579,445,3740,485"/>
 <area shape="poly" id="edge54_Node000014_Node000021" title=" " alt="" coords="2317,224,2433,266,2571,307,2713,338,2859,365,3145,409,3396,438,3579,455,3578,460,3396,443,3145,414,2858,371,2712,343,2569,312,2432,271,2315,229"/>
-<area shape="rect" id="Node000032" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="2283,629,2420,654"/>
-<area shape="poly" id="edge57_Node000014_Node000032" title=" " alt="" coords="2176,228,2094,253,2007,286,1933,322,1906,340,1888,359,1856,416,1846,443,1841,469,1841,494,1847,519,1859,545,1878,571,1898,582,1934,592,2043,609,2283,633,2282,638,2042,615,1933,597,1896,587,1875,575,1855,548,1842,521,1835,495,1835,468,1841,441,1851,414,1884,356,1902,336,1930,317,2005,281,2092,248,2175,223"/>
+<area shape="rect" id="Node000033" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="2283,629,2420,654"/>
+<area shape="poly" id="edge57_Node000014_Node000033" title=" " alt="" coords="2176,228,2094,253,2007,286,1933,322,1906,340,1888,359,1856,416,1846,443,1841,469,1841,494,1847,519,1859,545,1878,571,1898,582,1934,592,2043,609,2283,633,2282,638,2042,615,1933,597,1896,587,1875,575,1855,548,1842,521,1835,495,1835,468,1841,441,1851,414,1884,356,1902,336,1930,317,2005,281,2092,248,2175,223"/>
 <area shape="rect" id="Node000030" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="2169,541,2318,566"/>
 <area shape="poly" id="edge55_Node000014_Node000030" title=" " alt="" coords="2280,232,2295,269,2301,309,2302,350,2289,430,2269,497,2251,542,2246,540,2264,496,2284,429,2296,350,2296,309,2290,270,2275,234"/>
-<area shape="rect" id="Node000054" href="$d0/d3d/async__server_8c.html" title=" " alt="" coords="5221,533,5359,573"/>
-<area shape="poly" id="edge56_Node000014_Node000054" title=" " alt="" coords="2353,208,3280,293,3945,362,4628,443,4919,481,5209,531,5221,533,5220,538,5208,536,4919,486,4627,448,3945,368,3279,299,2353,213"/>
-<area shape="rect" id="Node000061" href="$dc/d23/https__upgrade__hook_8c.html" title=" " alt="" coords="2582,269,2715,309"/>
-<area shape="poly" id="edge59_Node000014_Node000061" title=" " alt="" coords="2354,221,2564,267,2582,271,2581,276,2563,272,2352,226"/>
-<area shape="rect" id="Node000062" href="$db/d59/metrics_8c.html" title="Lock&#45;free metrics registry and Prometheus exposition." alt="" coords="2739,277,2923,302"/>
-<area shape="poly" id="edge61_Node000014_Node000062" title=" " alt="" coords="2354,213,2728,267,2770,274,2769,279,2727,272,2353,218"/>
+<area shape="rect" id="Node000055" href="$d0/d3d/async__server_8c.html" title=" " alt="" coords="5221,533,5359,573"/>
+<area shape="poly" id="edge56_Node000014_Node000055" title=" " alt="" coords="2353,208,3280,293,3945,362,4628,443,4919,481,5209,531,5221,533,5220,538,5208,536,4919,486,4627,448,3945,368,3279,299,2353,213"/>
+<area shape="rect" id="Node000062" href="$dc/d23/https__upgrade__hook_8c.html" title=" " alt="" coords="2582,269,2715,309"/>
+<area shape="poly" id="edge59_Node000014_Node000062" title=" " alt="" coords="2354,221,2564,267,2582,271,2581,276,2563,272,2352,226"/>
+<area shape="rect" id="Node000063" href="$db/d59/metrics_8c.html" title="Lock&#45;free metrics registry and Prometheus exposition." alt="" coords="2739,277,2923,302"/>
+<area shape="poly" id="edge61_Node000014_Node000063" title=" " alt="" coords="2354,213,2728,267,2770,274,2769,279,2727,272,2353,218"/>
 <area shape="poly" id="edge52_Node000015_Node000003" title=" " alt="" coords="2105,303,1460,371,1460,366,2104,298"/>
 <area shape="poly" id="edge53_Node000015_Node000013" title=" " alt="" coords="2183,322,2158,376,2136,442,2131,477,2133,511,2141,543,2158,571,2203,584,2301,600,2525,629,2525,635,2300,605,2202,589,2155,575,2136,545,2127,512,2126,477,2131,441,2153,374,2179,320"/>
 <area shape="rect" id="Node000016" href="$d6/dbb/grpc_8h.html" title="gRPC over HTTP/2 helpers for CWIST." alt="" coords="2343,357,2507,397"/>
 <area shape="poly" id="edge16_Node000015_Node000016" title=" " alt="" coords="2263,312,2376,355,2374,360,2261,317"/>
 <area shape="poly" id="edge49_Node000015_Node000030" title=" " alt="" coords="2207,322,2244,540,2239,541,2202,323"/>
-<area shape="poly" id="edge50_Node000015_Node000054" title=" " alt="" coords="2295,294,2856,330,3700,389,4570,460,4935,496,5209,531,5221,533,5220,538,5208,536,4934,501,4570,465,3700,394,2856,335,2294,299"/>
-<area shape="poly" id="edge51_Node000015_Node000060" title=" " alt="" coords="2137,317,2001,367,2000,362,2135,312"/>
+<area shape="poly" id="edge50_Node000015_Node000055" title=" " alt="" coords="2295,294,2856,330,3700,389,4570,460,4935,496,5209,531,5221,533,5220,538,5208,536,4934,501,4570,465,3700,394,2856,335,2294,299"/>
+<area shape="poly" id="edge51_Node000015_Node000061" title=" " alt="" coords="2137,317,2001,367,2000,362,2135,312"/>
 <area shape="poly" id="edge48_Node000016_Node000013" title=" " alt="" coords="2406,411,2387,447,2372,489,2368,511,2368,533,2373,553,2383,572,2412,600,2448,618,2487,630,2526,636,2525,641,2486,635,2446,623,2409,604,2379,575,2368,555,2363,533,2363,511,2367,488,2382,445,2401,408"/>
 <area shape="poly" id="edge17_Node000016_Node000021" title=" " alt="" coords="2521,394,2526,395,2830,424,3130,444,3391,455,3579,460,3579,465,3391,460,3130,449,2830,430,2526,400,2520,399"/>
-<area shape="rect" id="Node000053" href="$d9/dba/grpc_8c.html" title="Unary gRPC over HTTP/2 support." alt="" coords="3589,629,3730,654"/>
-<area shape="poly" id="edge47_Node000016_Node000053" title=" " alt="" coords="2453,406,2547,505,2592,549,2619,571,2676,585,2776,597,3054,616,3356,629,3589,636,3588,641,3356,634,3053,621,2775,602,2675,590,2617,576,2588,553,2543,508,2449,410"/>
+<area shape="rect" id="Node000054" href="$d9/dba/grpc_8c.html" title="Unary gRPC over HTTP/2 support." alt="" coords="3589,629,3730,654"/>
+<area shape="poly" id="edge47_Node000016_Node000054" title=" " alt="" coords="2453,406,2547,505,2592,549,2619,571,2676,585,2776,597,3054,616,3356,629,3589,636,3588,641,3356,634,3053,621,2775,602,2675,590,2617,576,2588,553,2543,508,2449,410"/>
 <area shape="poly" id="edge40_Node000021_Node000013" title=" " alt="" coords="3565,470,3394,475,3189,486,2994,505,2915,519,2856,536,2841,544,2831,554,2821,565,2806,576,2725,609,2648,631,2647,626,2723,604,2803,571,2818,561,2828,550,2838,540,2854,531,2914,514,2993,500,3188,480,3394,470,3565,465"/>
 <area shape="rect" id="Node000022" href="$d2/d39/app_8h.html" title="Top&#45;level application header." alt="" coords="3219,541,3366,566"/>
 <area shape="poly" id="edge18_Node000021_Node000022" title=" " alt="" coords="3566,491,3342,543,3341,538,3565,486"/>
@@ -79,53 +79,53 @@
 <area shape="poly" id="edge21_Node000021_Node000026" title=" " alt="" coords="3607,493,3514,536,3511,531,3605,489"/>
 <area shape="rect" id="Node000028" href="$da/d46/session_8h.html" title="Signed client&#45;side session cookie API." alt="" coords="2630,533,2793,573"/>
 <area shape="poly" id="edge22_Node000021_Node000028" title=" " alt="" coords="3565,473,3231,494,3022,512,2812,536,2793,539,2793,533,2811,531,3021,507,3231,489,3564,468"/>
-<area shape="rect" id="Node000033" href="$da/db7/openapi_8h.html" title="OpenAPI 3.1 generation — source annotations and runtime serving." alt="" coords="3817,541,3992,566"/>
-<area shape="poly" id="edge24_Node000021_Node000033" title=" " alt="" coords="3727,487,3873,538,3871,543,3725,492"/>
-<area shape="rect" id="Node000035" href="$dc/d81/ech_8h.html" title="ech.h interface." alt="" coords="2393,533,2555,573"/>
-<area shape="poly" id="edge25_Node000021_Node000035" title=" " alt="" coords="3564,473,3153,495,2887,513,2618,536,2556,543,2555,538,2618,531,2887,508,3153,490,3564,468"/>
-<area shape="rect" id="Node000037" href="$df/d4c/compress_8h.html" title="Compression middleware with swappable backend interface." alt="" coords="4016,533,4177,573"/>
-<area shape="poly" id="edge27_Node000021_Node000037" title=" " alt="" coords="3754,482,4005,531,4016,533,4015,538,4004,536,3753,487"/>
-<area shape="rect" id="Node000039" href="$df/d1b/csrf_8h.html" title="CSRF protection via double&#45;submit cookie pattern." alt="" coords="4201,533,4363,573"/>
-<area shape="poly" id="edge28_Node000021_Node000039" title=" " alt="" coords="3754,474,3955,497,4190,531,4202,533,4201,538,4190,536,3955,502,3754,479"/>
-<area shape="rect" id="Node000041" href="$d3/d30/sys_2app_2middleware_8h.html" title="Built&#45;in middleware factories." alt="" coords="4975,621,5136,661"/>
-<area shape="poly" id="edge29_Node000021_Node000041" title=" " alt="" coords="3754,465,4042,470,4412,482,4751,501,4873,515,4916,522,4944,531,4976,549,5004,573,5044,619,5040,623,5000,577,4973,554,4942,536,4915,528,4872,520,4751,507,4412,487,4042,476,3754,470"/>
-<area shape="rect" id="Node000045" href="$db/de3/test__client_8h.html" title="In&#45;process HTTP test client (ala Flask test_client)." alt="" coords="4387,533,4548,573"/>
-<area shape="poly" id="edge30_Node000021_Node000045" title=" " alt="" coords="3754,470,4033,491,4204,509,4376,531,4387,532,4386,538,4375,536,4204,514,4033,496,3754,475"/>
-<area shape="rect" id="Node000047" href="$d0/d2a/waf_8h.html" title="Deterministic request firewall and output sanitization." alt="" coords="5035,533,5196,573"/>
-<area shape="poly" id="edge31_Node000021_Node000047" title=" " alt="" coords="3754,464,3978,468,4291,477,4651,497,4835,512,5016,531,5035,533,5034,539,5015,536,4835,517,4650,502,4291,483,3978,473,3754,470"/>
-<area shape="rect" id="Node000049" href="$d4/d9a/lwip_8h.html" title="Serve a CWIST app over lwIP&#39;s raw TCP API (issue #447 Phase 3)." alt="" coords="4573,533,4735,573"/>
-<area shape="poly" id="edge33_Node000021_Node000049" title=" " alt="" coords="3754,467,4109,486,4335,505,4561,531,4573,532,4572,538,4560,536,4334,510,4109,492,3754,472"/>
-<area shape="rect" id="Node000051" href="$da/dec/rdbms__auto__mount_8c.html" title="Automatic RDBMS provider detection and runtime mounting." alt="" coords="4760,533,4908,573"/>
-<area shape="poly" id="edge34_Node000021_Node000051" title=" " alt="" coords="3754,465,3938,470,4185,480,4465,500,4748,531,4760,533,4759,538,4747,536,4465,505,4185,485,3938,475,3754,470"/>
-<area shape="poly" id="edge35_Node000021_Node000052" title=" " alt="" coords="3565,472,2972,492,2568,511,2157,536,2044,546,2043,541,2156,531,2568,506,2972,487,3565,466"/>
-<area shape="poly" id="edge36_Node000021_Node000053" title=" " alt="" coords="3716,490,3739,509,3756,532,3763,553,3756,575,3743,593,3726,609,3690,631,3687,626,3723,605,3739,590,3752,572,3757,553,3752,535,3735,512,3712,495"/>
+<area shape="rect" id="Node000034" href="$da/db7/openapi_8h.html" title="OpenAPI 3.1 generation — source annotations and runtime serving." alt="" coords="3817,541,3992,566"/>
+<area shape="poly" id="edge24_Node000021_Node000034" title=" " alt="" coords="3727,487,3873,538,3871,543,3725,492"/>
+<area shape="rect" id="Node000036" href="$dc/d81/ech_8h.html" title="ech.h interface." alt="" coords="2393,533,2555,573"/>
+<area shape="poly" id="edge25_Node000021_Node000036" title=" " alt="" coords="3564,473,3153,495,2887,513,2618,536,2556,543,2555,538,2618,531,2887,508,3153,490,3564,468"/>
+<area shape="rect" id="Node000038" href="$df/d4c/compress_8h.html" title="Compression middleware with swappable backend interface." alt="" coords="4016,533,4177,573"/>
+<area shape="poly" id="edge27_Node000021_Node000038" title=" " alt="" coords="3754,482,4005,531,4016,533,4015,538,4004,536,3753,487"/>
+<area shape="rect" id="Node000040" href="$df/d1b/csrf_8h.html" title="CSRF protection via double&#45;submit cookie pattern." alt="" coords="4201,533,4363,573"/>
+<area shape="poly" id="edge28_Node000021_Node000040" title=" " alt="" coords="3754,474,3955,497,4190,531,4202,533,4201,538,4190,536,3955,502,3754,479"/>
+<area shape="rect" id="Node000042" href="$d3/d30/sys_2app_2middleware_8h.html" title="Built&#45;in middleware factories." alt="" coords="4975,621,5136,661"/>
+<area shape="poly" id="edge29_Node000021_Node000042" title=" " alt="" coords="3754,465,4042,470,4412,482,4751,501,4873,515,4916,522,4944,531,4976,549,5004,573,5044,619,5040,623,5000,577,4973,554,4942,536,4915,528,4872,520,4751,507,4412,487,4042,476,3754,470"/>
+<area shape="rect" id="Node000046" href="$db/de3/test__client_8h.html" title="In&#45;process HTTP test client (ala Flask test_client)." alt="" coords="4387,533,4548,573"/>
+<area shape="poly" id="edge30_Node000021_Node000046" title=" " alt="" coords="3754,470,4033,491,4204,509,4376,531,4387,532,4386,538,4375,536,4204,514,4033,496,3754,475"/>
+<area shape="rect" id="Node000048" href="$d0/d2a/waf_8h.html" title="Deterministic request firewall and output sanitization." alt="" coords="5035,533,5196,573"/>
+<area shape="poly" id="edge31_Node000021_Node000048" title=" " alt="" coords="3754,464,3978,468,4291,477,4651,497,4835,512,5016,531,5035,533,5034,539,5015,536,4835,517,4650,502,4291,483,3978,473,3754,470"/>
+<area shape="rect" id="Node000050" href="$d4/d9a/lwip_8h.html" title="Serve a CWIST app over lwIP&#39;s raw TCP API (issue #447 Phase 3)." alt="" coords="4573,533,4735,573"/>
+<area shape="poly" id="edge33_Node000021_Node000050" title=" " alt="" coords="3754,467,4109,486,4335,505,4561,531,4573,532,4572,538,4560,536,4334,510,4109,492,3754,472"/>
+<area shape="rect" id="Node000052" href="$da/dec/rdbms__auto__mount_8c.html" title="Automatic RDBMS provider detection and runtime mounting." alt="" coords="4760,533,4908,573"/>
+<area shape="poly" id="edge34_Node000021_Node000052" title=" " alt="" coords="3754,465,3938,470,4185,480,4465,500,4748,531,4760,533,4759,538,4747,536,4465,505,4185,485,3938,475,3754,470"/>
+<area shape="poly" id="edge35_Node000021_Node000053" title=" " alt="" coords="3565,472,2972,492,2568,511,2157,536,2044,546,2043,541,2156,531,2568,506,2972,487,3565,466"/>
+<area shape="poly" id="edge36_Node000021_Node000054" title=" " alt="" coords="3716,490,3739,509,3756,532,3763,553,3756,575,3743,593,3726,609,3690,631,3687,626,3723,605,3739,590,3752,572,3757,553,3752,535,3735,512,3712,495"/>
 <area shape="poly" id="edge37_Node000021_Node000030" title=" " alt="" coords="3565,472,3059,490,2722,509,2381,536,2318,543,2318,538,2380,531,2722,504,3059,485,3565,466"/>
-<area shape="poly" id="edge38_Node000021_Node000054" title=" " alt="" coords="3754,466,4484,486,4903,505,5077,517,5209,531,5221,533,5220,538,5208,536,5076,522,4903,511,4484,491,3754,471"/>
-<area shape="rect" id="Node000055" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="4303,629,4461,654"/>
-<area shape="poly" id="edge39_Node000021_Node000055" title=" " alt="" coords="3754,465,4051,472,4430,484,4762,503,4871,516,4905,523,4922,531,4930,542,4932,553,4930,564,4922,575,4899,588,4857,599,4733,617,4589,630,4461,639,4461,633,4589,625,4733,612,4856,594,4897,583,4919,571,4925,562,4927,553,4925,544,4919,535,4903,528,4870,521,4761,509,4429,489,4051,477,3754,471"/>
-<area shape="rect" id="Node000056" href="$d5/d34/app__route__internal_8h.html" title=" " alt="" coords="3577,533,3741,573"/>
-<area shape="poly" id="edge41_Node000021_Node000056" title=" " alt="" coords="3662,499,3662,533,3657,533,3657,499"/>
-<area shape="rect" id="Node000057" href="$d7/d1d/assets__internal_8h.html" title="Private wiring between app.c and the asset registry (assets.c)." alt="" coords="3054,533,3195,573"/>
-<area shape="poly" id="edge45_Node000021_Node000057" title=" " alt="" coords="3565,481,3398,504,3208,536,3196,538,3195,533,3207,531,3397,499,3565,476"/>
+<area shape="poly" id="edge38_Node000021_Node000055" title=" " alt="" coords="3754,466,4484,486,4903,505,5077,517,5209,531,5221,533,5220,538,5208,536,5076,522,4903,511,4484,491,3754,471"/>
+<area shape="rect" id="Node000056" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="4303,629,4461,654"/>
+<area shape="poly" id="edge39_Node000021_Node000056" title=" " alt="" coords="3754,465,4051,472,4430,484,4762,503,4871,516,4905,523,4922,531,4930,542,4932,553,4930,564,4922,575,4899,588,4857,599,4733,617,4589,630,4461,639,4461,633,4589,625,4733,612,4856,594,4897,583,4919,571,4925,562,4927,553,4925,544,4919,535,4903,528,4870,521,4761,509,4429,489,4051,477,3754,471"/>
+<area shape="rect" id="Node000057" href="$d5/d34/app__route__internal_8h.html" title=" " alt="" coords="3577,533,3741,573"/>
+<area shape="poly" id="edge41_Node000021_Node000057" title=" " alt="" coords="3662,499,3662,533,3657,533,3657,499"/>
+<area shape="rect" id="Node000058" href="$d7/d1d/assets__internal_8h.html" title="Private wiring between app.c and the asset registry (assets.c)." alt="" coords="3054,533,3195,573"/>
+<area shape="poly" id="edge45_Node000021_Node000058" title=" " alt="" coords="3565,481,3398,504,3208,536,3196,538,3195,533,3207,531,3397,499,3565,476"/>
 <area shape="poly" id="edge20_Node000025_Node000013" title=" " alt="" coords="2858,579,2641,631,2639,626,2857,574"/>
-<area shape="poly" id="edge23_Node000028_Node000032" title=" " alt="" coords="2620,579,2400,631,2399,626,2618,574"/>
-<area shape="poly" id="edge26_Node000035_Node000036" title=" " alt="" coords="2379,575,2079,631,2078,626,2378,570"/>
-<area shape="poly" id="edge32_Node000047_Node000041" title=" " alt="" coords="5096,586,5071,623,5066,620,5092,583"/>
-<area shape="poly" id="edge44_Node000056_Node000013" title=" " alt="" coords="3564,576,3298,605,3041,624,2660,641,2660,636,3040,618,3298,599,3563,571"/>
-<area shape="poly" id="edge42_Node000056_Node000053" title=" " alt="" coords="3662,587,3662,628,3657,628,3657,587"/>
-<area shape="poly" id="edge43_Node000056_Node000055" title=" " alt="" coords="3755,564,3806,571,4304,629,4303,634,3806,576,3755,570"/>
-<area shape="poly" id="edge46_Node000057_Node000013" title=" " alt="" coords="3041,576,2829,611,2661,634,2660,629,2829,606,3040,571"/>
-<area shape="poly" id="edge69_Node000063_Node000003" title=" " alt="" coords="695,217,535,242,471,257,450,264,439,271,431,290,432,298,439,307,455,318,483,328,569,344,685,356,818,364,1096,373,1314,374,1314,379,1096,378,818,370,684,361,569,349,482,333,453,323,435,311,428,301,425,289,435,268,447,259,469,252,534,237,694,212"/>
-<area shape="poly" id="edge70_Node000063_Node000004" title=" " alt="" coords="878,213,920,219,1311,248,1793,281,1792,286,1311,253,919,224,877,219"/>
-<area shape="rect" id="Node000064" href="$d3/d65/tls__chain_8c.html" title=" " alt="" coords="448,277,617,302"/>
-<area shape="poly" id="edge71_Node000063_Node000064" title=" " alt="" coords="746,221,569,279,567,274,745,216"/>
-<area shape="poly" id="edge74_Node000065_Node000005" title=" " alt="" coords="918,220,892,224,664,249,437,272,372,280,372,275,436,267,664,243,891,219,917,215"/>
-<area shape="rect" id="Node000066" href="$d9/d68/dtls_8c.html" title="DTLS helpers: ephemeral certificate generation, fingerprint, SSL_CTX." alt="" coords="1016,277,1169,302"/>
-<area shape="poly" id="edge73_Node000065_Node000066" title=" " alt="" coords="1042,230,1084,274,1080,278,1038,233"/>
-<area shape="rect" id="Node000067" href="$df/dc8/sctp_8c.html" title="SCTP DataChannels over DTLS (RFC 8831) and DCEP (RFC 8832)." alt="" coords="1193,277,1349,302"/>
-<area shape="poly" id="edge75_Node000065_Node000067" title=" " alt="" coords="1083,223,1238,274,1236,279,1082,228"/>
-<area shape="rect" id="Node000068" href="$d6/d9d/sdp_8c.html" title="Minimal SDP (RFC 4566) parse/generate for DataChannel offers/answers." alt="" coords="642,277,794,302"/>
-<area shape="poly" id="edge76_Node000065_Node000068" title=" " alt="" coords="936,228,758,279,756,274,934,223"/>
-<area shape="rect" id="Node000069" href="$d3/d90/webrtc_8c.html" title="WebRTC DataChannel context: UDP I/O, ICE&#45;lite, DTLS, SCTP driving." alt="" coords="818,277,991,302"/>
-<area shape="poly" id="edge77_Node000065_Node000069" title=" " alt="" coords="980,232,921,278,918,274,977,228"/>
+<area shape="poly" id="edge23_Node000028_Node000033" title=" " alt="" coords="2620,579,2400,631,2399,626,2618,574"/>
+<area shape="poly" id="edge26_Node000036_Node000037" title=" " alt="" coords="2379,575,2079,631,2078,626,2378,570"/>
+<area shape="poly" id="edge32_Node000048_Node000042" title=" " alt="" coords="5096,586,5071,623,5066,620,5092,583"/>
+<area shape="poly" id="edge44_Node000057_Node000013" title=" " alt="" coords="3564,576,3298,605,3041,624,2660,641,2660,636,3040,618,3298,599,3563,571"/>
+<area shape="poly" id="edge42_Node000057_Node000054" title=" " alt="" coords="3662,587,3662,628,3657,628,3657,587"/>
+<area shape="poly" id="edge43_Node000057_Node000056" title=" " alt="" coords="3755,564,3806,571,4304,629,4303,634,3806,576,3755,570"/>
+<area shape="poly" id="edge46_Node000058_Node000013" title=" " alt="" coords="3041,576,2829,611,2661,634,2660,629,2829,606,3040,571"/>
+<area shape="poly" id="edge69_Node000064_Node000003" title=" " alt="" coords="695,217,535,242,471,257,450,264,439,271,431,290,432,298,439,307,455,318,483,328,569,344,685,356,818,364,1096,373,1314,374,1314,379,1096,378,818,370,684,361,569,349,482,333,453,323,435,311,428,301,425,289,435,268,447,259,469,252,534,237,694,212"/>
+<area shape="poly" id="edge70_Node000064_Node000004" title=" " alt="" coords="878,213,920,219,1311,248,1793,281,1792,286,1311,253,919,224,877,219"/>
+<area shape="rect" id="Node000065" href="$d3/d65/tls__chain_8c.html" title=" " alt="" coords="448,277,617,302"/>
+<area shape="poly" id="edge71_Node000064_Node000065" title=" " alt="" coords="746,221,569,279,567,274,745,216"/>
+<area shape="poly" id="edge74_Node000066_Node000005" title=" " alt="" coords="918,220,892,224,664,249,437,272,372,280,372,275,436,267,664,243,891,219,917,215"/>
+<area shape="rect" id="Node000067" href="$d9/d68/dtls_8c.html" title="DTLS helpers: ephemeral certificate generation, fingerprint, SSL_CTX." alt="" coords="1016,277,1169,302"/>
+<area shape="poly" id="edge73_Node000066_Node000067" title=" " alt="" coords="1042,230,1084,274,1080,278,1038,233"/>
+<area shape="rect" id="Node000068" href="$df/dc8/sctp_8c.html" title="SCTP DataChannels over DTLS (RFC 8831) and DCEP (RFC 8832)." alt="" coords="1193,277,1349,302"/>
+<area shape="poly" id="edge75_Node000066_Node000068" title=" " alt="" coords="1083,223,1238,274,1236,279,1082,228"/>
+<area shape="rect" id="Node000069" href="$d6/d9d/sdp_8c.html" title="Minimal SDP (RFC 4566) parse/generate for DataChannel offers/answers." alt="" coords="642,277,794,302"/>
+<area shape="poly" id="edge76_Node000066_Node000069" title=" " alt="" coords="936,228,758,279,756,274,934,223"/>
+<area shape="rect" id="Node000070" href="$d3/d90/webrtc_8c.html" title="WebRTC DataChannel context: UDP I/O, ICE&#45;lite, DTLS, SCTP driving." alt="" coords="818,277,991,302"/>
+<area shape="poly" id="edge77_Node000066_Node000070" title=" " alt="" coords="980,232,921,278,918,274,977,228"/>
 </map>

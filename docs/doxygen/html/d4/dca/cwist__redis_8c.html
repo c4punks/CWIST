@@ -118,6 +118,7 @@ $(document).ready(function(){initNavTree('d4/dca/cwist__redis_8c.html','../../')
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d0/d39/cwist__redis_8h_source.html">cwist/net/redis/cwist_redis.h</a>&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../d9/d49/redis__frame__internal_8h_source.html">redis_frame_internal.h</a>&quot;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d0/daa/gc_8h_source.html">cwist/core/mem/gc.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html">cwist/core/sstring/sstring.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html">cwist/sys/err/cwist_err.h</a>&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
@@ -144,77 +145,85 @@ Include dependency graph for cwist_redis.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d2/d24/cwist__redis_8c__incl.png" border="0" usemap="#asrc_2net_2redis_2cwist__redis_8c" alt=""/></div>
 <map name="asrc_2net_2redis_2cwist__redis_8c" id="asrc_2net_2redis_2cwist__redis_8c">
-<area shape="rect" title="Minimal RESP2 Redis client with connection pooling." alt="" coords="1204,5,1344,45"/>
-<area shape="rect" href="../../d0/d39/cwist__redis_8h.html" title="Minimal in&#45;tree Redis client (RESP2) with connection pooling." alt="" coords="133,93,287,133"/>
-<area shape="poly" title=" " alt="" coords="1204,31,821,49,565,68,306,96,301,97,300,91,306,91,565,63,820,44,1204,26"/>
+<area shape="rect" title="Minimal RESP2 Redis client with connection pooling." alt="" coords="1300,5,1440,45"/>
+<area shape="rect" href="../../d0/d39/cwist__redis_8h.html" title="Minimal in&#45;tree Redis client (RESP2) with connection pooling." alt="" coords="158,93,313,133"/>
+<area shape="poly" title=" " alt="" coords="1300,31,1129,36,889,47,612,67,332,96,327,97,326,91,331,91,612,61,888,42,1128,31,1300,25"/>
 <area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="79,181,221,221"/>
-<area shape="poly" title=" " alt="" coords="1204,31,936,38,584,51,271,70,168,82,137,89,123,95,114,111,114,130,121,150,130,169,126,171,116,152,109,131,109,110,119,91,135,84,167,77,271,65,584,45,936,32,1204,25"/>
+<area shape="poly" title=" " alt="" coords="1300,31,1018,37,643,49,308,69,197,81,164,88,148,95,139,111,135,129,141,168,135,168,130,129,134,109,144,91,162,83,196,76,307,63,642,44,1018,31,1300,25"/>
 <area shape="rect" title=" " alt="" coords="5,269,76,295"/>
-<area shape="poly" title=" " alt="" coords="1204,29,945,31,600,39,431,48,283,59,170,75,131,85,107,96,90,111,76,130,57,173,47,218,43,256,38,255,41,217,51,172,71,127,86,107,105,91,130,80,169,70,282,54,430,42,600,34,945,26,1204,24"/>
-<area shape="rect" title=" " alt="" coords="278,269,361,295"/>
-<area shape="poly" title=" " alt="" coords="1204,30,994,33,726,42,597,51,485,62,401,77,373,86,356,95,341,112,330,131,318,175,316,219,318,255,313,256,310,219,313,174,325,129,337,109,352,91,371,81,400,72,484,57,596,45,726,37,994,27,1204,24"/>
-<area shape="rect" href="../../d9/d49/redis__frame__internal_8h.html" title=" " alt="" coords="875,101,1044,126"/>
-<area shape="poly" title=" " alt="" coords="1206,48,1015,100,1014,94,1204,43"/>
-<area shape="rect" title=" " alt="" coords="1060,189,1128,214"/>
-<area shape="poly" title=" " alt="" coords="1222,48,1183,68,1148,95,1133,114,1120,136,1103,177,1098,175,1115,133,1128,111,1144,91,1180,63,1219,43"/>
-<area shape="rect" title=" " alt="" coords="1153,189,1219,214"/>
-<area shape="poly" title=" " alt="" coords="1218,48,1185,67,1160,95,1154,115,1156,136,1173,176,1168,178,1151,137,1149,114,1156,92,1182,63,1215,43"/>
-<area shape="rect" title=" " alt="" coords="913,189,984,214"/>
-<area shape="poly" title=" " alt="" coords="1204,30,1112,35,1010,45,963,54,921,65,887,78,865,95,859,106,859,116,869,139,891,161,917,179,914,184,888,165,865,142,853,117,854,104,861,92,885,74,919,60,961,49,1010,40,1112,29,1204,25"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="626,101,799,126"/>
-<area shape="poly" title=" " alt="" coords="1204,39,818,96,789,101,788,96,818,91,1204,34"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="366,93,502,133"/>
-<area shape="poly" title=" " alt="" coords="1204,34,919,57,552,96,516,101,515,96,551,91,918,52,1203,29"/>
-<area shape="rect" title=" " alt="" coords="399,189,469,214"/>
-<area shape="poly" title=" " alt="" coords="1204,33,895,54,732,72,665,83,615,96,570,114,528,137,461,182,458,178,525,132,568,109,613,91,664,78,731,67,894,48,1204,27"/>
-<area shape="rect" title=" " alt="" coords="1170,101,1269,126"/>
-<area shape="poly" title=" " alt="" coords="1264,47,1236,90,1232,87,1260,44"/>
-<area shape="rect" title=" " alt="" coords="1293,101,1364,126"/>
-<area shape="poly" title=" " alt="" coords="1288,44,1316,87,1312,90,1284,47"/>
-<area shape="rect" title=" " alt="" coords="1389,101,1453,126"/>
-<area shape="poly" title=" " alt="" coords="1308,43,1391,91,1388,96,1305,48"/>
-<area shape="rect" title=" " alt="" coords="1477,101,1551,126"/>
-<area shape="poly" title=" " alt="" coords="1330,43,1466,91,1472,93,1470,98,1464,96,1328,48"/>
-<area shape="rect" title=" " alt="" coords="1576,101,1639,126"/>
-<area shape="poly" title=" " alt="" coords="1345,37,1449,59,1564,91,1571,93,1569,98,1563,96,1448,64,1344,42"/>
-<area shape="rect" title=" " alt="" coords="1663,101,1733,126"/>
-<area shape="poly" title=" " alt="" coords="1345,32,1488,54,1570,70,1652,91,1660,93,1658,98,1651,96,1569,76,1487,59,1344,37"/>
-<area shape="rect" title=" " alt="" coords="1758,101,1817,126"/>
-<area shape="poly" title=" " alt="" coords="1344,28,1528,46,1638,65,1747,91,1753,93,1752,98,1745,96,1637,70,1528,52,1344,33"/>
-<area shape="rect" title=" " alt="" coords="1841,101,1937,126"/>
-<area shape="poly" title=" " alt="" coords="1345,28,1562,49,1696,67,1829,91,1843,94,1842,99,1828,96,1695,72,1561,54,1344,34"/>
-<area shape="rect" title=" " alt="" coords="1961,101,2051,126"/>
-<area shape="poly" title=" " alt="" coords="1344,26,1460,32,1611,43,1780,62,1949,91,1962,94,1961,99,1948,96,1779,67,1611,48,1460,37,1344,31"/>
-<area shape="rect" title=" " alt="" coords="2076,101,2179,126"/>
-<area shape="poly" title=" " alt="" coords="1344,25,1478,30,1658,41,1860,60,2064,91,2081,95,2080,100,2063,96,1860,66,1657,46,1478,35,1344,31"/>
-<area shape="rect" title=" " alt="" coords="2203,101,2299,126"/>
-<area shape="poly" title=" " alt="" coords="1344,24,1498,26,1709,35,1949,55,2072,71,2192,91,2207,94,2206,99,2191,96,2071,76,1949,61,1709,41,1498,31,1344,29"/>
-<area shape="rect" title=" " alt="" coords="2324,101,2416,126"/>
-<area shape="poly" title=" " alt="" coords="1344,26,1834,48,2110,67,2225,78,2312,91,2326,94,2325,99,2311,96,2224,83,2110,72,1833,53,1344,32"/>
-<area shape="rect" title=" " alt="" coords="2440,101,2524,126"/>
-<area shape="poly" title=" " alt="" coords="1344,25,1576,32,1889,44,2202,64,2331,76,2429,91,2442,94,2441,99,2428,96,2331,81,2201,69,1889,50,1576,37,1344,31"/>
-<area shape="poly" title=" " alt="" coords="199,135,173,172,169,169,195,132"/>
-<area shape="rect" title=" " alt="" coords="691,269,766,295"/>
-<area shape="poly" title=" " alt="" coords="236,131,302,176,343,199,387,219,464,242,544,259,678,275,677,280,543,264,463,248,385,224,341,204,299,180,233,136"/>
+<area shape="poly" title=" " alt="" coords="1300,30,1027,32,659,42,478,50,319,62,197,77,155,86,129,96,109,110,92,128,68,172,53,217,46,256,41,255,48,216,63,170,88,125,105,106,126,91,154,81,197,72,319,56,478,45,659,36,1027,27,1300,24"/>
+<area shape="rect" title=" " alt="" coords="237,269,319,295"/>
+<area shape="poly" title=" " alt="" coords="1300,32,891,52,666,71,574,83,504,96,440,109,390,120,367,129,346,141,324,159,301,183,291,200,285,219,280,256,275,255,280,217,286,197,297,180,320,155,343,137,365,124,388,115,439,104,503,91,573,78,666,66,891,47,1300,26"/>
+<area shape="rect" href="../../d9/d49/redis__frame__internal_8h.html" title=" " alt="" coords="1076,101,1245,126"/>
+<area shape="poly" title=" " alt="" coords="1325,48,1202,98,1200,93,1323,43"/>
+<area shape="rect" title=" " alt="" coords="1189,189,1257,214"/>
+<area shape="poly" title=" " alt="" coords="1300,35,1234,42,1163,55,1103,72,1081,83,1067,95,1059,113,1067,131,1184,181,1182,186,1063,135,1054,113,1063,92,1078,78,1101,67,1162,49,1233,37,1300,29"/>
+<area shape="rect" title=" " alt="" coords="1333,189,1399,214"/>
+<area shape="poly" title=" " alt="" coords="1347,47,1327,68,1311,94,1307,113,1311,132,1325,157,1344,178,1340,181,1321,160,1306,134,1301,113,1306,92,1323,65,1344,44"/>
+<area shape="rect" title=" " alt="" coords="1095,189,1165,214"/>
+<area shape="poly" title=" " alt="" coords="1300,34,1230,41,1156,53,1092,71,1069,82,1053,95,1048,106,1047,116,1057,139,1077,160,1101,179,1098,183,1073,164,1052,142,1042,117,1043,104,1049,92,1066,78,1090,66,1155,48,1229,36,1300,29"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="777,101,950,126"/>
+<area shape="poly" title=" " alt="" coords="1300,41,969,96,941,101,940,96,968,91,1300,35"/>
+<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="347,189,505,214"/>
+<area shape="poly" title=" " alt="" coords="1300,31,1159,36,987,48,824,67,757,80,708,96,695,104,687,114,678,125,665,136,628,153,589,168,513,188,512,183,587,163,626,149,662,131,675,121,683,111,692,100,706,91,756,75,823,61,987,42,1159,31,1299,26"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="515,93,651,133"/>
+<area shape="poly" title=" " alt="" coords="1300,33,1023,54,847,72,670,96,665,97,665,92,670,91,847,67,1023,49,1299,28"/>
+<area shape="rect" title=" " alt="" coords="580,189,651,214"/>
+<area shape="poly" title=" " alt="" coords="1300,33,1172,40,1017,53,870,72,810,83,766,96,644,183,641,178,764,91,809,78,869,66,1016,48,1171,35,1300,27"/>
+<area shape="rect" title=" " alt="" coords="1321,101,1419,126"/>
+<area shape="poly" title=" " alt="" coords="1373,46,1373,87,1367,87,1367,46"/>
+<area shape="rect" title=" " alt="" coords="1444,101,1515,126"/>
+<area shape="poly" title=" " alt="" coords="1396,44,1455,90,1452,94,1393,48"/>
+<area shape="rect" title=" " alt="" coords="1539,101,1603,126"/>
+<area shape="poly" title=" " alt="" coords="1415,43,1533,93,1531,98,1413,48"/>
+<area shape="rect" title=" " alt="" coords="1627,101,1702,126"/>
+<area shape="poly" title=" " alt="" coords="1441,41,1616,91,1624,93,1622,98,1615,96,1440,46"/>
+<area shape="rect" title=" " alt="" coords="1727,101,1789,126"/>
+<area shape="poly" title=" " alt="" coords="1441,33,1569,55,1643,71,1715,91,1722,93,1720,98,1713,96,1641,76,1568,60,1440,38"/>
+<area shape="rect" title=" " alt="" coords="1813,101,1884,126"/>
+<area shape="poly" title=" " alt="" coords="1441,30,1607,51,1705,68,1803,91,1812,93,1810,99,1801,96,1704,73,1606,56,1440,35"/>
+<area shape="rect" title=" " alt="" coords="1909,101,1967,126"/>
+<area shape="poly" title=" " alt="" coords="1440,26,1533,32,1647,43,1773,62,1897,91,1904,93,1902,98,1896,96,1772,68,1647,49,1532,37,1440,32"/>
+<area shape="rect" title=" " alt="" coords="1991,101,2087,126"/>
+<area shape="poly" title=" " alt="" coords="1440,27,1681,46,1830,65,1980,91,1994,94,1993,99,1979,96,1829,70,1680,52,1440,33"/>
+<area shape="rect" title=" " alt="" coords="2111,101,2202,126"/>
+<area shape="poly" title=" " alt="" coords="1440,25,1565,30,1730,41,1914,60,2100,91,2114,94,2113,99,2099,96,1914,66,1729,46,1565,35,1440,31"/>
+<area shape="rect" title=" " alt="" coords="2227,101,2329,126"/>
+<area shape="poly" title=" " alt="" coords="1440,25,1583,29,1775,39,1994,59,2106,73,2215,91,2231,94,2230,100,2213,96,2105,78,1994,64,1775,44,1582,34,1440,30"/>
+<area shape="rect" title=" " alt="" coords="2354,101,2450,126"/>
+<area shape="poly" title=" " alt="" coords="1440,23,1602,25,1827,33,2083,54,2215,70,2343,91,2358,94,2356,99,2341,96,2214,75,2083,59,1826,39,1602,30,1440,29"/>
+<area shape="rect" title=" " alt="" coords="2475,101,2567,126"/>
+<area shape="poly" title=" " alt="" coords="1440,26,1956,47,2249,66,2370,78,2462,91,2478,94,2476,99,2462,96,2370,83,2248,71,1955,52,1440,31"/>
+<area shape="rect" title=" " alt="" coords="2591,101,2675,126"/>
+<area shape="poly" title=" " alt="" coords="1440,25,1682,31,2011,43,2340,63,2477,76,2580,91,2592,94,2591,99,2579,96,2476,81,2340,68,2011,49,1682,37,1440,31"/>
+<area shape="poly" title=" " alt="" coords="218,135,180,173,177,170,215,132"/>
+<area shape="rect" title=" " alt="" coords="738,269,813,295"/>
+<area shape="poly" title=" " alt="" coords="313,121,413,142,466,158,518,179,534,189,545,199,555,209,570,219,638,243,725,266,724,271,637,248,567,224,552,213,541,203,531,193,515,184,465,163,412,147,312,127"/>
 <area shape="poly" title=" " alt="" coords="125,224,69,263,66,259,122,219"/>
-<area shape="poly" title=" " alt="" coords="192,219,283,261,281,266,189,224"/>
+<area shape="poly" title=" " alt="" coords="182,219,249,260,246,264,180,224"/>
 <area shape="rect" title=" " alt="" coords="100,269,211,295"/>
 <area shape="poly" title=" " alt="" coords="154,221,156,255,151,256,149,222"/>
-<area shape="poly" title=" " alt="" coords="972,125,987,144,1001,170,1008,197,1006,211,999,223,984,235,962,246,905,262,840,273,780,279,779,274,839,267,904,257,960,241,981,231,995,220,1000,209,1002,197,996,172,983,147,968,128"/>
-<area shape="poly" title=" " alt="" coords="979,124,1066,179,1063,184,976,128"/>
-<area shape="poly" title=" " alt="" coords="993,124,1142,179,1147,181,1145,186,1140,184,991,129"/>
-<area shape="poly" title=" " alt="" coords="961,127,954,175,949,174,955,126"/>
-<area shape="poly" title=" " alt="" coords="768,124,814,144,835,160,852,180,860,201,852,223,838,240,820,254,781,272,779,267,817,249,834,236,848,220,854,201,848,183,832,164,811,149,766,129"/>
-<area shape="rect" title=" " alt="" coords="697,189,838,214"/>
-<area shape="poly" title=" " alt="" coords="722,125,755,175,750,178,718,128"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="494,189,673,214"/>
-<area shape="poly" title=" " alt="" coords="697,128,614,183,611,179,694,124"/>
-<area shape="poly" title=" " alt="" coords="546,217,372,268,370,263,544,211"/>
-<area shape="poly" title=" " alt="" coords="606,212,696,260,694,265,604,217"/>
-<area shape="poly" title=" " alt="" coords="372,136,226,180,225,175,371,131"/>
-<area shape="poly" title=" " alt="" coords="422,135,388,183,337,259,332,256,384,180,418,132"/>
-<area shape="poly" title=" " alt="" coords="503,122,850,179,900,188,899,193,850,184,502,128"/>
-<area shape="poly" title=" " alt="" coords="437,134,437,175,431,175,431,134"/>
+<area shape="poly" title=" " alt="" coords="1190,124,1225,142,1259,165,1272,178,1280,193,1280,208,1272,223,1248,235,1206,246,1083,263,943,274,827,281,826,276,942,269,1082,257,1205,241,1247,230,1268,219,1275,207,1274,194,1267,182,1256,169,1222,146,1187,128"/>
+<area shape="poly" title=" " alt="" coords="1171,125,1209,176,1204,179,1167,128"/>
+<area shape="poly" title=" " alt="" coords="1189,124,1327,181,1325,186,1187,129"/>
+<area shape="poly" title=" " alt="" coords="1159,127,1141,176,1136,174,1154,125"/>
+<area shape="poly" title=" " alt="" coords="916,123,966,138,1012,160,1029,173,1040,188,1042,205,1033,223,1020,235,999,245,945,261,884,272,827,279,826,274,883,266,944,255,997,240,1017,230,1029,220,1037,204,1035,190,1026,177,1009,164,964,143,915,129"/>
+<area shape="rect" title=" " alt="" coords="878,189,1019,214"/>
+<area shape="poly" title=" " alt="" coords="877,124,929,177,925,181,873,128"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="675,189,854,214"/>
+<area shape="poly" title=" " alt="" coords="852,128,791,181,787,177,848,124"/>
+<area shape="poly" title=" " alt="" coords="706,217,664,224,500,247,333,272,333,267,499,242,663,219,705,211"/>
+<area shape="poly" title=" " alt="" coords="769,214,775,255,769,256,764,215"/>
+<area shape="poly" title=" " alt="" coords="405,217,313,265,311,260,403,212"/>
+<area shape="poly" title=" " alt="" coords="479,212,725,266,724,272,477,217"/>
+<area shape="rect" title=" " alt="" coords="531,269,713,295"/>
+<area shape="poly" title=" " alt="" coords="455,212,582,262,580,267,454,216"/>
+<area shape="rect" title=" " alt="" coords="343,269,506,295"/>
+<area shape="poly" title=" " alt="" coords="428,214,428,256,422,255,423,214"/>
+<area shape="poly" title=" " alt="" coords="516,131,235,186,234,181,515,125"/>
+<area shape="poly" title=" " alt="" coords="515,122,472,128,425,140,379,158,337,183,320,200,307,219,288,257,284,255,302,216,316,196,334,179,377,153,424,135,471,123,515,116"/>
+<area shape="poly" title=" " alt="" coords="652,121,1032,179,1082,188,1081,193,1031,184,651,127"/>
+<area shape="poly" title=" " alt="" coords="593,133,609,175,604,177,588,135"/>
 </map>
 </div>
 </div>
@@ -353,7 +362,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00031">31</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00032">32</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -369,7 +378,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00033">33</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00034">34</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -385,7 +394,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00034">34</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00035">35</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -401,7 +410,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00032">32</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00033">33</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -417,7 +426,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00037">37</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00038">38</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -433,7 +442,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00040">40</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00041">41</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -449,7 +458,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00041">41</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00042">42</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -465,7 +474,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00057">57</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00058">58</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -481,7 +490,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00046">46</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00047">47</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -497,7 +506,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00050">50</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00051">51</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -513,7 +522,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00048">48</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00049">49</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -529,7 +538,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00047">47</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00048">48</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -545,7 +554,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00049">49</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00050">50</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -561,7 +570,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00051">51</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00052">52</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -615,9 +624,9 @@ Functions</h2></td></tr>
 <p>Authenticate/select a logical Redis database on this connection.</p>
 <dl class="section warning"><dt>Warning</dt><dd>AUTH uses plaintext RESP. Non-loopback peers are rejected unless CWIST_REDIS_ALLOW_INSECURE_AUTH=1 is explicitly set for a trusted tunnel. Connect uses a 5-second deadline; legacy I/O defaults to 30 seconds and can be changed with <a class="el" href="../../d0/d39/cwist__redis_8h.html#a590a6d56e9ddf7e875b76f2d58c557fc">cwist_redis_set_timeout_ms()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00864">864</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00865">865</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00815">cwist_redis_command_argv()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00816">cwist_redis_command_argv()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -640,11 +649,11 @@ Functions</h2></td></tr>
 <p>Close a Redis connection. </p>
 <p>Close a connection and free the handle. Shuts the socket down first to wake a subscriber blocked in recv; this is the documented way to stop <a class="el" href="../../d4/dca/cwist__redis_8c.html#abc6e0fe90ac671129ddc653f55d4e8da" title="Subscribe to channels on a dedicated connection.">cwist_redis_subscribe()</a>. Safe to call with NULL. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00748">748</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00749">749</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01105">cwist_redis_pool_create()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01168">cwist_redis_pool_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01106">cwist_redis_pool_create()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01171">cwist_redis_pool_destroy()</a>.</p>
 
 </div>
 </div>
@@ -691,11 +700,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00795">795</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00796">796</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00968">cwist_redis_del()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00987">cwist_redis_expire()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00908">cwist_redis_get()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01009">cwist_redis_publish()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00925">cwist_redis_set()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00946">cwist_redis_setex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00969">cwist_redis_del()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00988">cwist_redis_expire()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00909">cwist_redis_get()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01010">cwist_redis_publish()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00926">cwist_redis_set()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00947">cwist_redis_setex()</a>.</p>
 
 </div>
 </div>
@@ -761,11 +770,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00815">815</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00816">816</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00864">cwist_redis_auth()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01284">cwist_redis_pool_command_argv()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00891">cwist_redis_select()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00865">cwist_redis_auth()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01287">cwist_redis_pool_command_argv()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00892">cwist_redis_select()</a>.</p>
 
 </div>
 </div>
@@ -824,9 +833,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00674">674</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00675">675</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00592">cwist_redis_reply_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, and <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00084">cwist_redis_reply::type</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00593">cwist_redis_reply_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, and <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00084">cwist_redis_reply::type</a>.</p>
 
 </div>
 </div>
@@ -866,11 +875,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New connection handle on success, NULL on connection or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00714">714</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00715">715</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01105">cwist_redis_pool_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01106">cwist_redis_pool_create()</a>.</p>
 
 </div>
 </div>
@@ -908,11 +917,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00968">968</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00969">969</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00795">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00796">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01261">cwist_redis_pool_del()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01264">cwist_redis_pool_del()</a>.</p>
 
 </div>
 </div>
@@ -957,9 +966,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00987">987</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00988">988</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00795">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00796">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1006,11 +1015,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00908">908</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00909">909</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00795">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00796">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01230">cwist_redis_pool_get()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01233">cwist_redis_pool_get()</a>.</p>
 
 </div>
 </div>
@@ -1065,9 +1074,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Pool wrapper of <a class="el" href="../../d4/dca/cwist__redis_8c.html#a0d35e861a4ffd4b38fde66fdaccf8326">cwist_redis_command_argv()</a>: acquires a connection, runs the argv command, and releases the connection. See <a class="el" href="../../d4/dca/cwist__redis_8c.html#a0d35e861a4ffd4b38fde66fdaccf8326">cwist_redis_command_argv()</a> for parameter details. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01284">1284</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01287">1287</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00815">cwist_redis_command_argv()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00816">cwist_redis_command_argv()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1124,9 +1133,9 @@ Functions</h2></td></tr>
 <p>Run one binary-safe pooled command under a single deadline. </p>
 <p>Deadline-bounded pooled command; see <a class="el" href="../../d0/d39/cwist__redis_8h.html" title="Minimal in-tree Redis client (RESP2) with connection pooling.">cwist_redis.h</a> for the contract. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01512">1512</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01515">1515</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00013">cwist_malloc()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00592">cwist_redis_reply_free()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01205">EINVAL</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01211">ENOMEM</a>, and <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00084">cwist_redis_reply::type</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00013">cwist_malloc()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00593">cwist_redis_reply_free()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01205">EINVAL</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01211">ENOMEM</a>, and <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00084">cwist_redis_reply::type</a>.</p>
 
 </div>
 </div>
@@ -1173,11 +1182,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New pool handle on success, NULL on any connection or allocation failure (partial state is cleaned up). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01105">1105</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01106">1106</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00748">cwist_redis_close()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00714">cwist_redis_connect()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00749">cwist_redis_close()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00715">cwist_redis_connect()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02020">cwist_app_use_redis()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02022">cwist_app_use_redis()</a>.</p>
 
 </div>
 </div>
@@ -1208,9 +1217,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Pool wrapper of <a class="el" href="../../d4/dca/cwist__redis_8c.html#a5c94ffbc9d4a4dc8a68247e50e39612d">cwist_redis_del()</a>: acquires a connection, runs DEL, and releases the connection. See <a class="el" href="../../d4/dca/cwist__redis_8c.html#a5c94ffbc9d4a4dc8a68247e50e39612d">cwist_redis_del()</a> for parameter details. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01261">1261</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01264">1264</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00968">cwist_redis_del()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00969">cwist_redis_del()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1233,11 +1242,11 @@ Functions</h2></td></tr>
 <p>Destroy the pool and close all connections. </p>
 <p>Destroy a pool, closing every connection it owns. Safe to call with NULL. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01168">1168</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01171">1171</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00748">cwist_redis_close()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00749">cwist_redis_close()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01491">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02020">cwist_app_use_redis()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01493">cwist_app_destroy()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02022">cwist_app_use_redis()</a>.</p>
 
 </div>
 </div>
@@ -1276,9 +1285,9 @@ Functions</h2></td></tr>
 <p>Pooled convenience commands. </p>
 <p>Pool wrapper of <a class="el" href="../../d4/dca/cwist__redis_8c.html#a81cfc3c5e0038ad6f059794d0db05afc" title="Convenience commands.">cwist_redis_get()</a>: acquires a connection, runs GET, and releases the connection. See <a class="el" href="../../d4/dca/cwist__redis_8c.html#a81cfc3c5e0038ad6f059794d0db05afc" title="Convenience commands.">cwist_redis_get()</a> for parameter details. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01230">1230</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01233">1233</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00908">cwist_redis_get()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00909">cwist_redis_get()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1315,9 +1324,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Pool wrapper of <a class="el" href="../../d4/dca/cwist__redis_8c.html#a0ef1a3983258641b78acf2d5e780e85e">cwist_redis_publish()</a>: acquires a connection, runs PUBLISH, and releases the connection. See <a class="el" href="../../d4/dca/cwist__redis_8c.html#a0ef1a3983258641b78acf2d5e780e85e">cwist_redis_publish()</a> for parameter details. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01272">1272</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01275">1275</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01009">cwist_redis_publish()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01010">cwist_redis_publish()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1354,9 +1363,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Pool wrapper of <a class="el" href="../../d4/dca/cwist__redis_8c.html#af47033893cd7f80f457610f1a155a10a">cwist_redis_set()</a>: acquires a connection, runs SET, and releases the connection. See <a class="el" href="../../d4/dca/cwist__redis_8c.html#af47033893cd7f80f457610f1a155a10a">cwist_redis_set()</a> for parameter details. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01240">1240</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01243">1243</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00925">cwist_redis_set()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00926">cwist_redis_set()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1399,9 +1408,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Pool wrapper of <a class="el" href="../../d4/dca/cwist__redis_8c.html#a9e0ba5b12c0ec2c507e70972d81a2230">cwist_redis_setex()</a>: acquires a connection, runs SETEX, and releases the connection. See <a class="el" href="../../d4/dca/cwist__redis_8c.html#a9e0ba5b12c0ec2c507e70972d81a2230">cwist_redis_setex()</a> for parameter details. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01250">1250</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01253">1253</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00946">cwist_redis_setex()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00947">cwist_redis_setex()</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -1446,11 +1455,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01009">1009</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01010">1010</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00795">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00796">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01272">cwist_redis_pool_publish()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01275">cwist_redis_pool_publish()</a>.</p>
 
 </div>
 </div>
@@ -1471,11 +1480,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Recursively free a reply tree, including all child elements and string payloads. Safe to call with NULL. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00592">592</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00593">593</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00592">cwist_redis_reply_free()</a>, <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00088">cwist_redis_reply::element</a>, <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00089">cwist_redis_reply::elements</a>, and <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00085">cwist_redis_reply::str</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00593">cwist_redis_reply_free()</a>, <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00088">cwist_redis_reply::element</a>, <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00089">cwist_redis_reply::elements</a>, and <a class="el" href="../../d0/d39/cwist__redis_8h_source.html#l00085">cwist_redis_reply::str</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00674">cwist_redis_command_argv_reply()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01512">cwist_redis_pool_command_argv_reply_timeout()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00592">cwist_redis_reply_free()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00675">cwist_redis_command_argv_reply()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01515">cwist_redis_pool_command_argv_reply_timeout()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00593">cwist_redis_reply_free()</a>.</p>
 
 </div>
 </div>
@@ -1513,9 +1522,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00891">891</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00892">892</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00815">cwist_redis_command_argv()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00816">cwist_redis_command_argv()</a>.</p>
 
 </div>
 </div>
@@ -1560,11 +1569,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00925">925</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00926">926</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00795">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00796">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01240">cwist_redis_pool_set()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01243">cwist_redis_pool_set()</a>.</p>
 
 </div>
 </div>
@@ -1595,7 +1604,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Set the legacy connection send/receive timeout in milliseconds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00733">733</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00734">734</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
 </div>
 </div>
@@ -1647,11 +1656,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error value indicating success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00946">946</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00947">947</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00795">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00796">cwist_redis_command()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01250">cwist_redis_pool_setex()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01253">cwist_redis_pool_setex()</a>.</p>
 
 </div>
 </div>
@@ -1705,9 +1714,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Zero error value; the loop ends when the connection is shut down (see <a class="el" href="../../d4/dca/cwist__redis_8c.html#af140007c54aab5782e0a5ec02b0d4dc9" title="Close a Redis connection.">cwist_redis_close()</a>). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01034">1034</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l01035">1035</a> of file <a class="el" href="../../d4/dca/cwist__redis_8c_source.html">cwist_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00032">CWIST_REDIS_LINE_MAX</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/dca/cwist__redis_8c_source.html#l00033">CWIST_REDIS_LINE_MAX</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>

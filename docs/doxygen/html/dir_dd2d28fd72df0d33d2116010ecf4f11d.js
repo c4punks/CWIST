@@ -18,6 +18,8 @@ var dir_dd2d28fd72df0d33d2116010ecf4f11d =
     [ "http3_client.c", "d1/d88/http3__client_8c.html", "d1/d88/http3__client_8c" ],
     [ "http3_global.h", "d6/d41/http3__global_8h.html", "d6/d41/http3__global_8h" ],
     [ "http_client.c", "d6/d32/http__client_8c.html", "d6/d32/http__client_8c" ],
+    [ "http_client_file.c", "d2/dcb/http__client__file_8c.html", "d2/dcb/http__client__file_8c" ],
+    [ "http_client_file.h", "dd/de9/http__client__file_8h.html", "dd/de9/http__client__file_8h" ],
     [ "http_live.h", "d3/d37/http__live_8h.html", "d3/d37/http__live_8h" ],
     [ "https.c", "d2/db2/https_8c.html", "d2/db2/https_8c" ],
     [ "https_upgrade_hook.c", "dc/d23/https__upgrade__hook_8c.html", "dc/d23/https__upgrade__hook_8c" ],

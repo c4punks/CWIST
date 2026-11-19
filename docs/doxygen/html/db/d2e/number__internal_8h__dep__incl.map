@@ -1,13 +1,15 @@
 <map id="src/core/utils/number_internal.h" name="src/core/utils/number_internal.h">
-<area shape="rect" id="Node000001" title=" " alt="" coords="325,5,483,45"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="413,5,571,45"/>
 <area shape="rect" id="Node000002" href="$d1/d8b/json__heal_8c.html" title="Multi&#45;stage JSON recovery pipeline with optional schema alignment." alt="" coords="5,93,141,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="319,51,142,97,141,92,318,46"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="400,47,154,96,142,99,141,93,153,91,399,41"/>
 <area shape="rect" id="Node000003" href="$d7/d92/zod_8c.html" title="Lightweight schema validation helpers for cJSON payloads." alt="" coords="166,101,309,126"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="357,54,261,103,258,98,354,49"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="424,52,272,103,270,98,422,47"/>
 <area shape="rect" id="Node000004" href="$d6/d6d/bind_8c.html" title="Implementation of declarative schema validation and binding." alt="" coords="333,93,475,133"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="407,59,407,93,401,93,401,59"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="464,57,425,95,422,91,461,53"/>
 <area shape="rect" id="Node000005" href="$de/d67/session_8c.html" title="Signed client&#45;side session cookie implementation." alt="" coords="500,101,660,126"/>
-<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="456,49,558,98,555,103,454,54"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="523,53,570,98,566,102,520,57"/>
 <area shape="rect" id="Node000006" href="$d8/d80/jwt_8c.html" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="685,101,841,126"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="497,46,716,98,714,103,495,51"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="565,47,727,98,726,103,564,52"/>
+<area shape="rect" id="Node000007" href="$db/d59/metrics_8c.html" title="Lock&#45;free metrics registry and Prometheus exposition." alt="" coords="865,101,1049,126"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="585,41,896,98,895,103,584,46"/>
 </map>
