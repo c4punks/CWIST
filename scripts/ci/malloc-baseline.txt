@@ -163,8 +163,6 @@
 1	src/net/http/http3_client.c:st->req_body = malloc(body_len);
 1	src/net/http/http3_client.c:st->req_path = strdup(path);
 1	src/net/http/http_client.c:char *tmp = realloc(body->data, new_cap);
-1	src/net/http/http_client.c:client->altsvc_db = path ? strdup(path) : NULL;
-1	src/net/http/http_client.c:client->ca_bundle = path ? strdup(path) : NULL;
 3	src/net/http/http_client.c:free(resp_body.data);
 1	src/net/http/session.c:free(raw);
 1	src/net/http/tls_chain.c:char *url = (char *)malloc((size_t)uri_len + 1);
