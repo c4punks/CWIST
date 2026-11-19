@@ -631,6 +631,21 @@ static void remove_header(cwist_http_header_node **head, const char *key) {
     }
 }
 
+static void weaken_strong_etag(cwist_http_header_node *headers) {
+    for (cwist_http_header_node *node = headers; node; node = node->next) {
+        if (!node->key || !node->value || strcasecmp(node->key->data, "ETag") != 0) continue;
+        const char *etag = node->value->data;
+        if (!etag || strncmp(etag, "W/", 2) == 0) continue;
+        size_t len = strlen(etag);
+        char *weak = (char *)cwist_alloc(len + 3);
+        if (!weak) continue;
+        memcpy(weak, "W/", 2);
+        memcpy(weak + 2, etag, len + 1);
+        cwist_sstring_assign(node->value, weak);
+        cwist_free(weak);
+    }
+}
+
 static bool vary_has_accept_encoding(const cwist_http_header_node *headers) {
     for (const cwist_http_header_node *node = headers; node; node = node->next) {
         if (!node->key || !node->value || strcasecmp(node->key->data, "Vary") != 0) continue;
@@ -681,6 +696,10 @@ static void cwist_mw_compress_handler_core(cwist_http_request *req, cwist_http_r
      * be writing it on another thread right now (cwist_async_respond(), the
      * timeout job); leave it alone. */
     if (cwist_async_res_deferred(res)) return;
+    if (res->status_code == CWIST_HTTP_PARTIAL_CONTENT ||
+        cwist_http_header_get(req->headers, "Range") ||
+        cwist_http_header_get(res->headers, "Content-Encoding"))
+        return;
     if (res->body && res->body->size >= min_body_size && res->body->size > 0 && !res->is_ptr_body &&
         !res->use_file_stream && res->status_code >= 200 && res->status_code < 300)
         add_vary_accept_encoding(res);
@@ -762,6 +781,7 @@ static void cwist_mw_compress_handler_core(cwist_http_request *req, cwist_http_r
 
     if (ok && total_out > 0 && total_out < res->body->size) {
         cwist_sstring_assign_len(res->body, out_buf, total_out);
+        weaken_strong_etag(res->headers);
         cwist_http_header_add(&res->headers, "Content-Encoding", backend->encoding_name);
         remove_header(&res->headers, "Content-Length");
     }

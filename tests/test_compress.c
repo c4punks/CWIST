@@ -25,6 +25,19 @@ static void large_handler(cwist_http_request *req, cwist_http_response *res) {
     res->status_code = CWIST_HTTP_OK;
 }
 
+static int response_mode;
+
+static void eligibility_handler(cwist_http_request *req, cwist_http_response *res) {
+    large_handler(req, res);
+    if (response_mode == 1) {
+        res->status_code = CWIST_HTTP_PARTIAL_CONTENT;
+        cwist_http_header_add(&res->headers, "Content-Range", "bytes 0-4094/4095");
+    } else if (response_mode == 2) {
+        cwist_http_header_add(&res->headers, "Content-Encoding", "gzip");
+    }
+    cwist_http_header_add(&res->headers, "ETag", "\"strong\"");
+}
+
 static void verify_original(const unsigned char *data, size_t len) {
     assert(len == 4095);
     for (size_t i = 0; i < len; ++i) {
@@ -216,11 +229,61 @@ static void test_vary_and_independent_thresholds(void) {
     printf("Passed Vary and independent threshold tests.\n");
 }
 
+static cwist_http_response *dispatch_eligibility(int mode, bool range) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    cwist_app_use(app, cwist_mw_compress(64));
+    cwist_app_get(app, "/", eligibility_handler);
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(req->path, "/");
+    cwist_http_header_add(&req->headers, "Accept-Encoding", "gzip");
+    if (range) cwist_http_header_add(&req->headers, "Range", "bytes=0-4");
+    response_mode = mode;
+    cwist_app_dispatch(app, req, res);
+    cwist_http_request_destroy(req);
+    cwist_app_destroy(app);
+    return res;
+}
+
+static void test_compression_eligibility(void) {
+    cwist_compress_register_backend(cwist_compress_backend_gzip());
+    cwist_http_response *res = dispatch_eligibility(1, false);
+    assert(res->status_code == CWIST_HTTP_PARTIAL_CONTENT);
+    assert(cwist_http_header_get(res->headers, "Content-Encoding") == NULL);
+    assert(strcmp(cwist_http_header_get(res->headers, "ETag"), "\"strong\"") == 0);
+    assert(res->body->size == 4095);
+    cwist_http_response_destroy(res);
+
+    res = dispatch_eligibility(2, false);
+    size_t encoding_count = 0;
+    for (cwist_http_header_node *h = res->headers; h; h = h->next) {
+        if (strcasecmp(h->key->data, "Content-Encoding") == 0) encoding_count++;
+    }
+    assert(encoding_count == 1);
+    assert(res->body->size == 4095);
+    cwist_http_response_destroy(res);
+
+    res = dispatch_eligibility(0, false);
+    assert(strcmp(cwist_http_header_get(res->headers, "Content-Encoding"), "gzip") == 0);
+    assert(strcmp(cwist_http_header_get(res->headers, "ETag"), "W/\"strong\"") == 0);
+    assert(res->body->size < 4095);
+    cwist_http_response_destroy(res);
+
+    res = dispatch_eligibility(0, true);
+    assert(cwist_http_header_get(res->headers, "Content-Encoding") == NULL);
+    assert(res->body->size == 4095);
+    cwist_http_response_destroy(res);
+    cwist_compress_unregister_all();
+}
+
 int main(void) {
     test_gzip();
     test_brotli();
     test_accept_encoding_negotiation();
     test_vary_and_independent_thresholds();
+    test_compression_eligibility();
     printf("Passed compression middleware tests.\n");
     return 0;
 }
