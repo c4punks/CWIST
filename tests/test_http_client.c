@@ -56,6 +56,7 @@ static void hello_handler(cwist_http_request *req, cwist_http_response *res) {
     /* Not 200, so the test proves the status comes from the handler. */
     res->status_code = CWIST_HTTP_ACCEPTED;
     cwist_http_header_add(&res->headers, "X-Cwist-Test", "hello");
+    cwist_http_header_add(&res->headers, "X-Empty", "");
     cwist_sstring_assign(res->body, HELLO_BODY);
 }
 
@@ -73,6 +74,20 @@ static void redirect_handler(cwist_http_request *req, cwist_http_response *res) 
     res->status_code = CWIST_HTTP_FOUND;
     cwist_http_header_add(&res->headers, "Location", "/hello");
     cwist_sstring_assign(res->body, REDIRECT_BODY);
+}
+
+static int redirect_loop_count;
+
+static void redirect_loop_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    redirect_loop_count++;
+    if (redirect_loop_count >= 12) {
+        res->status_code = CWIST_HTTP_ACCEPTED;
+        cwist_sstring_assign(res->body, "done");
+        return;
+    }
+    res->status_code = CWIST_HTTP_FOUND;
+    cwist_http_header_add(&res->headers, "Location", "/loop");
 }
 
 static void query_handler(cwist_http_request *req, cwist_http_response *res) {
@@ -99,7 +114,9 @@ static void run_server(int port) {
     if (!app) _exit(1);
     cwist_app_get(app, "/hello", hello_handler);
     cwist_app_post(app, "/echo", echo_handler);
+    cwist_app_get(app, "/get-echo", echo_handler);
     cwist_app_get(app, "/redirect", redirect_handler);
+    cwist_app_get(app, "/loop", redirect_loop_handler);
     cwist_app_get(app, "/query", query_handler);
     cwist_app_get(app, "/large-header", large_header_handler);
     g_cwist_drain_timeout_sec = 1;
@@ -221,6 +238,8 @@ static void test_get(cwist_http_client *client, const char *base) {
     CHECK(body_equals(res, HELLO_BODY, strlen(HELLO_BODY)), "GET: unexpected body");
     const char *h = cwist_http_header_get(res->headers, "X-Cwist-Test");
     CHECK(h && strcmp(h, "hello") == 0, "GET: handler header missing");
+    const char *empty = cwist_http_header_get(res->headers, "X-Empty");
+    CHECK(empty && strcmp(empty, "") == 0, "GET: empty response header missing");
     cwist_http_response_destroy(res);
     report(before, "GET status, body and header");
 }
@@ -243,6 +262,34 @@ static void post_and_expect_echo(cwist_http_client *client, const char *url, con
               "POST: server saw different body bytes");
     }
     cwist_http_response_destroy(res);
+}
+
+static void test_get_with_body_preserves_method(cwist_http_client *client, const char *base) {
+    int before = g_failures;
+    char url[128];
+    snprintf(url, sizeof(url), "%s/get-echo", base);
+    cwist_http_response *res = request(client, url, CWIST_HTTP_GET, "x", 1);
+    if (res) {
+        CHECK(res->status_code == CWIST_HTTP_CREATED,
+              "GET with body changed the method or returned %d", (int)res->status_code);
+        CHECK(body_equals(res, "len=1;x", 7), "GET with body: wrong echoed body");
+        cwist_http_response_destroy(res);
+    }
+    report(before, "GET with body preserves the method");
+}
+
+static void test_redirect_limit(cwist_http_client *client, const char *base) {
+    int before = g_failures;
+    char url[128];
+    snprintf(url, sizeof(url), "%s/loop", base);
+    redirect_loop_count = 0;
+    cwist_http_response *res = NULL;
+    cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    CHECK(!cwist_error_is_ok(&err), "redirect loop exceeded the configured limit");
+    CHECK(res == NULL, "redirect loop unexpectedly returned a response");
+    if (res) cwist_http_response_destroy(res);
+    cwist_error_dispose(&err);
+    report(before, "redirect limit survives easy-handle reset");
 }
 
 static void test_post(cwist_http_client *client, const char *base) {
@@ -446,6 +493,8 @@ int main(void) {
         snprintf(base, sizeof(base), "http://127.0.0.1:%d", port);
         test_get(client, base);
         test_post(client, base);
+        test_get_with_body_preserves_method(client, base);
+        test_redirect_limit(client, base);
         test_redirect_followed(client, base);
         test_redirect_not_followed(client, base);
         test_custom_headers_not_forwarded_on_redirect(client, base);

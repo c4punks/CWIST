@@ -3,6 +3,7 @@
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/seq/seq.h>
 
+#include "../../core/utils/number_internal.h"
 #include <cjson/cJSON.h>
 
 #if defined(CWIST_TLS_MBEDTLS)
@@ -28,7 +29,9 @@
 #include <openssl/obj.h>
 #endif
 
+#include <limits.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -499,6 +502,20 @@ struct cwist_jwt_claims {
     cJSON *json; ///< Parsed payload JSON object.
 };
 
+static uintmax_t jwt_time_max(void) {
+    if ((time_t)-1 > 0) return (uintmax_t)(time_t)-1;
+    return ((uintmax_t)1 << (sizeof(time_t) * CHAR_BIT - 1)) - 1;
+}
+
+static bool jwt_time_from_number(double value, time_t *out) {
+    if (!cwist_number_double_is_finite(value)) return false;
+    long double wide = (long double)value;
+    long double minimum = (time_t)-1 > 0 ? 0.0L : -(long double)jwt_time_max() - 1.0L;
+    if (wide < minimum || wide > (long double)jwt_time_max()) return false;
+    *out = (time_t)value;
+    return true;
+}
+
 /* --------------------------------------------------------------------------
  * Public API
  * -------------------------------------------------------------------------- */
@@ -529,14 +546,20 @@ static char *jwt_sign_common(jwt_alg_t alg, const char *payload_json, const char
     if (!header_json) return NULL;
 
     /* --- Optionally inject exp/iat into payload --------------------------- */
-    cJSON *payload = cJSON_Parse(payload_json);
-    if (!payload) {
+    cJSON *payload = cJSON_ParseWithOpts(payload_json, NULL, true);
+    if (!payload || !cJSON_IsObject(payload)) {
+        cJSON_Delete(payload);
         cJSON_free(header_json);
         return NULL;
     }
 
     if (exp_seconds > 0) {
         time_t now = time(NULL);
+        if (now == (time_t)-1 || (uintmax_t)exp_seconds > jwt_time_max() - (uintmax_t)now) {
+            cJSON_Delete(payload);
+            cJSON_free(header_json);
+            return NULL;
+        }
         /* Only add if not already present */
         if (!cJSON_GetObjectItemCaseSensitive(payload, "iat")) {
             cJSON_AddNumberToObject(payload, "iat", (double)now);
@@ -667,7 +690,7 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
         cwist_free(tok_copy);
         return NULL;
     }
-    cJSON *hdr = cJSON_ParseWithLength((const char *)hdr_json, hdr_json_len);
+    cJSON *hdr = cJSON_ParseWithLengthOpts((const char *)hdr_json, hdr_json_len + 1, NULL, true);
     cwist_free(hdr_json);
     if (!hdr) {
         cwist_free(tok_copy);
@@ -709,33 +732,42 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
 
     if (!pay_json) return NULL;
 
-    cJSON *json = cJSON_ParseWithLength((const char *)pay_json, pay_json_len);
+    cJSON *json = cJSON_ParseWithLengthOpts((const char *)pay_json, pay_json_len + 1, NULL, true);
     cwist_free(pay_json);
 
-    if (!json) return NULL;
+    if (!json || !cJSON_IsObject(json)) {
+        cJSON_Delete(json);
+        return NULL;
+    }
 
     /* Expiry and not-before claims are exact unless the caller explicitly
      * configures clock-skew leeway. */
     time_t now = time(NULL);
+    if (now == (time_t)-1) {
+        cJSON_Delete(json);
+        return NULL;
+    }
     cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, "exp");
-    if (exp_item && (!cJSON_IsNumber(exp_item) || !isfinite(exp_item->valuedouble))) {
+    time_t exp_time;
+    if (exp_item &&
+        (!cJSON_IsNumber(exp_item) || !jwt_time_from_number(exp_item->valuedouble, &exp_time))) {
         cJSON_Delete(json);
         return NULL;
     }
     if (exp_item) {
-        time_t exp_time = (time_t)exp_item->valuedouble;
         if (now > leeway && exp_time < now - leeway) {
             cJSON_Delete(json);
             return NULL; /* token expired */
         }
     }
     cJSON *nbf_item = cJSON_GetObjectItemCaseSensitive(json, "nbf");
-    if (nbf_item && (!cJSON_IsNumber(nbf_item) || !isfinite(nbf_item->valuedouble))) {
+    time_t nbf_time;
+    if (nbf_item &&
+        (!cJSON_IsNumber(nbf_item) || !jwt_time_from_number(nbf_item->valuedouble, &nbf_time))) {
         cJSON_Delete(json);
         return NULL;
     }
     if (nbf_item) {
-        time_t nbf_time = (time_t)nbf_item->valuedouble;
         if (nbf_time > now && (nbf_time - now) > leeway) {
             cJSON_Delete(json);
             return NULL; /* token not yet valid */

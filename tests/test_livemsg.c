@@ -470,6 +470,17 @@ static void test_json_server(void) {
     assert(close_frame.payload[0] == 0x03 && close_frame.payload[1] == 0xf1);
     frame_free(&close_frame);
     close(fd);
+
+    fd = ws_connect((uint16_t)json_port, "/json");
+    ignored = ws_read(fd);
+    frame_free(&ignored);
+    static const char trailing[] = "{\"value\":42} trailing";
+    ws_write(fd, CWIST_WS_FRAME_TEXT, trailing, sizeof(trailing) - 1);
+    close_frame = ws_read(fd);
+    assert(close_frame.opcode == CWIST_WS_FRAME_CLOSE && close_frame.len == 2);
+    assert(close_frame.payload[0] == 0x03 && close_frame.payload[1] == 0xef);
+    frame_free(&close_frame);
+    close(fd);
     stop_server(server);
     puts("JSON echo and protocol error closes: ok");
 }

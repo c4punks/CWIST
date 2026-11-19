@@ -81,6 +81,13 @@ static void test_healthz_null_buffer_and_status(void) {
     assert(count == 2);
     assert(overall == CWIST_HEALTH_FAIL);
 
+    count = 0;
+    cwist_healthz_run(probes, 1, &count, &overall);
+    assert(count == 2);
+    count = 0;
+    cwist_healthz_run(probes, 0, &count, &overall);
+    assert(count == 2);
+
     // Test cwist_app_healthz response handling
     cwist_http_response res;
     memset(&res, 0, sizeof(res));

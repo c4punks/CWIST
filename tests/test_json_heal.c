@@ -561,6 +561,57 @@ static void test_db_query_strict(void) {
     printf("  Passed.\n");
 }
 
+static void test_strict_json_and_schema_boundaries(void) {
+    printf("Strict JSON and schema boundaries...\n");
+
+    cwist_heal_result_t healed = cwist_json_heal("{} trailing", NULL);
+    assert(healed.json == NULL);
+    cwist_heal_result_free(&healed);
+
+    static const cwist_schema_field_t fields[] = {
+        {"n", {NULL}, CWIST_FIELD_INT, true},
+    };
+    static const cwist_schema_t schema = {fields, 1};
+    assert(!cwist_zod_parse("{\"n\":1.5}", &schema, NULL).valid);
+    assert(!cwist_zod_parse("{\"n\":1} trailing", &schema, NULL).valid);
+
+    cwist_heal_config_t cfg = {.schema = &schema};
+    healed = cwist_json_heal("{\"n\":\"nan\"}", &cfg);
+    assert(healed.json != NULL && strstr(healed.json, "\"nan\"") != NULL);
+    cwist_heal_result_free(&healed);
+
+    char long_a[96], long_b[96], long_c[96], long_input[256];
+    memset(long_a, 'a', sizeof(long_a) - 1);
+    memset(long_b, 'a', sizeof(long_b) - 1);
+    memset(long_c, 'a', sizeof(long_c) - 1);
+    long_a[sizeof(long_a) - 1] = long_b[sizeof(long_b) - 1] = long_c[sizeof(long_c) - 1] = '\0';
+    long_a[sizeof(long_a) - 2] = 'x';
+    long_b[sizeof(long_b) - 2] = 'y';
+    long_c[sizeof(long_c) - 2] = 'z';
+    snprintf(long_input, sizeof(long_input), "{\"%s\":1,\"%s\":2}", long_a, long_b);
+    cwist_schema_field_t long_fields[] = {
+        {.name = long_c, .type = CWIST_FIELD_INT, .required = false},
+    };
+    cwist_schema_t long_schema = {long_fields, 1};
+    cwist_heal_config_t long_cfg = {.schema = &long_schema};
+    healed = cwist_json_heal(long_input, &long_cfg);
+    assert(healed.json != NULL && !healed.healed);
+    cwist_heal_result_free(&healed);
+
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+    cJSON *stale = (cJSON *)1;
+    err = cwist_db_query_strict(db, "not sql", &stale, &schema);
+    assert(!cwist_error_is_ok(&err) && stale == NULL);
+    cwist_error_dispose(&err);
+    err = cwist_db_query_strict(db, "SELECT 1 AS n", NULL, &schema);
+    assert(!cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+    cwist_db_close(db);
+    printf("  Passed.\n");
+}
+
 /* ==========================================================================
  * main
  * ======================================================================== */
@@ -599,6 +650,7 @@ int main(void) {
     test_db_insert_healed_escapes_identifiers();
     test_db_insert_healed_preserves_long_values();
     test_db_query_strict();
+    test_strict_json_and_schema_boundaries();
 
     printf("\nAll json_heal / zod / DB tests passed!\n");
     return 0;

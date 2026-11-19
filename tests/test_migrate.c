@@ -202,6 +202,22 @@ static void test_migrate_history_failure_rolls_back(void) {
     printf("  Passed.\n");
 }
 
+static void test_migrate_extreme_versions(void) {
+    printf("Testing migration ordering at integer boundaries...\n");
+
+    sqlite3 *db = NULL;
+    assert(sqlite3_open(":memory:", &db) == SQLITE_OK);
+    const cwist_migration_t extreme[] = {
+        {INT_MAX, "last", "CREATE TABLE last_version (id INTEGER);", NULL},
+        {1, "first", "CREATE TABLE first_version (id INTEGER);", NULL},
+        {INT_MIN, "skipped", "CREATE TABLE skipped_version (id INTEGER);", NULL},
+    };
+    assert(cwist_migrate_up(db, extreme, 3) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_version(db) == INT_MAX);
+    sqlite3_close(db);
+    printf("  Passed.\n");
+}
+
 /* -------------------------------------------------------------------------
  * db_crypt tests
  * ---------------------------------------------------------------------- */
@@ -321,6 +337,7 @@ int main(void) {
     test_migrate_down_all();
     test_migrate_down_steps_skip_irreversible();
     test_migrate_history_failure_rolls_back();
+    test_migrate_extreme_versions();
 
     printf("=== DB Crypt tests ===\n");
     test_db_crypt_roundtrip();

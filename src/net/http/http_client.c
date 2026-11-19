@@ -129,7 +129,7 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
         value_len--;
     }
 
-    if (name_len > 0 && value_len > 0) {
+    if (name_len > 0) {
         cwist_scratch_t name_s CWIST_SCRATCH_DEFER = {0};
         char *name = cwist_scratch_alloc(&name_s, name_len + 1);
         if (!name) return total;
@@ -355,6 +355,7 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
 
     /* Re-apply persistent settings after reset */
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, client->follow_redirects ? 1L : 0L);
+    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)client->timeout_ms);
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
     curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
@@ -429,6 +430,8 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)body_len);
         curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, body);
     }
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method_str);
+    if (strcmp(method_str, "HEAD") == 0) curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
     /* Response accumulators */
     response_body_t resp_body = {0};

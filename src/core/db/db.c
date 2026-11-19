@@ -590,6 +590,12 @@ cwist_error_t cwist_db_insert_healed(cwist_db *db, const char *table, const char
  */
 cwist_error_t cwist_db_query_strict(cwist_db *db, const char *sql, cJSON **result,
                                     const cwist_schema_t *schema) {
+    if (!result) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    *result = NULL;
     /* When no schema is given, behave identically to cwist_db_query(). */
     if (!schema) return cwist_db_query(db, sql, result);
 

@@ -71,6 +71,29 @@ static void test_session_expiry_and_revocation(void) {
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
 
+    char decoded[4096];
+    assert(cwist_cookie_decode(revoked, decoded, sizeof(decoded)) >= 0);
+    size_t decoded_len = strlen(decoded);
+    assert(decoded_len > 2 && decoded[decoded_len - 1] == '=');
+    static const char alphabet[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    char *last = strchr(alphabet, decoded[decoded_len - 2]);
+    assert(last != NULL);
+    size_t index = (size_t)(last - alphabet);
+    decoded[decoded_len - 2] = alphabet[(index & 0x3c) | ((index + 1) & 3)];
+    char *noncanonical = cwist_cookie_encode(decoded);
+    assert(noncanonical != NULL);
+    replayed = cwist_http_request_create();
+    replay_res = cwist_http_response_create();
+    session_set_cookie(replayed, noncanonical);
+    replayed_session = cwist_session_start(app, replayed, replay_res);
+    assert(cwist_session_get(replayed_session, "role") == NULL);
+    cwist_session_destroy(replayed_session);
+    replayed->session = NULL;
+    free(noncanonical);
+    cwist_http_response_destroy(replay_res);
+    cwist_http_request_destroy(replayed);
+
     req = cwist_http_request_create();
     res = cwist_http_response_create();
     session = cwist_session_start(app, req, res);

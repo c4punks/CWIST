@@ -295,10 +295,12 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
         a->received = (bool *)cwist_alloc_array(chunk->total, sizeof(bool));
         a->payload_lens = (uint16_t *)cwist_alloc_array(chunk->total, sizeof(uint16_t));
         if (!a->data || !a->received || !a->payload_lens) {
+            size_t max_data_len = a->max_data_len;
             cwist_free(a->data);
             cwist_free(a->received);
             cwist_free(a->payload_lens);
             memset(a, 0, sizeof(*a));
+            a->max_data_len = max_data_len;
             return false;
         }
         a->have_state = true;
