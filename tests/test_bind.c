@@ -131,7 +131,7 @@ void test_bind_auto_400_response(void) {
 
 void test_bind_form_data(void) {
     printf("test_bind_form_data...\n");
-    const char *form = "email=carol@example.com&age=25&name=Carol&score=88";
+    const char *form = "em%61il=carol%40example.com&age=25&name=Carol+Smith&score=88";
     cwist_http_request *req = cwist_http_request_create();
     cwist_sstring_assign(req->body, (char *)form);
 
@@ -143,7 +143,7 @@ void test_bind_form_data(void) {
     assert(ok == true);
     assert(strcmp(out.email, "carol@example.com") == 0);
     assert(out.age == 25);
-    assert(strcmp(out.name, "Carol") == 0);
+    assert(strcmp(out.name, "Carol Smith") == 0);
 
     cwist_http_request_destroy(req);
     printf("  OK\n");
@@ -297,6 +297,39 @@ static void test_bind_rejects_invalid_numbers_and_shapes(void) {
     cwist_http_request_destroy(req);
 }
 
+static void test_bind_form_decoding_limits(void) {
+    typedef struct {
+        char value[8192];
+    } long_form_t;
+    const cwist_bind_field_t fields[] = {
+        {.json_key = "value",
+         .target_type = CWIST_BIND_STRING,
+         .target_offset = offsetof(long_form_t, value),
+         .target_size = sizeof(((long_form_t *)0)->value)},
+    };
+    const cwist_bind_schema_t schema = {fields, 1, sizeof(long_form_t)};
+    char form[5010];
+    memcpy(form, "value=", 6);
+    memset(form + 6, 'x', 5000);
+    form[5006] = '\0';
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, form);
+    long_form_t out = {0};
+    cwist_bind_result_t result;
+    assert(cwist_app_req_bind_form(req, &schema, &out, &result));
+    assert(strlen(out.value) == 5000);
+    cwist_http_request_destroy(req);
+
+    const char *invalid[] = {"value=%", "value=%0", "value=%GG", "value=%00"};
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
+        req = cwist_http_request_create();
+        cwist_sstring_assign(req->body, invalid[i]);
+        assert(!cwist_app_req_bind_form(req, &schema, &out, &result));
+        assert(result.error_count > 0);
+        cwist_http_request_destroy(req);
+    }
+}
+
 int main(void) {
     test_bind_rejects_invalid_numbers_and_shapes();
     test_bind_success();
@@ -305,6 +338,7 @@ int main(void) {
     test_bind_age_out_of_range();
     test_bind_auto_400_response();
     test_bind_form_data();
+    test_bind_form_decoding_limits();
     test_bind_regex();
     test_bind_null_guards_and_numeric_validation();
     printf("All bind tests passed.\n");
