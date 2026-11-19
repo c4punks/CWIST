@@ -1415,21 +1415,29 @@ static size_t proxy_ws_build_request(cwist_http_request *req, const char *target
                      authority_begin);
     if (w < 0 || (size_t)w >= cap) return 0;
     size_t len = (size_t)w;
+    proxy_conn_tokens tokens;
+    if (!proxy_collect_connection_tokens(req->headers, &tokens)) return 0;
 
     for (cwist_http_header_node *h = req->headers; h; h = h->next) {
         if (!h->key || !h->key->data) continue;
         const char *k = h->key->data;
         const char *v = (h->value && h->value->data) ? h->value->data : "";
         if (k[0] == ':') continue;
-        if (strcasecmp(k, "host") == 0) continue; /* rewritten above */
-        if (strcasecmp(k, "proxy-connection") == 0) continue;
+        if (strcasecmp(k, "host") == 0 || strcasecmp(k, "connection") == 0) continue;
         if (strncasecmp(k, "x-forwarded-", 12) == 0) continue; /* regenerated below */
+        if (strcasecmp(k, "upgrade") != 0 && strncasecmp(k, "sec-websocket-", 14) != 0 &&
+            (proxy_in_list(k_proxy_hop_by_hop, k) || proxy_in_list(k_proxy_req_drop, k) ||
+             proxy_in_tokens(&tokens, k)))
+            continue;
         if (!cwist_proxy_header_name_ok(k) || !cwist_proxy_header_value_ok(v)) return 0;
         w = snprintf(out + len, cap - len, "%s: %s\r\n", k, v);
         if (w < 0 || (size_t)w >= cap - len) return 0;
         len += (size_t)w;
     }
 
+    w = snprintf(out + len, cap - len, "Connection: Upgrade\r\n");
+    if (w < 0 || (size_t)w >= cap - len) return 0;
+    len += (size_t)w;
     if (xff && xff[0]) {
         w = snprintf(out + len, cap - len, "X-Forwarded-For: %s\r\n", xff);
         if (w < 0 || (size_t)w >= cap - len) return 0;
