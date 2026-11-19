@@ -66,6 +66,9 @@ int cwist_cookie_decode(const char *in, char *out, size_t out_len) {
                 out[j++] = in[i];
                 continue;
             }
+            if (hex == 0) {
+                return -1;
+            }
             out[j++] = (char)hex;
             i += 2;
         } else if (in[i] == '+') {
