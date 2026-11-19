@@ -8,6 +8,8 @@
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,26 +64,22 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
         {.name = "cwist_http_continuation_shed_total",
          .help = "Pipelined HTTP/1.1 continuations dropped due to full reactor queue",
          .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_TOTAL] =
-        {.name = "cwist_tls_handshakes_total",
-         .help = "TLS handshakes completed (full + resumed)",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_RESUMED] =
-        {.name = "cwist_tls_handshakes_resumed_total",
-         .help = "TLS handshakes resumed via session ID or ticket",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CONNECTIONS_ACTIVE] =
-        {.name = "cwist_tls_connections_active",
-         .help = "Currently established TLS connections",
-         .type = CWIST_METRIC_GAUGE},
-    [CWIST_METRIC_TLS_HANDSHAKES_TLS12] =
-        {.name = "cwist_tls_handshakes_tls12_total",
-         .help = "TLS handshakes that negotiated TLS 1.2",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_TLS13] =
-        {.name = "cwist_tls_handshakes_tls13_total",
-         .help = "TLS handshakes that negotiated TLS 1.3",
-         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_TOTAL] = {.name = "cwist_tls_handshakes_total",
+                                           .help = "TLS handshakes completed (full + resumed)",
+                                           .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_RESUMED] = {.name = "cwist_tls_handshakes_resumed_total",
+                                             .help =
+                                                 "TLS handshakes resumed via session ID or ticket",
+                                             .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CONNECTIONS_ACTIVE] = {.name = "cwist_tls_connections_active",
+                                             .help = "Currently established TLS connections",
+                                             .type = CWIST_METRIC_GAUGE},
+    [CWIST_METRIC_TLS_HANDSHAKES_TLS12] = {.name = "cwist_tls_handshakes_tls12_total",
+                                           .help = "TLS handshakes that negotiated TLS 1.2",
+                                           .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_TLS13] = {.name = "cwist_tls_handshakes_tls13_total",
+                                           .help = "TLS handshakes that negotiated TLS 1.3",
+                                           .type = CWIST_METRIC_COUNTER},
     [CWIST_METRIC_TLS_CIPHERS_AES128_GCM] =
         {.name = "cwist_tls_ciphers_aes128_gcm_total",
          .help = "TLS handshakes negotiated with TLS_AES_128_GCM_SHA256",
@@ -94,10 +92,9 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
         {.name = "cwist_tls_ciphers_chacha20_total",
          .help = "TLS handshakes negotiated with TLS_CHACHA20_POLY1305_SHA256",
          .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CIPHERS_OTHER] =
-        {.name = "cwist_tls_ciphers_other_total",
-         .help = "TLS handshakes negotiated with any other cipher",
-         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CIPHERS_OTHER] = {.name = "cwist_tls_ciphers_other_total",
+                                        .help = "TLS handshakes negotiated with any other cipher",
+                                        .type = CWIST_METRIC_COUNTER},
 };
 
 /* -------------------------------------------------------------------------
@@ -113,12 +110,13 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
  *
  * @return Pointer to the singleton registry, or NULL on allocation failure.
  */
-cwist_metrics_registry_t *cwist_metrics_registry(void) {
-    static cwist_metrics_registry_t *g_reg = NULL;
-    if (__builtin_expect(g_reg != NULL, 1)) return g_reg;
+static cwist_metrics_registry_t *g_reg;
+static pthread_once_t g_reg_once = PTHREAD_ONCE_INIT;
 
+static void cwist_metrics_registry_init(void) {
     cwist_metrics_registry_t *alloc = cwist_alloc(sizeof(*alloc));
-    if (!alloc) return NULL;
+    if (!alloc) return;
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(alloc);
     memcpy(alloc->metrics, metric_defaults, sizeof(metric_defaults));
     for (int i = 0; i < CWIST_METRIC_COUNT; ++i) {
         atomic_init(&alloc->metrics[i].value.raw, 0);
@@ -126,6 +124,10 @@ cwist_metrics_registry_t *cwist_metrics_registry(void) {
         atomic_init(&alloc->metrics[i].sum, 0);
     }
     g_reg = alloc;
+}
+
+cwist_metrics_registry_t *cwist_metrics_registry(void) {
+    pthread_once(&g_reg_once, cwist_metrics_registry_init);
     return g_reg;
 }
 
