@@ -766,244 +766,245 @@ $(document).ready(function(){initNavTree('d8/d80/jwt_8c_source.html','../../'); 
 <div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>    }</div>
 <div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>    cJSON *alg_item = cJSON_GetObjectItemCaseSensitive(hdr, <span class="stringliteral">&quot;alg&quot;</span>);</div>
 <div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>    <span class="keywordtype">bool</span> alg_ok = alg_item &amp;&amp; cJSON_IsString(alg_item) &amp;&amp;</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>                  strcmp(alg_item-&gt;valuestring, jwt_alg_name(alg)) == 0;</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>    cJSON_Delete(hdr);</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>    <span class="keywordflow">if</span> (!alg_ok) {</div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>    }</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span> </div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *pay_enc = dot1 + 1;</div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *sig_enc = dot2 + 1;</div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span> </div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    <span class="comment">/* --- Decode the provided signature ------------------------------------ */</span></div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    <span class="keywordtype">size_t</span> provided_sig_len = 0;</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> *provided_sig = b64url_decode(sig_enc, strlen(sig_enc), &amp;provided_sig_len);</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    <span class="keywordflow">if</span> (!provided_sig) {</div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    }</div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span> </div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>    <span class="comment">/* --- Verify over the original &quot;hdr_enc.pay_enc&quot; signing input --------- */</span></div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>    <span class="keywordtype">size_t</span> first_two_len = (size_t)(dot2 - tok_copy);</div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>    <span class="keywordtype">bool</span> sig_ok = jwt_verify_bytes(alg, key, token, first_two_len, provided_sig, provided_sig_len);</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(provided_sig);</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>    <span class="keywordflow">if</span> (!sig_ok) {</div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>        <span class="keywordflow">return</span> NULL; <span class="comment">/* signature mismatch */</span></div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>    }</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span> </div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>    <span class="comment">/* --- Decode and parse the payload ------------------------------------- */</span></div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>    <span class="keywordtype">size_t</span> pay_json_len = 0;</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> *pay_json = b64url_decode(pay_enc, strlen(pay_enc), &amp;pay_json_len);</div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span> </div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>    <span class="keywordflow">if</span> (!pay_json) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span> </div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    cJSON *json = cJSON_ParseWithLengthOpts((<span class="keyword">const</span> <span class="keywordtype">char</span> *)pay_json, pay_json_len + 1, NULL, <span class="keyword">true</span>);</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(pay_json);</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span> </div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    <span class="keywordflow">if</span> (!json || !cJSON_IsObject(json)) {</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>        cJSON_Delete(json);</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    }</div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span> </div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>    <span class="comment">/* Expiry and not-before claims are exact unless the caller explicitly</span></div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span><span class="comment">     * configures clock-skew leeway. */</span></div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    time_t now = time(NULL);</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>    <span class="keywordflow">if</span> (now == (time_t)-1) {</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>        cJSON_Delete(json);</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>    }</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>    cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, <span class="stringliteral">&quot;exp&quot;</span>);</div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    time_t exp_time;</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    <span class="keywordflow">if</span> (exp_item &amp;&amp;</div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>        (!cJSON_IsNumber(exp_item) || !jwt_time_from_number(exp_item-&gt;valuedouble, &amp;exp_time))) {</div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>        cJSON_Delete(json);</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    }</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    <span class="keywordflow">if</span> (exp_item) {</div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>        <span class="keywordflow">if</span> (now &gt; leeway &amp;&amp; exp_time &lt; now - leeway) {</div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>            cJSON_Delete(json);</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>            <span class="keywordflow">return</span> NULL; <span class="comment">/* token expired */</span></div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>        }</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    }</div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    cJSON *nbf_item = cJSON_GetObjectItemCaseSensitive(json, <span class="stringliteral">&quot;nbf&quot;</span>);</div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>    time_t nbf_time;</div>
-<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>    <span class="keywordflow">if</span> (nbf_item &amp;&amp;</div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>        (!cJSON_IsNumber(nbf_item) || !jwt_time_from_number(nbf_item-&gt;valuedouble, &amp;nbf_time))) {</div>
-<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>        cJSON_Delete(json);</div>
-<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>    }</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>    <span class="keywordflow">if</span> (nbf_item) {</div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>        <span class="keywordflow">if</span> (nbf_time &gt; now &amp;&amp; (nbf_time - now) &gt; leeway) {</div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>            cJSON_Delete(json);</div>
-<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>            <span class="keywordflow">return</span> NULL; <span class="comment">/* token not yet valid */</span></div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        }</div>
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>    }</div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span> </div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>    <span class="comment">/* --- Build and return claims object ----------------------------------- */</span></div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>    <a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *claims = (<a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(cwist_jwt_claims));</div>
-<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>    <span class="keywordflow">if</span> (!claims) {</div>
-<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>        cJSON_Delete(json);</div>
-<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    }</div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>    claims-&gt;json = json;</div>
-<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    <span class="keywordflow">return</span> claims;</div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>}</div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span> </div>
-<div class="foldopen" id="foldopen00787" data-start="{" data-end="}">
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a7ebdc506413955dc760508df1943b0ca">  787</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *secret) {</div>
-<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604">JWT_ALG_HS256</a>, token, secret, 0);</div>
-<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>}</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>                  strcmp(alg_item-&gt;valuestring, jwt_alg_name(alg)) == 0 &amp;&amp;</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>                  cJSON_GetObjectItemCaseSensitive(hdr, <span class="stringliteral">&quot;crit&quot;</span>) == NULL;</div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>    cJSON_Delete(hdr);</div>
+<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>    <span class="keywordflow">if</span> (!alg_ok) {</div>
+<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
+<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>    }</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span> </div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *pay_enc = dot1 + 1;</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *sig_enc = dot2 + 1;</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span> </div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    <span class="comment">/* --- Decode the provided signature ------------------------------------ */</span></div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    <span class="keywordtype">size_t</span> provided_sig_len = 0;</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> *provided_sig = b64url_decode(sig_enc, strlen(sig_enc), &amp;provided_sig_len);</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    <span class="keywordflow">if</span> (!provided_sig) {</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    }</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span> </div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>    <span class="comment">/* --- Verify over the original &quot;hdr_enc.pay_enc&quot; signing input --------- */</span></div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>    <span class="keywordtype">size_t</span> first_two_len = (size_t)(dot2 - tok_copy);</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>    <span class="keywordtype">bool</span> sig_ok = jwt_verify_bytes(alg, key, token, first_two_len, provided_sig, provided_sig_len);</div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(provided_sig);</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>    <span class="keywordflow">if</span> (!sig_ok) {</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>        <span class="keywordflow">return</span> NULL; <span class="comment">/* signature mismatch */</span></div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>    }</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span> </div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>    <span class="comment">/* --- Decode and parse the payload ------------------------------------- */</span></div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>    <span class="keywordtype">size_t</span> pay_json_len = 0;</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> *pay_json = b64url_decode(pay_enc, strlen(pay_enc), &amp;pay_json_len);</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(tok_copy);</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span> </div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    <span class="keywordflow">if</span> (!pay_json) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span> </div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    cJSON *json = cJSON_ParseWithLengthOpts((<span class="keyword">const</span> <span class="keywordtype">char</span> *)pay_json, pay_json_len + 1, NULL, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(pay_json);</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span> </div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>    <span class="keywordflow">if</span> (!json || !cJSON_IsObject(json)) {</div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>        cJSON_Delete(json);</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>    }</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span> </div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>    <span class="comment">/* Expiry and not-before claims are exact unless the caller explicitly</span></div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span><span class="comment">     * configures clock-skew leeway. */</span></div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>    time_t now = time(NULL);</div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>    <span class="keywordflow">if</span> (now == (time_t)-1) {</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        cJSON_Delete(json);</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>    }</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    cJSON *exp_item = cJSON_GetObjectItemCaseSensitive(json, <span class="stringliteral">&quot;exp&quot;</span>);</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    time_t exp_time;</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>    <span class="keywordflow">if</span> (exp_item &amp;&amp;</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>        (!cJSON_IsNumber(exp_item) || !jwt_time_from_number(exp_item-&gt;valuedouble, &amp;exp_time))) {</div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>        cJSON_Delete(json);</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    }</div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    <span class="keywordflow">if</span> (exp_item) {</div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>        <span class="keywordflow">if</span> (now &gt;= leeway &amp;&amp; exp_time &lt;= now - leeway) {</div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>            cJSON_Delete(json);</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>            <span class="keywordflow">return</span> NULL; <span class="comment">/* token expired */</span></div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>        }</div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    }</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>    cJSON *nbf_item = cJSON_GetObjectItemCaseSensitive(json, <span class="stringliteral">&quot;nbf&quot;</span>);</div>
+<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>    time_t nbf_time;</div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>    <span class="keywordflow">if</span> (nbf_item &amp;&amp;</div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>        (!cJSON_IsNumber(nbf_item) || !jwt_time_from_number(nbf_item-&gt;valuedouble, &amp;nbf_time))) {</div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>        cJSON_Delete(json);</div>
+<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>    }</div>
+<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>    <span class="keywordflow">if</span> (nbf_item) {</div>
+<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>        <span class="keywordflow">if</span> (nbf_time &gt; now &amp;&amp; (nbf_time - now) &gt; leeway) {</div>
+<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>            cJSON_Delete(json);</div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>            <span class="keywordflow">return</span> NULL; <span class="comment">/* token not yet valid */</span></div>
+<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>        }</div>
+<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>    }</div>
+<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span> </div>
+<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>    <span class="comment">/* --- Build and return claims object ----------------------------------- */</span></div>
+<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>    <a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *claims = (<a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(cwist_jwt_claims));</div>
+<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>    <span class="keywordflow">if</span> (!claims) {</div>
+<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>        cJSON_Delete(json);</div>
+<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>    }</div>
+<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    claims-&gt;json = json;</div>
+<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>    <span class="keywordflow">return</span> claims;</div>
+<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>}</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span> </div>
+<div class="foldopen" id="foldopen00788" data-start="{" data-end="}">
+<div class="line"><a id="l00788" name="l00788"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a7ebdc506413955dc760508df1943b0ca">  788</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *secret) {</div>
+<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604">JWT_ALG_HS256</a>, token, secret, 0);</div>
+<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>}</div>
 </div>
-<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span> </div>
-<div class="foldopen" id="foldopen00791" data-start="{" data-end="}">
-<div class="line"><a id="l00791" name="l00791"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a07985e26c7135aa715ad4fcf83eda914">  791</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a07985e26c7135aa715ad4fcf83eda914">cwist_jwt_verify_with_leeway</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *secret,</div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>                                               <span class="keywordtype">long</span> leeway_seconds) {</div>
-<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604">JWT_ALG_HS256</a>, token, secret, (time_t)leeway_seconds);</div>
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>}</div>
+<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span> </div>
+<div class="foldopen" id="foldopen00792" data-start="{" data-end="}">
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a07985e26c7135aa715ad4fcf83eda914">  792</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a07985e26c7135aa715ad4fcf83eda914">cwist_jwt_verify_with_leeway</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *secret,</div>
+<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>                                               <span class="keywordtype">long</span> leeway_seconds) {</div>
+<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604">JWT_ALG_HS256</a>, token, secret, (time_t)leeway_seconds);</div>
+<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>}</div>
 </div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span> </div>
-<div class="foldopen" id="foldopen00796" data-start="{" data-end="}">
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a449066f8812ceed8be3af264d626b123">  796</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a449066f8812ceed8be3af264d626b123">cwist_jwt_verify_es256</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *pem_key) {</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a84f9bf1cb93f6ae622a9de57d9c67472">JWT_ALG_ES256</a>, token, pem_key, 0);</div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>}</div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span> </div>
+<div class="foldopen" id="foldopen00797" data-start="{" data-end="}">
+<div class="line"><a id="l00797" name="l00797"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a449066f8812ceed8be3af264d626b123">  797</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a449066f8812ceed8be3af264d626b123">cwist_jwt_verify_es256</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *pem_key) {</div>
+<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a84f9bf1cb93f6ae622a9de57d9c67472">JWT_ALG_ES256</a>, token, pem_key, 0);</div>
+<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>}</div>
 </div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span> </div>
-<div class="foldopen" id="foldopen00800" data-start="{" data-end="}">
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#af92c64b451fdba1c2e3065572daaf5fc">  800</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#af92c64b451fdba1c2e3065572daaf5fc">cwist_jwt_verify_ed25519</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *pem_key) {</div>
-<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674">JWT_ALG_ED25519</a>, token, pem_key, 0);</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>}</div>
+<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span> </div>
+<div class="foldopen" id="foldopen00801" data-start="{" data-end="}">
+<div class="line"><a id="l00801" name="l00801"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#af92c64b451fdba1c2e3065572daaf5fc">  801</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#af92c64b451fdba1c2e3065572daaf5fc">cwist_jwt_verify_ed25519</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, <span class="keyword">const</span> <span class="keywordtype">char</span> *pem_key) {</div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>    <span class="keywordflow">return</span> jwt_verify_common(<a class="code hl_enumvalue" href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674">JWT_ALG_ED25519</a>, token, pem_key, 0);</div>
+<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>}</div>
 </div>
-<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span> </div>
-<div class="foldopen" id="foldopen00810" data-start="{" data-end="}">
-<div class="line"><a id="l00810" name="l00810"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a05776c1f6f45fbb9499e8b8788fbc64e">  810</a></span><span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a05776c1f6f45fbb9499e8b8788fbc64e">cwist_jwt_claims_get</a>(<span class="keyword">const</span> cwist_jwt_claims *claims, <span class="keyword">const</span> <span class="keywordtype">char</span> *key) {</div>
-<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>    <span class="keywordflow">if</span> (!claims || !key) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>    cJSON *item = cJSON_GetObjectItemCaseSensitive(claims-&gt;json, key);</div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>    <span class="keywordflow">if</span> (!item) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    <span class="keywordflow">if</span> (cJSON_IsString(item)) <span class="keywordflow">return</span> item-&gt;valuestring;</div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="comment">/* For numeric claims return the raw JSON representation */</span></div>
-<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>}</div>
+<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span> </div>
+<div class="foldopen" id="foldopen00811" data-start="{" data-end="}">
+<div class="line"><a id="l00811" name="l00811"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a05776c1f6f45fbb9499e8b8788fbc64e">  811</a></span><span class="keyword">const</span> <span class="keywordtype">char</span> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a05776c1f6f45fbb9499e8b8788fbc64e">cwist_jwt_claims_get</a>(<span class="keyword">const</span> cwist_jwt_claims *claims, <span class="keyword">const</span> <span class="keywordtype">char</span> *key) {</div>
+<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>    <span class="keywordflow">if</span> (!claims || !key) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>    cJSON *item = cJSON_GetObjectItemCaseSensitive(claims-&gt;json, key);</div>
+<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    <span class="keywordflow">if</span> (!item) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="keywordflow">if</span> (cJSON_IsString(item)) <span class="keywordflow">return</span> item-&gt;valuestring;</div>
+<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    <span class="comment">/* For numeric claims return the raw JSON representation */</span></div>
+<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>}</div>
 </div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span> </div>
-<div class="foldopen" id="foldopen00823" data-start="{" data-end="}">
-<div class="line"><a id="l00823" name="l00823"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da">  823</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a22f0ad8ebf932941f73e52625fbf78da">cwist_jwt_claims_destroy</a>(cwist_jwt_claims *claims) {</div>
-<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>    <span class="keywordflow">if</span> (!claims) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>    cJSON_Delete(claims-&gt;json);</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(claims);</div>
-<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>}</div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span> </div>
+<div class="foldopen" id="foldopen00824" data-start="{" data-end="}">
+<div class="line"><a id="l00824" name="l00824"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da">  824</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a22f0ad8ebf932941f73e52625fbf78da">cwist_jwt_claims_destroy</a>(cwist_jwt_claims *claims) {</div>
+<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>    <span class="keywordflow">if</span> (!claims) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>    cJSON_Delete(claims-&gt;json);</div>
+<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(claims);</div>
+<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>}</div>
 </div>
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span> </div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span><span class="comment">/* --------------------------------------------------------------------------</span></div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span><span class="comment"> * Sequenced JWT transport helpers</span></div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span><span class="comment"> * -------------------------------------------------------------------------- */</span></div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span> </div>
-<div class="foldopen" id="foldopen00844" data-start="{" data-end="}">
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a3955dfbdd69fa45b4ad0fa53f748df49">  844</a></span><a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3955dfbdd69fa45b4ad0fa53f748df49">cwist_jwt_split_chunks</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, uint16_t chunk_payload_size,</div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>                                          <span class="keywordtype">size_t</span> *out_count) {</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>    <span class="keywordflow">if</span> (!token || chunk_payload_size == 0 || !out_count) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>    *out_count = 0;</div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span> </div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>    <span class="keywordtype">size_t</span> token_len = strlen(token);</div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>    <span class="keywordflow">if</span> (token_len == 0) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span> </div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>    <a class="code hl_struct" href="../../d1/d74/structcwist__seq__message.html">cwist_seq_message_t</a> msg;</div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>    <span class="keywordflow">if</span> (!<a class="code hl_function" href="../../d6/d3c/seq_8h.html#af5d78912995060e0f3f2151fdc163acc">cwist_seq_split</a>((<span class="keyword">const</span> uint8_t *)token, token_len, chunk_payload_size, &amp;msg)) {</div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>    }</div>
-<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span> </div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks =</div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>        (<a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#acf0a2673b8792bf9a1b3267c17ca0385">cwist_alloc_array</a>(msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a397b1893ece8110e314b940d563f1678">count</a>, <span class="keyword">sizeof</span>(<a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a>));</div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>    <span class="keywordflow">if</span> (!chunks) {</div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        <a class="code hl_function" href="../../d6/d3c/seq_8h.html#ac4556d6b030fb6c6604ee4e1a8073c89">cwist_seq_message_free</a>(&amp;msg);</div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>    }</div>
-<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span> </div>
-<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a397b1893ece8110e314b940d563f1678">count</a>; i++) {</div>
-<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>        chunks[i].<a class="code hl_variable" href="../../d0/d64/structcwist__jwt__chunk.html#afa5f48e0c08afab6702d523dc991fbc2">data</a> = msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#adaae11f0bb473e233c10ac2f76e06644">chunks</a>[i];</div>
-<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>        chunks[i].<a class="code hl_variable" href="../../d0/d64/structcwist__jwt__chunk.html#a87e03c48296e3812c6aac482fcce87d4">len</a> = msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a39b64d24f50034549d3b53ef51193934">chunk_lens</a>[i];</div>
-<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#adaae11f0bb473e233c10ac2f76e06644">chunks</a>[i] = NULL; <span class="comment">/* ownership transferred */</span></div>
-<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>    }</div>
-<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span> </div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>    <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> = msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a397b1893ece8110e314b940d563f1678">count</a>;</div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>    <a class="code hl_function" href="../../d6/d3c/seq_8h.html#ac4556d6b030fb6c6604ee4e1a8073c89">cwist_seq_message_free</a>(&amp;msg);</div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>    *out_count = <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>;</div>
-<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>    <span class="keywordflow">return</span> chunks;</div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>}</div>
+<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span> </div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span><span class="comment">/* --------------------------------------------------------------------------</span></div>
+<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span><span class="comment"> * Sequenced JWT transport helpers</span></div>
+<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span><span class="comment"> * -------------------------------------------------------------------------- */</span></div>
+<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span> </div>
+<div class="foldopen" id="foldopen00845" data-start="{" data-end="}">
+<div class="line"><a id="l00845" name="l00845"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a3955dfbdd69fa45b4ad0fa53f748df49">  845</a></span><a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3955dfbdd69fa45b4ad0fa53f748df49">cwist_jwt_split_chunks</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *token, uint16_t chunk_payload_size,</div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>                                          <span class="keywordtype">size_t</span> *out_count) {</div>
+<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>    <span class="keywordflow">if</span> (!token || chunk_payload_size == 0 || !out_count) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>    *out_count = 0;</div>
+<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span> </div>
+<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>    <span class="keywordtype">size_t</span> token_len = strlen(token);</div>
+<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>    <span class="keywordflow">if</span> (token_len == 0) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span> </div>
+<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>    <a class="code hl_struct" href="../../d1/d74/structcwist__seq__message.html">cwist_seq_message_t</a> msg;</div>
+<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>    <span class="keywordflow">if</span> (!<a class="code hl_function" href="../../d6/d3c/seq_8h.html#af5d78912995060e0f3f2151fdc163acc">cwist_seq_split</a>((<span class="keyword">const</span> uint8_t *)token, token_len, chunk_payload_size, &amp;msg)) {</div>
+<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>    }</div>
+<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span> </div>
+<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>    <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks =</div>
+<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        (<a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#acf0a2673b8792bf9a1b3267c17ca0385">cwist_alloc_array</a>(msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a397b1893ece8110e314b940d563f1678">count</a>, <span class="keyword">sizeof</span>(<a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a>));</div>
+<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>    <span class="keywordflow">if</span> (!chunks) {</div>
+<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        <a class="code hl_function" href="../../d6/d3c/seq_8h.html#ac4556d6b030fb6c6604ee4e1a8073c89">cwist_seq_message_free</a>(&amp;msg);</div>
+<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>    }</div>
+<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span> </div>
+<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a397b1893ece8110e314b940d563f1678">count</a>; i++) {</div>
+<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>        chunks[i].<a class="code hl_variable" href="../../d0/d64/structcwist__jwt__chunk.html#afa5f48e0c08afab6702d523dc991fbc2">data</a> = msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#adaae11f0bb473e233c10ac2f76e06644">chunks</a>[i];</div>
+<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>        chunks[i].<a class="code hl_variable" href="../../d0/d64/structcwist__jwt__chunk.html#a87e03c48296e3812c6aac482fcce87d4">len</a> = msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a39b64d24f50034549d3b53ef51193934">chunk_lens</a>[i];</div>
+<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>        msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#adaae11f0bb473e233c10ac2f76e06644">chunks</a>[i] = NULL; <span class="comment">/* ownership transferred */</span></div>
+<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>    }</div>
+<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span> </div>
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>    <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> = msg.<a class="code hl_variable" href="../../d1/d74/structcwist__seq__message.html#a397b1893ece8110e314b940d563f1678">count</a>;</div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>    <a class="code hl_function" href="../../d6/d3c/seq_8h.html#ac4556d6b030fb6c6604ee4e1a8073c89">cwist_seq_message_free</a>(&amp;msg);</div>
+<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>    *out_count = <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>;</div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>    <span class="keywordflow">return</span> chunks;</div>
+<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>}</div>
 </div>
-<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span> </div>
-<div class="foldopen" id="foldopen00881" data-start="{" data-end="}">
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68">  881</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d80/jwt_8c.html#aea871d4338c9ae6eae0aa726f45e0e68">cwist_jwt_chunks_free</a>(<a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks, <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>) {</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>    <span class="keywordflow">if</span> (!chunks) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>; i++) <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(chunks[i].data);</div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(chunks);</div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>}</div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span> </div>
+<div class="foldopen" id="foldopen00882" data-start="{" data-end="}">
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68">  882</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d8/d80/jwt_8c.html#aea871d4338c9ae6eae0aa726f45e0e68">cwist_jwt_chunks_free</a>(<a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks, <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>) {</div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>    <span class="keywordflow">if</span> (!chunks) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>; i++) <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(chunks[i].data);</div>
+<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(chunks);</div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>}</div>
 </div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span> </div>
-<div class="foldopen" id="foldopen00896" data-start="{" data-end="}">
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">  896</a></span><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">cwist_jwt_join_chunks</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks, <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>) {</div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    <span class="keywordflow">if</span> (!chunks || <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> == 0) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span> </div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>    <a class="code hl_typedef" href="../../d6/d3c/seq_8h.html#adccd92fe0b3fef8b839ad7ab9c29fe94">cwist_seq_assembler_t</a> *a = <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a5a962c56d9ed37c39d76b4dc5a8db4cd">cwist_seq_assembler_create</a>();</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    <span class="keywordflow">if</span> (!a) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span> </div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>; i++) {</div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>        <a class="code hl_struct" href="../../de/d97/structcwist__seq__chunk.html">cwist_seq_chunk_t</a> chunk;</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>        <span class="keywordflow">if</span> (!<a class="code hl_function" href="../../d6/d3c/seq_8h.html#a2eef131923a413cb9fb333dfe790a20f">cwist_seq_chunk_parse</a>(chunks[i].data, chunks[i].len, &amp;chunk)) {</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>            <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a7df762fada017289f83eb725ac0b5f59">cwist_seq_assembler_destroy</a>(a);</div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>            <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>        }</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>        <span class="keywordflow">if</span> (!<a class="code hl_function" href="../../d6/d3c/seq_8h.html#ad8a8f6b3c6a50375fe2900adadb8b860">cwist_seq_assembler_feed</a>(a, &amp;chunk)) {</div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>            <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a7df762fada017289f83eb725ac0b5f59">cwist_seq_assembler_destroy</a>(a);</div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>            <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>        }</div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>    }</div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span> </div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>    <span class="keyword">const</span> uint8_t *data = NULL;</div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>    <span class="keywordtype">size_t</span> len = 0;</div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    <span class="keywordtype">bool</span> ok = <a class="code hl_function" href="../../d6/d3c/seq_8h.html#acd602b0fddc5aee076638e546f9eaa10">cwist_seq_assembler_get_data</a>(a, &amp;data, &amp;len);</div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    <span class="keywordtype">char</span> *token = NULL;</div>
-<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>    <span class="keywordflow">if</span> (ok &amp;&amp; len &gt; 0) {</div>
-<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>        token = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(len + 1);</div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>        <span class="keywordflow">if</span> (token) {</div>
-<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>            memcpy(token, data, len);</div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>            token[len] = <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>        }</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>    }</div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span> </div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a7df762fada017289f83eb725ac0b5f59">cwist_seq_assembler_destroy</a>(a);</div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <span class="keywordflow">return</span> token;</div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>}</div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span> </div>
+<div class="foldopen" id="foldopen00897" data-start="{" data-end="}">
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">  897</a></span><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">cwist_jwt_join_chunks</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks, <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>) {</div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="keywordflow">if</span> (!chunks || <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> == 0) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span> </div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    <a class="code hl_typedef" href="../../d6/d3c/seq_8h.html#adccd92fe0b3fef8b839ad7ab9c29fe94">cwist_seq_assembler_t</a> *a = <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a5a962c56d9ed37c39d76b4dc5a8db4cd">cwist_seq_assembler_create</a>();</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    <span class="keywordflow">if</span> (!a) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span> </div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>; i++) {</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>        <a class="code hl_struct" href="../../de/d97/structcwist__seq__chunk.html">cwist_seq_chunk_t</a> chunk;</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>        <span class="keywordflow">if</span> (!<a class="code hl_function" href="../../d6/d3c/seq_8h.html#a2eef131923a413cb9fb333dfe790a20f">cwist_seq_chunk_parse</a>(chunks[i].data, chunks[i].len, &amp;chunk)) {</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>            <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a7df762fada017289f83eb725ac0b5f59">cwist_seq_assembler_destroy</a>(a);</div>
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>            <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>        }</div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>        <span class="keywordflow">if</span> (!<a class="code hl_function" href="../../d6/d3c/seq_8h.html#ad8a8f6b3c6a50375fe2900adadb8b860">cwist_seq_assembler_feed</a>(a, &amp;chunk)) {</div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>            <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a7df762fada017289f83eb725ac0b5f59">cwist_seq_assembler_destroy</a>(a);</div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>            <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>        }</div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>    }</div>
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span> </div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>    <span class="keyword">const</span> uint8_t *data = NULL;</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    <span class="keywordtype">size_t</span> len = 0;</div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>    <span class="keywordtype">bool</span> ok = <a class="code hl_function" href="../../d6/d3c/seq_8h.html#acd602b0fddc5aee076638e546f9eaa10">cwist_seq_assembler_get_data</a>(a, &amp;data, &amp;len);</div>
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>    <span class="keywordtype">char</span> *token = NULL;</div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>    <span class="keywordflow">if</span> (ok &amp;&amp; len &gt; 0) {</div>
+<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>        token = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(len + 1);</div>
+<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>        <span class="keywordflow">if</span> (token) {</div>
+<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>            memcpy(token, data, len);</div>
+<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>            token[len] = <span class="charliteral">&#39;\0&#39;</span>;</div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>        }</div>
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    }</div>
+<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span> </div>
+<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <a class="code hl_function" href="../../d6/d3c/seq_8h.html#a7df762fada017289f83eb725ac0b5f59">cwist_seq_assembler_destroy</a>(a);</div>
+<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>    <span class="keywordflow">return</span> token;</div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>}</div>
 </div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span> </div>
-<div class="foldopen" id="foldopen00941" data-start="{" data-end="}">
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a81a63ce0e1e1b6651b2cebc377ad21a1">  941</a></span><a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a81a63ce0e1e1b6651b2cebc377ad21a1">cwist_jwt_sign_chunks</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *payload_json, <span class="keyword">const</span> <span class="keywordtype">char</span> *secret,</div>
-<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>                                         <span class="keywordtype">long</span> exp_seconds, uint16_t chunk_payload_size,</div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>                                         <span class="keywordtype">size_t</span> *out_count) {</div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    <span class="keywordflow">if</span> (!payload_json || !secret || chunk_payload_size == 0 || !out_count) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    *out_count = 0;</div>
-<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span> </div>
-<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>    <span class="keywordtype">char</span> *token = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a7a722b14dc0d9fc508c800bbe3671417">cwist_jwt_sign</a>(payload_json, secret, exp_seconds);</div>
-<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    <span class="keywordflow">if</span> (!token) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span> </div>
-<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>    <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3955dfbdd69fa45b4ad0fa53f748df49">cwist_jwt_split_chunks</a>(token, chunk_payload_size, out_count);</div>
-<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    <span class="keywordflow">return</span> chunks;</div>
-<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>}</div>
+<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span> </div>
+<div class="foldopen" id="foldopen00942" data-start="{" data-end="}">
+<div class="line"><a id="l00942" name="l00942"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#a81a63ce0e1e1b6651b2cebc377ad21a1">  942</a></span><a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#a81a63ce0e1e1b6651b2cebc377ad21a1">cwist_jwt_sign_chunks</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *payload_json, <span class="keyword">const</span> <span class="keywordtype">char</span> *secret,</div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>                                         <span class="keywordtype">long</span> exp_seconds, uint16_t chunk_payload_size,</div>
+<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>                                         <span class="keywordtype">size_t</span> *out_count) {</div>
+<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    <span class="keywordflow">if</span> (!payload_json || !secret || chunk_payload_size == 0 || !out_count) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>    *out_count = 0;</div>
+<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span> </div>
+<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    <span class="keywordtype">char</span> *token = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a7a722b14dc0d9fc508c800bbe3671417">cwist_jwt_sign</a>(payload_json, secret, exp_seconds);</div>
+<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>    <span class="keywordflow">if</span> (!token) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span> </div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3955dfbdd69fa45b4ad0fa53f748df49">cwist_jwt_split_chunks</a>(token, chunk_payload_size, out_count);</div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
+<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>    <span class="keywordflow">return</span> chunks;</div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>}</div>
 </div>
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span> </div>
-<div class="foldopen" id="foldopen00965" data-start="{" data-end="}">
-<div class="line"><a id="l00965" name="l00965"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#adb61a3f86525a66a8b5d2eb0ae0c492c">  965</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#adb61a3f86525a66a8b5d2eb0ae0c492c">cwist_jwt_verify_chunks</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks, <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>,</div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>                                          <span class="keyword">const</span> <span class="keywordtype">char</span> *secret) {</div>
-<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>    <span class="keywordflow">if</span> (!chunks || <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> == 0 || !secret) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>    <span class="keywordtype">char</span> *token = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">cwist_jwt_join_chunks</a>(chunks, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>);</div>
-<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    <span class="keywordflow">if</span> (!token) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    <a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *claims = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a>(token, secret);</div>
-<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
-<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>    <span class="keywordflow">return</span> claims;</div>
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>}</div>
+<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span> </div>
+<div class="foldopen" id="foldopen00966" data-start="{" data-end="}">
+<div class="line"><a id="l00966" name="l00966"></a><span class="lineno"><a class="line" href="../../d5/d6c/jwt_8h.html#adb61a3f86525a66a8b5d2eb0ae0c492c">  966</a></span><a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *<a class="code hl_function" href="../../d8/d80/jwt_8c.html#adb61a3f86525a66a8b5d2eb0ae0c492c">cwist_jwt_verify_chunks</a>(<span class="keyword">const</span> <a class="code hl_struct" href="../../d0/d64/structcwist__jwt__chunk.html">cwist_jwt_chunk_t</a> *chunks, <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>,</div>
+<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>                                          <span class="keyword">const</span> <span class="keywordtype">char</span> *secret) {</div>
+<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>    <span class="keywordflow">if</span> (!chunks || <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> == 0 || !secret) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>    <span class="keywordtype">char</span> *token = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">cwist_jwt_join_chunks</a>(chunks, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>);</div>
+<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    <span class="keywordflow">if</span> (!token) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>    <a class="code hl_typedef" href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a> *claims = <a class="code hl_function" href="../../d8/d80/jwt_8c.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a>(token, secret);</div>
+<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
+<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>    <span class="keywordflow">return</span> claims;</div>
+<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
@@ -1020,23 +1021,23 @@ $(document).ready(function(){initNavTree('d8/d80/jwt_8c_source.html','../../'); 
 <div class="ttc" id="aevp_8h_html_ac38c03bb894d575cfd09229af481c15d"><div class="ttname"><a href="../../d5/d67/evp_8h.html#ac38c03bb894d575cfd09229af481c15d">EVP_sha256</a></div><div class="ttdeci">#define EVP_sha256</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d67/evp_8h_source.html#l00025">evp.h:25</a></div></div>
 <div class="ttc" id="ahmac_8h_html"><div class="ttname"><a href="../../d0/dc6/hmac_8h.html">hmac.h</a></div><div class="ttdoc">mbedTLS TLS backend: HMAC subset (HMAC-SHA256, one-shot + streaming).</div></div>
 <div class="ttc" id="ahmac_8h_html_abc78ee1e9aa8963f13e15bc7514e7bc4"><div class="ttname"><a href="../../d0/dc6/hmac_8h.html#abc78ee1e9aa8963f13e15bc7514e7bc4">HMAC</a></div><div class="ttdeci">#define HMAC</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dc6/hmac_8h_source.html#l00021">hmac.h:21</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a05776c1f6f45fbb9499e8b8788fbc64e"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a05776c1f6f45fbb9499e8b8788fbc64e">cwist_jwt_claims_get</a></div><div class="ttdeci">const char * cwist_jwt_claims_get(const cwist_jwt_claims *claims, const char *key)</div><div class="ttdoc">Retrieve one string-valued claim from a verified JWT payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00810">jwt.c:810</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a07985e26c7135aa715ad4fcf83eda914"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a07985e26c7135aa715ad4fcf83eda914">cwist_jwt_verify_with_leeway</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_with_leeway(const char *token, const char *secret, long leeway_seconds)</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00791">jwt.c:791</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a22f0ad8ebf932941f73e52625fbf78da"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a22f0ad8ebf932941f73e52625fbf78da">cwist_jwt_claims_destroy</a></div><div class="ttdeci">void cwist_jwt_claims_destroy(cwist_jwt_claims *claims)</div><div class="ttdoc">Destroy a verified claims object and its parsed JSON payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00823">jwt.c:823</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a3955dfbdd69fa45b4ad0fa53f748df49"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a3955dfbdd69fa45b4ad0fa53f748df49">cwist_jwt_split_chunks</a></div><div class="ttdeci">cwist_jwt_chunk_t * cwist_jwt_split_chunks(const char *token, uint16_t chunk_payload_size, size_t *out_count)</div><div class="ttdoc">Split a JWT token into sequenced transport chunks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00844">jwt.c:844</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a3e0f7b9add2bcba43c82ce9f6c5ea2d6"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">cwist_jwt_join_chunks</a></div><div class="ttdeci">char * cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count)</div><div class="ttdoc">Reassemble a JWT token from sequenced transport chunks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00896">jwt.c:896</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a449066f8812ceed8be3af264d626b123"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a449066f8812ceed8be3af264d626b123">cwist_jwt_verify_es256</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_es256(const char *token, const char *pem_key)</div><div class="ttdoc">Verify an ES256-signed JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00796">jwt.c:796</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a05776c1f6f45fbb9499e8b8788fbc64e"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a05776c1f6f45fbb9499e8b8788fbc64e">cwist_jwt_claims_get</a></div><div class="ttdeci">const char * cwist_jwt_claims_get(const cwist_jwt_claims *claims, const char *key)</div><div class="ttdoc">Retrieve one string-valued claim from a verified JWT payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00811">jwt.c:811</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a07985e26c7135aa715ad4fcf83eda914"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a07985e26c7135aa715ad4fcf83eda914">cwist_jwt_verify_with_leeway</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_with_leeway(const char *token, const char *secret, long leeway_seconds)</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00792">jwt.c:792</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a22f0ad8ebf932941f73e52625fbf78da"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a22f0ad8ebf932941f73e52625fbf78da">cwist_jwt_claims_destroy</a></div><div class="ttdeci">void cwist_jwt_claims_destroy(cwist_jwt_claims *claims)</div><div class="ttdoc">Destroy a verified claims object and its parsed JSON payload.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00824">jwt.c:824</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a3955dfbdd69fa45b4ad0fa53f748df49"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a3955dfbdd69fa45b4ad0fa53f748df49">cwist_jwt_split_chunks</a></div><div class="ttdeci">cwist_jwt_chunk_t * cwist_jwt_split_chunks(const char *token, uint16_t chunk_payload_size, size_t *out_count)</div><div class="ttdoc">Split a JWT token into sequenced transport chunks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00845">jwt.c:845</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a3e0f7b9add2bcba43c82ce9f6c5ea2d6"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a3e0f7b9add2bcba43c82ce9f6c5ea2d6">cwist_jwt_join_chunks</a></div><div class="ttdeci">char * cwist_jwt_join_chunks(const cwist_jwt_chunk_t *chunks, size_t count)</div><div class="ttdoc">Reassemble a JWT token from sequenced transport chunks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00897">jwt.c:897</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a449066f8812ceed8be3af264d626b123"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a449066f8812ceed8be3af264d626b123">cwist_jwt_verify_es256</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_es256(const char *token, const char *pem_key)</div><div class="ttdoc">Verify an ES256-signed JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00797">jwt.c:797</a></div></div>
 <div class="ttc" id="ajwt_8c_html_a7a722b14dc0d9fc508c800bbe3671417"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a7a722b14dc0d9fc508c800bbe3671417">cwist_jwt_sign</a></div><div class="ttdeci">char * cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seconds)</div><div class="ttdoc">Sign a JWT token with HMAC-SHA256.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00642">jwt.c:642</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a7ebdc506413955dc760508df1943b0ca"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify(const char *token, const char *secret)</div><div class="ttdoc">Verify a JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00787">jwt.c:787</a></div></div>
-<div class="ttc" id="ajwt_8c_html_a81a63ce0e1e1b6651b2cebc377ad21a1"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a81a63ce0e1e1b6651b2cebc377ad21a1">cwist_jwt_sign_chunks</a></div><div class="ttdeci">cwist_jwt_chunk_t * cwist_jwt_sign_chunks(const char *payload_json, const char *secret, long exp_seconds, uint16_t chunk_payload_size, size_t *out_count)</div><div class="ttdoc">Sign a payload as an HS256 JWT and split it into sequenced transport chunks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00941">jwt.c:941</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a7ebdc506413955dc760508df1943b0ca"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a7ebdc506413955dc760508df1943b0ca">cwist_jwt_verify</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify(const char *token, const char *secret)</div><div class="ttdoc">Verify a JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00788">jwt.c:788</a></div></div>
+<div class="ttc" id="ajwt_8c_html_a81a63ce0e1e1b6651b2cebc377ad21a1"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a81a63ce0e1e1b6651b2cebc377ad21a1">cwist_jwt_sign_chunks</a></div><div class="ttdeci">cwist_jwt_chunk_t * cwist_jwt_sign_chunks(const char *payload_json, const char *secret, long exp_seconds, uint16_t chunk_payload_size, size_t *out_count)</div><div class="ttdoc">Sign a payload as an HS256 JWT and split it into sequenced transport chunks.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00942">jwt.c:942</a></div></div>
 <div class="ttc" id="ajwt_8c_html_a889db178d8714ab67bc994f1d8faad33"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33">jwt_alg_t</a></div><div class="ttdeci">jwt_alg_t</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00169">jwt.c:169</a></div></div>
 <div class="ttc" id="ajwt_8c_html_a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674">JWT_ALG_ED25519</a></div><div class="ttdeci">@ JWT_ALG_ED25519</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00172">jwt.c:172</a></div></div>
 <div class="ttc" id="ajwt_8c_html_a889db178d8714ab67bc994f1d8faad33a84f9bf1cb93f6ae622a9de57d9c67472"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33a84f9bf1cb93f6ae622a9de57d9c67472">JWT_ALG_ES256</a></div><div class="ttdeci">@ JWT_ALG_ES256</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00171">jwt.c:171</a></div></div>
 <div class="ttc" id="ajwt_8c_html_a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a889db178d8714ab67bc994f1d8faad33aaa9217f4c8f5266d5401402f0ec98604">JWT_ALG_HS256</a></div><div class="ttdeci">@ JWT_ALG_HS256</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00170">jwt.c:170</a></div></div>
 <div class="ttc" id="ajwt_8c_html_a99a9d7d8249d30e9ac1c349fee2ad480"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#a99a9d7d8249d30e9ac1c349fee2ad480">cwist_jwt_sign_es256</a></div><div class="ttdeci">char * cwist_jwt_sign_es256(const char *payload_json, const char *pem_private_key, const char *kid, long exp_seconds)</div><div class="ttdoc">Sign a JWT token with ES256 (ECDSA over P-256 with SHA-256).</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00646">jwt.c:646</a></div></div>
-<div class="ttc" id="ajwt_8c_html_adb61a3f86525a66a8b5d2eb0ae0c492c"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#adb61a3f86525a66a8b5d2eb0ae0c492c">cwist_jwt_verify_chunks</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count, const char *secret)</div><div class="ttdoc">Reassemble sequenced chunks into a token, verify it, and return its claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00965">jwt.c:965</a></div></div>
-<div class="ttc" id="ajwt_8c_html_aea871d4338c9ae6eae0aa726f45e0e68"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#aea871d4338c9ae6eae0aa726f45e0e68">cwist_jwt_chunks_free</a></div><div class="ttdeci">void cwist_jwt_chunks_free(cwist_jwt_chunk_t *chunks, size_t count)</div><div class="ttdoc">Free a chunk array produced by cwist_jwt_split_chunks() or cwist_jwt_sign_chunks().</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00881">jwt.c:881</a></div></div>
-<div class="ttc" id="ajwt_8c_html_af92c64b451fdba1c2e3065572daaf5fc"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#af92c64b451fdba1c2e3065572daaf5fc">cwist_jwt_verify_ed25519</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_ed25519(const char *token, const char *pem_key)</div><div class="ttdoc">Verify an Ed25519-signed JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00800">jwt.c:800</a></div></div>
+<div class="ttc" id="ajwt_8c_html_adb61a3f86525a66a8b5d2eb0ae0c492c"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#adb61a3f86525a66a8b5d2eb0ae0c492c">cwist_jwt_verify_chunks</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_chunks(const cwist_jwt_chunk_t *chunks, size_t count, const char *secret)</div><div class="ttdoc">Reassemble sequenced chunks into a token, verify it, and return its claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00966">jwt.c:966</a></div></div>
+<div class="ttc" id="ajwt_8c_html_aea871d4338c9ae6eae0aa726f45e0e68"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#aea871d4338c9ae6eae0aa726f45e0e68">cwist_jwt_chunks_free</a></div><div class="ttdeci">void cwist_jwt_chunks_free(cwist_jwt_chunk_t *chunks, size_t count)</div><div class="ttdoc">Free a chunk array produced by cwist_jwt_split_chunks() or cwist_jwt_sign_chunks().</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00882">jwt.c:882</a></div></div>
+<div class="ttc" id="ajwt_8c_html_af92c64b451fdba1c2e3065572daaf5fc"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#af92c64b451fdba1c2e3065572daaf5fc">cwist_jwt_verify_ed25519</a></div><div class="ttdeci">cwist_jwt_claims * cwist_jwt_verify_ed25519(const char *token, const char *pem_key)</div><div class="ttdoc">Verify an Ed25519-signed JWT token and return the decoded claims.</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00801">jwt.c:801</a></div></div>
 <div class="ttc" id="ajwt_8c_html_afbea518478ac45e5f86153c41da97347"><div class="ttname"><a href="../../d8/d80/jwt_8c.html#afbea518478ac45e5f86153c41da97347">cwist_jwt_sign_ed25519</a></div><div class="ttdeci">char * cwist_jwt_sign_ed25519(const char *payload_json, const char *pem_private_key, const char *kid, long exp_seconds)</div><div class="ttdoc">Sign a JWT token with EdDSA (Ed25519, RFC 8037).</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d80/jwt_8c_source.html#l00651">jwt.c:651</a></div></div>
 <div class="ttc" id="ajwt_8h_html"><div class="ttname"><a href="../../d5/d6c/jwt_8h.html">jwt.h</a></div><div class="ttdoc">JWT (JSON Web Token) generation and verification.</div></div>
 <div class="ttc" id="ajwt_8h_html_a3d2807564663ad54f5921a3ce6d95aa0"><div class="ttname"><a href="../../d5/d6c/jwt_8h.html#a3d2807564663ad54f5921a3ce6d95aa0">cwist_jwt_claims</a></div><div class="ttdeci">struct cwist_jwt_claims cwist_jwt_claims</div><div class="ttdoc">Opaque JWT claims object returned after successful verification.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d6c/jwt_8h_source.html#l00025">jwt.h:25</a></div></div>
