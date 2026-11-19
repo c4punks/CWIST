@@ -1,5 +1,6 @@
 var NAVTREEINDEX22 =
 {
+"df/d58/net_2http_2sse_8h.html#a144359ec2805ddd170fc3d38d7d2e491":[98,0,1,0,2,3,15,8],
 "df/d58/net_2http_2sse_8h.html#a1814cb23b06dfb500d1f266a97cc8d2d":[98,0,1,0,2,3,15,7],
 "df/d58/net_2http_2sse_8h.html#a1dac4f5c4a77d713f4863cd02b6fbce1":[98,0,1,0,2,3,15,14],
 "df/d58/net_2http_2sse_8h.html#a579b2c4ad140329cb2048f671cd87041":[98,0,1,0,2,3,15,9],
@@ -248,6 +249,5 @@ var NAVTREEINDEX22 =
 "df/dad/http3__client_8h.html#a0d80519ea3bf37670733582ead5c691e":[98,0,1,0,2,3,8,32],
 "df/dad/http3__client_8h.html#a1a558af1f6551d6c6d42e83575c90c6a":[98,0,1,0,2,3,8,14],
 "df/dad/http3__client_8h.html#a1cebceb867dbe446f274df968cb30cdd":[98,0,1,0,2,3,8,13],
-"df/dad/http3__client_8h.html#a21c7ecc5b2c262e477020b8a8d56fcd8":[98,0,1,0,2,3,8,7],
-"df/dad/http3__client_8h.html#a28c4dd00a14d72470fd8a43f6b7eb1fc":[98,0,1,0,2,3,8,15]
+"df/dad/http3__client_8h.html#a21c7ecc5b2c262e477020b8a8d56fcd8":[98,0,1,0,2,3,8,7]
 };
