@@ -165,10 +165,37 @@ static void test_jwt_middleware_bearer_case_and_whitespace(void) {
     mw(&req3, &res3, dummy_next);
     assert(s_handler_reached == false);
     assert(res3.status_code == CWIST_HTTP_UNAUTHORIZED);
+    const char *challenge = cwist_http_header_get(res3.headers, "WWW-Authenticate");
+    assert(challenge && strcmp(challenge, "Bearer realm=\"api\", error=\"invalid_request\"") == 0);
 
     free_headers(req3.headers);
     free_headers(res3.headers);
     cwist_sstring_destroy(res3.body);
+
+    cwist_http_request req4 = {0};
+    cwist_http_response res4 = {0};
+    res4.body = cwist_sstring_create();
+    s_handler_reached = false;
+    mw(&req4, &res4, dummy_next);
+    assert(!s_handler_reached && res4.status_code == CWIST_HTTP_UNAUTHORIZED);
+    challenge = cwist_http_header_get(res4.headers, "WWW-Authenticate");
+    assert(challenge && strcmp(challenge, "Bearer realm=\"api\"") == 0);
+    free_headers(req4.headers);
+    free_headers(res4.headers);
+    cwist_sstring_destroy(res4.body);
+
+    cwist_http_request req5 = {0};
+    cwist_http_response res5 = {0};
+    res5.body = cwist_sstring_create();
+    cwist_http_header_add(&req5.headers, "Authorization", "Bearer not-a-valid-token");
+    s_handler_reached = false;
+    mw(&req5, &res5, dummy_next);
+    assert(!s_handler_reached && res5.status_code == CWIST_HTTP_UNAUTHORIZED);
+    challenge = cwist_http_header_get(res5.headers, "WWW-Authenticate");
+    assert(challenge && strcmp(challenge, "Bearer realm=\"api\", error=\"invalid_token\"") == 0);
+    free_headers(req5.headers);
+    free_headers(res5.headers);
+    cwist_sstring_destroy(res5.body);
 
     cwist_free(token);
 }
