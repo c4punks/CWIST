@@ -37,7 +37,7 @@ jobs:
     - name: Install arm-none-eabi toolchain and qemu-user
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi qemu-user
+        sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi qemu-user
         arm-none-eabi-gcc --version | head -1
         qemu-arm --version | head -1
 
