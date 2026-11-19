@@ -375,7 +375,7 @@ static char *cwist_orm_literal(const cwist_orm_t *orm, const char *src) {
         static const char hex[] = "0123456789ABCDEF";
         size_t len = strlen(src);
         if (len > (SIZE_MAX - 4) / 2) return NULL;
-        char *out = cwist_alloc(len * 2 + 4);
+        char *out = (char *)malloc(len * 2 + 4);
         if (!out) return NULL;
         out[0] = 'X';
         out[1] = '\'';
@@ -392,16 +392,16 @@ static char *cwist_orm_literal(const cwist_orm_t *orm, const char *src) {
     char *escaped = cwist_orm_escape_sqlite(src);
     if (!escaped) return NULL;
     size_t len = strlen(escaped);
-    char *out = cwist_alloc(len + 3);
+    char *out = (char *)malloc(len + 3);
     if (!out) {
-        cwist_free(escaped);
+        free(escaped);
         return NULL;
     }
     out[0] = '\'';
     memcpy(out + 1, escaped, len);
     out[len + 1] = '\'';
     out[len + 2] = '\0';
-    cwist_free(escaped);
+    free(escaped);
     return out;
 }
 
