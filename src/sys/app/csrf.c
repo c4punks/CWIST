@@ -1,9 +1,11 @@
-/** @file csrf.c @brief Double-submit CSRF protection. */
+/** @file csrf.c @brief Signed double-submit CSRF protection. */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/csrf.h>
 #include <cwist/net/http/cookie.h>
 #include <cwist/net/http/multipart.h>
 #include <cwist/core/mem/alloc.h>
+#include <openssl/hmac.h>
+#include <pthread.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -58,6 +60,41 @@ static char *csrf_generate_token(void) {
     return token;
 }
 
+static pthread_once_t csrf_fallback_once = PTHREAD_ONCE_INIT;
+static char csrf_fallback_secret[CWIST_CSRF_TOKEN_CHARS + 1];
+
+static void csrf_fallback_init(void) {
+    char *secret = csrf_generate_token();
+    if (secret) {
+        memcpy(csrf_fallback_secret, secret, CWIST_CSRF_TOKEN_CHARS + 1);
+        cwist_free(secret);
+    }
+}
+
+static const char *csrf_secret(const cwist_http_request *req) {
+    if (req && req->app && req->app->session_secret && req->app->session_secret[0])
+        return req->app->session_secret;
+    pthread_once(&csrf_fallback_once, csrf_fallback_init);
+    return csrf_fallback_secret[0] ? csrf_fallback_secret : NULL;
+}
+
+static bool csrf_sign(const cwist_http_request *req, const char *nonce, char signature[65]) {
+    const char *secret = csrf_secret(req);
+    if (!secret) return false;
+    unsigned char digest[32];
+    unsigned int digest_len = 0;
+    if (!HMAC(EVP_sha256(), secret, (int)strlen(secret), (const unsigned char *)nonce,
+              CWIST_CSRF_TOKEN_CHARS, digest, &digest_len))
+        return false;
+    static const char hex[] = "0123456789abcdef";
+    for (size_t i = 0; i < sizeof(digest); i++) {
+        signature[2 * i] = hex[digest[i] >> 4];
+        signature[2 * i + 1] = hex[digest[i] & 15U];
+    }
+    signature[64] = '\0';
+    return true;
+}
+
 /**
  * @brief Compare two strings for equality in constant time.
  * @param a First string; may be NULL.
@@ -76,6 +113,15 @@ static bool csrf_equal(const char *a, const char *b) {
         diff |= (size_t)(ac ^ bc);
     }
     return diff == 0;
+}
+
+static bool csrf_token_valid(const cwist_http_request *req, const char *token) {
+    if (!token || strlen(token) != CWIST_CSRF_TOKEN_CHARS * 2 + 1 ||
+        token[CWIST_CSRF_TOKEN_CHARS] != '.')
+        return false;
+    char signature[65];
+    return csrf_sign(req, token, signature) && csrf_equal(token + CWIST_CSRF_TOKEN_CHARS + 1,
+                                                          signature);
 }
 
 /**
@@ -173,9 +219,9 @@ static char *csrf_form_value(const cwist_http_request *req) {
 
 /**
  * @brief Set the CSRF cookie on the response.
- * Cookie is scoped to path "/", expires after 30 days, is marked Secure
- * when the app uses SSL, and uses SameSite=Strict. Not HttpOnly so the
- * client-side code can read it for form submission.
+ * Cookie is scoped to path "/", expires after 30 days, is always Secure,
+ * and uses SameSite=Strict. Not HttpOnly so client-side code can read it
+ * for form submission. HTTPS uses the __Host- prefix.
  * @param req Current request (used to determine SSL usage).
  * @param res Response to attach the cookie to.
  * @param token Token value to store in the cookie.
@@ -186,9 +232,10 @@ static void csrf_issue_cookie(cwist_http_request *req, cwist_http_response *res,
     options.path = "/";
     options.max_age_seconds = 30 * 24 * 60 * 60;
     options.http_only = false;
-    options.secure = req && req->app && req->app->use_ssl;
+    options.secure = true;
     options.same_site = "Strict";
-    cwist_cookie_set(res, CWIST_CSRF_COOKIE_NAME, token, &options);
+    const char *name = req && req->app && req->app->use_ssl ? "__Host-csrf" : CWIST_CSRF_COOKIE_NAME;
+    cwist_cookie_set(res, name, token, &options);
 }
 
 /**
@@ -206,24 +253,30 @@ static void csrf_issue_cookie(cwist_http_request *req, cwist_http_response *res,
 static void csrf_handler(cwist_http_request *req, cwist_http_response *res,
                          cwist_handler_func next) {
     const char *cookie_header = cwist_http_header_get(req->headers, "Cookie");
+    const char *cookie_name = req && req->app && req->app->use_ssl ? "__Host-csrf" : CWIST_CSRF_COOKIE_NAME;
     cwist_query_map *cookies = cwist_query_map_create();
-    const char *cookie = cookies ? cwist_cookie_get(cookies, CWIST_CSRF_COOKIE_NAME) : NULL;
+    const char *cookie = cookies ? cwist_cookie_get(cookies, cookie_name) : NULL;
     if (cookies) {
         cwist_cookie_parse(cookies, cookie_header);
-        cookie = cwist_cookie_get(cookies, CWIST_CSRF_COOKIE_NAME);
+        cookie = cwist_cookie_get(cookies, cookie_name);
     }
     if (req->csrf_token) {
         cwist_free(req->csrf_token);
         req->csrf_token = NULL;
     }
-    if (!cookie) {
-        char *token = csrf_generate_token();
-        if (!token) {
+    if (!cookie || !csrf_token_valid(req, cookie)) {
+        char *nonce = csrf_generate_token();
+        char signature[65];
+        if (!nonce || !csrf_sign(req, nonce, signature)) {
+            cwist_free(nonce);
             if (cookies) cwist_query_map_destroy(cookies);
             res->status_code = CWIST_HTTP_INTERNAL_ERROR;
             return;
         }
-        req->csrf_token = token;
+        char token[CWIST_CSRF_TOKEN_CHARS * 2 + 2];
+        snprintf(token, sizeof(token), "%s.%s", nonce, signature);
+        cwist_free(nonce);
+        req->csrf_token = cwist_strdup(token);
         csrf_issue_cookie(req, res, token);
         if (cookies) cwist_query_map_destroy(cookies);
         if (csrf_safe_method(req->method))
@@ -255,7 +308,7 @@ static void csrf_handler(cwist_http_request *req, cwist_http_response *res,
 
 /**
  * @brief Create the CSRF protection middleware.
- * @param app Application instance; unused.
+ * @param app Application instance; the request uses its session secret and TLS mode.
  * @return The CSRF middleware handler function.
  */
 cwist_middleware_func cwist_mw_csrf(cwist_app *app) {
