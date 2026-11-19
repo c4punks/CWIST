@@ -256,14 +256,40 @@ static char *generate_secret(size_t len) {
  */
 int cwist_app_use_session(cwist_app *app, const char *secret) {
     if (!app) return -1;
-    if (app->session_secret) cwist_free(app->session_secret);
-    if (secret && *secret) {
-        app->session_secret = cwist_strdup(secret);
-    } else {
-        app->session_secret = generate_secret(32);
+
+    /* Handle self-aliasing: if secret points to app->session_secret, it is already active */
+    if (secret && app->session_secret && secret == app->session_secret) {
+        if (!app->session_name) {
+            char *def_name = cwist_strdup(CWIST_SESSION_DEFAULT_NAME);
+            if (!def_name) return -1;
+            app->session_name = def_name;
+        }
+        if (app->session_max_age <= 0) app->session_max_age = CWIST_SESSION_DEFAULT_MAX_AGE;
+        return 0;
     }
-    if (!app->session_secret) return -1;
-    if (!app->session_name) app->session_name = cwist_strdup(CWIST_SESSION_DEFAULT_NAME);
+
+    char *new_secret = NULL;
+    if (secret && *secret) {
+        new_secret = cwist_strdup(secret);
+    } else {
+        new_secret = generate_secret(32);
+    }
+    if (!new_secret) return -1;
+
+    char *new_name = NULL;
+    if (!app->session_name) {
+        new_name = cwist_strdup(CWIST_SESSION_DEFAULT_NAME);
+        if (!new_name) {
+            cwist_free(new_secret);
+            return -1;
+        }
+    }
+
+    if (app->session_secret) cwist_free(app->session_secret);
+    app->session_secret = new_secret;
+    if (new_name) {
+        app->session_name = new_name;
+    }
     if (app->session_max_age <= 0) app->session_max_age = CWIST_SESSION_DEFAULT_MAX_AGE;
     return 0;
 }
