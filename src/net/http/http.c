@@ -1066,11 +1066,13 @@ static void http_reap_sweep_cb(void *ctx) {
         cwist_http_async_conn_t *next = c->reap_next;
         if (__atomic_load_n(&c->reap_dead, __ATOMIC_ACQUIRE)) {
             http_async_conn_release(c);
-        } else if (c->reap_waiting && !c->reap_kicked && c->last_active_sec > 0 &&
-                   now - c->last_active_sec > timeout_sec) {
+        } else if (__atomic_load_n(&c->reap_waiting, __ATOMIC_ACQUIRE) &&
+                   !__atomic_load_n(&c->reap_kicked, __ATOMIC_ACQUIRE) &&
+                   __atomic_load_n(&c->last_active_sec, __ATOMIC_ACQUIRE) > 0 &&
+                   now - __atomic_load_n(&c->last_active_sec, __ATOMIC_ACQUIRE) > timeout_sec) {
             /* Completes the armed wait; http_async_event_cb (POLL) sees the
              * idle deadline and closes, a RECV completes with EOF. */
-            c->reap_kicked = true;
+            __atomic_store_n(&c->reap_kicked, true, __ATOMIC_RELEASE);
             shutdown(c->fd, SHUT_RDWR);
             cwist_metric_inc(cwist_metrics_registry(), CWIST_METRIC_HTTP_IDLE_REAPED);
         }
@@ -1198,8 +1200,8 @@ static bool http_async_arm_wait(int fd, cwist_http_async_conn_t *conn,
     };
     /* Idle sweep: the wait starts now. Written before arming, because once
      * the wait is armed the owner thread may complete and free conn. */
-    conn->last_active_sec = cwist_fast_monotonic_sec();
-    conn->reap_waiting = true;
+    __atomic_store_n(&conn->last_active_sec, cwist_fast_monotonic_sec(), __ATOMIC_RELEASE);
+    __atomic_store_n(&conn->reap_waiting, true, __ATOMIC_RELEASE);
     if (cwist_reactor_rx_supported(reactor) && !conn->peer_eof && !conn->rx_recv_inflight &&
         !conn->rx_prefers_poll) {
         /* Virgin stash: grow to the 4 KiB idle floor, not the 16 KiB read
@@ -1315,7 +1317,7 @@ static void http_async_dispatch(int fd, cwist_http_async_conn_t *conn,
 static void http_rx_recv_cb(void *conn_ptr, int res) {
     cwist_http_async_conn_t *conn = (cwist_http_async_conn_t *)conn_ptr;
     conn->rx_recv_inflight = false;
-    conn->reap_waiting = false;
+    __atomic_store_n(&conn->reap_waiting, false, __ATOMIC_RELEASE);
 
     if (res == -ECANCELED) {
         /* The deferred submission failed (SQ wedged) or the ring tore down;
@@ -1351,7 +1353,7 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
         clock_gettime(CLOCK_MONOTONIC, &ts);
         t0 = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
     }
-    conn->last_active_sec = cwist_fast_monotonic_sec();
+    __atomic_store_n(&conn->last_active_sec, cwist_fast_monotonic_sec(), __ATOMIC_RELEASE);
 
     if (res == -EAGAIN) {
         /* Data not ready: hand the wait to the legacy one-shot POLL.  Arm
@@ -1366,7 +1368,7 @@ static void http_rx_recv_cb(void *conn_ptr, int res) {
          * bytes again (pipelining detected), keeping the steady-state op
          * count identical to the legacy path. */
         conn->rx_prefers_poll = true;
-        conn->reap_waiting = true;
+        __atomic_store_n(&conn->reap_waiting, true, __ATOMIC_RELEASE);
         http_async_ctx_t next = {
             .client_fd = conn->fd,
             .handler = conn->handler,
@@ -1416,21 +1418,22 @@ static void http_async_event_cb(int fd, void *ctx) {
     http_async_ctx_t *c = (http_async_ctx_t *)ctx;
     cwist_http_async_conn_t *conn = c->conn;
     cwist_async_handler_t handler = c->handler;
-    conn->reap_waiting = false;
+    __atomic_store_n(&conn->reap_waiting, false, __ATOMIC_RELEASE);
 
     uint32_t now = cwist_fast_monotonic_sec();
     uint32_t timeout_sec = cwist_http_keep_alive_timeout_sec();
+    uint32_t last_active = __atomic_load_n(&conn->last_active_sec, __ATOMIC_ACQUIRE);
 
     /* Idle connection reaper: close keep-alive sockets that exceeded timeout.
      * A client may have pipelined a request into the post-timeout,
      * pre-dispatch window; drain before closing so the teardown is a
      * graceful FIN, not an RST that flushes the peer's queued bytes. The
      * triggering one-shot slot is consumed, so closing here is safe. */
-    if (conn->last_active_sec > 0 && (now - conn->last_active_sec) > timeout_sec) {
+    if (last_active > 0 && (now - last_active) > timeout_sec) {
         http_async_close(fd, conn);
         return;
     }
-    conn->last_active_sec = now;
+    __atomic_store_n(&conn->last_active_sec, now, __ATOMIC_RELEASE);
 
     if (cwist_reactor_rx_supported(c->reactor) && !conn->rx_recv_inflight && !conn->peer_eof &&
         conn->len == 0 && !conn->rx_prefers_poll) {
@@ -1490,7 +1493,7 @@ bool cwist_http_async_rearm(int client_fd, cwist_reactor_t *reactor,
         http_async_close(client_fd, conn);
         return false;
     }
-    conn->last_active_sec = cwist_fast_monotonic_sec();
+    __atomic_store_n(&conn->last_active_sec, cwist_fast_monotonic_sec(), __ATOMIC_RELEASE);
     http_async_ctx_t next = {
         .client_fd = client_fd,
         .handler = conn->handler,
@@ -1614,8 +1617,8 @@ bool cwist_http_pool_submit_async(int client_fd, cwist_async_handler_t handler, 
     conn->fd = client_fd;
     conn->user_ctx = ctx;
     conn->virgin = true;
-    conn->last_active_sec = cwist_fast_monotonic_sec();
-    conn->stash_grown_sec = conn->last_active_sec;
+    __atomic_store_n(&conn->last_active_sec, cwist_fast_monotonic_sec(), __ATOMIC_RELEASE);
+    conn->stash_grown_sec = __atomic_load_n(&conn->last_active_sec, __ATOMIC_ACQUIRE);
 
     /* Worker selection: Power of Two Random Choices (P2C) load balancing
      * to eliminate queue skew without cache-bouncing work stealing. */
