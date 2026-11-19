@@ -2686,7 +2686,7 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         res->endpoint_opts = req->endpoint_opts;
         res->keep_alive = req->keep_alive;
         if (req->version && req->version->data)
-            cwist_sstring_assign(res->version, req->version->data);
+            cwist_sstring_borrow(res->version, req->version->data, req->version->size);
         if (req->method == CWIST_HTTP_UNKNOWN) {
             res->status_code = CWIST_HTTP_NOT_IMPLEMENTED;
             cwist_sstring_assign(res->body, "Method Not Implemented");
