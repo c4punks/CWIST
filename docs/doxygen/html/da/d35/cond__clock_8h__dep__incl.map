@@ -1,0 +1,9 @@
+<map id="src/net/http/cond_clock.h" name="src/net/http/cond_clock.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="148,5,332,31"/>
+<area shape="rect" id="Node000002" href="$d9/dba/grpc_8c.html" title="Unary gRPC over HTTP/2 support." alt="" coords="5,79,147,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="202,39,104,81,102,76,200,34"/>
+<area shape="rect" id="Node000003" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="171,79,309,104"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="243,44,243,79,237,79,237,44"/>
+<area shape="rect" id="Node000004" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="333,79,478,104"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="280,34,379,76,377,81,278,38"/>
+</map>
