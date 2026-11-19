@@ -252,97 +252,56 @@ static const char *json_scalar_text(const cJSON *value, char *buf, size_t buf_le
 }
 
 /**
- * @brief HTML-escape a string into an output buffer.
- */
-static void html_escape(const char *value, char *out, size_t out_len) {
-    if (!value || out_len == 0) return;
-    size_t i, j;
-    for (i = 0, j = 0; value[i] && j < out_len - 1; i++) {
-        const char *repl = NULL;
-        switch (value[i]) {
-            case '&': repl = "&amp;"; break;
-            case '<': repl = "&lt;"; break;
-            case '>': repl = "&gt;"; break;
-            case '"': repl = "&quot;"; break;
-            case '\'': repl = "&#39;"; break;
-            default: break;
-        }
-        if (repl) {
-            size_t rlen = strlen(repl);
-            if (j + rlen >= out_len) break;
-            memcpy(out + j, repl, rlen);
-            j += rlen;
-        } else {
-            out[j++] = value[i];
-        }
-    }
-    out[j] = '\0';
-}
-
-/**
- * @brief Apply a simple filter to a string value in-place into a fixed buffer.
+ * @brief Apply a simple filter and return a dynamically sized string.
  * Supported filters: upper, lower, escape, trim, length, default(arg).
- * @param value Input string.
- * @param filter Filter name (may include an argument, e.g. "default(n/a)").
- * @param out Output buffer.
- * @param out_len Output buffer size.
  */
-static void apply_filter(const char *value, const char *filter, char *out, size_t out_len) {
-    if (!filter || out_len == 0) return;
-    if (strcmp(filter, "upper") == 0) {
-        size_t i;
-        for (i = 0; i < out_len - 1 && value && value[i]; i++)
-            out[i] = (char)toupper((unsigned char)value[i]);
-        out[i] = '\0';
-    } else if (strcmp(filter, "lower") == 0) {
-        size_t i;
-        for (i = 0; i < out_len - 1 && value && value[i]; i++)
-            out[i] = (char)tolower((unsigned char)value[i]);
-        out[i] = '\0';
-    } else if (strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0) {
-        html_escape(value, out, out_len);
-    } else if (strcmp(filter, "trim") == 0) {
-        if (!value || value[0] == '\0') {
-            out[0] = '\0';
-            return;
+static cwist_sstring *apply_filter(const char *value, const char *filter) {
+    if (!filter) return NULL;
+    cwist_sstring *out = cwist_sstring_create();
+    if (!out) return NULL;
+
+    if (strcmp(filter, "upper") == 0 || strcmp(filter, "lower") == 0) {
+        bool upper = strcmp(filter, "upper") == 0;
+        if (value) {
+            const char *p = value;
+            while (*p) {
+                char chunk[256];
+                size_t len = strlen(p) < sizeof(chunk) ? strlen(p) : sizeof(chunk);
+                for (size_t i = 0; i < len; i++) {
+                    unsigned char c = (unsigned char)p[i];
+                    chunk[i] = (char)(upper ? toupper(c) : tolower(c));
+                }
+                cwist_sstring_append_len(out, chunk, len);
+                p += len;
+            }
         }
-        const char *s = value;
-        while (isspace((unsigned char)*s)) s++;
-        /* Guard against all-whitespace input: s may have advanced past the
-         * last character, making e = value + vlen - 1 < s. */
-        size_t vlen = strlen(value);
-        const char *e = value + vlen - 1;
-        while (e > s && isspace((unsigned char)*e)) e--;
-        size_t len = (s > e) ? 0 : (size_t)(e - s + 1);
-        if (len >= out_len) len = out_len - 1;
-        memcpy(out, s, len);
-        out[len] = '\0';
+    } else if (strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0) {
+        cwist_sstring_append_escaped(out, value);
+    } else if (strcmp(filter, "trim") == 0) {
+        if (value && *value) {
+            const char *s = value;
+            while (isspace((unsigned char)*s)) s++;
+            size_t vlen = strlen(value);
+            const char *e = value + vlen - 1;
+            while (e > s && isspace((unsigned char)*e)) e--;
+            if (s <= e) cwist_sstring_append_len(out, s, (size_t)(e - s + 1));
+        }
     } else if (strcmp(filter, "length") == 0 || strcmp(filter, "len") == 0) {
-        snprintf(out, out_len, "%zu", value ? strlen(value) : 0);
+        char length[64];
+        snprintf(length, sizeof(length), "%zu", value ? strlen(value) : 0);
+        cwist_sstring_append(out, length);
     } else if (strncmp(filter, "default", 7) == 0) {
-        const char *arg = NULL;
         const char *lp = strchr(filter, '(');
         const char *rp = strrchr(filter, ')');
-        if (lp && rp && rp > lp) {
-            arg = lp + 1;
+        if (value && *value) {
+            cwist_sstring_append(out, value);
+        } else if (lp && rp && rp > lp) {
+            cwist_sstring_append_len(out, lp + 1, (size_t)(rp - lp - 1));
         }
-        if (value && value[0]) {
-            snprintf(out, out_len, "%s", value);
-        } else if (arg) {
-            size_t arg_len = (size_t)(rp - arg);
-            if (arg_len >= out_len) arg_len = out_len - 1;
-            memcpy(out, arg, arg_len);
-            out[arg_len] = '\0';
-        } else {
-            out[0] = '\0';
-        }
-    } else {
-        if (value) {
-            snprintf(out, out_len, "%s", value);
-        } else {
-            out[0] = '\0';
-        }
+    } else if (value) {
+        cwist_sstring_append(out, value);
     }
+    return out;
 }
 
 /**
@@ -467,9 +426,11 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 char num_str[64] = {0};
                 const char *raw = value ? json_scalar_text(value, num_str, sizeof(num_str)) : NULL;
                 if (raw && filter) {
-                    char filtered[512] = {0};
-                    apply_filter(raw, filter, filtered, sizeof(filtered));
-                    cwist_sstring_append(output, filtered);
+                    cwist_sstring *filtered = apply_filter(raw, filter);
+                    if (filtered) {
+                        cwist_sstring_append(output, filtered->data);
+                        cwist_sstring_destroy(filtered);
+                    }
                 } else if (raw) {
                     cwist_sstring_append(output, raw);
                 }
