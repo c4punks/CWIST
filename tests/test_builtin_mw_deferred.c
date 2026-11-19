@@ -15,6 +15,7 @@
 #include <cwist/sys/app/middleware.h>
 #include <cwist/net/http/async.h>
 #include <cwist/net/http/http.h>
+#include <cjson/cJSON.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -105,8 +106,8 @@ static void test_compress(void) {
 }
 
 /* Runs @p mw with stdout redirected and returns what it printed. */
-static void capture_log(cwist_middleware_func mw, bool defer, char *out, size_t out_len) {
-    cwist_http_request *req = make_request();
+static void capture_log_request(cwist_middleware_func mw, bool defer, cwist_http_request *req,
+                                char *out, size_t out_len) {
     cwist_http_response *res = cwist_http_response_create();
     REQUIRE(res);
 
@@ -128,6 +129,10 @@ static void capture_log(cwist_middleware_func mw, bool defer, char *out, size_t 
 
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
+}
+
+static void capture_log(cwist_middleware_func mw, bool defer, char *out, size_t out_len) {
+    capture_log_request(mw, defer, make_request(), out, out_len);
 }
 
 static void expect_contains(const char *log, const char *want) {
@@ -190,10 +195,42 @@ static void test_request_ids(void) {
     printf("Passed request ID validation\n");
 }
 
+static cwist_http_request *make_log_request(void) {
+    cwist_http_request *req = cwist_http_request_create();
+    REQUIRE(req);
+    req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(req->path, "/a\"b\\c");
+    cwist_sstring_assign(req->query, "x=\"");
+    cwist_http_header_add(&req->headers, "X-Request-Id", "rid\"\\");
+    cwist_http_header_add(&req->headers, "Referer", "ref\"\\");
+    cwist_http_header_add(&req->headers, "User-Agent", "bad\"\x01line");
+    return req;
+}
+
+static void test_access_log_escaping(void) {
+    char log[2048];
+    capture_log_request(cwist_mw_access_log(CWIST_LOG_COMBINED), false, make_log_request(), log,
+                        sizeof(log));
+    expect_contains(log, "\\x01");
+    expect_contains(log, "a\\\"b\\\\c?x=");
+
+    capture_log_request(cwist_mw_access_log(CWIST_LOG_JSON), false, make_log_request(), log,
+                        sizeof(log));
+    cJSON *json = cJSON_Parse(log);
+    REQUIRE(json != NULL);
+    cJSON *path = cJSON_GetObjectItemCaseSensitive(json, "path");
+    cJSON *rid = cJSON_GetObjectItemCaseSensitive(json, "rid");
+    REQUIRE(path && strcmp(path->valuestring, "/a\"b\\c?x=\"") == 0);
+    REQUIRE(rid && strcmp(rid->valuestring, "rid\"\\") == 0);
+    cJSON_Delete(json);
+    printf("Passed access log escaping\n");
+}
+
 int main(void) {
     printf("Testing built-in middleware with a deferred response...\n");
     test_compress();
     test_access_logs();
+    test_access_log_escaping();
     test_request_ids();
     printf("All deferred built-in middleware tests passed.\n");
     return 0;
