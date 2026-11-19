@@ -386,7 +386,7 @@ Functions</h2></td></tr>
 <tr><td class="fieldname"><a id="a22009cad9633c4143994338668ad016aa9993147bc5be445ff948fde8e1ff340a" name="a22009cad9633c4143994338668ad016aa9993147bc5be445ff948fde8e1ff340a"></a>CWIST_LOG_JSON&#160;</td><td class="fielddoc"></td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00022">22</a> of file <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html">middleware.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00023">23</a> of file <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html">middleware.h</a>.</p>
 
 </div>
 </div>
@@ -417,7 +417,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for access logging. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00296">296</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00307">307</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -517,9 +517,9 @@ Functions</h2></td></tr>
 <p>CORS middleware. Adds CORS headers and handles OPTIONS requests (returns 204).</p>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for CORS handling. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00525">525</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00536">536</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00500">cwist_mw_cors_handler()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00511">cwist_mw_cors_handler()</a>.</p>
 
 </div>
 </div>
@@ -557,7 +557,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware wrapper bound to the supplied secret, or NULL on overflow or when the JWT module is compiled out (CWIST_JWT=0). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00649">649</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00660">660</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -595,7 +595,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Active decoded claims, or NULL when the request is not inside JWT auth on this thread. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00687">687</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00698">698</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -619,9 +619,9 @@ Functions</h2></td></tr>
 <p>Prometheus metrics collection middleware.</p>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for request metrics. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00333">333</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00344">344</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00315">cwist_mw_metrics_handler()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00326">cwist_mw_metrics_handler()</a>.</p>
 
 </div>
 </div>
@@ -684,7 +684,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/db2/otel_8c_source.html#l00273">273</a> of file <a class="el" href="../../d3/db2/otel_8c_source.html">otel.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00055">batch</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00125">cwist_otel_cfg_t::batch_size</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00057">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00121">cwist_otel_cfg_t::endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00053">endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00033">OTEL_DEFAULT_BATCH</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00030">OTEL_DEFAULT_ENDPOINT</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00032">OTEL_DEFAULT_QUEUE</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00031">OTEL_DEFAULT_SERVICE</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00124">cwist_otel_cfg_t::queue_cap</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00123">cwist_otel_cfg_t::service_name</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00055">batch</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00126">cwist_otel_cfg_t::batch_size</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00057">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00122">cwist_otel_cfg_t::endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00053">endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00033">OTEL_DEFAULT_BATCH</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00030">OTEL_DEFAULT_ENDPOINT</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00032">OTEL_DEFAULT_QUEUE</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00031">OTEL_DEFAULT_SERVICE</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00125">cwist_otel_cfg_t::queue_cap</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00124">cwist_otel_cfg_t::service_name</a>.</p>
 
 </div>
 </div>
@@ -715,7 +715,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for per-IP rate limiting. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00467">467</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00478">478</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -741,7 +741,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00129">129</a> of file <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html">rate_limit_redis.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00036">cwist_rate_limit_redis_cfg_t::fail_closed</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00034">cwist_rate_limit_redis_cfg_t::key_prefix</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00032">cwist_rate_limit_redis_cfg_t::pool</a>, <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00018">REDIS_RATE_PREFIX_MAX</a>, <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00017">REDIS_RATE_SLOTS</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00033">cwist_rate_limit_redis_cfg_t::requests_per_minute</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00035">cwist_rate_limit_redis_cfg_t::timeout_ms</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00037">cwist_rate_limit_redis_cfg_t::fail_closed</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00035">cwist_rate_limit_redis_cfg_t::key_prefix</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00033">cwist_rate_limit_redis_cfg_t::pool</a>, <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00018">REDIS_RATE_PREFIX_MAX</a>, <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00017">REDIS_RATE_SLOTS</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00034">cwist_rate_limit_redis_cfg_t::requests_per_minute</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00036">cwist_rate_limit_redis_cfg_t::timeout_ms</a>.</p>
 
 </div>
 </div>
@@ -764,7 +764,7 @@ Functions</h2></td></tr>
 <p>Reset the process-local IP table; Redis configs and keys are unchanged. </p>
 <p>Reset the process-local IP table; Redis configs and keys are unchanged. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00450">450</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00461">461</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -787,21 +787,22 @@ Functions</h2></td></tr>
 <p>Request ID middleware. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">header_name</td><td>Optional override for the header (defaults to "X-Request-Id").</td></tr>
+    <tr><td class="paramname">header_name</td><td>NULL or "X-Request-Id". </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware function, or NULL for an unsupported custom header name.</dd></dl>
 <p>Request ID middleware.</p>
 <p>Request ID middleware factory.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">header_name</td><td>Currently unused custom header override. </td></tr>
+    <tr><td class="paramname">header_name</td><td>NULL or "X-Request-Id"; other names are unsupported. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for request ID injection. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer, or NULL for an unsupported header name. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00079">79</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00090">90</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>

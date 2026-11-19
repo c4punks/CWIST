@@ -169,7 +169,7 @@ $(document).ready(function(){initNavTree('de/d6c/arena_8c_source.html','../../')
 <div class="line"><a id="l00062" name="l00062"></a><span class="lineno"><a class="line" href="../../da/d0c/arena_8h.html#a2314d237f2461e1d36e874b30ec9ffcf">   62</a></span><span class="keywordtype">void</span> *<a class="code hl_function" href="../../de/d6c/arena_8c.html#a2314d237f2461e1d36e874b30ec9ffcf">cwist_arena_alloc</a>(<a class="code hl_typedef" href="../../da/d0c/arena_8h.html#a18e3b94906aace36413cfdec0fbe329b">cwist_arena_t</a> *arena, <span class="keywordtype">size_t</span> size) {</div>
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span>    <span class="keywordflow">if</span> (!arena || !size || !arena-&gt;base) <span class="keywordflow">return</span> NULL;</div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span>    <span class="keywordflow">if</span> (size &gt; SIZE_MAX - 15u) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    size = (size + 15u) &amp; ~15u;</div>
+<div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span>    size = (size + 15u) &amp; ~(<span class="keywordtype">size_t</span>)15u;</div>
 <div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span>    <span class="keywordflow">if</span> (size &gt; arena-&gt;capacity - arena-&gt;used) <span class="keywordflow">return</span> NULL;</div>
 <div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span>    <span class="keywordtype">void</span> *ptr = arena-&gt;base + arena-&gt;used;</div>
 <div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span>    arena-&gt;used += size;</div>
@@ -347,7 +347,7 @@ $(document).ready(function(){initNavTree('de/d6c/arena_8c_source.html','../../')
 <div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span><span class="comment">     * and scatter offset; exhaustion still returns NULL so callers fall</span></div>
 <div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span><span class="comment">     * back to the heap exactly as before. */</span></div>
 <div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    <span class="keywordflow">if</span> (size &gt; SIZE_MAX - 15u) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    size = (size + 15u) &amp; ~15u;</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    size = (size + 15u) &amp; ~(<span class="keywordtype">size_t</span>)15u;</div>
 <div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    <span class="keywordflow">if</span> (size &gt; arena-&gt;gen.capacity - arena-&gt;gen.used) <span class="keywordflow">return</span> NULL;</div>
 <div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    <span class="keywordtype">void</span> *ptr = (uint8_t *)arena-&gt;gen.base + arena-&gt;gen.used;</div>
 <div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    arena-&gt;gen.used += size;</div>
