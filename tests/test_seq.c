@@ -186,11 +186,9 @@ static void test_conflicting_duplicate_rejected(void) {
 
 static void test_reset_preserves_limit(void) {
     printf("Testing reset preserves max_data_len limit...\n");
-    /* Create assembler with 10-byte ceiling */
     cwist_seq_assembler_t *a = cwist_seq_assembler_create_limited(10);
     assert(a != NULL);
 
-    /* Valid 4-byte message fits within 10-byte limit */
     const char *msg1 = "test";
     cwist_seq_message_t split1;
     assert(cwist_seq_split((const uint8_t *)msg1, strlen(msg1), 4, &split1));
@@ -200,19 +198,42 @@ static void test_reset_preserves_limit(void) {
     assert(cwist_seq_assembler_is_complete(a));
     cwist_seq_message_free(&split1);
 
-    /* Reset the assembler */
     cwist_seq_assembler_reset(a);
 
-    /* Oversized message (20 bytes > 10-byte ceiling) must still be rejected after reset */
     const char *msg2 = "01234567890123456789";
     cwist_seq_message_t split2;
     assert(cwist_seq_split((const uint8_t *)msg2, strlen(msg2), 10, &split2));
     assert(cwist_seq_chunk_parse(split2.chunks[0], split2.chunk_lens[0], &chunk));
-    assert(!cwist_seq_assembler_feed(a, &chunk)); /* rejected because 20 > 10 */
+    assert(cwist_seq_assembler_feed(a, &chunk));
+    assert(cwist_seq_chunk_parse(split2.chunks[1], split2.chunk_lens[1], &chunk));
+    assert(!cwist_seq_assembler_feed(a, &chunk));
 
     cwist_seq_assembler_destroy(a);
     cwist_seq_message_free(&split2);
     printf("  Passed reset preserves limit.\n");
+}
+
+static void test_short_final_chunk_fits_actual_limit(void) {
+    printf("Testing short final chunk against the actual message limit...\n");
+    uint8_t data[101] = {0};
+    cwist_seq_message_t split;
+    assert(cwist_seq_split(data, sizeof(data), 100, &split));
+    cwist_seq_assembler_t *a = cwist_seq_assembler_create_limited(150);
+    assert(a != NULL);
+
+    cwist_seq_chunk_t chunk;
+    assert(cwist_seq_chunk_parse(split.chunks[1], split.chunk_lens[1], &chunk));
+    assert(cwist_seq_assembler_feed(a, &chunk));
+    assert(cwist_seq_chunk_parse(split.chunks[0], split.chunk_lens[0], &chunk));
+    assert(cwist_seq_assembler_feed(a, &chunk));
+
+    const uint8_t *assembled = NULL;
+    size_t assembled_len = 0;
+    assert(cwist_seq_assembler_get_data(a, &assembled, &assembled_len));
+    assert(assembled_len == sizeof(data) && memcmp(assembled, data, sizeof(data)) == 0);
+    cwist_seq_assembler_destroy(a);
+    cwist_seq_message_free(&split);
+    printf("  Passed short final chunk limit.\n");
 }
 
 int main(void) {
@@ -223,6 +244,7 @@ int main(void) {
     test_final_chunk_first_recovery_targets();
     test_conflicting_duplicate_rejected();
     test_reset_preserves_limit();
+    test_short_final_chunk_fits_actual_limit();
     printf("All seq tests passed!\n");
     return 0;
 }
