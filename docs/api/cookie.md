@@ -50,6 +50,9 @@ left out, and `http_only` and `secure` are added only when `true`.
 `max_age_seconds` is written only when it is greater than zero. A
 zero-initialised struct creates a session cookie. Use `cwist_cookie_delete` to
 emit `Max-Age=0`. `same_site` must be `Strict`, `Lax`, or `None` when present.
+`SameSite=None` requires `secure`. Names with the `__Secure-` prefix also require
+`secure`. Names with the `__Host-` prefix require `secure`, `path` of `/`, and no
+`domain`.
 
 ### `cwist_cookie_set`
 ```c
@@ -73,6 +76,15 @@ int cwist_cookie_delete(cwist_http_response *res, const char *name);
 Adds a `Set-Cookie: name=; Path=/; Max-Age=0` header, which tells the client to
 remove the cookie. The path is fixed to `/`, so a cookie that was set with a
 different `path` is not matched by this header. Returns `0` on success and `-1`
+on failure.
+
+### `cwist_cookie_delete_ex`
+```c
+int cwist_cookie_delete_ex(cwist_http_response *res, const char *name,
+                           const cwist_cookie_options *opts);
+```
+Deletes a cookie using its original `path`, `domain`, and security attributes.
+The emitted header always includes `Max-Age=0`. Returns `0` on success and `-1`
 on failure.
 
 ## Encoding

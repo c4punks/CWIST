@@ -175,17 +175,22 @@ static bool cookie_same_site_is_valid(const char *same_site) {
                          strcmp(same_site, "None") == 0);
 }
 
-static bool cookie_options_are_valid(const cwist_cookie_options *opts) {
+static bool cookie_options_are_valid(const char *name, const cwist_cookie_options *opts) {
     if (!opts) return true;
     if (opts->path && !cookie_path_is_valid(opts->path)) return false;
     if (opts->domain && !cookie_domain_is_valid(opts->domain)) return false;
     if (opts->same_site && !cookie_same_site_is_valid(opts->same_site)) return false;
+    if (opts->same_site && strcmp(opts->same_site, "None") == 0 && !opts->secure) return false;
+    if (strncmp(name, "__Secure-", 9) == 0 && !opts->secure) return false;
+    if (strncmp(name, "__Host-", 7) == 0 &&
+        (!opts->secure || opts->domain || !opts->path || strcmp(opts->path, "/") != 0))
+        return false;
     return true;
 }
 
 int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value,
                      const cwist_cookie_options *opts) {
-    if (!res || !cookie_name_is_valid(name) || !cookie_options_are_valid(opts)) return -1;
+    if (!res || !cookie_name_is_valid(name) || !cookie_options_are_valid(name, opts)) return -1;
 
     char *encoded = value ? cwist_cookie_encode(value) : cwist_strdup("");
     if (!encoded) return -1;
@@ -219,15 +224,28 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
     return rc;
 }
 
-int cwist_cookie_delete(cwist_http_response *res, const char *name) {
-    if (!res || !cookie_name_is_valid(name)) return -1;
+int cwist_cookie_delete_ex(cwist_http_response *res, const char *name,
+                           const cwist_cookie_options *opts) {
+    if (!res || !cookie_name_is_valid(name) || !cookie_options_are_valid(name, opts)) return -1;
 
     cwist_sstring *cookie = cwist_sstring_create();
     if (!cookie) return -1;
 
-    bool ok =
-        cookie_append(cookie, name) == 0 && cookie_append(cookie, "=; Path=/; Max-Age=0") == 0;
+    bool ok = cookie_append(cookie, name) == 0 && cookie_append(cookie, "=; Max-Age=0") == 0;
+    if (ok && opts) {
+        if (opts->path) ok = cookie_append_attr(cookie, "; Path=", opts->path) == 0;
+        if (ok && opts->domain) ok = cookie_append_attr(cookie, "; Domain=", opts->domain) == 0;
+        if (ok && opts->http_only) ok = cookie_append(cookie, "; HttpOnly") == 0;
+        if (ok && opts->secure) ok = cookie_append(cookie, "; Secure") == 0;
+        if (ok && opts->same_site)
+            ok = cookie_append_attr(cookie, "; SameSite=", opts->same_site) == 0;
+    }
     int rc = ok ? add_set_cookie(res, cookie->data) : -1;
     cwist_sstring_destroy(cookie);
     return rc;
+}
+
+int cwist_cookie_delete(cwist_http_response *res, const char *name) {
+    cwist_cookie_options opts = {.path = "/"};
+    return cwist_cookie_delete_ex(res, name, &opts);
 }
