@@ -448,7 +448,8 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)body_len);
         curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, body);
     }
-    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method_str);
+    if (strcmp(method_str, "GET") == 0 && body && body_len > 0)
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
     if (strcmp(method_str, "HEAD") == 0) curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
     /* Response accumulators */

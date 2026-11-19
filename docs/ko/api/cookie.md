@@ -15,7 +15,9 @@ void cwist_cookie_parse(cwist_query_map *map, const char *header);
 `map`은 `cwist_query_map_create()`로 만든 것이어야 합니다.
 
 * 이름 앞의 공백과 이름 뒤의 공백은 제거합니다. 값 끝의 공백은 그대로 둡니다.
-* 각 값은 `cwist_cookie_decode`로 URL 디코딩합니다.
+* 퍼센트 이스케이프는 `cwist_cookie_decode`로 디코딩하고, 리터럴 `+`는 그대로 유지합니다.
+  값을 감싼 큰따옴표는 제거합니다.
+* 같은 이름이 여러 번 나오면 브라우저의 쿠키 순서에 맞춰 첫 번째 값을 사용합니다.
 * `=`가 없거나, 이름이 비어 있거나, 디코딩한 값이 4096바이트에 들어가지 않는 쌍은 건너뜁니다.
 * `NULL`이거나 빈 `header`, 또는 `NULL` `map`이면 아무것도 하지 않습니다.
 
@@ -33,7 +35,7 @@ const char *cwist_cookie_get(cwist_query_map *map, const char *name);
 typedef struct cwist_cookie_options {
     const char *path;
     const char *domain;
-    int max_age_seconds;   /* < 0 means omit */
+    int max_age_seconds;   /* > 0 emits Max-Age; <= 0 omits it */
     bool http_only;
     bool secure;
     const char *same_site; /* "Strict", "Lax", or "None" */
@@ -42,9 +44,9 @@ typedef struct cwist_cookie_options {
 `cwist_cookie_set`의 속성입니다. `NULL`인 `path`, `domain`, `same_site`는 생략되고,
 `http_only`와 `secure`는 `true`일 때만 추가됩니다.
 
-`max_age_seconds`는 `0` 이상이면 항상 기록되므로, 0으로 초기화한 구조체는 `Max-Age=0`을
-만들어 클라이언트에게 쿠키 삭제를 지시합니다. 속성을 생략하려면 `-1`로 설정하세요.
-`same_site`는 주어진 그대로 복사되며 위 세 값 중 하나인지 검사하지 않습니다.
+`max_age_seconds`는 0보다 클 때만 기록합니다. 0으로 초기화한 구조체는 세션 쿠키를 만듭니다.
+`Max-Age=0`으로 삭제하려면 `cwist_cookie_delete`를 사용하세요. `same_site`는 지정한 경우
+`Strict`, `Lax`, `None` 중 하나여야 합니다.
 
 ### `cwist_cookie_set`
 ```c
@@ -82,8 +84,8 @@ char *cwist_cookie_encode(const char *value);
 int cwist_cookie_decode(const char *in, char *out, size_t out_len);
 ```
 `in`을 크기가 `out_len`인 호출자 버퍼 `out`으로 디코딩합니다. `%XX` 시퀀스(16진수 대소문자
-모두)는 해당 바이트가 되고 `+`는 공백이 됩니다. 뒤에 16진수 두 자리가 오지 않는 `%`는 그대로
-복사됩니다.
+모두)는 해당 바이트가 되고 리터럴 `+`는 그대로 유지됩니다. 뒤에 16진수 두 자리가 오지 않는
+`%`는 그대로 복사됩니다.
 
 종료 `\0`을 제외하고 쓴 바이트 수를 반환합니다. 인자가 `NULL`이거나, `out_len`이 `0`이거나,
 결과가 종료 `\0`과 함께 `out`에 들어가지 않으면 `-1`입니다.

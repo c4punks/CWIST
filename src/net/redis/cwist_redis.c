@@ -511,7 +511,11 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
             char *end = NULL;
             long long blen = strtoll(line + 1, &end, 10);
             if (end == line + 1 || *end != '\0') goto fail;
-            if (blen < 0) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+            if (blen == -1) {
+                node->integer = -1;
+                return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
+            }
+            if (blen < -1) goto fail;
             /* Guard against a rogue/malicious server advertising a huge bulk
              * string that would exhaust memory before we read a single byte. */
             if (blen > CWIST_REDIS_MAX_BULK_BYTES) goto fail;
@@ -524,7 +528,7 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
             buf[blen] = '\0';
             /* consume trailing \r\n */
             char crlf[2];
-            if (redis_recv_bytes(r, crlf, 2) != 0) {
+            if (redis_recv_bytes(r, crlf, 2) != 0 || crlf[0] != '\r' || crlf[1] != '\n') {
                 cwist_free(buf);
                 goto fail;
             }
@@ -538,10 +542,11 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
             if (depth >= CWIST_REDIS_MAX_REPLY_DEPTH) goto fail;
             char *end = NULL;
             long long count = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0' || count < 0 ||
+            if (end == line + 1 || *end != '\0' || count < -1 ||
                 count > CWIST_REDIS_MAX_REPLY_ELEMENTS)
                 goto fail;
-            node->elements = (size_t)count;
+            node->integer = count;
+            node->elements = count > 0 ? (size_t)count : 0;
             if (count > 0) {
                 node->element = cwist_alloc_array((size_t)count, sizeof(*node->element));
                 if (!node->element) goto fail;

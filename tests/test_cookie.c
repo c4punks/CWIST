@@ -32,10 +32,10 @@ static void test_cookie_decode(void) {
     printf("Testing cookie decode...\n");
     char out[128];
 
-    /* Basic hex decoding and + as space */
+    /* Percent escapes are decoded and literal plus signs are preserved. */
     int len = cwist_cookie_decode("hello+world%21%2A", out, sizeof(out));
     assert(len == 13);
-    assert(strcmp(out, "hello world!*") == 0);
+    assert(strcmp(out, "hello+world!*") == 0);
 
     /* Lowercase hex */
     len = cwist_cookie_decode("%2fpath%2fa", out, sizeof(out));
@@ -85,6 +85,11 @@ static void test_cookie_parse_and_get(void) {
     assert(cwist_cookie_get(map, "") == NULL);
     assert(cwist_cookie_get(map, "missing") == NULL);
 
+    cwist_cookie_parse(map, "session_id=tossed; quoted=\"value\"; base64=a+b/c=");
+    assert(strcmp(cwist_cookie_get(map, "session_id"), "s 123") == 0);
+    assert(strcmp(cwist_cookie_get(map, "quoted"), "value") == 0);
+    assert(strcmp(cwist_cookie_get(map, "base64"), "a+b/c=") == 0);
+
     /* Encoded NUL cookie value is rejected and not stored (Issue #768) */
     cwist_cookie_parse(map, "evil=expected%00ignored");
     assert(cwist_cookie_get(map, "evil") == NULL);
@@ -131,6 +136,14 @@ static void test_cookie_set_and_delete(void) {
     assert(strstr(del_cookie, "auth_token=;") != NULL);
     assert(strstr(del_cookie, "Max-Age=0") != NULL);
 
+    cwist_http_response *session_res = cwist_http_response_create();
+    assert(session_res != NULL);
+    cwist_cookie_options session_opts = {0};
+    assert(cwist_cookie_set(session_res, "pref", "dark", &session_opts) == 0);
+    const char *session_cookie = cwist_http_header_get(session_res->headers, "Set-Cookie");
+    assert(session_cookie != NULL && strstr(session_cookie, "Max-Age") == NULL);
+
+    cwist_http_response_destroy(session_res);
     cwist_http_response_destroy(res);
     cwist_http_response_destroy(del_res);
     printf("  Passed set and delete.\n");

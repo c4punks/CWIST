@@ -121,6 +121,16 @@ int main(void) {
     fprintf(f, "Hello World");
     fclose(f);
 
+    char plus_path[256];
+    snprintf(plus_path, sizeof(plus_path), "%s/c++.txt", tmpdir);
+    f = fopen(plus_path, "w");
+    if (!f) {
+        perror("fopen");
+        return 1;
+    }
+    fprintf(f, "plus");
+    fclose(f);
+
     /* Create a symlink escape target */
     char secret_path[256];
     snprintf(secret_path, sizeof(secret_path), "%s/secret.txt", tmpdir);
@@ -252,6 +262,36 @@ int main(void) {
         failures++;
     }
 
+    struct {
+        const char *target;
+        const char *status;
+    } decode_cases[] = {
+        {"/static/c++.txt", "200"},
+        {"/static/c%2B%2B.txt", "200"},
+        {"/static/index.html%00.txt", "400"},
+        {"/static/index.html%0a.txt", "400"},
+        {"/static/index.html%", "400"},
+    };
+    for (size_t i = 0; i < sizeof(decode_cases) / sizeof(decode_cases[0]); i++) {
+        fd = connect_to_server();
+        if (fd < 0) {
+            fprintf(stderr, "FAIL: Could not connect for path decoding test\n");
+            failures++;
+            continue;
+        }
+        char request[512];
+        snprintf(request, sizeof(request), "GET %s HTTP/1.1\r\nHost: localhost\r\n\r\n",
+                 decode_cases[i].target);
+        send_request(fd, request);
+        read_response(fd, buf, sizeof(buf));
+        if (!response_has_code(buf, decode_cases[i].status)) {
+            fprintf(stderr, "FAIL: Expected %s for %s, got:\n%s\n", decode_cases[i].status,
+                    decode_cases[i].target, buf);
+            failures++;
+        }
+        close(fd);
+    }
+
     /* Cleanup */
     if (kill(pid, SIGTERM) < 0 && errno != ESRCH) {
         perror("kill SIGTERM");
@@ -291,6 +331,7 @@ int main(void) {
     }
 
     unlink(index_path);
+    unlink(plus_path);
     unlink(secret_path);
     rmdir(tmpdir);
 

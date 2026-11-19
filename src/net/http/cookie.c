@@ -71,8 +71,6 @@ int cwist_cookie_decode(const char *in, char *out, size_t out_len) {
             }
             out[j++] = (char)hex;
             i += 2;
-        } else if (in[i] == '+') {
-            out[j++] = ' ';
         } else {
             out[j++] = in[i];
         }
@@ -103,7 +101,12 @@ void cwist_cookie_parse(cwist_query_map *map, const char *header) {
                 name[--nlen] = '\0';
             }
 
-            if (nlen > 0) {
+            size_t vlen = strlen(value);
+            if (vlen >= 2 && value[0] == '"' && value[vlen - 1] == '"') {
+                value++;
+                value[vlen - 2] = '\0';
+            }
+            if (nlen > 0 && cwist_query_map_get(map, name) == NULL) {
                 char *decoded = cwist_alloc(strlen(value) + 1);
                 if (decoded) {
                     if (cwist_cookie_decode(value, decoded, strlen(value) + 1) >= 0) {
@@ -200,7 +203,7 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
     if (ok && opts) {
         if (opts->path) ok = cookie_append_attr(cookie, "; Path=", opts->path) == 0;
         if (ok && opts->domain) ok = cookie_append_attr(cookie, "; Domain=", opts->domain) == 0;
-        if (ok && opts->max_age_seconds >= 0) {
+        if (ok && opts->max_age_seconds > 0) {
             char buf[64];
             snprintf(buf, sizeof(buf), "; Max-Age=%d", opts->max_age_seconds);
             ok = cookie_append(cookie, buf) == 0;

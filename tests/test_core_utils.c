@@ -154,7 +154,7 @@ static void exercise_query_map(cwist_query_map *m) {
     assert(strcmp(cwist_query_map_get(m, "b"), "two words") == 0);
     assert(strcmp(cwist_query_map_get(m, "c"), "") == 0);
     assert(strcmp(cwist_query_map_get(m, "d"), "&") == 0);
-    assert(cwist_query_map_get(m, "noeq") == NULL);
+    assert(strcmp(cwist_query_map_get(m, "noeq"), "") == 0);
 
     cwist_query_map_set(m, "a", "replaced");
     cwist_query_map_set(m, "e", "5");
@@ -165,8 +165,9 @@ static void exercise_query_map(cwist_query_map *m) {
 
     iter_ctx c = {0};
     cwist_query_map_foreach(m, collect, &c);
-    assert(c.count == 5);
-    assert(strstr(c.seen, "a=replaced;") && strstr(c.seen, "e=5;") && strstr(c.seen, "c=;"));
+    assert(c.count == 6);
+    assert(strstr(c.seen, "a=replaced;") && strstr(c.seen, "e=5;") && strstr(c.seen, "c=;") &&
+           strstr(c.seen, "noeq=;"));
     cwist_query_map_foreach(m, NULL, &c);
     cwist_query_map_foreach(NULL, collect, &c);
 

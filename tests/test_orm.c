@@ -375,6 +375,28 @@ static void test_query_typed(void) {
     cwist_orm_close_socket(orm);
 }
 
+static void test_numeric_literal_fidelity(void) {
+    cwist_orm_t *orm = open_memdb();
+    cwist_orm_immediate_commit(true);
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE n(id INTEGER PRIMARY KEY, v REAL);")) == 0);
+    cJSON *row = cJSON_CreateObject();
+    cJSON_AddNumberToObject(row, "id", 1700000000123.0);
+    cJSON_AddNumberToObject(row, "v", 0.12345678901234567);
+    assert(rc(cwist_orm_insert(orm, "n", row)) == 0);
+    cJSON_Delete(row);
+    long long id = 0;
+    double value = 0;
+    assert(rc(cwist_orm_select_one_llong(orm, "n", "id", NULL, &id)) == 0);
+    assert(id == 1700000000123LL);
+    assert(rc(cwist_orm_select_one_double(orm, "n", "v", NULL, &value)) == 0);
+    assert(value == 0.12345678901234567);
+    row = cJSON_CreateObject();
+    cJSON_AddNumberToObject(row, "id", NAN);
+    assert(rc(cwist_orm_insert(orm, "n", row)) != 0);
+    cJSON_Delete(row);
+    cwist_orm_close_socket(orm);
+}
+
 static void test_closed_peer_does_not_raise_sigpipe(void) {
     int fds[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
@@ -404,6 +426,7 @@ int main(void) {
     test_exact_i64();
     test_query_typed();
     test_dialects();
+    test_numeric_literal_fidelity();
     test_closed_peer_does_not_raise_sigpipe();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");
