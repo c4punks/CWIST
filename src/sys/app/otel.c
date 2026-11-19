@@ -15,6 +15,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/middleware.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/http_client.h>
 #include <cjson/cJSON.h>
@@ -279,6 +280,7 @@ cwist_middleware_func cwist_mw_otel_trace(const cwist_otel_cfg_t *cfg) {
         g_otel.endpoint = cwist_strdup(endpoint);
         g_otel.service_name = cwist_strdup(service);
         g_otel.ring = cwist_alloc_array(cap, sizeof(*g_otel.ring));
+        if (g_otel.ring && cwist_full_gc_enabled()) cwist_gc_scope_disown(g_otel.ring);
         if (g_otel.endpoint && g_otel.service_name && g_otel.ring &&
             pthread_atfork(otel_atfork_prepare, otel_atfork_parent, otel_atfork_child) == 0) {
             g_otel.cap = cap;

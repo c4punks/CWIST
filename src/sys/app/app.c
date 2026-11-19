@@ -46,6 +46,7 @@
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/core/utils/json_builder.h>
 /* Libttak headers */
 #include <ttak/mem/mem.h>
@@ -559,6 +560,7 @@ static cwist_route_table *cwist_route_table_create(void) {
         cwist_free(table);
         return NULL;
     }
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(table->buckets);
     table->param_routes = NULL;
     return table;
 }
@@ -2370,8 +2372,7 @@ void cwist_app_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t 
     (void)cwist_app_internal_ws_async(app, path, on_message, NULL, NULL, user_data, 0);
 }
 
-bool cwist_app_internal_ws_async(cwist_app *app, const char *path,
-                                 cwist_ws_on_message_t on_message,
+bool cwist_app_internal_ws_async(cwist_app *app, const char *path, cwist_ws_on_message_t on_message,
                                  cwist_ws_on_open_t on_open, cwist_ws_on_close_t on_close,
                                  void *user_data, size_t max_message_bytes) {
 #ifdef CWIST_WS

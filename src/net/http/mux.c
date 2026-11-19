@@ -2,6 +2,7 @@
 #include <cwist/net/http/mux.h>
 #include <cwist/net/http/http.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -120,6 +121,7 @@ cwist_mux_router *cwist_mux_router_create(void) {
         cwist_free(router);
         return NULL;
     }
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(router->buckets);
     memset(router->buckets, 0, router->bucket_count * sizeof(cwist_mux_route *));
     router->routes = NULL;
     router->param_routes = NULL;
@@ -203,7 +205,8 @@ void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, cons
  * @param out_params On match, receives an allocated query map with extracted parameters
  *                 (NULL when the template had no parameters). Left untouched on mismatch;
  *                 any partially built map is freed internally.
- * @return true when the path matches the template exactly (trailing slash ignored), otherwise false.
+ * @return true when the path matches the template exactly (trailing slash ignored), otherwise
+ * false.
  * @retval true  On match, *out_params owns the extracted parameter map (caller-owned).
  * @retval false On mismatch, *out_params is unchanged.
  */

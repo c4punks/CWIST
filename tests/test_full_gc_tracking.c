@@ -76,6 +76,20 @@ static void test_disown_and_realloc(void) {
     printf("Passed test_disown_and_realloc\n");
 }
 
+static void test_alloc_array_tracking(void) {
+    size_t base = cwist_gc_scope_pending_count();
+    size_t *values = cwist_alloc_array(4, sizeof(*values));
+    void *empty = cwist_alloc_array(0, 0);
+    assert(values && empty);
+    assert(cwist_gc_scope_pending_count() == base + 2);
+    for (size_t i = 0; i < 4; i++) assert(values[i] == 0);
+    assert(cwist_alloc_array(SIZE_MAX, 2) == NULL);
+    cwist_free(empty);
+    cwist_free(values);
+    assert(cwist_gc_scope_pending_count() == base);
+    printf("Passed test_alloc_array_tracking\n");
+}
+
 static void test_flush(void) {
     /* Enough blocks to grow the set well past its reuse limit. */
     for (int i = 0; i < 5000; i++) assert(cwist_alloc(16));
@@ -203,6 +217,7 @@ int main(void) {
     assert(cwist_full_gc_enabled());
     test_large_live_set();
     test_disown_and_realloc();
+    test_alloc_array_tracking();
     test_flush();
     test_flush_reclaims();
     test_threads();

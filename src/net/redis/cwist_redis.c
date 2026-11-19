@@ -6,6 +6,7 @@
 #include <cwist/net/redis/cwist_redis.h>
 #include "redis_frame_internal.h"
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/sys/err/cwist_err.h>
 #include <stdio.h>
@@ -1096,6 +1097,8 @@ cwist_redis_pool_t *cwist_redis_pool_create(const char *host, int port, size_t m
     pool->max_conns = max_conns;
     pool->conns = cwist_alloc_array(max_conns, sizeof(cwist_redis_t *));
     pool->available = cwist_alloc_array(max_conns, sizeof(bool));
+    if (pool->conns && cwist_full_gc_enabled()) cwist_gc_scope_disown(pool->conns);
+    if (pool->available && cwist_full_gc_enabled()) cwist_gc_scope_disown(pool->available);
     if (!pool->host || !pool->conns || !pool->available) goto fail;
 
     for (size_t i = 0; i < max_conns; i++) {
