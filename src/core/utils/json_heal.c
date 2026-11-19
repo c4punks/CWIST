@@ -1,7 +1,10 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/core/utils/json_heal.h>
+#include "number_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
+#include <errno.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -276,7 +279,7 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
     if (b.len != old_len) log_append(log, log_sz, "[L1] removed trailing comma(s); ");
 
     /* 5. Try to parse */
-    cJSON *test = cJSON_Parse(b.data);
+    cJSON *test = cJSON_ParseWithOpts(b.data, NULL, true);
     if (!test) {
         strbuf_free(&b);
         return NULL;
@@ -290,36 +293,19 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
  * ======================================================================== */
 
 /**
- * @brief Normalise a field name for fuzzy comparison.
- *
- * Lower-cases the name and drops '_' and '-' separators, writing at most
- * dst_sz - 1 characters plus a NUL terminator.
- * @param src Source name; must not be NULL.
- * @param dst Destination buffer; must not be NULL.
- * @param dst_sz Size of @p dst in bytes.
- */
-static void normalise_name(const char *src, char *dst, size_t dst_sz) {
-    size_t j = 0;
-    for (size_t i = 0; src[i] && j < dst_sz - 1; i++) {
-        char c = src[i];
-        if (c == '_' || c == '-') continue;
-        dst[j++] = (char)tolower((unsigned char)c);
-    }
-    dst[j] = '\0';
-}
-
-/**
- * @brief Compare two field names fuzzily (case-insensitive, ignoring '_'/'-').
+ * @brief Compare complete field names case-insensitively, ignoring '_'/'-'.
  * @param a First name.
  * @param b Second name.
- * @retval true The normalised forms are identical.
- * @retval false The normalised forms differ.
  */
 static bool names_fuzzy_match(const char *a, const char *b) {
-    char na[64], nb[64];
-    normalise_name(a, na, sizeof(na));
-    normalise_name(b, nb, sizeof(nb));
-    return strcmp(na, nb) == 0;
+    for (;;) {
+        while (*a == '_' || *a == '-') a++;
+        while (*b == '_' || *b == '-') b++;
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) return false;
+        if (!*a) return true;
+        a++;
+        b++;
+    }
 }
 
 /**
@@ -327,18 +313,17 @@ static bool names_fuzzy_match(const char *a, const char *b) {
  * @param obj cJSON object to search; must be an object node.
  * @param name Name to fuzzy-match against each child's key.
  * @param found_key Optional output: pointer to the actual child key that matched.
- * @return The matching child item, or NULL if no child matches.
+ * @return The only matching child item, or NULL if absent or ambiguous.
  */
 static cJSON *find_fuzzy(cJSON *obj, const char *name, const char **found_key) {
-    cJSON *child = obj->child;
-    while (child) {
-        if (names_fuzzy_match(child->string, name)) {
-            if (found_key) *found_key = child->string;
-            return child;
-        }
-        child = child->next;
+    cJSON *match = NULL;
+    for (cJSON *child = obj->child; child; child = child->next) {
+        if (!names_fuzzy_match(child->string, name)) continue;
+        if (match) return NULL;
+        match = child;
     }
-    return NULL;
+    if (match && found_key) *found_key = match->string;
+    return match;
 }
 
 /**
@@ -435,8 +420,9 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
         if ((fd->type == CWIST_FIELD_INT || fd->type == CWIST_FIELD_FLOAT) &&
             cJSON_IsString(item) && item->valuestring) {
             char *end = NULL;
+            errno = 0;
             double v = strtod(item->valuestring, &end);
-            if (end && *end == '\0') {
+            if (end && *end == '\0' && errno != ERANGE && cwist_number_double_is_finite(v)) {
                 cJSON *num = cJSON_CreateNumber(v);
                 if (num) {
                     cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, num);
@@ -515,7 +501,7 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     double threshold = (cfg && cfg->threshold > 0.0) ? cfg->threshold : 0.8;
 
     /* ---- Try direct parse ---- */
-    cJSON *parsed = cJSON_Parse(input);
+    cJSON *parsed = cJSON_ParseWithOpts(input, NULL, true);
     if (parsed) {
         if (cfg && cfg->schema) {
             int changes =
@@ -535,7 +521,7 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     /* ---- L1: Syntax fix ---- */
     char *fixed = l1_heal(input, result.log, CWIST_HEAL_LOG_MAX);
     if (fixed) {
-        parsed = cJSON_Parse(fixed);
+        parsed = cJSON_ParseWithOpts(fixed, NULL, true);
         cwist_free(fixed);
         if (parsed) {
             result.level = 1;
@@ -559,7 +545,7 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     if (cfg && cfg->sllm_fn) {
         char *recovered = cfg->sllm_fn(input, cfg->schema, cfg->sllm_userdata);
         if (recovered) {
-            parsed = cJSON_Parse(recovered);
+            parsed = cJSON_ParseWithOpts(recovered, NULL, true);
             free(recovered); /* SLLM callback uses plain malloc per contract */
             if (parsed) {
                 result.level = 3;

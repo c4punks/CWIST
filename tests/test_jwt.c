@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <limits.h>
 #include <time.h>
 
 static void test_sign_and_verify(void) {
@@ -289,7 +290,26 @@ static void test_malformed_time_claim_types(void) {
     printf("  Passed malformed time claim rejection.\n");
 }
 
+static void test_input_shape_and_time_bounds(void) {
+    printf("Testing JWT input shapes and time bounds...\n");
+    assert(cwist_jwt_sign("[1,2,3]", "secret", 0) == NULL);
+    assert(cwist_jwt_sign("{\"sub\":\"1\"} trailing", "secret", 0) == NULL);
+    assert(cwist_jwt_sign("{\"sub\":\"1\"}", "secret", LONG_MAX) == NULL);
+
+    char *token = cwist_jwt_sign("{\"sub\":\"future\",\"nbf\":1e300}", "secret", 0);
+    assert(token != NULL);
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    cwist_free(token);
+
+    token = cwist_jwt_sign("{\"sub\":\"bad\",\"exp\":1e300}", "secret", 0);
+    assert(token != NULL);
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    cwist_free(token);
+    printf("  Passed input shape and time bounds.\n");
+}
+
 int main(void) {
+    test_input_shape_and_time_bounds();
     test_malformed_time_claim_types();
     test_sign_and_verify();
     test_wrong_secret();

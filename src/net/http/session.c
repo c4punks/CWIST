@@ -4,6 +4,7 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/http/session.h>
+#include "../../core/utils/number_internal.h"
 #include <cwist/net/http/cookie.h>
 #include <cwist/core/mem/alloc.h>
 #include "async_gc.h"
@@ -130,19 +131,23 @@ static int base64_decode(const char *in, uint8_t *out, size_t out_len) {
 
     size_t j = 0;
     for (size_t i = 0; i < in_len; i += 4) {
+        bool final = i + 4 == in_len;
         int a = decode[(unsigned char)in[i]];
         int b = decode[(unsigned char)in[i + 1]];
         int c = decode[(unsigned char)in[i + 2]];
         int d = decode[(unsigned char)in[i + 3]];
-        if (a < 0 || b < 0) return -1;
+        if (a < 0 || b < 0 || (!final && (c < 0 || d < 0))) return -1;
+        if (c < 0 && (in[i + 2] != '=' || in[i + 3] != '=' || (b & 0x0F) != 0)) return -1;
+        if (c >= 0 && d < 0 && (in[i + 3] != '=' || (c & 0x03) != 0)) return -1;
+
         uint32_t v = ((uint32_t)a << 18) | ((uint32_t)b << 12);
         if (c >= 0) v |= ((uint32_t)c << 6);
         if (d >= 0) v |= (uint32_t)d;
         out[j++] = (v >> 16) & 0xFF;
-        if (c >= 0 && in[i + 2] != '=') out[j++] = (v >> 8) & 0xFF;
-        if (d >= 0 && in[i + 3] != '=') out[j++] = v & 0xFF;
+        if (c >= 0) out[j++] = (v >> 8) & 0xFF;
+        if (d >= 0) out[j++] = v & 0xFF;
     }
-    return (int)j;
+    return j == len ? (int)j : -1;
 }
 
 /* --- HMAC-SHA256 -------------------------------------------------------- */
@@ -358,11 +363,14 @@ static cwist_query_map *parse_payload(const char *payload_b64, time_t *expires_a
     int len = base64_decode(payload_b64, payload, sizeof(payload) - 1);
     if (len < 0) return NULL;
     payload[len] = '\0';
-    cJSON *json = cJSON_Parse((const char *)payload);
-    if (!json) return NULL;
+    cJSON *json = cJSON_ParseWithOpts((const char *)payload, NULL, true);
+    if (!json || !cJSON_IsObject(json)) {
+        cJSON_Delete(json);
+        return NULL;
+    }
     cJSON *exp = cJSON_GetObjectItemCaseSensitive(json, "__cwist_exp");
-    if (!cJSON_IsNumber(exp) || !isfinite(exp->valuedouble) || exp->valuedouble < 1 ||
-        exp->valuedouble > 9007199254740991.0) {
+    if (!cJSON_IsNumber(exp) || !cwist_number_double_is_finite(exp->valuedouble) ||
+        exp->valuedouble < 1 || exp->valuedouble > 9007199254740991.0) {
         cJSON_Delete(json);
         return NULL;
     }

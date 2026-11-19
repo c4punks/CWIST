@@ -381,8 +381,10 @@ bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *a
         return cwist_io_queue_submit(s->queue, func, arg);
     }
 
+    uint64_t current_ms = now_ms();
+    if (delay_ms > UINT64_MAX - current_ms) return false;
     scheduled_job_t job;
-    job.deadline_ms = now_ms() + delay_ms;
+    job.deadline_ms = current_ms + delay_ms;
     job.func = func;
     job.arg = arg;
 

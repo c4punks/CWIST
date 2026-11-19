@@ -180,7 +180,72 @@ void test_bind_regex(void) {
     printf("  OK\n");
 }
 
+typedef struct {
+    unsigned char tiny;
+    double score;
+} numeric_target_t;
+
+static void test_bind_rejects_invalid_numbers_and_shapes(void) {
+    CWIST_BIND_RULES(score_rules, CWIST_RULE_MIN_VAL(0), CWIST_RULE_MAX_VAL(100));
+    const cwist_bind_field_t fields[] = {
+        {.json_key = "tiny",
+         .target_type = CWIST_BIND_UINT,
+         .target_offset = offsetof(numeric_target_t, tiny),
+         .target_size = sizeof(unsigned char)},
+        {.json_key = "score",
+         .target_type = CWIST_BIND_DOUBLE,
+         .target_offset = offsetof(numeric_target_t, score),
+         .target_size = sizeof(double),
+         .rules = score_rules},
+    };
+    const cwist_bind_schema_t schema = {fields, 2, sizeof(numeric_target_t)};
+    const char *invalid[] = {
+        "{\"tiny\":256,\"score\":50}",
+        "{\"tiny\":-1,\"score\":50}",
+        "{\"tiny\":1,\"score\":\"nan\"}",
+        "{\"tiny\":1,\"score\":1e300}",
+        "[1,2,3]",
+        "{\"tiny\":1,\"score\":50} trailing",
+    };
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
+        cwist_http_request *req = cwist_http_request_create();
+        cwist_sstring_assign(req->body, invalid[i]);
+        numeric_target_t out = {0};
+        cwist_bind_result_t result;
+        assert(!cwist_app_req_bind_json(req, &schema, &out, &result));
+        assert(result.error_count > 0);
+        cwist_http_request_destroy(req);
+    }
+
+    cwist_http_request *req = cwist_http_request_create();
+    char long_form[8192];
+    memset(long_form, 'x', sizeof(long_form));
+    memcpy(long_form, "score=", 6);
+    memcpy(long_form + 4090, "&tiny=1", 8);
+    cwist_sstring_assign_len(req->body, long_form, sizeof(long_form));
+    numeric_target_t out = {0};
+    cwist_bind_result_t result;
+    assert(!cwist_app_req_bind_form(req, &schema, &out, &result));
+    cwist_http_request_destroy(req);
+
+    const cwist_bind_rule_t unsentinel[] = {CWIST_RULE_REQUIRED()};
+    const cwist_bind_field_t sentinel_fields[] = {
+        {.json_key = "tiny",
+         .target_type = CWIST_BIND_UINT,
+         .target_offset = offsetof(numeric_target_t, tiny),
+         .target_size = sizeof(unsigned char),
+         .rules = unsentinel,
+         .rule_count = 1},
+    };
+    const cwist_bind_schema_t sentinel_schema = {sentinel_fields, 1, sizeof(numeric_target_t)};
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "{\"tiny\":1}");
+    assert(!cwist_app_req_bind_json(req, &sentinel_schema, &out, &result));
+    cwist_http_request_destroy(req);
+}
+
 int main(void) {
+    test_bind_rejects_invalid_numbers_and_shapes();
     test_bind_success();
     test_bind_missing_required();
     test_bind_invalid_email();

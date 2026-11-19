@@ -55,6 +55,9 @@ int main(void) {
     pthread_mutex_unlock(&g_mutex);
     assert(cwist_scheduler_pending_count(s) == 0);
 
+    int overflow_arg = 1;
+    assert(!cwist_scheduler_schedule(s, increment_job, &overflow_arg, UINT64_MAX));
+
     cwist_scheduler_destroy(s);
     printf("All scheduler tests passed.\n");
     return 0;
