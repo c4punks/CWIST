@@ -1,5 +1,7 @@
 var NAVTREEINDEX21 =
 {
+"de/d87/md_docs_2embedded_2stm32.html#autotoc_md321":[29,2],
+"de/d87/md_docs_2embedded_2stm32.html#autotoc_md322":[29,3],
 "de/d87/md_docs_2embedded_2stm32.html#autotoc_md323":[29,4],
 "de/d87/md_docs_2embedded_2stm32.html#autotoc_md324":[29,4,0],
 "de/d87/md_docs_2embedded_2stm32.html#autotoc_md325":[29,4,1],
@@ -247,7 +249,5 @@ var NAVTREEINDEX21 =
 "df/d57/latin__square_8h.html#affea9d7e9eb21a0542ffaacd184076d3":[98,0,2,0,1,1,7],
 "df/d57/latin__square_8h_source.html":[98,0,2,0,1,1],
 "df/d58/net_2http_2sse_8h.html":[98,0,1,0,2,3,15],
-"df/d58/net_2http_2sse_8h.html#a0921a5a6899fa86e558f2f3e48010d5a":[98,0,1,0,2,3,15,4],
-"df/d58/net_2http_2sse_8h.html#a11159f8f94ba6e260a8705bddc0cb8fd":[98,0,1,0,2,3,15,10],
-"df/d58/net_2http_2sse_8h.html#a142c15574a54fd8be066c83f2c7f3479":[98,0,1,0,2,3,15,13]
+"df/d58/net_2http_2sse_8h.html#a0921a5a6899fa86e558f2f3e48010d5a":[98,0,1,0,2,3,15,4]
 };

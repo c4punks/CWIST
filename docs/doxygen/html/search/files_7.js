@@ -13,5 +13,6 @@ var searchData=
   ['grpc_5fchannel_2ec_10',['grpc_channel.c',['../d5/d7a/grpc__channel_8c.html',1,'']]],
   ['grpc_5fchannel_2eh_11',['grpc_channel.h',['../d3/d4c/grpc__channel_8h.html',1,'']]],
   ['grpc_5fclient_2ec_12',['grpc_client.c',['../d4/d54/grpc__client_8c.html',1,'']]],
-  ['grpc_5fclient_2eh_13',['grpc_client.h',['../d3/df6/grpc__client_8h.html',1,'']]]
+  ['grpc_5fclient_2eh_13',['grpc_client.h',['../d3/df6/grpc__client_8h.html',1,'']]],
+  ['grpc_5fstatus_5fmessage_2eh_14',['grpc_status_message.h',['../d8/d7c/grpc__status__message_8h.html',1,'']]]
 ];

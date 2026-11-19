@@ -1,0 +1,7 @@
+<map id="src/net/grpc/grpc_status_message.h" name="src/net/grpc/grpc_status_message.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="81,5,258,45"/>
+<area shape="rect" id="Node000002" href="$d9/dba/grpc_8c.html" title="Unary gRPC over HTTP/2 support." alt="" coords="5,93,147,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="138,56,92,95,88,91,135,52"/>
+<area shape="rect" id="Node000003" href="$d4/d54/grpc__client_8c.html" title="HTTP/2&#45;based gRPC client (h2c cleartext, or TLS with ALPN &quot;h2&quot;)." alt="" coords="171,93,355,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="204,52,250,91,247,95,201,56"/>
+</map>

@@ -26,5 +26,5 @@ var searchData=
   ['cwist_5fnats_2eh_23',['cwist_nats.h',['../d1/de1/cwist__nats_8h.html',1,'']]],
   ['cwist_5fredis_2ec_24',['cwist_redis.c',['../d4/dca/cwist__redis_8c.html',1,'']]],
   ['cwist_5fredis_2eh_25',['cwist_redis.h',['../d0/d39/cwist__redis_8h.html',1,'']]],
-  ['cwist_5ftutorial_2emd_26',['cwist_tutorial.md',['../d5/d46/cwist__tutorial_8md.html',1,'(Global Namespace)'],['../d5/da8/korean_2cwist__tutorial_8md.html',1,'(Global Namespace)']]]
+  ['cwist_5ftutorial_2emd_26',['cwist_tutorial.md',['../d5/da8/korean_2cwist__tutorial_8md.html',1,'(Global Namespace)'],['../d5/d46/cwist__tutorial_8md.html',1,'(Global Namespace)']]]
 ];

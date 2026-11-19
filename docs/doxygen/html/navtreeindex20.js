@@ -1,5 +1,7 @@
 var NAVTREEINDEX20 =
 {
+"dd/d82/structcwist__buffer.html":[97,0,12],
+"dd/d82/structcwist__buffer.html#a11c67dfb063e1b697ba317f76df9ff61":[97,0,12,1],
 "dd/d82/structcwist__buffer.html#a4067a6091c1d38e22127aeae1fef58fd":[97,0,12,2],
 "dd/d82/structcwist__buffer.html#a7222faa69403bf6cf180246f790e7aa8":[97,0,12,0],
 "dd/d89/structcwist__pb__writer.html":[97,0,80],
@@ -247,7 +249,5 @@ var NAVTREEINDEX20 =
 "de/d6c/arena_8c_source.html":[98,0,2,0,4,1],
 "de/d87/md_docs_2embedded_2stm32.html":[29],
 "de/d87/md_docs_2embedded_2stm32.html#autotoc_md319":[29,0],
-"de/d87/md_docs_2embedded_2stm32.html#autotoc_md320":[29,1],
-"de/d87/md_docs_2embedded_2stm32.html#autotoc_md321":[29,2],
-"de/d87/md_docs_2embedded_2stm32.html#autotoc_md322":[29,3]
+"de/d87/md_docs_2embedded_2stm32.html#autotoc_md320":[29,1]
 };
