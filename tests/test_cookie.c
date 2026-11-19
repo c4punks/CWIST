@@ -201,6 +201,33 @@ static void test_cookie_rejects_invalid_attributes(void) {
     printf("  Passed invalid cookie attribute rejection.\n");
 }
 
+static void test_cookie_scopes_and_prefixes(void) {
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    cwist_cookie_options opts = {.path = "/api", .domain = "example.com", .same_site = "None"};
+    assert(cwist_cookie_set(res, "session", "value", &opts) == -1);
+    opts.secure = true;
+    assert(cwist_cookie_set(res, "session", "value", &opts) == 0);
+    assert(cwist_cookie_delete_ex(res, "session", &opts) == 0);
+    const char *deleted = cwist_http_header_get(res->headers, "Set-Cookie");
+    assert(deleted && strstr(deleted, "Path=/api") && strstr(deleted, "Domain=example.com") &&
+           strstr(deleted, "Max-Age=0") && strstr(deleted, "Secure"));
+
+    cwist_cookie_options insecure = {0};
+    assert(cwist_cookie_set(res, "__Secure-id", "value", &insecure) == -1);
+    insecure.secure = true;
+    assert(cwist_cookie_set(res, "__Secure-id", "value", &insecure) == 0);
+    cwist_cookie_options host = {.path = "/", .secure = true};
+    assert(cwist_cookie_set(res, "__Host-id", "value", &host) == 0);
+    host.domain = "example.com";
+    assert(cwist_cookie_set(res, "__Host-id", "value", &host) == -1);
+    host.domain = NULL;
+    host.path = "/api";
+    assert(cwist_cookie_set(res, "__Host-id", "value", &host) == -1);
+    assert(cwist_cookie_delete(res, "__Host-id") == -1);
+    cwist_http_response_destroy(res);
+}
+
 int main(void) {
     test_cookie_encode();
     test_cookie_decode();
@@ -208,6 +235,7 @@ int main(void) {
     test_cookie_set_and_delete();
     test_cookie_large_value_and_attributes();
     test_cookie_rejects_invalid_attributes();
+    test_cookie_scopes_and_prefixes();
     printf("All cookie tests passed!\n");
     return 0;
 }

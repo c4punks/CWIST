@@ -46,7 +46,8 @@ typedef struct cwist_cookie_options {
 
 `max_age_seconds`는 0보다 클 때만 기록합니다. 0으로 초기화한 구조체는 세션 쿠키를 만듭니다.
 `Max-Age=0`으로 삭제하려면 `cwist_cookie_delete`를 사용하세요. `same_site`는 지정한 경우
-`Strict`, `Lax`, `None` 중 하나여야 합니다.
+`Strict`, `Lax`, `None` 중 하나여야 합니다. `SameSite=None`과 `__Secure-` 접두사는 `secure`가
+필요합니다. `__Host-` 접두사는 `secure`, `/` 경로, 도메인 없음이 필요합니다.
 
 ### `cwist_cookie_set`
 ```c
@@ -68,6 +69,14 @@ int cwist_cookie_delete(cwist_http_response *res, const char *name);
 클라이언트에게 쿠키 삭제를 지시하는 `Set-Cookie: name=; Path=/; Max-Age=0` 헤더를 추가합니다.
 경로가 `/`로 고정되어 있으므로, 다른 `path`로 설정된 쿠키는 이 헤더로 지워지지 않습니다.
 성공하면 `0`, 실패하면 `-1`을 반환합니다.
+
+### `cwist_cookie_delete_ex`
+```c
+int cwist_cookie_delete_ex(cwist_http_response *res, const char *name,
+                           const cwist_cookie_options *opts);
+```
+원래 쿠키의 `path`, `domain`, 보안 속성을 사용해 삭제합니다. 응답에는 항상 `Max-Age=0`을
+포함합니다. 성공하면 `0`, 실패하면 `-1`을 반환합니다.
 
 ## 인코딩
 

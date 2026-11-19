@@ -70,6 +70,16 @@ int cwist_cookie_set(cwist_http_response *res, const char *name, const char *val
 int cwist_cookie_delete(cwist_http_response *res, const char *name);
 
 /**
+ * @brief Delete a cookie using its original path, domain, and security attributes.
+ * @param res Response to modify.
+ * @param name Cookie name.
+ * @param opts Attributes used to identify the cookie; may be NULL.
+ * @return 0 on success, -1 on failure.
+ */
+int cwist_cookie_delete_ex(cwist_http_response *res, const char *name,
+                           const cwist_cookie_options *opts);
+
+/**
  * @brief Get a cookie value by name from a parsed map.
  * @return Pointer to value, or NULL if not found.
  */
