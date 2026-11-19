@@ -408,8 +408,8 @@ int cwist_http2_flow_control_maybe_window_update(cwist_http2_flow_control *flow_
     if (cwist_http2_write_window_update(buffer, buffer_len, written, 0U, increment) != 0) {
         return -1;
     }
-    flow_control->receive_window = increment > CWIST_HTTP2_MAX_WINDOW - flow_control->receive_window
-                                       ? CWIST_HTTP2_MAX_WINDOW
+    flow_control->receive_window = increment > CWIST_HTTP2_MAX_RECEIVE_WINDOW - flow_control->receive_window
+                                       ? CWIST_HTTP2_MAX_RECEIVE_WINDOW
                                        : flow_control->receive_window + increment;
     flow_control->pending_update = 0;
     flow_control->last_window_update_us = now_us;
@@ -480,8 +480,8 @@ int cwist_http2_stream_flow_control_maybe_window_update(
         return -1;
     }
     stream_flow_control->receive_window =
-        increment > CWIST_HTTP2_MAX_WINDOW - stream_flow_control->receive_window
-            ? CWIST_HTTP2_MAX_WINDOW
+        increment > CWIST_HTTP2_MAX_RECEIVE_WINDOW - stream_flow_control->receive_window
+            ? CWIST_HTTP2_MAX_RECEIVE_WINDOW
             : stream_flow_control->receive_window + increment;
     stream_flow_control->pending_update = 0;
     stream_flow_control->last_window_update_us = now_us;
