@@ -17,7 +17,8 @@ extern "C" {
 /**
  * @brief Parse a Cookie header value into a query-style map.
  *
- * Handles "name1=value1; name2=value2" format. Values are URL-decoded.
+ * Handles "name1=value1; name2=value2" format. Percent escapes are decoded,
+ * literal '+' bytes are preserved, and the first occurrence of a name wins.
  *
  * @param map   Map to populate. Must be created by cwist_query_map_create().
  * @param header Raw Cookie header value (may be NULL).
@@ -45,7 +46,7 @@ int cwist_cookie_decode(const char *in, char *out, size_t out_len);
 typedef struct cwist_cookie_options {
     const char *path;
     const char *domain;
-    int max_age_seconds;   /**< < 0 means omit */
+    int max_age_seconds;   /**< > 0 emits Max-Age; <= 0 omits it */
     bool http_only;
     bool secure;
     const char *same_site; /**< "Strict", "Lax", or "None" */

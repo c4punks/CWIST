@@ -30,7 +30,7 @@ void session_arena_init(struct session_arena *arena, uint8_t *buffer, size_t cap
 void *session_arena_alloc(struct session_arena *arena, size_t size) {
     if (!arena || !arena->buffer) return NULL;
     if (size > SIZE_MAX - 7u) return NULL;
-    size = (size + 7u) & ~7u;
+    size = (size + 7u) & ~(size_t)7u;
     if (size > arena->capacity - arena->offset) {
         return NULL;
     }

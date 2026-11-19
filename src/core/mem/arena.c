@@ -62,7 +62,7 @@ cwist_arena_t *cwist_arena_create(size_t generation_bytes) {
 void *cwist_arena_alloc(cwist_arena_t *arena, size_t size) {
     if (!arena || !size || !arena->base) return NULL;
     if (size > SIZE_MAX - 15u) return NULL;
-    size = (size + 15u) & ~15u;
+    size = (size + 15u) & ~(size_t)15u;
     if (size > arena->capacity - arena->used) return NULL;
     void *ptr = arena->base + arena->used;
     arena->used += size;
@@ -247,7 +247,7 @@ void *cwist_arena_alloc(cwist_arena_t *arena, size_t size) {
      * and scatter offset; exhaustion still returns NULL so callers fall
      * back to the heap exactly as before. */
     if (size > SIZE_MAX - 15u) return NULL;
-    size = (size + 15u) & ~15u;
+    size = (size + 15u) & ~(size_t)15u;
     if (size > arena->gen.capacity - arena->gen.used) return NULL;
     void *ptr = (uint8_t *)arena->gen.base + arena->gen.used;
     arena->gen.used += size;

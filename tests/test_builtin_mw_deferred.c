@@ -164,10 +164,37 @@ static void test_access_logs(void) {
     printf("Passed access logs do not read a deferred response\n");
 }
 
+static void test_request_ids(void) {
+    cwist_http_request *req = make_request();
+    cwist_http_response *res = cwist_http_response_create();
+    REQUIRE(res);
+    cwist_middleware_func mw = cwist_mw_request_id(NULL);
+    REQUIRE(mw != NULL);
+    run(mw, false, req, res);
+    REQUIRE(strcmp(cwist_http_header_get(res->headers, "X-Request-Id"), "rid-from-request") == 0);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    req = cwist_http_request_create();
+    REQUIRE(req);
+    res = cwist_http_response_create();
+    REQUIRE(res);
+    cwist_http_header_add(&req->headers, "X-Request-Id", "bad id");
+    run(mw, false, req, res);
+    const char *rid = cwist_http_header_get(res->headers, "X-Request-Id");
+    REQUIRE(rid && strlen(rid) == 16);
+    REQUIRE(strcmp(rid, "rid-from-request") != 0);
+    REQUIRE(cwist_mw_request_id("X-Correlation-Id") == NULL);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    printf("Passed request ID validation\n");
+}
+
 int main(void) {
     printf("Testing built-in middleware with a deferred response...\n");
     test_compress();
     test_access_logs();
+    test_request_ids();
     printf("All deferred built-in middleware tests passed.\n");
     return 0;
 }

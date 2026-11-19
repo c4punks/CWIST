@@ -698,26 +698,28 @@ static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *tabl
 }
 
 /**
- * @brief Decode percent-encoded URL components in-place into dst.
- * @return Number of bytes written to dst (excluding NUL).
+ * @brief Decode a static-file URI path without form-urlencoding semantics.
+ * @return Number of bytes written to dst, or -1 for malformed input.
  */
-static size_t cwist_url_decode(const char *src, char *dst, size_t dst_size) {
+static ssize_t cwist_url_decode_path(const char *src, char *dst, size_t dst_size) {
     size_t i = 0, j = 0;
-    while (src[i] && j + 1 < dst_size) {
-        if (src[i] == '%' && isxdigit((unsigned char)src[i + 1]) &&
-            isxdigit((unsigned char)src[i + 2])) {
+    while (src[i]) {
+        if (j + 1 >= dst_size) return -1;
+        if (src[i] == '%') {
+            if (!src[i + 1] || !src[i + 2] || !isxdigit((unsigned char)src[i + 1]) ||
+                !isxdigit((unsigned char)src[i + 2]))
+                return -1;
             char hex[3] = {src[i + 1], src[i + 2], '\0'};
-            dst[j++] = (char)strtol(hex, NULL, 16);
+            unsigned long decoded = strtoul(hex, NULL, 16);
+            if (decoded == 0 || decoded < 0x20 || decoded == 0x7f) return -1;
+            dst[j++] = (char)decoded;
             i += 3;
-        } else if (src[i] == '+') {
-            dst[j++] = ' ';
-            i++;
         } else {
             dst[j++] = src[i++];
         }
     }
     dst[j] = '\0';
-    return j;
+    return (ssize_t)j;
 }
 
 /**
@@ -1033,7 +1035,11 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
     relative_buf[PATH_MAX - 1] = '\0';
 
     char decoded_relative[PATH_MAX];
-    cwist_url_decode(relative_buf, decoded_relative, sizeof(decoded_relative));
+    if (cwist_url_decode_path(relative_buf, decoded_relative, sizeof(decoded_relative)) < 0) {
+        res->status_code = CWIST_HTTP_BAD_REQUEST;
+        cwist_sstring_assign(res->body, "Invalid static path");
+        return;
+    }
 
     if (cwist_path_has_parent_ref(decoded_relative)) {
         res->status_code = CWIST_HTTP_FORBIDDEN;
