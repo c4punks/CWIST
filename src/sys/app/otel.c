@@ -18,6 +18,8 @@
 #include <cwist/core/mem/gc.h>
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/http_client.h>
+#include <cwist/net/http/async.h>
+#include "../../net/http/async_internal.h"
 #include <cjson/cJSON.h>
 #include <openssl/rand.h>
 #include <pthread.h>
@@ -250,6 +252,15 @@ static void otel_enqueue(const otel_span_t *span) {
     pthread_mutex_unlock(&g_otel_lock);
 }
 
+static void otel_complete(cwist_async *a, void *ctx) {
+    otel_span_t *span = ctx;
+    cwist_http_response *res = cwist_async_final_response(a);
+    span->end_ns = otel_unix_nanos();
+    span->status = res ? (int)res->status_code : 0;
+    otel_enqueue(span);
+    cwist_free(span);
+}
+
 static void otel_middleware(cwist_http_request *req, cwist_http_response *res,
                             cwist_handler_func next) {
     otel_span_t span = {.method = req->method, .start_ns = otel_unix_nanos()};
@@ -257,16 +268,26 @@ static void otel_middleware(cwist_http_request *req, cwist_http_response *res,
                                 span.parent_span_id))
         otel_random_id(span.trace_id, OTEL_TRACE_ID_HEX);
     otel_random_id(span.span_id, OTEL_SPAN_ID_HEX);
+    snprintf(span.path, sizeof(span.path), "%s",
+             req->path && req->path->data ? req->path->data : "/");
 
     otel_ctx ctx = {.req = req, .trace_id = span.trace_id, .outer = t_otel_ctx};
     t_otel_ctx = &ctx;
     next(req, res);
     t_otel_ctx = ctx.outer;
+    bool deferred = cwist_async_res_deferred(res);
+    if (deferred) {
+        otel_span_t *pending = cwist_alloc(sizeof(*pending));
+        if (pending) {
+            *pending = span;
+            if (cwist_full_gc_enabled()) cwist_gc_scope_disown(pending);
+            if (cwist_async_add_completion_hook(res->async, otel_complete, pending)) return;
+            cwist_free(pending);
+        }
+    }
 
     span.end_ns = otel_unix_nanos();
-    span.status = (int)res->status_code;
-    snprintf(span.path, sizeof(span.path), "%s",
-             req->path && req->path->data ? req->path->data : "/");
+    span.status = deferred ? 0 : (int)res->status_code;
     otel_enqueue(&span);
 }
 

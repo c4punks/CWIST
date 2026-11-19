@@ -7,6 +7,8 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/middleware.h>
 #include <cwist/sys/app/test_client.h>
+#include <cwist/net/http/async.h>
+#include <cwist/core/mem/gc.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -27,6 +29,10 @@ static void trace_id_handler(cwist_http_request *req, cwist_http_response *res) 
     const char *id = cwist_mw_otel_get_trace_id(req);
     cwist_sstring_assign(res->body, id ? id : "none");
     res->status_code = CWIST_HTTP_OK;
+}
+
+static void deferred_next(cwist_http_request *req, cwist_http_response *res) {
+    cwist_async_defer(req, res);
 }
 
 static int is_lower_hex(const char *s, size_t len) {
@@ -117,21 +123,40 @@ int main(void) {
     FAIL_IF(!strstr(export, "\"traceId\":\"4bf92f3577b34da6a3ce929d0e0e4736\""), "span trace id");
     FAIL_IF(!strstr(export, "\"parentSpanId\":\"00f067aa0ba902b7\""), "parent span id");
     FAIL_IF(!strstr(export, "\"startTimeUnixNano\""), "span timestamps");
-    close(lfd);
 
     FAIL_IF(get_trace_id(client, "00-00000000000000000000000000000000-00f067aa0ba902b7-01", id,
                          sizeof(id)) != 0 ||
                 strcmp(id, "00000000000000000000000000000000") == 0 || !is_lower_hex(id, 32),
             "all-zero trace id is rejected and replaced");
+    FAIL_IF(collector_receive(lfd, export, sizeof(export)) != 0, "replacement trace span exported");
     FAIL_IF(get_trace_id(client, "00-4BF92F3577B34DA6A3CE929D0E0E4736-00f067aa0ba902b7-01", id,
                          sizeof(id)) != 0 ||
                 strcmp(id, "4bf92f3577b34da6a3ce929d0e0e4736") == 0,
             "uppercase traceparent is rejected");
+    FAIL_IF(collector_receive(lfd, export, sizeof(export)) != 0, "uppercase rejection span exported");
 
     FAIL_IF(get_trace_id(client, NULL, id, sizeof(id)) != 0, "request without traceparent");
     FAIL_IF(!is_lower_hex(id, 32), "fresh 128-bit trace id without traceparent");
+    FAIL_IF(collector_receive(lfd, export, sizeof(export)) != 0, "fresh trace span exported");
 
     FAIL_IF(cwist_mw_otel_get_trace_id(NULL), "NULL request");
+
+    cwist_http_request *deferred_req = cwist_http_request_create();
+    cwist_http_response *deferred_res = cwist_http_response_create();
+    deferred_req->app = app;
+    cwist_full_gc(true);
+    mw(deferred_req, deferred_res, deferred_next);
+    cwist_async *a = deferred_res->async;
+    FAIL_IF(!a, "deferred async handle");
+    cwist_async_dispatch_ack(a);
+    FAIL_IF(!cwist_async_respond(a, CWIST_HTTP_SERVICE_UNAVAILABLE, "text/plain", "down", 4),
+            "deferred response");
+    cwist_full_gc(false);
+    FAIL_IF(collector_receive(lfd, export, sizeof(export)) != 0, "deferred span exported");
+    FAIL_IF(!strstr(export,
+                    "\"key\":\"http.response.status_code\",\"value\":{\"intValue\":\"503\"}"),
+            "deferred status recorded after completion");
+    close(lfd);
 
     cwist_test_client_destroy(client);
     cwist_app_destroy(app);
