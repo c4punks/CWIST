@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md544',1,'']]],
+  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md547',1,'']]],
   ['실험적_1',['라이브 메시지 런타임(실험적)',['../d2/daa/md_docs_2ko_2api_2livemsg.html',1,'']]]
 ];

@@ -1,28 +1,53 @@
 <map id="include/cwist/core/mem/gc.h" name="include/cwist/core/mem/gc.h">
-<area shape="rect" id="Node000001" title="Epoch&#45;based garbage collection wrapper." alt="" coords="752,5,891,45"/>
-<area shape="rect" id="Node000002" href="$d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch&#45;based reclamation." alt="" coords="5,93,147,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="739,37,166,96,147,98,146,93,165,91,738,32"/>
-<area shape="rect" id="Node000003" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="109,167,259,192"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="738,33,595,42,430,56,288,74,239,84,212,95,200,111,192,130,187,167,181,166,187,129,195,108,209,91,238,79,287,68,430,50,595,37,738,28"/>
-<area shape="rect" id="Node000004" href="$df/dcd/async__gc_8h.html" title=" " alt="" coords="222,93,394,119"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="739,42,383,96,382,91,738,37"/>
-<area shape="rect" id="Node000006" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="418,93,555,119"/>
-<area shape="poly" id="edge6_Node000001_Node000006" title=" " alt="" coords="739,49,536,96,535,91,738,43"/>
-<area shape="rect" id="Node000007" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="579,93,725,119"/>
-<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="770,53,678,96,676,91,767,49"/>
-<area shape="rect" id="Node000008" href="$d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="749,93,893,119"/>
-<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="824,59,824,93,819,93,819,59"/>
-<area shape="rect" id="Node000009" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="917,93,1075,119"/>
-<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="877,49,971,91,969,96,875,53"/>
-<area shape="rect" id="Node000010" href="$d2/d62/transport_8c.html" title=" " alt="" coords="1099,93,1280,119"/>
-<area shape="poly" id="edge10_Node000001_Node000010" title=" " alt="" coords="905,42,1136,91,1135,96,904,47"/>
-<area shape="rect" id="Node000011" href="$d1/de4/io__queue_8c.html" title="Lock&#45;free job queue backing cwist_io_queue. Despite the old file name (io_uring.c),..." alt="" coords="1304,93,1461,119"/>
-<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="904,36,1304,91,1304,96,904,41"/>
-<area shape="rect" id="Node000012" href="$dd/d2e/kqueue_8c.html" title="BSD kqueue backend for the generic CWIST job queue interface." alt="" coords="1485,93,1632,119"/>
-<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="905,32,1159,57,1474,91,1485,92,1485,97,1473,96,1158,62,904,37"/>
-<area shape="rect" id="Node000013" href="$dd/d6c/scheduler_8c.html" title="Background job scheduler with delayed execution." alt="" coords="1656,93,1824,119"/>
-<area shape="poly" id="edge13_Node000001_Node000013" title=" " alt="" coords="904,30,1229,54,1644,91,1656,92,1655,97,1644,96,1228,59,904,35"/>
-<area shape="poly" id="edge4_Node000004_Node000003" title=" " alt="" coords="278,128,206,169,203,164,275,123"/>
-<area shape="rect" id="Node000005" href="$de/d67/session_8c.html" title="Signed client&#45;side session cookie implementation." alt="" coords="283,167,443,192"/>
-<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="327,128,356,165,352,168,323,131"/>
+<area shape="rect" id="Node000001" title="Epoch&#45;based garbage collection wrapper." alt="" coords="1735,5,1873,45"/>
+<area shape="rect" id="Node000002" href="$d4/de5/pool_8c.html" title="Bounded SQLite pool with O(1) lease bookkeeping." alt="" coords="5,101,141,126"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1721,31,1396,37,943,49,487,69,297,81,154,96,116,103,115,98,153,91,297,76,487,64,943,44,1396,32,1720,25"/>
+<area shape="rect" id="Node000003" href="$d8/d16/gc_8c.html" title="Thin implementation wrapper around libttak epoch&#45;based reclamation." alt="" coords="165,101,307,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="1721,31,1021,52,615,71,447,83,319,96,280,103,279,98,318,91,446,78,615,66,1021,47,1721,26"/>
+<area shape="rect" id="Node000004" href="$da/dec/rdbms__auto__mount_8c.html" title="Automatic RDBMS provider detection and runtime mounting." alt="" coords="331,93,479,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="1721,29,1506,31,1201,39,849,59,668,75,491,96,480,98,479,92,490,91,667,70,848,54,1201,34,1506,25,1721,23"/>
+<area shape="rect" id="Node000005" href="$d0/d3c/seq__auth_8c.html" title=" " alt="" coords="503,101,678,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="1721,31,1535,36,1280,47,987,67,691,96,645,103,645,98,690,91,987,61,1279,42,1535,31,1721,25"/>
+<area shape="rect" id="Node000006" href="$d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="703,101,911,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="1721,34,1375,56,1154,73,930,96,876,103,875,98,929,91,1153,68,1375,50,1720,28"/>
+<area shape="rect" id="Node000007" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="819,189,968,214"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="1721,32,1530,40,1297,53,1090,72,1016,83,975,96,948,116,927,142,900,190,896,187,922,139,944,112,972,91,1015,78,1089,67,1297,48,1530,35,1721,27"/>
+<area shape="rect" id="Node000008" href="$df/dcd/async__gc_8h.html" title=" " alt="" coords="986,101,1158,126"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="1721,36,1477,60,1178,96,1132,103,1132,98,1177,91,1476,54,1721,31"/>
+<area shape="rect" id="Node000009" href="$d2/dcb/http__client__file_8c.html" title=" " alt="" coords="1177,181,1346,221"/>
+<area shape="poly" id="edge13_Node000001_Node000009" title=" " alt="" coords="1721,33,1583,41,1427,53,1293,72,1248,83,1224,95,1219,104,1217,115,1220,137,1232,160,1246,180,1242,183,1227,163,1215,139,1211,114,1214,102,1221,91,1246,78,1292,66,1426,48,1583,35,1721,28"/>
+<area shape="rect" id="Node000011" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="1234,101,1371,126"/>
+<area shape="poly" id="edge11_Node000001_Node000011" title=" " alt="" coords="1721,41,1565,64,1385,96,1350,103,1349,98,1383,91,1564,59,1721,36"/>
+<area shape="rect" id="Node000012" href="$d2/db0/http2_8c.html" title="Implementation of HTTP/2 protocol handler for CWIST." alt="" coords="1395,101,1541,126"/>
+<area shape="poly" id="edge12_Node000001_Node000012" title=" " alt="" coords="1722,50,1514,103,1512,98,1720,45"/>
+<area shape="rect" id="Node000013" href="$d2/db2/https_8c.html" title="OpenSSL&#45;backed HTTPS accept, receive, send, and server&#45;loop helpers." alt="" coords="1565,101,1709,126"/>
+<area shape="poly" id="edge14_Node000001_Node000013" title=" " alt="" coords="1757,54,1661,103,1658,98,1754,49"/>
+<area shape="rect" id="Node000014" href="$dd/d49/mux_8c.html" title="Fixed&#45;bucket HTTP route dispatch using a lightweight path signature." alt="" coords="1734,101,1874,126"/>
+<area shape="poly" id="edge15_Node000001_Node000014" title=" " alt="" coords="1807,59,1807,100,1801,100,1801,59"/>
+<area shape="rect" id="Node000015" href="$dc/da0/proxy_8c.html" title="Reverse proxy: rule table, request sanitizing and libcurl upstream." alt="" coords="1899,101,2056,126"/>
+<area shape="poly" id="edge16_Node000001_Node000015" title=" " alt="" coords="1855,49,1955,98,1953,103,1853,54"/>
+<area shape="rect" id="Node000016" href="$d2/d62/transport_8c.html" title=" " alt="" coords="2080,101,2261,126"/>
+<area shape="poly" id="edge17_Node000001_Node000016" title=" " alt="" coords="1887,43,2122,98,2121,103,1886,48"/>
+<area shape="rect" id="Node000017" href="$d4/dca/cwist__redis_8c.html" title="Minimal RESP2 Redis client with connection pooling." alt="" coords="2286,93,2426,133"/>
+<area shape="poly" id="edge18_Node000001_Node000017" title=" " alt="" coords="1887,34,2065,57,2274,91,2286,93,2285,98,2273,96,2064,63,1887,39"/>
+<area shape="rect" id="Node000018" href="$df/d7f/app_8c.html" title=" " alt="" coords="2450,101,2585,126"/>
+<area shape="poly" id="edge19_Node000001_Node000018" title=" " alt="" coords="1887,29,2135,51,2287,68,2439,91,2474,98,2473,103,2438,96,2286,73,2135,56,1887,35"/>
+<area shape="rect" id="Node000019" href="$dc/da3/big__dumb__reply_8c.html" title="Opportunistic response cache that stores stable GET replies in memory or on disk." alt="" coords="2609,93,2772,133"/>
+<area shape="poly" id="edge20_Node000001_Node000019" title=" " alt="" coords="1887,28,2200,48,2398,67,2598,91,2610,93,2609,98,2597,96,2398,72,2200,54,1887,33"/>
+<area shape="rect" id="Node000020" href="$d3/d95/config_8c.html" title="config.c interface." alt="" coords="2796,101,2945,126"/>
+<area shape="poly" id="edge21_Node000001_Node000020" title=" " alt="" coords="1888,26,2053,31,2276,42,2529,61,2784,91,2824,98,2823,103,2784,96,2528,67,2276,48,2053,36,1888,31"/>
+<area shape="rect" id="Node000021" href="$d3/db2/otel_8c.html" title="OpenTelemetry tracing middleware (#402)." alt="" coords="2970,101,3105,126"/>
+<area shape="poly" id="edge22_Node000001_Node000021" title=" " alt="" coords="1888,24,2080,27,2345,36,2650,56,2805,71,2958,91,2995,98,2994,103,2957,96,2805,77,2649,61,2345,41,2079,32,1888,29"/>
+<area shape="rect" id="Node000022" href="$d1/de4/io__queue_8c.html" title="Lock&#45;free job queue backing cwist_io_queue. Despite the old file name (io_uring.c),..." alt="" coords="3129,101,3287,126"/>
+<area shape="poly" id="edge23_Node000001_Node000022" title=" " alt="" coords="1887,24,2102,26,2407,35,2760,55,2941,71,3118,91,3160,98,3159,103,3117,96,2940,76,2759,61,2407,41,2102,32,1887,29"/>
+<area shape="rect" id="Node000023" href="$dd/d2e/kqueue_8c.html" title="BSD kqueue backend for the generic CWIST job queue interface." alt="" coords="3311,101,3457,126"/>
+<area shape="poly" id="edge24_Node000001_Node000023" title=" " alt="" coords="1887,26,2592,47,3000,66,3170,78,3299,91,3339,98,3338,103,3298,96,3170,83,3000,72,2591,52,1887,31"/>
+<area shape="rect" id="Node000024" href="$dd/d6c/scheduler_8c.html" title="Background job scheduler with delayed execution." alt="" coords="3481,101,3649,126"/>
+<area shape="poly" id="edge25_Node000001_Node000024" title=" " alt="" coords="1887,26,2671,47,3132,66,3324,78,3470,91,3515,98,3514,103,3469,96,3324,83,3131,71,2670,52,1887,31"/>
+<area shape="rect" id="Node000025" href="$db/d59/metrics_8c.html" title="Lock&#45;free metrics registry and Prometheus exposition." alt="" coords="3673,101,3857,126"/>
+<area shape="poly" id="edge26_Node000001_Node000025" title=" " alt="" coords="1887,25,2760,46,3280,65,3497,77,3662,91,3711,98,3710,103,3661,96,3497,83,3280,71,2760,51,1887,31"/>
+<area shape="poly" id="edge8_Node000008_Node000007" title=" " alt="" coords="1037,134,919,191,916,186,1035,130"/>
+<area shape="poly" id="edge9_Node000008_Node000009" title=" " alt="" coords="1111,129,1221,179,1218,184,1109,134"/>
+<area shape="rect" id="Node000010" href="$de/d67/session_8c.html" title="Signed client&#45;side session cookie implementation." alt="" coords="992,189,1152,214"/>
+<area shape="poly" id="edge10_Node000008_Node000010" title=" " alt="" coords="1075,140,1075,188,1069,188,1069,140"/>
 </map>

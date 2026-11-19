@@ -118,6 +118,7 @@ $(document).ready(function(){initNavTree('d8/d80/jwt_8c.html','../../'); initRes
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html">cwist/core/sstring/sstring.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d6/d3c/seq_8h_source.html">cwist/core/seq/seq.h</a>&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../de/d66/number__internal_8h_source.html">../../core/utils/number_internal.h</a>&quot;</code><br />
 <code>#include &lt;cjson/cJSON.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d0/dc6/hmac_8h_source.html">openssl/hmac.h</a>&gt;</code><br />
 <code>#include &lt;openssl/sha.h&gt;</code><br />
@@ -128,7 +129,9 @@ $(document).ready(function(){initNavTree('d8/d80/jwt_8c.html','../../'); initRes
 <code>#include &lt;openssl/ecdsa.h&gt;</code><br />
 <code>#include &lt;openssl/bn.h&gt;</code><br />
 <code>#include &lt;openssl/obj.h&gt;</code><br />
+<code>#include &lt;limits.h&gt;</code><br />
 <code>#include &lt;math.h&gt;</code><br />
+<code>#include &lt;stdint.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
@@ -138,73 +141,84 @@ Include dependency graph for jwt.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d5/dc1/jwt_8c__incl.png" border="0" usemap="#asrc_2security_2jwt_2jwt_8c" alt=""/></div>
 <map name="asrc_2security_2jwt_2jwt_8c" id="asrc_2security_2jwt_2jwt_8c">
-<area shape="rect" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="1261,5,1417,31"/>
-<area shape="rect" href="../../d5/d6c/jwt_8h.html" title="JWT (JSON Web Token) generation and verification." alt="" coords="25,167,161,207"/>
-<area shape="poly" title=" " alt="" coords="1261,23,1059,29,798,39,542,57,437,68,357,81,298,98,240,119,142,163,140,158,238,114,296,93,356,76,436,63,542,51,798,34,1059,24,1261,18"/>
-<area shape="rect" title=" " alt="" coords="9,255,73,280"/>
-<area shape="poly" title=" " alt="" coords="1261,23,1036,27,739,37,447,54,326,67,234,81,165,92,108,101,83,109,59,121,37,141,15,168,9,186,10,205,27,242,22,245,5,206,3,185,10,165,33,137,56,117,81,104,106,96,164,87,234,76,325,61,446,49,739,32,1036,22,1261,18"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="911,86,1085,111"/>
-<area shape="poly" title=" " alt="" coords="1290,33,1061,86,1060,80,1289,28"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="514,79,650,119"/>
-<area shape="poly" title=" " alt="" coords="1261,30,664,92,663,86,1261,25"/>
-<area shape="rect" title=" " alt="" coords="364,174,435,199"/>
-<area shape="poly" title=" " alt="" coords="1261,24,834,43,622,60,547,70,503,81,476,98,452,120,416,164,412,161,448,116,473,94,501,76,546,65,622,55,834,38,1261,19"/>
-<area shape="rect" title=" " alt="" coords="677,174,748,199"/>
-<area shape="poly" title=" " alt="" coords="1261,24,1184,28,1093,38,995,55,900,81,855,100,811,123,741,168,738,163,808,118,852,95,899,76,994,50,1092,33,1184,23,1261,18"/>
-<area shape="rect" title=" " alt="" coords="1192,255,1303,280"/>
-<area shape="poly" title=" " alt="" coords="1346,30,1368,121,1374,172,1373,193,1368,208,1343,235,1311,252,1308,247,1340,230,1364,205,1368,192,1369,172,1363,122,1340,32"/>
-<area shape="rect" href="../../d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="185,174,339,199"/>
-<area shape="poly" title=" " alt="" coords="1261,23,1076,26,840,36,611,53,517,66,447,81,401,99,357,122,288,168,285,164,355,118,399,94,445,76,516,60,610,48,839,30,1075,21,1261,17"/>
-<area shape="rect" href="../../d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="1127,86,1251,111"/>
-<area shape="poly" title=" " alt="" coords="1318,33,1224,82,1222,77,1316,28"/>
-<area shape="rect" href="../../d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="1242,174,1354,199"/>
-<area shape="poly" title=" " alt="" coords="1338,32,1323,79,1305,161,1300,160,1318,78,1333,30"/>
-<area shape="rect" title=" " alt="" coords="1377,86,1488,111"/>
-<area shape="poly" title=" " alt="" coords="1355,29,1410,75,1407,79,1351,33"/>
-<area shape="rect" title=" " alt="" coords="1513,86,1630,111"/>
-<area shape="poly" title=" " alt="" coords="1374,28,1525,79,1524,84,1372,33"/>
-<area shape="rect" title=" " alt="" coords="1655,86,1763,111"/>
-<area shape="poly" title=" " alt="" coords="1406,28,1517,49,1643,76,1658,80,1656,85,1641,81,1516,54,1405,33"/>
-<area shape="rect" title=" " alt="" coords="1787,86,1889,111"/>
-<area shape="poly" title=" " alt="" coords="1418,24,1583,43,1680,58,1776,76,1791,80,1790,85,1775,81,1679,63,1583,48,1417,29"/>
-<area shape="rect" title=" " alt="" coords="1913,86,2040,111"/>
-<area shape="poly" title=" " alt="" coords="1418,21,1637,40,1770,56,1903,76,1923,80,1922,85,1902,81,1769,61,1636,45,1417,27"/>
-<area shape="rect" title=" " alt="" coords="2065,86,2169,111"/>
-<area shape="poly" title=" " alt="" coords="1418,18,1541,23,1699,32,1876,50,2053,76,2070,80,2069,85,2052,81,1875,55,1699,38,1540,28,1418,23"/>
-<area shape="rect" title=" " alt="" coords="2193,86,2301,111"/>
-<area shape="poly" title=" " alt="" coords="1418,17,1561,20,1751,29,1966,47,2181,76,2199,80,2198,85,2180,81,1965,52,1751,34,1561,25,1418,22"/>
-<area shape="rect" title=" " alt="" coords="2325,86,2393,111"/>
-<area shape="poly" title=" " alt="" coords="1418,18,1618,23,1877,34,2131,51,2235,63,2315,76,2324,79,2322,84,2313,81,2235,68,2130,56,1877,39,1618,29,1418,23"/>
-<area shape="rect" title=" " alt="" coords="2418,86,2485,111"/>
-<area shape="poly" title=" " alt="" coords="1418,18,1636,22,1921,32,2202,49,2319,61,2407,76,2416,79,2414,84,2406,81,2318,67,2202,55,1921,37,1635,27,1418,23"/>
-<area shape="rect" title=" " alt="" coords="431,255,514,280"/>
-<area shape="poly" title=" " alt="" coords="161,201,173,204,419,253,418,258,172,209,160,207"/>
-<area shape="rect" title=" " alt="" coords="887,255,962,280"/>
-<area shape="poly" title=" " alt="" coords="162,202,173,204,376,230,576,247,874,262,874,267,576,252,375,235,172,209,161,207"/>
-<area shape="rect" title=" " alt="" coords="227,255,297,280"/>
-<area shape="poly" title=" " alt="" coords="134,204,226,246,224,251,132,209"/>
-<area shape="poly" title=" " alt="" coords="82,208,58,244,54,241,78,205"/>
-<area shape="poly" title=" " alt="" coords="998,112,986,155,966,208,944,245,939,242,961,206,981,153,993,111"/>
-<area shape="rect" title=" " alt="" coords="1026,174,1167,199"/>
-<area shape="poly" title=" " alt="" coords="1013,109,1074,162,1071,166,1010,114"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="773,174,951,199"/>
-<area shape="poly" title=" " alt="" coords="981,114,893,169,891,164,978,109"/>
-<area shape="poly" title=" " alt="" coords="806,202,529,258,527,252,805,197"/>
-<area shape="poly" title=" " alt="" coords="873,198,909,242,905,246,869,201"/>
-<area shape="poly" title=" " alt="" coords="551,121,524,142,500,168,484,205,477,242,472,241,479,204,496,165,520,138,547,117"/>
-<area shape="poly" title=" " alt="" coords="543,121,437,171,435,166,541,116"/>
-<area shape="poly" title=" " alt="" coords="613,117,685,164,682,168,610,121"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="511,167,653,207"/>
-<area shape="poly" title=" " alt="" coords="585,119,585,153,579,153,579,119"/>
-<area shape="poly" title=" " alt="" coords="557,209,502,249,498,244,554,205"/>
-<area shape="poly" title=" " alt="" coords="511,208,311,257,310,252,510,203"/>
-<area shape="poly" title=" " alt="" coords="654,202,665,204,808,224,950,240,1178,259,1178,264,949,245,807,230,664,209,653,207"/>
-<area shape="poly" title=" " alt="" coords="294,197,430,247,428,252,292,202"/>
-<area shape="poly" title=" " alt="" coords="312,197,352,204,500,224,647,240,874,260,873,265,646,246,499,230,351,209,312,202"/>
-<area shape="poly" title=" " alt="" coords="265,200,265,241,259,241,259,200"/>
-<area shape="poly" title=" " alt="" coords="1194,111,1199,157,1194,184,1181,208,1167,220,1147,229,1093,245,976,264,975,259,1092,240,1145,224,1164,215,1177,205,1189,183,1193,157,1189,112"/>
-<area shape="poly" title=" " alt="" coords="1205,109,1274,163,1271,167,1202,114"/>
-<area shape="poly" title=" " alt="" coords="1255,202,1224,209,976,259,975,254,1223,204,1253,197"/>
+<area shape="rect" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="1507,5,1663,31"/>
+<area shape="rect" href="../../d5/d6c/jwt_8h.html" title="JWT (JSON Web Token) generation and verification." alt="" coords="758,167,894,207"/>
+<area shape="poly" title=" " alt="" coords="1507,21,1363,23,1190,31,1105,39,1027,49,962,63,914,81,892,96,873,115,844,156,840,153,869,112,889,92,912,76,961,58,1026,44,1104,33,1190,26,1363,18,1507,16"/>
+<area shape="rect" title=" " alt="" coords="896,255,967,280"/>
+<area shape="poly" title=" " alt="" coords="1507,25,1393,30,1260,41,1138,58,1088,68,1052,81,1020,98,998,115,980,137,961,168,945,205,937,241,932,240,940,204,956,165,976,134,994,111,1017,93,1049,76,1087,63,1137,52,1260,36,1392,25,1507,19"/>
+<area shape="rect" title=" " alt="" coords="1293,255,1357,280"/>
+<area shape="poly" title=" " alt="" coords="1595,30,1620,68,1648,121,1668,172,1670,193,1664,209,1371,261,1370,256,1661,205,1665,192,1663,173,1643,123,1615,71,1591,32"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="338,86,512,111"/>
+<area shape="poly" title=" " alt="" coords="1507,27,699,81,526,93,525,88,698,76,1507,22"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="1120,79,1256,119"/>
+<area shape="poly" title=" " alt="" coords="1528,33,1270,84,1269,79,1527,28"/>
+<area shape="rect" title=" " alt="" coords="1283,174,1354,199"/>
+<area shape="poly" title=" " alt="" coords="1507,23,1468,28,1426,39,1387,56,1352,81,1339,98,1330,119,1322,161,1317,160,1325,118,1334,96,1349,77,1384,51,1424,34,1467,23,1507,17"/>
+<area shape="rect" title=" " alt="" coords="970,174,1040,199"/>
+<area shape="poly" title=" " alt="" coords="1507,25,1405,32,1289,43,1183,59,1141,69,1109,81,1082,98,1058,120,1022,164,1018,161,1054,117,1079,94,1107,76,1139,64,1182,54,1289,38,1405,27,1507,20"/>
+<area shape="rect" title=" " alt="" coords="1407,255,1518,280"/>
+<area shape="poly" title=" " alt="" coords="1601,29,1657,83,1687,122,1709,166,1715,187,1714,198,1708,208,1680,228,1636,242,1532,261,1531,256,1634,237,1678,223,1704,205,1709,196,1710,188,1704,168,1682,125,1653,86,1598,33"/>
+<area shape="rect" href="../../d6/d3c/seq_8h.html" title="TCP&#45;like sequenced message fragmentation and reassembly." alt="" coords="580,174,734,199"/>
+<area shape="poly" title=" " alt="" coords="1507,25,1170,42,992,59,919,69,865,81,813,100,764,123,686,169,684,164,762,118,811,95,863,76,918,64,991,54,1169,37,1507,19"/>
+<area shape="rect" href="../../de/d66/number__internal_8h.html" title=" " alt="" coords="1362,79,1522,119"/>
+<area shape="poly" title=" " alt="" coords="1565,33,1490,74,1488,70,1563,29"/>
+<area shape="rect" title=" " alt="" coords="1584,174,1650,199"/>
+<area shape="poly" title=" " alt="" coords="1587,31,1588,70,1594,118,1609,161,1603,162,1589,119,1583,70,1582,31"/>
+<area shape="rect" href="../../d0/dc6/hmac_8h.html" title="mbedTLS TLS backend: HMAC subset (HMAC&#45;SHA256, one&#45;shot + streaming)." alt="" coords="19,86,143,111"/>
+<area shape="poly" title=" " alt="" coords="1507,24,977,40,614,57,243,81,157,90,157,85,242,76,613,51,977,34,1507,18"/>
+<area shape="rect" href="../../d5/d67/evp_8h.html" title="mbedTLS TLS backend: EVP subset (HMAC digest tags, AES&#45;256&#45;CBC)." alt="" coords="25,174,137,199"/>
+<area shape="poly" title=" " alt="" coords="1507,22,1253,24,912,32,573,50,433,64,327,81,266,99,207,123,113,170,111,165,205,118,264,94,326,76,432,58,572,45,912,27,1253,19,1507,17"/>
+<area shape="rect" title=" " alt="" coords="1699,86,1810,111"/>
+<area shape="poly" title=" " alt="" coords="1611,28,1719,78,1716,83,1609,33"/>
+<area shape="rect" title=" " alt="" coords="1834,86,1952,111"/>
+<area shape="poly" title=" " alt="" coords="1632,28,1823,76,1838,80,1837,85,1822,81,1631,33"/>
+<area shape="rect" title=" " alt="" coords="1976,86,2084,111"/>
+<area shape="poly" title=" " alt="" coords="1664,26,1804,46,1964,76,1980,80,1979,85,1963,81,1803,52,1663,31"/>
+<area shape="rect" title=" " alt="" coords="2108,86,2211,111"/>
+<area shape="poly" title=" " alt="" coords="1664,21,1861,40,1980,55,2098,76,2113,80,2112,85,2097,81,1979,61,1861,45,1663,27"/>
+<area shape="rect" title=" " alt="" coords="2235,86,2362,111"/>
+<area shape="poly" title=" " alt="" coords="1663,20,1914,38,2069,54,2224,76,2245,80,2244,85,2223,81,2068,59,1913,43,1663,25"/>
+<area shape="rect" title=" " alt="" coords="2386,86,2490,111"/>
+<area shape="poly" title=" " alt="" coords="1664,17,1799,21,1976,30,2175,47,2375,76,2392,80,2391,85,2374,81,2175,53,1976,35,1799,26,1664,22"/>
+<area shape="rect" title=" " alt="" coords="2515,86,2623,111"/>
+<area shape="poly" title=" " alt="" coords="1664,16,1819,18,2028,27,2264,45,2385,58,2503,76,2521,80,2520,85,2502,81,2384,64,2264,50,2027,32,1819,24,1664,22"/>
+<area shape="rect" title=" " alt="" coords="2647,86,2718,111"/>
+<area shape="poly" title=" " alt="" coords="1663,18,1878,23,2159,33,2436,50,2550,62,2636,76,2646,79,2645,84,2635,81,2549,67,2435,55,2159,38,1878,28,1663,23"/>
+<area shape="rect" title=" " alt="" coords="2742,86,2810,111"/>
+<area shape="poly" title=" " alt="" coords="1663,17,1896,21,2205,30,2509,48,2636,60,2731,76,2740,79,2739,84,2730,81,2635,66,2509,53,2204,36,1896,26,1663,23"/>
+<area shape="rect" title=" " alt="" coords="786,255,869,280"/>
+<area shape="poly" title=" " alt="" coords="829,207,830,241,825,241,824,207"/>
+<area shape="rect" title=" " alt="" coords="284,255,358,280"/>
+<area shape="poly" title=" " alt="" coords="759,207,747,209,540,242,373,263,372,258,539,237,746,204,757,202"/>
+<area shape="poly" title=" " alt="" coords="854,205,907,244,903,248,850,209"/>
+<area shape="poly" title=" " alt="" coords="895,196,1280,256,1279,261,894,201"/>
+<area shape="poly" title=" " alt="" coords="355,114,263,136,225,151,202,168,195,186,202,205,215,221,232,234,271,252,269,257,230,239,212,225,197,208,190,186,198,165,222,147,261,131,354,109"/>
+<area shape="rect" title=" " alt="" coords="212,174,353,199"/>
+<area shape="poly" title=" " alt="" coords="407,114,315,169,312,165,404,109"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="377,174,556,199"/>
+<area shape="poly" title=" " alt="" coords="433,110,457,160,452,162,428,113"/>
+<area shape="poly" title=" " alt="" coords="520,197,774,252,773,257,518,202"/>
+<area shape="poly" title=" " alt="" coords="446,202,356,250,353,246,444,197"/>
+<area shape="poly" title=" " alt="" coords="1166,121,1054,209,979,234,883,257,882,252,977,229,1052,204,1163,117"/>
+<area shape="poly" title=" " alt="" coords="1218,117,1291,164,1288,168,1215,121"/>
+<area shape="poly" title=" " alt="" coords="1149,121,1043,171,1041,166,1147,116"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="1116,167,1259,207"/>
+<area shape="poly" title=" " alt="" coords="1190,119,1190,153,1185,153,1185,119"/>
+<area shape="poly" title=" " alt="" coords="1117,206,883,257,882,252,1116,201"/>
+<area shape="poly" title=" " alt="" coords="1127,209,981,254,979,249,1126,204"/>
+<area shape="poly" title=" " alt="" coords="1254,204,1410,248,1408,253,1253,209"/>
+<area shape="poly" title=" " alt="" coords="683,197,792,247,790,251,681,202"/>
+<area shape="poly" title=" " alt="" coords="609,202,373,257,371,252,608,197"/>
+<area shape="poly" title=" " alt="" coords="698,197,884,250,882,255,696,202"/>
+<area shape="poly" title=" " alt="" coords="1437,120,1412,166,1392,190,1368,209,1324,226,1267,237,1202,244,1131,248,992,251,885,257,884,258,883,252,885,252,992,245,1131,242,1201,239,1267,232,1323,221,1365,204,1388,186,1407,163,1433,118"/>
+<area shape="poly" title=" " alt="" coords="1445,119,1438,164,1429,188,1412,209,1379,227,1332,241,1275,252,1213,260,1085,267,981,269,981,264,1085,262,1212,254,1275,247,1331,236,1377,222,1409,205,1424,186,1433,163,1440,118"/>
+<area shape="poly" title=" " alt="" coords="1416,121,1348,168,1345,164,1413,117"/>
+<area shape="poly" title=" " alt="" coords="1482,116,1583,166,1581,170,1480,121"/>
+<area shape="rect" title=" " alt="" coords="1480,174,1559,199"/>
+<area shape="poly" title=" " alt="" coords="1462,117,1502,162,1498,165,1458,121"/>
+<area shape="poly" title=" " alt="" coords="66,114,43,132,21,156,9,182,9,194,15,205,31,218,56,229,124,245,201,256,270,261,270,266,201,261,123,251,55,234,29,222,11,208,4,195,3,181,16,153,39,128,62,109"/>
+<area shape="poly" title=" " alt="" coords="84,112,84,160,78,160,78,112"/>
+<area shape="poly" title=" " alt="" coords="117,197,274,248,272,253,115,202"/>
 </map>
 </div>
 </div>
@@ -284,7 +298,7 @@ Functions</h2></td></tr>
 <tr><td class="fieldname"><a id="a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674" name="a889db178d8714ab67bc994f1d8faad33a7dc1f237400db583167d328cd7735674"></a>JWT_ALG_ED25519&#160;</td><td class="fielddoc"></td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00166">166</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00169">169</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 </div>
 </div>
@@ -325,9 +339,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00849">849</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00881">881</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
 </div>
 </div>
@@ -356,7 +370,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00791">791</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00823">823</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -399,7 +413,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Borrowed pointer to the claim string, or NULL when absent/non-string. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00778">778</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00810">810</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
 </div>
 </div>
@@ -441,11 +455,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL when the chunk set is invalid/incomplete or assembly/allocation fails.</dd></dl>
 <p>The caller owns the returned string and must free it with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00864">864</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00896">896</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00196">cwist_seq_assembler_create()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00223">cwist_seq_assembler_destroy()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00268">cwist_seq_assembler_feed()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00390">cwist_seq_assembler_get_data()</a>, and <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00196">cwist_seq_assembler_create()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00223">cwist_seq_assembler_destroy()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00268">cwist_seq_assembler_feed()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00389">cwist_seq_assembler_get_data()</a>, and <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00933">cwist_jwt_verify_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00965">cwist_jwt_verify_chunks()</a>.</p>
 
 </div>
 </div>
@@ -492,11 +506,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00619">619</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00642">642</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00167">JWT_ALG_HS256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00170">JWT_ALG_HS256</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00909">cwist_jwt_sign_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00941">cwist_jwt_sign_chunks()</a>.</p>
 
 </div>
 </div>
@@ -559,9 +573,9 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated chunk array, or NULL when signing or chunking fails.</dd></dl>
 <p>Free the result with <a class="el" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68" title="Free chunk objects returned by cwist_jwt_split_chunks().">cwist_jwt_chunks_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00909">909</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00941">941</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00619">cwist_jwt_sign()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00812">cwist_jwt_split_chunks()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00642">cwist_jwt_sign()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00844">cwist_jwt_split_chunks()</a>.</p>
 
 </div>
 </div>
@@ -616,9 +630,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00628">628</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00651">651</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00169">JWT_ALG_ED25519</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00172">JWT_ALG_ED25519</a>.</p>
 
 </div>
 </div>
@@ -673,9 +687,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated null-terminated JWT string, or NULL on error. Caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00623">623</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00646">646</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00168">JWT_ALG_ES256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00171">JWT_ALG_ES256</a>.</p>
 
 </div>
 </div>
@@ -724,11 +738,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated array of <code>out_count</code> chunks, or NULL on invalid input, split failure, or allocation failure.</dd></dl>
 <p>Each chunk's <code>data</code> buffer is owned by the caller and must be released with <a class="el" href="../../d5/d6c/jwt_8h.html#aea871d4338c9ae6eae0aa726f45e0e68" title="Free chunk objects returned by cwist_jwt_split_chunks().">cwist_jwt_chunks_free()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00812">812</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00844">844</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00062">cwist_seq_message::chunk_lens</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00061">cwist_seq_message::chunks</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00063">cwist_seq_message::count</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00178">cwist_seq_message_free()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00125">cwist_seq_split()</a>, <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00085">cwist_jwt_chunk::data</a>, and <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00086">cwist_jwt_chunk::len</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00062">cwist_seq_message::chunk_lens</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00061">cwist_seq_message::chunks</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00063">cwist_seq_message::count</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00178">cwist_seq_message_free()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00125">cwist_seq_split()</a>, <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00085">cwist_jwt_chunk::data</a>, and <a class="el" href="../../d5/d6c/jwt_8h_source.html#l00086">cwist_jwt_chunk::len</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00909">cwist_jwt_sign_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00941">cwist_jwt_sign_chunks()</a>.</p>
 
 </div>
 </div>
@@ -773,11 +787,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00755">755</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00787">787</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00167">JWT_ALG_HS256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00170">JWT_ALG_HS256</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00933">cwist_jwt_verify_chunks()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d80/jwt_8c_source.html#l00965">cwist_jwt_verify_chunks()</a>.</p>
 
 </div>
 </div>
@@ -826,9 +840,9 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated verified claims object, or NULL when assembly, parsing, signature verification, or claim validation fails.</dd></dl>
 <p>The caller owns the result and must release it with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00933">933</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00965">965</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00864">cwist_jwt_join_chunks()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00755">cwist_jwt_verify()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d80/jwt_8c_source.html#l00896">cwist_jwt_join_chunks()</a>, and <a class="el" href="../../d8/d80/jwt_8c_source.html#l00787">cwist_jwt_verify()</a>.</p>
 
 </div>
 </div>
@@ -869,9 +883,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00768">768</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00800">800</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00169">JWT_ALG_ED25519</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00172">JWT_ALG_ED25519</a>.</p>
 
 </div>
 </div>
@@ -912,9 +926,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to a cwist_jwt_claims object on success, NULL on failure. Caller must free with <a class="el" href="../../d5/d6c/jwt_8h.html#a22f0ad8ebf932941f73e52625fbf78da" title="Free a claims object.">cwist_jwt_claims_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00764">764</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00796">796</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00168">JWT_ALG_ES256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00171">JWT_ALG_ES256</a>.</p>
 
 </div>
 </div>
@@ -951,9 +965,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Verify an HS256 JWT with an explicit nonnegative exp/nbf leeway in seconds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00759">759</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d80/jwt_8c_source.html#l00791">791</a> of file <a class="el" href="../../d8/d80/jwt_8c_source.html">jwt.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00167">JWT_ALG_HS256</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d80/jwt_8c_source.html#l00170">JWT_ALG_HS256</a>.</p>
 
 </div>
 </div>

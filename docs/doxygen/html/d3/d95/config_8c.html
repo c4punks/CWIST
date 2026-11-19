@@ -116,6 +116,7 @@ $(document).ready(function(){initNavTree('d3/d95/config_8c.html','../../'); init
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../db/d16/config_8h_source.html">cwist/sys/app/config.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d0/daa/gc_8h_source.html">cwist/core/mem/gc.h</a>&gt;</code><br />
 <code>#include &lt;errno.h&gt;</code><br />
 <code>#include &lt;limits.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
@@ -128,36 +129,44 @@ Include dependency graph for config.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../da/ddd/config_8c__incl.png" border="0" usemap="#asrc_2sys_2app_2config_8c" alt=""/></div>
 <map name="asrc_2sys_2app_2config_8c" id="asrc_2sys_2app_2config_8c">
-<area shape="rect" title="config.c interface." alt="" coords="605,5,755,31"/>
-<area shape="rect" href="../../db/d16/config_8h.html" title="Application configuration management (.env, environment variables)." alt="" coords="5,152,171,177"/>
-<area shape="poly" title=" " alt="" coords="605,24,530,30,440,40,343,57,249,81,177,112,118,147,115,142,174,108,247,76,342,51,439,35,529,24,605,19"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="260,79,433,104"/>
-<area shape="poly" title=" " alt="" coords="627,33,414,78,413,73,626,28"/>
-<area shape="rect" title=" " alt="" coords="458,79,526,104"/>
-<area shape="poly" title=" " alt="" coords="651,33,536,76,535,71,649,28"/>
-<area shape="rect" title=" " alt="" coords="550,79,621,104"/>
-<area shape="poly" title=" " alt="" coords="666,33,613,72,610,68,663,29"/>
-<area shape="rect" title=" " alt="" coords="645,79,715,104"/>
-<area shape="poly" title=" " alt="" coords="683,31,683,65,677,65,677,31"/>
-<area shape="rect" title=" " alt="" coords="740,79,807,104"/>
-<area shape="poly" title=" " alt="" coords="697,29,749,68,746,72,693,33"/>
-<area shape="rect" title=" " alt="" coords="831,79,902,104"/>
-<area shape="poly" title=" " alt="" coords="711,28,824,71,823,76,709,33"/>
-<area shape="rect" title=" " alt="" coords="926,79,1005,104"/>
-<area shape="poly" title=" " alt="" coords="726,28,913,74,912,80,725,33"/>
-<area shape="rect" title=" " alt="" coords="1029,79,1099,104"/>
-<area shape="poly" title=" " alt="" coords="753,28,1016,76,1015,81,752,33"/>
-<area shape="rect" title=" " alt="" coords="247,225,321,251"/>
-<area shape="poly" title=" " alt="" coords="120,175,240,218,238,223,119,180"/>
-<area shape="rect" title=" " alt="" coords="93,225,176,251"/>
-<area shape="poly" title=" " alt="" coords="98,176,122,212,117,215,93,179"/>
-<area shape="poly" title=" " alt="" coords="361,103,386,137,392,158,388,179,365,205,335,222,333,218,361,200,383,176,387,158,381,139,357,106"/>
-<area shape="rect" title=" " alt="" coords="448,152,589,177"/>
-<area shape="poly" title=" " alt="" coords="375,102,479,144,477,149,373,106"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="195,152,373,177"/>
-<area shape="poly" title=" " alt="" coords="338,106,305,143,301,140,334,103"/>
-<area shape="poly" title=" " alt="" coords="287,178,287,212,281,212,281,178"/>
-<area shape="poly" title=" " alt="" coords="261,180,173,222,170,217,259,175"/>
+<area shape="rect" title="config.c interface." alt="" coords="665,5,814,31"/>
+<area shape="rect" href="../../db/d16/config_8h.html" title="Application configuration management (.env, environment variables)." alt="" coords="394,152,560,177"/>
+<area shape="poly" title=" " alt="" coords="665,33,603,51,572,64,544,81,514,110,492,141,487,138,510,106,541,77,570,59,602,46,664,28"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="121,79,294,104"/>
+<area shape="poly" title=" " alt="" coords="665,32,307,79,307,74,664,27"/>
+<area shape="rect" href="../../d0/daa/gc_8h.html" title="Epoch&#45;based garbage collection wrapper." alt="" coords="584,152,741,177"/>
+<area shape="poly" title=" " alt="" coords="665,25,635,32,605,42,577,58,555,80,550,90,550,99,562,117,585,132,613,145,611,150,582,137,558,120,545,100,545,89,551,77,574,54,602,38,633,27,664,20"/>
+<area shape="rect" title=" " alt="" coords="566,79,634,104"/>
+<area shape="poly" title=" " alt="" coords="718,33,636,75,633,70,716,28"/>
+<area shape="rect" title=" " alt="" coords="658,79,728,104"/>
+<area shape="poly" title=" " alt="" coords="734,32,710,69,706,66,730,30"/>
+<area shape="rect" title=" " alt="" coords="752,79,823,104"/>
+<area shape="poly" title=" " alt="" coords="750,30,775,66,770,69,745,33"/>
+<area shape="rect" title=" " alt="" coords="848,79,914,104"/>
+<area shape="poly" title=" " alt="" coords="764,28,847,70,845,75,761,33"/>
+<area shape="rect" title=" " alt="" coords="939,79,1010,104"/>
+<area shape="poly" title=" " alt="" coords="778,28,926,73,925,78,777,33"/>
+<area shape="rect" title=" " alt="" coords="1034,79,1112,104"/>
+<area shape="poly" title=" " alt="" coords="796,28,1021,76,1020,81,794,33"/>
+<area shape="rect" title=" " alt="" coords="1136,79,1207,104"/>
+<area shape="poly" title=" " alt="" coords="815,26,954,46,1123,76,1122,81,954,52,814,32"/>
+<area shape="rect" title=" " alt="" coords="208,225,282,251"/>
+<area shape="poly" title=" " alt="" coords="441,180,296,224,295,219,439,175"/>
+<area shape="rect" title=" " alt="" coords="436,225,518,251"/>
+<area shape="poly" title=" " alt="" coords="480,178,480,212,474,212,474,178"/>
+<area shape="poly" title=" " alt="" coords="122,104,72,114,31,129,18,139,10,149,9,161,16,176,27,185,44,194,90,209,194,228,193,233,89,214,42,199,24,190,12,179,4,162,5,147,14,135,29,124,71,109,120,99"/>
+<area shape="rect" title=" " alt="" coords="229,152,370,177"/>
+<area shape="poly" title=" " alt="" coords="224,102,276,141,272,146,221,106"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="26,152,205,177"/>
+<area shape="poly" title=" " alt="" coords="195,106,143,146,140,141,191,102"/>
+<area shape="poly" title=" " alt="" coords="138,175,213,216,210,221,135,180"/>
+<area shape="poly" title=" " alt="" coords="174,175,423,223,422,229,173,180"/>
+<area shape="poly" title=" " alt="" coords="596,180,296,231,295,225,595,175"/>
+<area shape="poly" title=" " alt="" coords="634,180,521,223,519,218,632,175"/>
+<area shape="rect" title=" " alt="" coords="556,225,739,251"/>
+<area shape="poly" title=" " alt="" coords="663,178,655,212,650,211,657,177"/>
+<area shape="rect" title=" " alt="" coords="764,225,926,251"/>
+<area shape="poly" title=" " alt="" coords="693,175,803,218,801,223,691,180"/>
 </map>
 </div>
 </div>
@@ -230,7 +239,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00015">15</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00019">19</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
 </div>
 </div>
@@ -255,11 +264,11 @@ Functions</h2></td></tr>
 <p>Create a new configuration object.</p>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated config on success, NULL if allocation fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00031">31</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00035">35</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/d16/config_8h_source.html#l00020">cwist_config::bucket_count</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00019">cwist_config::buckets</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d3/d95/config_8c_source.html#l00015">CWIST_CONFIG_BUCKETS</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
+<p class="reference">References <a class="el" href="../../db/d16/config_8h_source.html#l00020">cwist_config::bucket_count</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00019">cwist_config::buckets</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d3/d95/config_8c_source.html#l00019">CWIST_CONFIG_BUCKETS</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01317">cwist_app_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01319">cwist_app_create()</a>.</p>
 
 </div>
 </div>
@@ -288,11 +297,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00047">47</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00052">52</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/d16/config_8h_source.html#l00020">cwist_config::bucket_count</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00019">cwist_config::buckets</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00013">cwist_config_bucket::key</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00015">cwist_config_bucket::next</a>, and <a class="el" href="../../db/d16/config_8h_source.html#l00014">cwist_config_bucket::value</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01491">cwist_app_destroy()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01493">cwist_app_destroy()</a>.</p>
 
 </div>
 </div>
@@ -333,11 +342,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the stored value string, or NULL if the key is not found or the arguments are invalid. The pointer is owned by the config and must not be freed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00104">104</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00109">109</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/d16/config_8h_source.html#l00020">cwist_config::bucket_count</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00019">cwist_config::buckets</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00013">cwist_config_bucket::key</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00015">cwist_config_bucket::next</a>, and <a class="el" href="../../db/d16/config_8h_source.html#l00014">cwist_config_bucket::value</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d95/config_8c_source.html#l00144">cwist_config_get_bool()</a>, and <a class="el" href="../../d3/d95/config_8c_source.html#l00124">cwist_config_get_int()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d95/config_8c_source.html#l00149">cwist_config_get_bool()</a>, and <a class="el" href="../../d3/d95/config_8c_source.html#l00129">cwist_config_get_int()</a>.</p>
 
 </div>
 </div>
@@ -385,9 +394,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The parsed boolean, or <code>default_val</code> on unrecognized values. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00144">144</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00149">149</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d95/config_8c_source.html#l00104">cwist_config_get()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d95/config_8c_source.html#l00109">cwist_config_get()</a>.</p>
 
 </div>
 </div>
@@ -435,9 +444,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The parsed integer, or <code>default_val</code> on missing/malformed values. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00124">124</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00129">129</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d95/config_8c_source.html#l00104">cwist_config_get()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d95/config_8c_source.html#l00109">cwist_config_get()</a>.</p>
 
 </div>
 </div>
@@ -477,9 +486,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00161">161</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00166">166</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d95/config_8c_source.html#l00068">cwist_config_set()</a>, and <a class="el" href="../../d2/dfe/alloc_8h_source.html#l00101">CWIST_DEFER_FREE</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d95/config_8c_source.html#l00073">cwist_config_set()</a>, and <a class="el" href="../../d2/dfe/alloc_8h_source.html#l00101">CWIST_DEFER_FREE</a>.</p>
 
 </div>
 </div>
@@ -519,9 +528,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00188">188</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00193">193</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d95/config_8c_source.html#l00068">cwist_config_set()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d95/config_8c_source.html#l00073">cwist_config_set()</a>, and <a class="el" href="../../d7/d69/baremetal__compat_8h.html#aaf07c1bbc2aa081a54bdd66f0e152312">getline()</a>.</p>
 
 </div>
 </div>
@@ -568,11 +577,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00068">68</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00073">73</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/d16/config_8h_source.html#l00020">cwist_config::bucket_count</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00019">cwist_config::buckets</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00013">cwist_config_bucket::key</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00015">cwist_config_bucket::next</a>, and <a class="el" href="../../db/d16/config_8h_source.html#l00014">cwist_config_bucket::value</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d95/config_8c_source.html#l00161">cwist_config_load_env()</a>, and <a class="el" href="../../d3/d95/config_8c_source.html#l00188">cwist_config_load_file()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d95/config_8c_source.html#l00166">cwist_config_load_env()</a>, and <a class="el" href="../../d3/d95/config_8c_source.html#l00193">cwist_config_load_file()</a>.</p>
 
 </div>
 </div>
