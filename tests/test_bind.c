@@ -74,19 +74,24 @@ void test_bind_missing_required(void) {
 
 void test_bind_invalid_email(void) {
     printf("test_bind_invalid_email...\n");
-    const char *json = "{\"email\":\"not-an-email\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}";
-    cwist_http_request *req = cwist_http_request_create();
-    cwist_sstring_assign(req->body, (char *)json);
-
-    user_t out;
-    memset(&out, 0, sizeof(out));
-    cwist_bind_result_t result;
-
-    bool ok = cwist_app_req_bind_json(req, &user_schema, &out, &result);
-    assert(ok == false);
-    assert(result.error_count > 0);
-
-    cwist_http_request_destroy(req);
+    static const char *invalid[] = {
+        "not-an-email", "a b@c.d", "x@@y.z", "a@b..c", "a@-b.c", ".a@b.c",
+        "a..b@c.d", "a@b.c\\r\\nBcc: victim@example.com",
+    };
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
+        char json[512];
+        snprintf(json, sizeof(json),
+                 "{\"email\":\"%s\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}",
+                 invalid[i]);
+        cwist_http_request *req = cwist_http_request_create();
+        cwist_sstring_assign(req->body, json);
+        user_t out = {0};
+        cwist_bind_result_t result;
+        bool ok = cwist_app_req_bind_json(req, &user_schema, &out, &result);
+        assert(ok == false);
+        assert(result.error_count > 0);
+        cwist_http_request_destroy(req);
+    }
     printf("  OK\n");
 }
 
@@ -154,7 +159,7 @@ void test_bind_regex(void) {
     typedef struct {
         char code[16];
     } code_t;
-    CWIST_BIND_RULES(code_rules, CWIST_RULE_REQUIRED(), CWIST_RULE_REGEX("^[A-Z]{3}[0-9]{4}$"));
+    CWIST_BIND_RULES(code_rules, CWIST_RULE_REQUIRED(), CWIST_RULE_REGEX("[A-Z]{3}[0-9]{4}"));
     static const cwist_bind_field_t code_fields[] = {
         CWIST_BIND_FIELD(code_t, code, "code", code_rules),
     };
@@ -170,13 +175,43 @@ void test_bind_regex(void) {
     assert(ok == true);
     cwist_http_request_destroy(req);
 
-    const char *json_bad = "{\"code\":\"abc1234\"}";
+    const char *json_bad = "{\"code\":\"xABC1234\"}";
     req = cwist_http_request_create();
     cwist_sstring_assign(req->body, (char *)json_bad);
     memset(&out, 0, sizeof(out));
     ok = cwist_app_req_bind_json(req, &code_schema, &out, &result);
     assert(ok == false);
     cwist_http_request_destroy(req);
+    printf("  OK\n");
+}
+
+void test_bind_utf8_length(void) {
+    printf("test_bind_utf8_length...\n");
+    typedef struct {
+        char name[64];
+    } name_t;
+    CWIST_BIND_RULES(utf8_rules, CWIST_RULE_MIN_LEN(2), CWIST_RULE_MAX_LEN(4));
+    static const cwist_bind_field_t fields[] = {
+        CWIST_BIND_FIELD(name_t, name, "name", utf8_rules),
+    };
+    static const cwist_bind_schema_t schema = CWIST_BIND_SCHEMA(name_t, fields);
+    static const struct {
+        const char *json;
+        bool expected;
+    } cases[] = {
+        {"{\"name\":\"\uAC00\uB098\uB2E4\uB77C\"}", true},
+        {"{\"name\":\"\uAC00\uB098\uB2E4\uB77C\uB9C8\"}", false},
+        {"{\"name\":\"\uAC00\"}", false},
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        cwist_http_request *req = cwist_http_request_create();
+        cwist_sstring_assign(req->body, (char *)cases[i].json);
+        name_t out = {0};
+        cwist_bind_result_t result;
+        bool ok = cwist_app_req_bind_json(req, &schema, &out, &result);
+        assert(ok == cases[i].expected);
+        cwist_http_request_destroy(req);
+    }
     printf("  OK\n");
 }
 
@@ -340,6 +375,7 @@ int main(void) {
     test_bind_form_data();
     test_bind_form_decoding_limits();
     test_bind_regex();
+    test_bind_utf8_length();
     test_bind_null_guards_and_numeric_validation();
     printf("All bind tests passed.\n");
     return 0;
