@@ -959,17 +959,18 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             }
             break;
         }
-        case H2_FRAME_GOAWAY:
+        case H2_FRAME_GOAWAY: {
             c->goaway = 1;
-            if (!call->trailers) {
+            uint32_t last = 0;
+            if (f.len >= 4) {
+                last = (((uint32_t)f.payload[0] & 0x7f) << 24) |
+                       ((uint32_t)f.payload[1] << 16) | ((uint32_t)f.payload[2] << 8) |
+                       f.payload[3];
+            }
+            if (!call->trailers && (f.len < 4 || last < call->stream_id)) {
                 /* gRFC A6 case 3: streams above the GOAWAY last-stream-id
                  * were never seen by server application logic. */
-                if (f.len >= 4 && !call->headers_received) {
-                    uint32_t last = (((uint32_t)f.payload[0] & 0x7f) << 24) |
-                                    ((uint32_t)f.payload[1] << 16) | ((uint32_t)f.payload[2] << 8) |
-                                    f.payload[3];
-                    if (last < call->stream_id) call->goaway_refused = 1;
-                }
+                if (f.len >= 4 && !call->headers_received) call->goaway_refused = 1;
                 call->failed = 1;
                 call->stream_ended = 1;
                 call->status = CWIST_GRPC_UNAVAILABLE;
@@ -978,6 +979,7 @@ static int grpc_client_pump(cwist_grpc_call *call) {
                 rc = 1;
             }
             break;
+        }
         case H2_FRAME_RST_STREAM:
             if (f.stream_id == call->stream_id) {
                 call->stream_ended = 1;
