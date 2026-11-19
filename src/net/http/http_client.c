@@ -272,8 +272,10 @@ void cwist_http_client_set_timeout_ms(cwist_http_client *client, int timeout_ms)
  */
 void cwist_http_client_set_ca_bundle(cwist_http_client *client, const char *path) {
     if (!client) return;
+    char *copy = path ? cwist_strdup(path) : NULL;
+    if (path && !copy) return;
     cwist_free(client->ca_bundle);
-    client->ca_bundle = path ? strdup(path) : NULL;
+    client->ca_bundle = copy;
     curl_easy_setopt(client->curl, CURLOPT_CAINFO, client->ca_bundle);
 }
 
@@ -304,8 +306,10 @@ void cwist_http_client_enable_altsvc(cwist_http_client *client, int enabled) {
  */
 void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path) {
     if (!client) return;
+    char *copy = path ? cwist_strdup(path) : NULL;
+    if (path && !copy) return;
     cwist_free(client->altsvc_db);
-    client->altsvc_db = path ? strdup(path) : NULL;
+    client->altsvc_db = copy;
     curl_easy_setopt(client->curl, CURLOPT_ALTSVC, client->altsvc_db);
 }
 
