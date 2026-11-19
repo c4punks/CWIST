@@ -102,6 +102,23 @@ static bool response_has_header(const char *response, const char *header) {
     return test_strcasestr(response, header) != NULL;
 }
 
+static void response_header_value(const char *response, const char *name, char *out, size_t cap) {
+    out[0] = '\0';
+    const char *header = test_strcasestr(response, name);
+    const char *end = strstr(response, "\r\n\r\n");
+    if (!header || !end || header >= end) return;
+    const char *colon = strchr(header, ':');
+    if (!colon || colon >= end) return;
+    const char *value = colon + 1;
+    while (value < end && (*value == ' ' || *value == '\t')) value++;
+    const char *value_end = strstr(value, "\r\n");
+    if (!value_end || value_end > end) return;
+    size_t len = (size_t)(value_end - value);
+    if (len >= cap) len = cap - 1;
+    memcpy(out, value, len);
+    out[len] = '\0';
+}
+
 int main(void) {
     printf("Testing static file security and range requests...\n");
 
@@ -169,6 +186,8 @@ int main(void) {
     usleep(400000);
 
     char buf[4096];
+    char etag[128] = {0};
+    char last_modified[128] = {0};
     int fd;
     int failures = 0;
 
@@ -184,6 +203,8 @@ int main(void) {
             fprintf(stderr, "FAIL: Missing Accept-Ranges header\n");
             failures++;
         }
+        response_header_value(buf, "ETag", etag, sizeof(etag));
+        response_header_value(buf, "Last-Modified", last_modified, sizeof(last_modified));
         close(fd);
     } else {
         fprintf(stderr, "FAIL: Could not connect for normal request\n");
@@ -260,6 +281,69 @@ int main(void) {
     } else {
         fprintf(stderr, "FAIL: Could not connect for suffix range test\n");
         failures++;
+    }
+
+    struct {
+        char headers[512];
+        const char *status;
+        bool full_body;
+        bool forbid_content_range;
+    } conditional[8] = {0};
+    snprintf(conditional[0].headers, sizeof(conditional[0].headers), "If-None-Match: W/%s\r\n", etag);
+    conditional[0].status = "304";
+    snprintf(conditional[1].headers, sizeof(conditional[1].headers),
+             "If-None-Match: \"nope\", W/%s\r\n", etag);
+    conditional[1].status = "304";
+    snprintf(conditional[2].headers, sizeof(conditional[2].headers), "If-None-Match: *\r\n");
+    conditional[2].status = "304";
+    snprintf(conditional[3].headers, sizeof(conditional[3].headers),
+             "If-None-Match: \"nope\"\r\nIf-Modified-Since: %s\r\n", last_modified);
+    conditional[3].status = "200";
+    conditional[3].full_body = true;
+    conditional[3].forbid_content_range = true;
+    snprintf(conditional[4].headers, sizeof(conditional[4].headers),
+             "Range: bytes=0-4\r\nIf-Range: %s\r\n", etag);
+    conditional[4].status = "206";
+    snprintf(conditional[5].headers, sizeof(conditional[5].headers),
+             "Range: bytes=0-4\r\nIf-Range: W/%s\r\n", etag);
+    conditional[5].status = "200";
+    conditional[5].full_body = true;
+    conditional[5].forbid_content_range = true;
+    snprintf(conditional[6].headers, sizeof(conditional[6].headers),
+             "Range: bytes=0-4\r\nIf-Range: %s\r\n", last_modified);
+    conditional[6].status = "206";
+    snprintf(conditional[7].headers, sizeof(conditional[7].headers),
+             "Range: bytes=0-1,5-6\r\n");
+    conditional[7].status = "200";
+    conditional[7].full_body = true;
+    conditional[7].forbid_content_range = true;
+
+    for (size_t i = 0; i < sizeof(conditional) / sizeof(conditional[0]); i++) {
+        fd = connect_to_server();
+        if (fd < 0) {
+            fprintf(stderr, "FAIL: Could not connect for conditional request test\n");
+            failures++;
+            continue;
+        }
+        char request[1024];
+        snprintf(request, sizeof(request), "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\n%s\r\n",
+                 conditional[i].headers);
+        send_request(fd, request);
+        read_response(fd, buf, sizeof(buf));
+        if (!response_has_code(buf, conditional[i].status)) {
+            fprintf(stderr, "FAIL: Expected %s for conditional request, got:\n%s\n",
+                    conditional[i].status, buf);
+            failures++;
+        }
+        if (conditional[i].full_body && !strstr(buf, "Hello World")) {
+            fprintf(stderr, "FAIL: Expected full representation, got:\n%s\n", buf);
+            failures++;
+        }
+        if (conditional[i].forbid_content_range && response_has_header(buf, "Content-Range")) {
+            fprintf(stderr, "FAIL: Range was not ignored, got:\n%s\n", buf);
+            failures++;
+        }
+        close(fd);
     }
 
     struct {

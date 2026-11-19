@@ -1115,8 +1115,8 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
         // Check conditional requests
         bool not_modified = false;
         const char *if_none_match = cwist_http_header_get(req->headers, "If-None-Match");
-        if (if_none_match && strcmp(if_none_match, etag) == 0) {
-            not_modified = true;
+        if (if_none_match) {
+            not_modified = cwist_assets_etag_matches(if_none_match, etag);
         } else {
             const char *if_modified_since =
                 cwist_http_header_get(req->headers, "If-Modified-Since");
@@ -1144,7 +1144,14 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
 
             /* --- Range Request Handling --- */
             const char *range_hdr = cwist_http_header_get(req->headers, "Range");
-            if (range_hdr && strncmp(range_hdr, "bytes=", 6) == 0) {
+            const char *if_range = cwist_http_header_get(req->headers, "If-Range");
+            bool range_allowed = !if_range || strcmp(if_range, etag) == 0;
+            if (if_range && !range_allowed) {
+                time_t validator_time = cwist_http_parse_date(if_range);
+                range_allowed = validator_time != (time_t)-1 && validator_time == file->last_mod;
+            }
+            if (range_hdr && range_allowed && !strchr(range_hdr, ',') &&
+                strncmp(range_hdr, "bytes=", 6) == 0) {
                 const char *p = range_hdr + 6;
                 size_t range_start = 0, range_end = file->size - 1;
                 bool range_valid = true;
