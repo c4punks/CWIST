@@ -949,6 +949,7 @@ TEST_TARGETS = test_worker_affinity \
                test_bdr \
                test_bdr_cache \
                test_db_sync \
+               test_db_sync_deadline \
                test_secure_headers \
                test_profile \
                test_http_chunked \
@@ -1412,6 +1413,10 @@ test_bdr_cache: $(LIB_NAME) tests/test_bdr_cache.c
 
 test_db_sync: $(LIB_NAME) tests/test_db_sync.c
 	$(CC) $(CFLAGS) -o $@ tests/test_db_sync.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_db_sync_deadline: $(LIB_NAME) tests/test_db_sync_deadline.c
+	$(CC) $(CFLAGS) -o $@ tests/test_db_sync_deadline.c $(LIB_NAME) $(LIBS)
 	./$@
 
 install: $(LIB_NAME) $(PC_FILE)

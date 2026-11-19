@@ -89,6 +89,24 @@ static int db_sync_connect(const struct addrinfo *addresses) {
     return -1;
 }
 
+static uint64_t db_sync_now_ms(void) {
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) return 0;
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+}
+
+static int db_sync_wait(int fd, short events, uint64_t deadline) {
+    for (;;) {
+        uint64_t now = db_sync_now_ms();
+        if (now >= deadline) return -1;
+        struct pollfd pfd = {.fd = fd, .events = events};
+        int rc = poll(&pfd, 1, (int)(deadline - now));
+        if (rc < 0 && errno == EINTR) continue;
+        if (rc <= 0 || (pfd.revents & (POLLERR | POLLNVAL))) return -1;
+        return 0;
+    }
+}
+
 /**
  * @brief Write exactly the requested number of bytes to a socket.
  * @param fd Connected socket descriptor.
@@ -96,9 +114,10 @@ static int db_sync_connect(const struct addrinfo *addresses) {
  * @param len Number of bytes to send.
  * @return 0 on success, or -1 on short/failed writes.
  */
-static int db_sync_write_all(int fd, const void *buf, size_t len) {
+static int db_sync_write_all(int fd, const void *buf, size_t len, uint64_t deadline) {
     const unsigned char *p = (const unsigned char *)buf;
     while (len > 0) {
+        if (db_sync_wait(fd, POLLOUT, deadline) != 0) return -1;
         ssize_t n = send(fd, p, len, MSG_NOSIGNAL);
         if (n < 0 && errno == EINTR) continue;
         if (n <= 0) return -1;
@@ -115,9 +134,10 @@ static int db_sync_write_all(int fd, const void *buf, size_t len) {
  * @param len Number of bytes to read.
  * @return 0 on success, or -1 on short/failed reads.
  */
-static int read_all(int fd, void *buf, size_t len) {
+static int read_all(int fd, void *buf, size_t len, uint64_t deadline) {
     unsigned char *p = (unsigned char *)buf;
     while (len > 0) {
+        if (db_sync_wait(fd, POLLIN, deadline) != 0) return -1;
         ssize_t n = read(fd, p, len);
         if (n < 0 && errno == EINTR) continue;
         if (n <= 0) return -1;
@@ -204,18 +224,11 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
         return CWIST_DB_SYNC_ERR_NET;
     }
 
-    time_t deadline = time(NULL) + CWIST_DB_SYNC_TIMEOUT_SEC;
+    uint64_t deadline = db_sync_now_ms() + CWIST_DB_SYNC_TIMEOUT_SEC * 1000;
     int cli_fd = -1;
     unsigned char client_nonce[DB_SYNC_NONCE_LEN];
     for (;;) {
-        int remaining = (int)(deadline - time(NULL));
-        if (remaining <= 0) break;
-        struct pollfd pfd = {.fd = srv_fd, .events = POLLIN};
-        int ready;
-        do {
-            ready = poll(&pfd, 1, remaining * 1000);
-        } while (ready < 0 && errno == EINTR);
-        if (ready <= 0) break;
+        if (db_sync_wait(srv_fd, POLLIN, deadline) != 0) break;
         cli_fd = accept(srv_fd, NULL, NULL);
         if (cli_fd < 0) continue;
         if (db_sync_configure_socket(cli_fd) != 0) {
@@ -225,7 +238,8 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
         }
         unsigned char hello[4 + DB_SYNC_NONCE_LEN + DB_SYNC_MAC_LEN];
         unsigned char expected[DB_SYNC_MAC_LEN];
-        if (read_all(cli_fd, hello, sizeof(hello)) == 0 && memcmp(hello, SYNC_MAGIC, 4) == 0) {
+        if (read_all(cli_fd, hello, sizeof(hello), deadline) == 0 &&
+            memcmp(hello, SYNC_MAGIC, 4) == 0) {
             memcpy(client_nonce, hello + 4, DB_SYNC_NONCE_LEN);
             if (db_sync_mac(ctx, "CWSY client", client_nonce, NULL, NULL, 0, expected) == 0 &&
                 CRYPTO_memcmp(expected, hello + 4 + DB_SYNC_NONCE_LEN, DB_SYNC_MAC_LEN) == 0)
@@ -252,11 +266,11 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
         free(blob);
         return CWIST_DB_SYNC_ERR_CRYPTO;
     }
-    if (db_sync_write_all(cli_fd, server_nonce, sizeof(server_nonce)) < 0 ||
-        db_sync_write_all(cli_fd, server_auth, sizeof(server_auth)) < 0 ||
-        db_sync_write_all(cli_fd, len_buf, sizeof(len_buf)) < 0 ||
-        db_sync_write_all(cli_fd, blob, blob_len) < 0 ||
-        db_sync_write_all(cli_fd, blob_auth, sizeof(blob_auth)) < 0) {
+    if (db_sync_write_all(cli_fd, server_nonce, sizeof(server_nonce), deadline) < 0 ||
+        db_sync_write_all(cli_fd, server_auth, sizeof(server_auth), deadline) < 0 ||
+        db_sync_write_all(cli_fd, len_buf, sizeof(len_buf), deadline) < 0 ||
+        db_sync_write_all(cli_fd, blob, blob_len, deadline) < 0 ||
+        db_sync_write_all(cli_fd, blob_auth, sizeof(blob_auth), deadline) < 0) {
         close(cli_fd);
         free(blob);
         return CWIST_DB_SYNC_ERR_NET;
@@ -280,6 +294,7 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
                        unsigned char **out_bytes, size_t *out_len) {
     if (!host || !ctx || !out_bytes || !out_len) return CWIST_DB_SYNC_ERR_ARGS;
     if (port <= 0) port = CWIST_DB_SYNC_DEFAULT_PORT;
+    uint64_t deadline = db_sync_now_ms() + CWIST_DB_SYNC_TIMEOUT_SEC * 1000;
 
     /* 1. Resolve host. */
     struct addrinfo hints, *res = NULL;
@@ -310,9 +325,9 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
         close(fd);
         return CWIST_DB_SYNC_ERR_CRYPTO;
     }
-    if (db_sync_write_all(fd, SYNC_MAGIC, 4) < 0 ||
-        db_sync_write_all(fd, client_nonce, sizeof(client_nonce)) < 0 ||
-        db_sync_write_all(fd, client_auth, sizeof(client_auth)) < 0) {
+    if (db_sync_write_all(fd, SYNC_MAGIC, 4, deadline) < 0 ||
+        db_sync_write_all(fd, client_nonce, sizeof(client_nonce), deadline) < 0 ||
+        db_sync_write_all(fd, client_auth, sizeof(client_auth), deadline) < 0) {
         close(fd);
         return CWIST_DB_SYNC_ERR_NET;
     }
@@ -321,11 +336,11 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
     unsigned char server_auth[DB_SYNC_MAC_LEN];
     unsigned char expected[DB_SYNC_MAC_LEN];
     unsigned char len_buf[8];
-    if (read_all(fd, server_nonce, sizeof(server_nonce)) < 0 ||
-        read_all(fd, server_auth, sizeof(server_auth)) < 0 ||
+    if (read_all(fd, server_nonce, sizeof(server_nonce), deadline) < 0 ||
+        read_all(fd, server_auth, sizeof(server_auth), deadline) < 0 ||
         db_sync_mac(ctx, "CWSY server", client_nonce, server_nonce, NULL, 0, expected) != 0 ||
         CRYPTO_memcmp(expected, server_auth, DB_SYNC_MAC_LEN) != 0 ||
-        read_all(fd, len_buf, sizeof(len_buf)) < 0) {
+        read_all(fd, len_buf, sizeof(len_buf), deadline) < 0) {
         close(fd);
         return CWIST_DB_SYNC_ERR_PROTO;
     }
@@ -350,7 +365,8 @@ int cwist_db_sync_pull(const char *host, int port, const cwist_db_crypt_ctx_t *c
 
     /* 5. Read the snapshot and its challenge-bound authentication tag. */
     unsigned char blob_auth[DB_SYNC_MAC_LEN];
-    if (read_all(fd, blob, blob_len) < 0 || read_all(fd, blob_auth, sizeof(blob_auth)) < 0) {
+    if (read_all(fd, blob, blob_len, deadline) < 0 ||
+        read_all(fd, blob_auth, sizeof(blob_auth), deadline) < 0) {
         free(blob);
         close(fd);
         return CWIST_DB_SYNC_ERR_NET;
