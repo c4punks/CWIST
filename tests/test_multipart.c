@@ -41,6 +41,8 @@ static void test_basic_two_fields(void) {
     cwist_multipart_result *r = cwist_multipart_parse(body, sizeof(body) - 1, B);
     assert(r != NULL);
     assert(count_fields(r) == 2);
+    assert(r->fields && strcmp(r->fields->name, "greeting") == 0);
+    assert(r->fields->next && strcmp(r->fields->next->name, "file") == 0);
 
     const cwist_multipart_field *g = find_field(r, "greeting");
     assert(g != NULL);
@@ -91,10 +93,8 @@ static void test_empty_header_value_does_not_swallow_next_header(void) {
     printf("  Passed.\n");
 }
 
-/* A truncated body must not leak the in-flight part buffer; completed parts
- * are still returned. */
-static void test_truncated_body_drops_partial_part(void) {
-    printf("Testing truncated body...\n");
+static void test_truncated_body_rejected(void) {
+    printf("Testing truncated body rejection...\n");
     static const char body[] = "--" B "\r\n"
                                "Content-Disposition: form-data; name=\"done\"\r\n"
                                "\r\n"
@@ -103,24 +103,14 @@ static void test_truncated_body_drops_partial_part(void) {
                                "Content-Disposition: form-data; name=\"cut\"\r\n"
                                "\r\n"
                                "this part never sees its closing boundary";
+    assert(cwist_multipart_parse(body, sizeof(body) - 1, B) == NULL);
 
-    cwist_multipart_result *r = cwist_multipart_parse(body, sizeof(body) - 1, B);
-    assert(r != NULL);
-    assert(count_fields(r) == 1);
-    assert(find_field(r, "done") != NULL);
-    assert(find_field(r, "cut") == NULL);
-    cwist_multipart_result_destroy(r);
-
-    /* Truncated inside the very first part: nothing completed, no leak. */
     static const char body2[] =
         "--" B "\r\n"
         "Content-Disposition: form-data; name=\"only\"\r\n"
         "\r\n"
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-    r = cwist_multipart_parse(body2, sizeof(body2) - 1, B);
-    assert(r != NULL);
-    assert(count_fields(r) == 0);
-    cwist_multipart_result_destroy(r);
+    assert(cwist_multipart_parse(body2, sizeof(body2) - 1, B) == NULL);
     printf("  Passed.\n");
 }
 
@@ -258,7 +248,7 @@ static void test_extract_boundary(void) {
 int main(void) {
     test_basic_two_fields();
     test_empty_header_value_does_not_swallow_next_header();
-    test_truncated_body_drops_partial_part();
+    test_truncated_body_rejected();
     test_malformed_input_returns_null();
     test_long_disposition_parameters();
     test_disposition_parameter_forms();
