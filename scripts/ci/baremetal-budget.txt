@@ -7,12 +7,12 @@
 # also checks gcc 13.2.1 / newlib 4.4 on ubuntu-24.04. Raise a limit only
 # together with the change that needs it, and say why in the PR.
 hello      flash       49152  # 45156
-hello      static_ram   2048  #  1840
+hello      static_ram   2112  #  2080
 hello      heap        24576  # 23308
 hello      stack        9216  #  8352
 hello      allocs           1
 hello-rtc  flash       49152  # 45132
-hello-rtc  static_ram   2048  #  1852
+hello-rtc  static_ram   2112  #  2092
 hello-rtc  heap        24576  # 23312
 hello-rtc  stack        9728  #  8800
 hello-rtc  allocs           1

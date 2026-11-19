@@ -5,6 +5,9 @@
 #include <cwist/sys/app/config.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
+#if defined(CWIST_BAREMETAL)
+#include "../port/baremetal_compat.h"
+#endif
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
