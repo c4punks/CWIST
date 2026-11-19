@@ -397,6 +397,30 @@ static void test_numeric_literal_fidelity(void) {
     cwist_orm_close_socket(orm);
 }
 
+static void test_mysql_literal_safety(void) {
+    const char *payload = "\\' , is_admin) VALUES (1, 1) -- ";
+    cwist_orm_t *orm = open_memdb();
+    cwist_orm_immediate_commit(true);
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE m(id INTEGER PRIMARY KEY, value TEXT);")) == 0);
+    const cwist_orm_dialect_t dialects[] = {CWIST_ORM_MYSQL, CWIST_ORM_MARIADB};
+    for (size_t i = 0; i < 2; i++) {
+        cwist_orm_use_dialect(orm, dialects[i]);
+        cJSON *row = cJSON_CreateObject();
+        cJSON_AddStringToObject(row, "value", payload);
+        assert(rc(cwist_orm_insert(orm, "m", row)) == 0);
+        cJSON_Delete(row);
+    }
+    for (int id = 1; id <= 2; id++) {
+        char where[32];
+        snprintf(where, sizeof(where), "id = %d", id);
+        char *value = NULL;
+        assert(rc(cwist_orm_select_one_string(orm, "m", "value", where, &value)) == 0);
+        assert(value != NULL && strcmp(value, payload) == 0);
+        free(value);
+    }
+    cwist_orm_close_socket(orm);
+}
+
 static void test_closed_peer_does_not_raise_sigpipe(void) {
     int fds[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
@@ -427,6 +451,7 @@ int main(void) {
     test_query_typed();
     test_dialects();
     test_numeric_literal_fidelity();
+    test_mysql_literal_safety();
     test_closed_peer_does_not_raise_sigpipe();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");
