@@ -127,6 +127,32 @@ static void access_log_printf(const char *fmt, ...) {
     if (line != stack_buf) cwist_free(line);
 }
 
+static char *access_log_escape(const char *input, bool json) {
+    if (!input) return cwist_strdup("-");
+    size_t len = strlen(input);
+    if (len > (SIZE_MAX - 1) / 6) return NULL;
+    char *escaped = cwist_alloc(len * 6 + 1);
+    if (!escaped) return NULL;
+    size_t out = 0;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)input[i];
+        if (c == '"' || c == '\\') {
+            escaped[out++] = '\\';
+            escaped[out++] = (char)c;
+        } else if (c < 0x20 || c == 0x7f) {
+            if (json) {
+                out += (size_t)snprintf(escaped + out, 7, "\\u%04x", c);
+            } else {
+                out += (size_t)snprintf(escaped + out, 5, "\\x%02x", c);
+            }
+        } else {
+            escaped[out++] = (char)c;
+        }
+    }
+    escaped[out] = '\0';
+    return escaped;
+}
+
 /**
  * @brief Format a timestamp in Common Log Format: dd/Mon/yyyy:HH:MM:SS +zzzz
  *        in local time.
@@ -174,7 +200,9 @@ static void format_iso8601_time(char *buf, size_t len, const struct timeval *tv)
  */
 static const char *access_log_request_id(cwist_http_request *req, cwist_http_response *res) {
     cwist_http_header_node *headers = cwist_async_res_deferred(res) ? req->headers : res->headers;
-    return cwist_http_header_get(headers, "X-Request-Id");
+    const char *rid = cwist_http_header_get(headers, "X-Request-Id");
+    if (!rid && headers != req->headers) rid = cwist_http_header_get(req->headers, "X-Request-Id");
+    return rid;
 }
 
 /**
@@ -223,9 +251,18 @@ static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_ht
     char status[16], res_bytes[32];
     access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
-    access_log_printf("%s - %s [%s] \"%s %s %s\" %s %s\n", ip_str, rid ? rid : "-", time_buf,
-                      cwist_http_method_to_string(req->method), req->path->data,
-                      req->version ? req->version->data : "HTTP/1.1", status, res_bytes);
+    char *rid_text = access_log_escape(rid, false);
+    char *path = access_log_escape(req->path ? req->path->data : "-", false);
+    char *query = access_log_escape(req->query ? req->query->data : "", false);
+    if (rid_text && path && query) {
+        access_log_printf("%s - %s [%s] \"%s %s%s%s %s\" %s %s\n", ip_str, rid_text, time_buf,
+                          cwist_http_method_to_string(req->method), path,
+                          query[0] ? "?" : "", query,
+                          req->version ? req->version->data : "HTTP/1.1", status, res_bytes);
+    }
+    cwist_free(rid_text);
+    cwist_free(path);
+    cwist_free(query);
 
     if (ip) cwist_sstring_destroy(ip);
 }
@@ -256,10 +293,23 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
     char status[16], res_bytes[32];
     access_log_status_bytes(res, "-", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
-    access_log_printf("%s - %s [%s] \"%s %s %s\" %s %s \"%s\" \"%s\"\n", ip_str, rid ? rid : "-",
-                      time_buf, cwist_http_method_to_string(req->method), req->path->data,
-                      req->version ? req->version->data : "HTTP/1.1", status, res_bytes,
-                      referer ? referer : "-", user_agent ? user_agent : "-");
+    char *rid_text = access_log_escape(rid, false);
+    char *path = access_log_escape(req->path ? req->path->data : "-", false);
+    char *query = access_log_escape(req->query ? req->query->data : "", false);
+    char *referer_text = access_log_escape(referer, false);
+    char *agent_text = access_log_escape(user_agent, false);
+    if (rid_text && path && query && referer_text && agent_text) {
+        access_log_printf("%s - %s [%s] \"%s %s%s%s %s\" %s %s \"%s\" \"%s\"\n", ip_str, rid_text,
+                          time_buf, cwist_http_method_to_string(req->method), path,
+                          query[0] ? "?" : "", query,
+                          req->version ? req->version->data : "HTTP/1.1", status, res_bytes,
+                          referer_text, agent_text);
+    }
+    cwist_free(rid_text);
+    cwist_free(path);
+    cwist_free(query);
+    cwist_free(referer_text);
+    cwist_free(agent_text);
 
     if (ip) cwist_sstring_destroy(ip);
 }
@@ -290,11 +340,19 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     char status[16], res_bytes[32];
     access_log_status_bytes(res, "null", status, sizeof(status), res_bytes, sizeof(res_bytes));
 
-    access_log_printf(
-        "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s\",\"protocol\":\"%s\",\"status\":%s,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%s}\n",
-        time_buf, ip_str, rid ? rid : "-", cwist_http_method_to_string(req->method),
-        req->path->data, req->version ? req->version->data : "HTTP/1.1", status, msec, req_bytes,
-        res_bytes);
+    char *rid_text = access_log_escape(rid, true);
+    char *path = access_log_escape(req->path ? req->path->data : "-", true);
+    char *query = access_log_escape(req->query ? req->query->data : "", true);
+    if (rid_text && path && query) {
+        access_log_printf(
+            "{\"time\":\"%s\",\"client\":\"%s\",\"rid\":\"%s\",\"method\":\"%s\",\"path\":\"%s%s%s\",\"protocol\":\"%s\",\"status\":%s,\"duration_ms\":%ld,\"req_bytes\":%zu,\"res_bytes\":%s}\n",
+            time_buf, ip_str, rid_text, cwist_http_method_to_string(req->method), path,
+            query[0] ? "?" : "", query, req->version ? req->version->data : "HTTP/1.1", status,
+            msec, req_bytes, res_bytes);
+    }
+    cwist_free(rid_text);
+    cwist_free(path);
+    cwist_free(query);
 
     if (ip) cwist_sstring_destroy(ip);
 }
