@@ -437,6 +437,12 @@ int main(void) {
     CHECK(client != NULL, "cwist_http_client_create failed");
     if (client) {
         cwist_http_client_set_timeout_ms(client, 10000);
+        cwist_http_client_set_ca_bundle(client, "/dev/null");
+        cwist_http_client_set_ca_bundle(client, NULL);
+        cwist_http_client_enable_altsvc(client, 1);
+        cwist_http_client_set_altsvc_db(client, "alt-svc-cache.db");
+        cwist_http_client_set_altsvc_db(client, NULL);
+        cwist_http_client_enable_altsvc(client, 0);
         char base[64];
         snprintf(base, sizeof(base), "http://127.0.0.1:%d", port);
         test_get(client, base);
