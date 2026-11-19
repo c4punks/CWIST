@@ -34,7 +34,7 @@ typedef enum cwist_metric_type {
 
 /** @brief Atomic metric value container. */
 typedef struct cwist_metric_value {
-    atomic_uintmax_t raw;   /**< Base-1000 scaled integer for gauge/counter. */
+    atomic_uintmax_t raw;   /**< Base-1000 counter; two's-complement signed gauge storage. */
 } cwist_metric_value_t;
 
 /** @brief Single metric definition. */
@@ -61,16 +61,17 @@ typedef enum cwist_metric_id {
     CWIST_METRIC_H2_HEADERS_DROPPED, /**< H2 header fields dropped: unresolvable HPACK index. */
     CWIST_METRIC_HTTP_CONTINUATION_SHED, /**< Pipelined continuations dropped due to full reactor
                                             queue. */
-    CWIST_METRIC_TLS_HANDSHAKES_TOTAL,      /**< TLS handshakes completed (full + resumed). */
-    CWIST_METRIC_TLS_HANDSHAKES_RESUMED,    /**< TLS handshakes resumed via session/ticket. */
-    CWIST_METRIC_TLS_CONNECTIONS_ACTIVE,    /**< Currently established TLS connections. */
-    CWIST_METRIC_TLS_HANDSHAKES_TLS12,      /**< Handshakes negotiated as TLS 1.2. */
-    CWIST_METRIC_TLS_HANDSHAKES_TLS13,      /**< Handshakes negotiated as TLS 1.3. */
-    CWIST_METRIC_TLS_CIPHERS_AES128_GCM,    /**< TLS_AES_128_GCM_SHA256 handshakes. */
-    CWIST_METRIC_TLS_CIPHERS_AES256_GCM,    /**< TLS_AES_256_GCM_SHA384 handshakes. */
-    CWIST_METRIC_TLS_CIPHERS_CHACHA20,      /**< TLS_CHACHA20_POLY1305_SHA256 handshakes. */
-    CWIST_METRIC_TLS_CIPHERS_OTHER,         /**< Handshakes with any other cipher. */
-    CWIST_METRIC_HTTP_IDLE_REAPED, /**< Idle C1M keep-alive connections closed by the sweep timer. */
+    CWIST_METRIC_TLS_HANDSHAKES_TOTAL, /**< TLS handshakes completed (full + resumed). */
+    CWIST_METRIC_TLS_HANDSHAKES_RESUMED, /**< TLS handshakes resumed via session/ticket. */
+    CWIST_METRIC_TLS_CONNECTIONS_ACTIVE, /**< Currently established TLS connections. */
+    CWIST_METRIC_TLS_HANDSHAKES_TLS12, /**< Handshakes negotiated as TLS 1.2. */
+    CWIST_METRIC_TLS_HANDSHAKES_TLS13, /**< Handshakes negotiated as TLS 1.3. */
+    CWIST_METRIC_TLS_CIPHERS_AES128_GCM, /**< TLS_AES_128_GCM_SHA256 handshakes. */
+    CWIST_METRIC_TLS_CIPHERS_AES256_GCM, /**< TLS_AES_256_GCM_SHA384 handshakes. */
+    CWIST_METRIC_TLS_CIPHERS_CHACHA20, /**< TLS_CHACHA20_POLY1305_SHA256 handshakes. */
+    CWIST_METRIC_TLS_CIPHERS_OTHER, /**< Handshakes with any other cipher. */
+    CWIST_METRIC_HTTP_IDLE_REAPED, /**< Idle C1M keep-alive connections closed by the sweep timer.
+                                    */
     CWIST_METRIC_COUNT
 } cwist_metric_id_t;
 
