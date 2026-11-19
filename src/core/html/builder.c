@@ -11,12 +11,34 @@
  * @brief Minimal HTML tree construction and rendering helpers.
  */
 
+static bool html_tag_name_is_valid(const char *tag) {
+    if (!tag || !*tag) return true;
+    for (const unsigned char *p = (const unsigned char *)tag; *p; p++) {
+        if ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'Z') ||
+            (*p >= 'a' && *p <= 'z') || *p == '-')
+            continue;
+        return false;
+    }
+    return true;
+}
+
+static bool html_attr_name_is_valid(const char *name) {
+    if (!name || !*name) return false;
+    for (const unsigned char *p = (const unsigned char *)name; *p; p++) {
+        if (*p <= 0x20 || *p == 0x7f || *p == '"' || *p == '\'' || *p == '>' || *p == '/' ||
+            *p == '=' || *p == '<')
+            return false;
+    }
+    return true;
+}
+
 /**
  * @brief Allocate a new HTML element node for the supplied tag name.
  * @param tag Tag name to copy into the node, such as "div" or "span".
- * @return Newly allocated element, or NULL when allocation fails.
+ * @return Newly allocated element, or NULL for an invalid name or allocation failure.
  */
 cwist_html_element_t *cwist_html_element_create(const char *tag) {
+    if (!html_tag_name_is_valid(tag)) return NULL;
     cwist_html_element_t *el = (cwist_html_element_t *)cwist_alloc(sizeof(cwist_html_element_t));
     if (!el) return NULL;
 
@@ -59,7 +81,7 @@ void cwist_html_element_destroy(cwist_html_element_t *el) {
  * @param value Attribute value stored as a cJSON string node.
  */
 void cwist_html_element_add_attr(cwist_html_element_t *el, const char *key, const char *value) {
-    if (!el || !key || !value || !el->attributes) return;
+    if (!el || !html_attr_name_is_valid(key) || !value || !el->attributes) return;
 
     if (cJSON_HasObjectItem(el->attributes, key)) {
         cJSON_ReplaceItemInObject(el->attributes, key, cJSON_CreateString(value));
@@ -161,12 +183,12 @@ static bool is_void_element(const char *tag) {
 static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
     if (!el || !out) return;
 
-    if (el->tag && el->tag->data && *el->tag->data) {
+    if (el->tag && el->tag->data && *el->tag->data && html_tag_name_is_valid(el->tag->data)) {
         cwist_sstring_append(out, "<");
         cwist_sstring_append(out, el->tag->data);
         cJSON *attr = NULL;
         cJSON_ArrayForEach(attr, el->attributes) {
-            if (!attr || !attr->string) continue;
+            if (!attr || !html_attr_name_is_valid(attr->string)) continue;
             if (cJSON_IsString(attr) && attr->valuestring) {
                 cwist_sstring_append(out, " ");
                 cwist_sstring_append(out, attr->string);

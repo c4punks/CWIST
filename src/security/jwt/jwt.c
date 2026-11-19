@@ -319,8 +319,9 @@ static cwist_jwt_claims *jwt_verify_hs256(const char *token, const char *secret,
         return NULL;
     }
     cJSON *alg_item = cJSON_GetObjectItemCaseSensitive(hdr, "alg");
-    bool alg_ok =
-        alg_item && cJSON_IsString(alg_item) && strcmp(alg_item->valuestring, "HS256") == 0;
+    bool alg_ok = alg_item && cJSON_IsString(alg_item) &&
+                  strcmp(alg_item->valuestring, "HS256") == 0 &&
+                  cJSON_GetObjectItemCaseSensitive(hdr, "crit") == NULL;
     cJSON_Delete(hdr);
     if (!alg_ok) {
         cwist_free(tok_copy);
@@ -402,7 +403,7 @@ static cwist_jwt_claims *jwt_verify_hs256(const char *token, const char *secret,
         return NULL;
     }
     if (exp_item) {
-        if (now > leeway && exp_time < now - leeway) {
+        if (now >= leeway && exp_time <= now - leeway) {
             cJSON_Delete(json);
             return NULL; /* token expired */
         }

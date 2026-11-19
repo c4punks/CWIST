@@ -536,7 +536,8 @@ void cwist_mw_cors_handler(cwist_http_request *req, cwist_http_response *res,
     cwist_http_header_add(&res->headers, "Access-Control-Allow-Origin", "*");
 
     // Handle Preflight (OPTIONS)
-    if (req->method == CWIST_HTTP_OPTIONS) {
+    if (req->method == CWIST_HTTP_OPTIONS && cwist_http_header_get(req->headers, "Origin") &&
+        cwist_http_header_get(req->headers, "Access-Control-Request-Method")) {
         cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods",
                               "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
         cwist_http_header_add(&res->headers, "Access-Control-Allow-Headers",
