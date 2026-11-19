@@ -66,6 +66,7 @@ EM_JS(int, cwist_session_entropy_js, (char *hex_out, int nbytes), {
 typedef struct session_revocation {
     cwist_app *app;
     char *signature;
+    char *session_id;
     time_t expires_at;
     struct session_revocation *next;
 } session_revocation;
@@ -78,6 +79,7 @@ struct cwist_session {
     cwist_http_request *req;
     cwist_query_map *data;
     session_revocation *revocation;
+    char *session_id;
     bool modified;
     bool invalidated;
     bool loaded;
@@ -348,7 +350,9 @@ static bool verify_signature(cwist_app *app, const char *payload_b64, const char
  * @return New query map on success (possibly empty), NULL if decoding,
  * JSON parsing, or allocation fails. Caller owns the returned map.
  */
-static cwist_query_map *parse_payload(const char *payload_b64, time_t *expires_at) {
+static cwist_query_map *parse_payload(const char *payload_b64, time_t *expires_at,
+                                      char **session_id) {
+    *session_id = NULL;
     uint8_t payload[8192];
     int len = base64_decode(payload_b64, payload, sizeof(payload) - 1);
     if (len < 0) return NULL;
@@ -369,6 +373,11 @@ static cwist_query_map *parse_payload(const char *payload_b64, time_t *expires_a
         cJSON_Delete(json);
         return NULL;
     }
+    cJSON *jti = cJSON_GetObjectItemCaseSensitive(json, "__cwist_jti");
+    if (jti && (!cJSON_IsString(jti) || !jti->valuestring || !*jti->valuestring)) {
+        cJSON_Delete(json);
+        return NULL;
+    }
     cwist_query_map *map = cwist_query_map_create();
     if (!map) {
         cJSON_Delete(json);
@@ -381,12 +390,20 @@ static cwist_query_map *parse_payload(const char *payload_b64, time_t *expires_a
             cwist_query_map_set(map, item->string, item->valuestring);
         }
     }
+    if (jti) {
+        *session_id = cwist_strdup(jti->valuestring);
+        if (!*session_id) {
+            cwist_query_map_destroy(map);
+            cJSON_Delete(json);
+            return NULL;
+        }
+    }
     cJSON_Delete(json);
     *expires_at = expires;
     return map;
 }
 
-static bool session_is_revoked(cwist_app *app, const char *signature) {
+static bool session_is_revoked(cwist_app *app, const char *signature, const char *session_id) {
     time_t now = time(NULL);
     bool revoked = false;
     pthread_mutex_lock(&g_session_revocations_lock);
@@ -396,10 +413,15 @@ static bool session_is_revoked(cwist_app *app, const char *signature) {
         if (entry->expires_at <= now) {
             *link = entry->next;
             cwist_free(entry->signature);
+            cwist_free(entry->session_id);
             cwist_free(entry);
             continue;
         }
-        if (entry->app == app && strcmp(entry->signature, signature) == 0) revoked = true;
+        if (entry->app == app &&
+            ((session_id && entry->session_id && strcmp(entry->session_id, session_id) == 0) ||
+             (signature && entry->signature && strcmp(entry->signature, signature) == 0))) {
+            revoked = true;
+        }
         link = &entry->next;
     }
     pthread_mutex_unlock(&g_session_revocations_lock);
@@ -417,6 +439,7 @@ void cwist_session_app_destroy(cwist_app *app) {
         }
         *link = entry->next;
         cwist_free(entry->signature);
+        cwist_free(entry->session_id);
         cwist_free(entry);
     }
     pthread_mutex_unlock(&g_session_revocations_lock);
@@ -460,27 +483,39 @@ cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
             if (dot) {
                 *dot = '\0';
                 const char *signature = dot + 1;
-                if (verify_signature(app, copy, signature) && !session_is_revoked(app, signature)) {
+                if (verify_signature(app, copy, signature)) {
                     time_t expires_at;
-                    cwist_query_map *loaded = parse_payload(copy, &expires_at);
-                    session_revocation *revocation = cwist_alloc(sizeof(*revocation));
-                    char *signature_copy = cwist_strdup(signature);
-                    if (loaded && revocation && signature_copy) {
-                        cwist_gc_scope_disown(revocation);
-                        cwist_gc_scope_disown(signature_copy);
-                        revocation->app = app;
-                        revocation->signature = signature_copy;
-                        revocation->expires_at = expires_at;
-                        revocation->next = NULL;
-                        session->revocation = revocation;
-                        cwist_query_map_destroy(session->data);
-                        session->data = loaded;
-                        session->loaded = true;
-                    } else {
-                        cwist_query_map_destroy(loaded);
-                        cwist_free(revocation);
-                        cwist_free(signature_copy);
+                    char *session_id = NULL;
+                    cwist_query_map *loaded = parse_payload(copy, &expires_at, &session_id);
+                    if (loaded && !session_is_revoked(app, signature, session_id)) {
+                        session_revocation *revocation = cwist_alloc(sizeof(*revocation));
+                        char *signature_copy = cwist_strdup(signature);
+                        char *id_copy = session_id ? cwist_strdup(session_id) : NULL;
+                        if (revocation && signature_copy && (!session_id || id_copy)) {
+                            cwist_gc_scope_disown(revocation);
+                            cwist_gc_scope_disown(signature_copy);
+                            if (id_copy) cwist_gc_scope_disown(id_copy);
+                            revocation->app = app;
+                            revocation->signature = signature_copy;
+                            revocation->session_id = id_copy;
+                            revocation->expires_at = expires_at;
+                            revocation->next = NULL;
+                            session->revocation = revocation;
+                            session->session_id = session_id;
+                            session_id = NULL;
+                            cwist_query_map_destroy(session->data);
+                            session->data = loaded;
+                            session->loaded = true;
+                        } else {
+                            cwist_free(revocation);
+                            cwist_free(signature_copy);
+                            cwist_free(id_copy);
+                        }
                     }
+                    if (!session->loaded) {
+                        cwist_query_map_destroy(loaded);
+                    }
+                    cwist_free(session_id);
                 }
             }
             cwist_free(copy);
@@ -561,9 +596,11 @@ void cwist_session_destroy(cwist_session_t *session) {
     if (!session) return;
     if (session->revocation) {
         cwist_free(session->revocation->signature);
+        cwist_free(session->revocation->session_id);
         cwist_free(session->revocation);
     }
     cwist_query_map_destroy(session->data);
+    cwist_free(session->session_id);
     cwist_free(session);
 }
 
@@ -579,22 +616,26 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     if (!session->modified && session->loaded) return 0;
 
     if (session->invalidated) {
-        cwist_cookie_delete(res, session->app->session_name);
-        return 0;
+        int rc = cwist_cookie_delete(res, session->app->session_name);
+        if (rc == 0) {
+            session->modified = false;
+            session->loaded = false;
+        }
+        return rc;
     }
+
+    if (!session->session_id) session->session_id = generate_secret(16);
+    if (!session->session_id) return -1;
 
     json_ctx_t ctx;
     ctx.json = cJSON_CreateObject();
     if (!ctx.json) return -1;
     time_t expires_at = time(NULL) + session->app->session_max_age;
-    char *session_id = generate_secret(16);
-    if (!session_id || !cJSON_AddNumberToObject(ctx.json, "__cwist_exp", (double)expires_at) ||
-        !cJSON_AddStringToObject(ctx.json, "__cwist_jti", session_id)) {
-        cwist_free(session_id);
+    if (!cJSON_AddNumberToObject(ctx.json, "__cwist_exp", (double)expires_at) ||
+        !cJSON_AddStringToObject(ctx.json, "__cwist_jti", session->session_id)) {
         cJSON_Delete(ctx.json);
         return -1;
     }
-    cwist_free(session_id);
     cwist_query_map_foreach(session->data, add_to_json, &ctx);
     char *raw = cJSON_PrintUnformatted(ctx.json);
     cJSON_Delete(ctx.json);
@@ -619,35 +660,31 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
         cwist_free(payload_b64);
         return -1;
     }
-    if (!session->revocation) {
-        session_revocation *revocation = cwist_alloc(sizeof(*revocation));
-        char *signature_copy = cwist_strdup(sig_b64);
-        if (!revocation || !signature_copy) {
-            cwist_free(revocation);
-            cwist_free(signature_copy);
-            cwist_free(payload_b64);
-            cwist_free(sig_b64);
-            return -1;
-        }
-        cwist_gc_scope_disown(revocation);
-        cwist_gc_scope_disown(signature_copy);
-        revocation->app = session->app;
-        revocation->signature = signature_copy;
-        revocation->expires_at = expires_at;
-        revocation->next = NULL;
-        session->revocation = revocation;
-    }
 
     size_t cookie_len = strlen(payload_b64) + strlen(sig_b64) + 1;
     char *cookie_value = cwist_alloc(cookie_len + 1);
-    if (!cookie_value) {
-        cwist_free(payload_b64);
-        cwist_free(sig_b64);
-        return -1;
-    }
-    snprintf(cookie_value, cookie_len + 1, "%s.%s", payload_b64, sig_b64);
+    if (cookie_value) snprintf(cookie_value, cookie_len + 1, "%s.%s", payload_b64, sig_b64);
     cwist_free(payload_b64);
     cwist_free(sig_b64);
+    if (!cookie_value) return -1;
+
+    session_revocation *revocation = session->revocation;
+    bool fresh = revocation == NULL;
+    if (fresh) revocation = cwist_alloc(sizeof(*revocation));
+    char *signature_copy = revocation ? cwist_strdup(strstr(cookie_value, ".") + 1) : NULL;
+    char *id_copy =
+        revocation && !revocation->session_id ? cwist_strdup(session->session_id) : NULL;
+    if (!revocation || !signature_copy || (!revocation->session_id && !id_copy)) {
+        if (fresh) cwist_free(revocation);
+        cwist_free(signature_copy);
+        cwist_free(id_copy);
+        cwist_free(cookie_value);
+        return -1;
+    }
+    if (fresh) {
+        revocation->app = session->app;
+        revocation->next = NULL;
+    }
 
     cwist_cookie_options opts = {0};
     opts.path = "/";
@@ -658,7 +695,29 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
 
     int rc = cwist_cookie_set(res, session->app->session_name, cookie_value, &opts);
     cwist_free(cookie_value);
-    return rc;
+    if (rc != 0) {
+        if (fresh) cwist_free(revocation);
+        cwist_free(signature_copy);
+        cwist_free(id_copy);
+        return rc;
+    }
+
+    if (fresh) {
+        session->revocation = revocation;
+        cwist_gc_scope_disown(revocation);
+    } else {
+        cwist_free(revocation->signature);
+    }
+    revocation->signature = signature_copy;
+    cwist_gc_scope_disown(signature_copy);
+    if (id_copy) {
+        revocation->session_id = id_copy;
+        cwist_gc_scope_disown(id_copy);
+    }
+    revocation->expires_at = expires_at;
+    session->modified = false;
+    session->loaded = true;
+    return 0;
 }
 
 /* Middleware ------------------------------------------------------------- */
