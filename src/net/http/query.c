@@ -337,11 +337,9 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
         if (seg_end == token) continue; /* strtok_r skips empty tokens */
 
         char *eq = memchr(token, '=', (size_t)(seg_end - token));
-        if (!eq) continue;
-
-        *eq = '\0';
         const char *key_raw = token;
-        const char *value_raw = eq + 1;
+        const char *value_raw = eq ? eq + 1 : seg_end;
+        if (eq) *eq = '\0';
 
         char *key_dec = url_decode(map->arena, key_raw);
         char *value_dec = url_decode(map->arena, value_raw);

@@ -4,6 +4,7 @@
 #include <cwist/core/macros.h>
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/core/mem/alloc.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +47,16 @@ static void generate_request_id(char id[17]) {
     id[16] = '\0';
 }
 
+static bool request_id_is_valid(const char *rid) {
+    if (!rid || !*rid) return false;
+    size_t len = strlen(rid);
+    if (len > 128) return false;
+    for (const unsigned char *p = (const unsigned char *)rid; *p; p++) {
+        if (!isalnum(*p) && *p != '.' && *p != '_' && *p != '-') return false;
+    }
+    return true;
+}
+
 /**
  * @brief Attach an X-Request-Id header to both the request and the response.
  * @param req Incoming HTTP request.
@@ -58,7 +69,7 @@ void cwist_mw_request_id_handler(cwist_http_request *req, cwist_http_response *r
     const char *rid = cwist_http_header_get(req->headers, header_name);
     char generated[17];
 
-    if (!rid) {
+    if (!request_id_is_valid(rid)) {
         generate_request_id(generated);
         rid = generated;
         cwist_http_header_add(&req->headers, header_name, rid);
@@ -73,11 +84,11 @@ void cwist_mw_request_id_handler(cwist_http_request *req, cwist_http_response *r
 
 /**
  * @brief Return the built-in request ID middleware.
- * @param header_name Currently unused custom header override.
- * @return Middleware function pointer for request ID injection.
+ * @param header_name NULL or "X-Request-Id"; other names are unsupported.
+ * @return Middleware function pointer, or NULL for an unsupported header name.
  */
 cwist_middleware_func cwist_mw_request_id(const char *header_name) {
-    CWIST_UNUSED(header_name);
+    if (header_name && strcasecmp(header_name, "X-Request-Id") != 0) return NULL;
     return cwist_mw_request_id_handler;
 }
 

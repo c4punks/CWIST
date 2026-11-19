@@ -49,6 +49,9 @@ static void test_arena_overflow_and_exhaustion(void) {
 
     // Allocation larger than capacity
     assert(cwist_arena_alloc(arena, 1024) == NULL);
+#if SIZE_MAX > UINT32_MAX
+    assert(cwist_arena_alloc(arena, ((size_t)1 << 32) + 16) == NULL);
+#endif
 
     // Valid allocation should still succeed after failed attempts
     void *p = cwist_arena_alloc(arena, 128);

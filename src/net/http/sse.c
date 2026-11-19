@@ -50,25 +50,28 @@ static bool sse_append(cwist_sstring *out, const char *data, size_t len) {
 
 /** @brief Append one SSE field line to a frame, splitting multi-line values.
  *
- * Writes "name:value\n" for each line of @p value, splitting on '\n' and
- * stripping a trailing '\r' from each line. A NULL value is written as an
- * empty field.
+ * Writes "name: value\n" for each line of @p value, treating CR, LF and CRLF
+ * as line terminators. A NULL value is written as an empty field.
  *
  * @param out Destination string.
- * @param name Field name; an empty name produces a comment line (":value").
+ * @param name Field name; an empty name produces a comment line (": value").
  * @param value Field value, may be NULL or contain newlines.
  * @return 0 on success, -1 if appending fails (out may be partially written).
  */
 static int append_field(cwist_sstring *out, const char *name, const char *value) {
     const char *line = value ? value : "";
     do {
-        const char *end = strchr(line, '\n');
-        size_t len = end ? (size_t)(end - line) : strlen(line);
-        if (len && line[len - 1] == '\r') len--;
-        if (!sse_append(out, name, strlen(name)) || !sse_append(out, ":", 1) ||
+        size_t len = strcspn(line, "\r\n");
+        if (!sse_append(out, name, strlen(name)) || !sse_append(out, ": ", 2) ||
             (len && !sse_append(out, line, len)) || !sse_append(out, "\n", 1))
             return -1;
-        line = end ? end + 1 : NULL;
+        line += len;
+        if (!*line) {
+            line = NULL;
+        } else {
+            char terminator = *line++;
+            if (terminator == '\r' && *line == '\n') line++;
+        }
     } while (line);
     return 0;
 }

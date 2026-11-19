@@ -76,6 +76,12 @@ static void redirect_handler(cwist_http_request *req, cwist_http_response *res) 
     cwist_sstring_assign(res->body, REDIRECT_BODY);
 }
 
+static void see_other_handler(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    res->status_code = CWIST_HTTP_SEE_OTHER;
+    cwist_http_header_add(&res->headers, "Location", "/hello");
+}
+
 static int redirect_loop_count;
 
 static void redirect_loop_handler(cwist_http_request *req, cwist_http_response *res) {
@@ -116,6 +122,7 @@ static void run_server(int port) {
     cwist_app_post(app, "/echo", echo_handler);
     cwist_app_get(app, "/get-echo", echo_handler);
     cwist_app_get(app, "/redirect", redirect_handler);
+    cwist_app_post(app, "/see-other", see_other_handler);
     cwist_app_get(app, "/loop", redirect_loop_handler);
     cwist_app_get(app, "/query", query_handler);
     cwist_app_get(app, "/large-header", large_header_handler);
@@ -329,6 +336,16 @@ static void test_redirect_followed(cwist_http_client *client, const char *base) 
     CHECK(content_length_headers == 1, "follow: %d Content-Length headers, want 1",
           content_length_headers);
     cwist_http_response_destroy(res);
+
+    snprintf(url, sizeof(url), "%s/see-other", base);
+    res = request(client, url, CWIST_HTTP_POST, "payload", 7);
+    if (res) {
+        CHECK(res->status_code == CWIST_HTTP_ACCEPTED,
+              "303 redirect did not switch POST to GET: status %d", (int)res->status_code);
+        CHECK(body_equals(res, HELLO_BODY, strlen(HELLO_BODY)),
+              "303 redirect did not reach the GET target");
+        cwist_http_response_destroy(res);
+    }
     report(before, "redirect following enabled");
 }
 

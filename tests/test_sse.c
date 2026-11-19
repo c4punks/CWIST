@@ -32,6 +32,7 @@ int main(void) {
     assert(cwist_sse_response_init(res).error.err_i16 == 0);
     assert(cwist_sse_response_event(res, "update", "42", 1500, "first\nsecond").error.err_i16 == 0);
     assert(cwist_sse_response_comment(res, "heartbeat").error.err_i16 == 0);
+    assert(cwist_sse_response_event(res, "safe", NULL, -1, " leading\rhidden: no\r\nlast").error.err_i16 == 0);
     cwist_sse_event_t typed = CWIST_SSE_NAMED("typed", "payload");
     assert(cwist_sse_response_write(res, &typed).error.err_i16 == 0);
     assert(strcmp(cwist_http_header_get(res->headers, "Content-Type"),
@@ -39,7 +40,9 @@ int main(void) {
     assert(
         strcmp(
             res->body->data,
-            "id:42\nevent:update\nretry:1500\ndata:first\ndata:second\n\n:heartbeat\n\nevent:typed\ndata:payload\n\n") ==
+            "id: 42\nevent: update\nretry: 1500\ndata: first\ndata: second\n\n: heartbeat\n\n"
+            "event: safe\ndata:  leading\ndata: hidden: no\ndata: last\n\n"
+            "event: typed\ndata: payload\n\n") ==
         0);
     cwist_http_response_destroy(res);
 
@@ -54,7 +57,7 @@ int main(void) {
     ssize_t n = read(pair[1], received, sizeof(received) - 1);
     assert(n > 0);
     assert(strstr(received, "Content-Type: text/event-stream") != NULL);
-    assert(strstr(received, "id:7\nevent:message\ndata:ok\n\n") != NULL);
+    assert(strstr(received, "id: 7\nevent: message\ndata: ok\n\n") != NULL);
     cwist_sse_event_t live_event = CWIST_SSE_EVENT("typed payload");
     assert(cwist_sse_stream_write(stream, &live_event).error.err_i16 == 0);
     cwist_sse_stream_close(stream);

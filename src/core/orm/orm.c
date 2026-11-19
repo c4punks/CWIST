@@ -13,6 +13,7 @@
 #include <cwist/core/orm/orm.h>
 #include <cwist/core/mem/alloc.h>
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -416,9 +417,9 @@ static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id) 
  * @brief Convert a single cJSON node into an SQL literal fragment.
  *
  * Maps cJSON types to SQL literals (NULL, booleans as TRUE/FALSE or 1/0 by
- * dialect, numbers via %g, strings single-quoted with quote doubling, and
- * arrays/objects as single-quoted JSON text).  The returned string is
- * heap-allocated and must be freed by the caller.
+ * dialect, numbers with round-trip precision, strings single-quoted with
+ * quote doubling, and arrays/objects as single-quoted JSON text). The
+ * returned string is heap-allocated and must be freed by the caller.
  *
  * @param orm  Session (determines boolean rendering; may be NULL).
  * @param node cJSON value node (may be NULL, treated as SQL NULL).
@@ -437,8 +438,15 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
         return strdup(cJSON_IsTrue(node) ? "1" : "0");
     }
     if (cJSON_IsNumber(node)) {
+        double value = node->valuedouble;
+        if (!isfinite(value)) return NULL;
         char buf[64];
-        snprintf(buf, sizeof(buf), "%g", node->valuedouble);
+        if (value >= -9007199254740991.0 && value <= 9007199254740991.0 &&
+            trunc(value) == value) {
+            snprintf(buf, sizeof(buf), "%.0f", value);
+        } else {
+            snprintf(buf, sizeof(buf), "%.17g", value);
+        }
         return strdup(buf);
     }
     if (cJSON_IsString(node)) {

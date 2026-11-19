@@ -9,6 +9,8 @@
 
 /**
  * @brief Request ID middleware factory.
+ * @param header_name NULL or "X-Request-Id".
+ * @return Middleware function, or NULL for an unsupported custom header name.
  */
 cwist_middleware_func cwist_mw_request_id(const char *header_name);
 

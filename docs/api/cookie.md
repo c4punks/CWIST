@@ -17,7 +17,9 @@ stores each pair in `map`, which must come from `cwist_query_map_create()`.
 
 * Leading whitespace before a name and trailing whitespace after a name are
   removed. Whitespace at the end of a value is kept.
-* Each value is URL-decoded with `cwist_cookie_decode`.
+* Percent escapes are decoded with `cwist_cookie_decode`; literal `+` bytes
+  are preserved. Surrounding double quotes are removed.
+* The first occurrence of a name wins, matching browser cookie ordering.
 * Pairs with no `=`, with an empty name, or whose decoded value does not fit in
   4096 bytes are skipped.
 * A `NULL` or empty `header`, or a `NULL` `map`, does nothing.
@@ -36,7 +38,7 @@ pointer belongs to `map` and is valid until the map is destroyed.
 typedef struct cwist_cookie_options {
     const char *path;
     const char *domain;
-    int max_age_seconds;   /* < 0 means omit */
+    int max_age_seconds;   /* > 0 emits Max-Age; <= 0 omits it */
     bool http_only;
     bool secure;
     const char *same_site; /* "Strict", "Lax", or "None" */
@@ -45,10 +47,9 @@ typedef struct cwist_cookie_options {
 Attributes for `cwist_cookie_set`. A `NULL` `path`, `domain` or `same_site` is
 left out, and `http_only` and `secure` are added only when `true`.
 
-`max_age_seconds` is written whenever it is `0` or greater, so a
-zero-initialised struct produces `Max-Age=0`, which tells the client to delete
-the cookie. Set it to `-1` to omit the attribute. `same_site` is copied as given
-and is not checked against the three listed values.
+`max_age_seconds` is written only when it is greater than zero. A
+zero-initialised struct creates a session cookie. Use `cwist_cookie_delete` to
+emit `Max-Age=0`. `same_site` must be `Strict`, `Lax`, or `None` when present.
 
 ### `cwist_cookie_set`
 ```c
@@ -90,8 +91,8 @@ if `value` is `NULL` or allocation fails.
 int cwist_cookie_decode(const char *in, char *out, size_t out_len);
 ```
 Decodes `in` into the caller's buffer `out` of size `out_len`. `%XX` sequences
-(upper or lower case hex) become the byte they name, and `+` becomes a space.
-A `%` that is not followed by two hex digits is copied unchanged.
+(upper or lower case hex) become the byte they name. Literal `+` bytes are
+preserved. A `%` that is not followed by two hex digits is copied unchanged.
 
 Returns the number of bytes written, not counting the terminating `\0`, or `-1`
 if an argument is `NULL`, `out_len` is `0`, or the result does not fit in
