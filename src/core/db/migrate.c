@@ -96,7 +96,7 @@ static int migrate_exec_sql(sqlite3 *db, const char *sql, int version, const cha
 static int migration_cmp_asc(const void *a, const void *b) {
     const cwist_migration_t *ma = (const cwist_migration_t *)a;
     const cwist_migration_t *mb = (const cwist_migration_t *)b;
-    return ma->version - mb->version;
+    return (ma->version > mb->version) - (ma->version < mb->version);
 }
 
 /**
@@ -108,7 +108,7 @@ static int migration_cmp_asc(const void *a, const void *b) {
 static int migration_cmp_desc(const void *a, const void *b) {
     const cwist_migration_t *ma = (const cwist_migration_t *)a;
     const cwist_migration_t *mb = (const cwist_migration_t *)b;
-    return mb->version - ma->version;
+    return (mb->version > ma->version) - (mb->version < ma->version);
 }
 
 /**
@@ -125,7 +125,7 @@ int cwist_migrate_version(sqlite3 *db) {
                                 &stmt, NULL);
     if (rc != SQLITE_OK) return -1;
 
-    int version = 0;
+    int version = -1;
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         version = sqlite3_column_int(stmt, 0);
     }
@@ -202,11 +202,22 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
         /* Check it's actually in the history table. */
         sqlite3_stmt *chk = NULL;
         int found = 0;
-        if (sqlite3_prepare_v2(db, "SELECT 1 FROM _cwist_migrations WHERE version = ?;", -1, &chk,
-                               NULL) == SQLITE_OK) {
-            sqlite3_bind_int(chk, 1, sorted[i].version);
-            if (sqlite3_step(chk) == SQLITE_ROW) found = 1;
-            sqlite3_finalize(chk);
+        int rc = sqlite3_prepare_v2(db, "SELECT 1 FROM _cwist_migrations WHERE version = ?;", -1,
+                                    &chk, NULL);
+        if (rc == SQLITE_OK) rc = sqlite3_bind_int(chk, 1, sorted[i].version);
+        if (rc == SQLITE_OK) {
+            rc = sqlite3_step(chk);
+            if (rc == SQLITE_ROW) {
+                found = 1;
+                rc = SQLITE_OK;
+            } else if (rc == SQLITE_DONE) {
+                rc = SQLITE_OK;
+            }
+        }
+        sqlite3_finalize(chk);
+        if (rc != SQLITE_OK) {
+            cwist_free(sorted);
+            return CWIST_MIGRATE_ERR_SQL;
         }
         if (!found) continue;
 
@@ -215,7 +226,7 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
             return CWIST_MIGRATE_ERR_GENERIC;
         }
 
-        int rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, NULL, 0, "down");
+        rc = migrate_exec_sql(db, sorted[i].down_sql, sorted[i].version, NULL, 0, "down");
         if (rc != CWIST_MIGRATE_OK) {
             cwist_free(sorted);
             return rc;

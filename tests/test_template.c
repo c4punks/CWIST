@@ -214,6 +214,13 @@ static void test_include_root(const cJSON *context) {
     assert(rmdir(base) == 0);
 }
 
+static void test_unclosed_comment_is_an_error(void) {
+    cwist_template_error_t error;
+    cwist_sstring *out = cwist_template_render_ex("before {# unterminated", NULL, &error);
+    assert(out == NULL);
+    assert(error.code == CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
+}
+
 int main(void) {
     cJSON *context = cJSON_CreateObject();
     assert(context != NULL);
@@ -340,6 +347,7 @@ int main(void) {
     assert(unlink(first) == 0);
     assert(unlink(second) == 0);
     assert(rmdir(directory) == 0);
+    test_unclosed_comment_is_an_error();
     puts("test_template: all passed");
     return 0;
 }

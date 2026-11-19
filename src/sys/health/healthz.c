@@ -138,9 +138,7 @@ void cwist_healthz_run(cwist_health_probe_t *out_probes, size_t max_probes, size
         if (out_probes && count < max_probes) {
             out_probes[count] = r;
         }
-        if (!out_probes || count < max_probes) {
-            count++;
-        }
+        count++;
         if (r.status == CWIST_HEALTH_FAIL)
             overall = CWIST_HEALTH_FAIL;
         else if (r.status == CWIST_HEALTH_DEGRADED && overall == CWIST_HEALTH_OK)

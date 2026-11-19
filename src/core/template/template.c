@@ -423,7 +423,11 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 cwist_sstring_append_len(output, start, p - start);
                 p += 2;
                 while (*p && !(p[0] == '#' && p[1] == '}')) p++;
-                if (*p) p += 2;
+                if (!*p) {
+                    template_report_error(source, opening, CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
+                    goto fail;
+                }
+                p += 2;
                 start = p;
                 break;
 

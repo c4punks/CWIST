@@ -1,4 +1,6 @@
 #include <cwist/core/utils/zod.h>
+#include "number_internal.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,7 +36,14 @@ static bool type_matches(const cJSON *item, cwist_field_type_t t) {
     switch (t) {
         case CWIST_FIELD_STRING: return cJSON_IsString(item);
         case CWIST_FIELD_INT:
-        case CWIST_FIELD_FLOAT: return cJSON_IsNumber(item);
+            if (!cJSON_IsNumber(item) || !cwist_number_double_is_finite(item->valuedouble))
+                return false;
+            double intpart;
+            return modf(item->valuedouble, &intpart) == 0.0 &&
+                   item->valuedouble >= -9223372036854775808.0 &&
+                   item->valuedouble < 9223372036854775808.0;
+        case CWIST_FIELD_FLOAT:
+            return cJSON_IsNumber(item) && cwist_number_double_is_finite(item->valuedouble);
         case CWIST_FIELD_BOOL: return cJSON_IsBool(item);
         case CWIST_FIELD_OBJECT: return cJSON_IsObject(item);
         case CWIST_FIELD_ARRAY: return cJSON_IsArray(item);
@@ -121,7 +130,7 @@ cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema
         return r;
     }
 
-    cJSON *parsed = cJSON_Parse(raw);
+    cJSON *parsed = cJSON_ParseWithOpts(raw, NULL, true);
     if (!parsed) {
         add_error(&r, "(root)", "JSON parse error: invalid syntax");
         return r;

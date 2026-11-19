@@ -76,8 +76,8 @@ typedef struct cwist_bind_field {
     cwist_bind_field_type_t target_type;   ///< Destination C type.
     size_t target_offset; ///< Byte offset inside the user struct.
     size_t target_size;   ///< sizeof(destination) for bounds checking.
-    const cwist_bind_rule_t *rules;         ///< Array of rules (NULL-terminated by type == -1).
-    size_t rule_count;    ///< Number of rules (optional, for static arrays).
+    const cwist_bind_rule_t *rules;         ///< Rule array; a type == -1 sentinel is required.
+    size_t rule_count;    ///< Optional iteration bound; the sentinel is still required.
 } cwist_bind_field_t;
 
 /** @brief Complete schema descriptor for a struct. */

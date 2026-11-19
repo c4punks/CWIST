@@ -4,6 +4,7 @@
  */
 
 #include <cwist/core/validation/bind.h>
+#include "../utils/number_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <string.h>
 #include <stdlib.h>
@@ -86,7 +87,7 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
                 v = strtold(value, &end);
             }
             if (!value || !end || end == value || *end != '\0' || errno == ERANGE ||
-                v < rule->u.min_val) {
+                !cwist_number_long_double_is_finite(v) || v < rule->u.min_val) {
                 snprintf(buf, sizeof(buf), "%s: minimum value is %Lg",
                          rule->error_message ? rule->error_message : "value too small",
                          rule->u.min_val);
@@ -104,7 +105,7 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
                 v = strtold(value, &end);
             }
             if (!value || !end || end == value || *end != '\0' || errno == ERANGE ||
-                v > rule->u.max_val) {
+                !cwist_number_long_double_is_finite(v) || v > rule->u.max_val) {
                 snprintf(buf, sizeof(buf), "%s: maximum value is %Lg",
                          rule->error_message ? rule->error_message : "value too large",
                          rule->u.max_val);
@@ -172,9 +173,20 @@ static bool run_rules(const cwist_bind_field_t *f, const char *value, size_t len
                       cwist_bind_result_t *r) {
     if (!f->rules) return true;
     bool all_ok = true;
-    for (size_t i = 0; i < CWIST_BIND_MAX_ERRORS; ++i) {
-        if (f->rules[i].type == (cwist_bind_rule_type_t)-1) break;
+    bool terminated = false;
+    size_t limit = f->rule_count > 0 && f->rule_count < CWIST_BIND_MAX_ERRORS
+                       ? f->rule_count
+                       : CWIST_BIND_MAX_ERRORS;
+    for (size_t i = 0; i < limit; ++i) {
+        if (f->rules[i].type == (cwist_bind_rule_type_t)-1) {
+            terminated = true;
+            break;
+        }
         if (!check_rule(&f->rules[i], value, len, r, f->json_key)) all_ok = false;
+    }
+    if (!terminated) {
+        bind_add_error(r, f->json_key, "rule list is missing its sentinel");
+        all_ok = false;
     }
     return all_ok;
 }
@@ -213,7 +225,22 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
                     return false;
                 }
             }
-            memcpy(dest, &v, f->target_size <= sizeof(v) ? f->target_size : sizeof(v));
+            if (f->target_size == sizeof(int8_t) && v >= INT8_MIN && v <= INT8_MAX) {
+                int8_t typed = (int8_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else if (f->target_size == sizeof(int16_t) && v >= INT16_MIN && v <= INT16_MAX) {
+                int16_t typed = (int16_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else if (f->target_size == sizeof(int32_t) && v >= INT32_MIN && v <= INT32_MAX) {
+                int32_t typed = (int32_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else if (f->target_size == sizeof(int64_t)) {
+                int64_t typed = (int64_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else {
+                bind_add_error(r, f->json_key, "integer is outside the target range");
+                return false;
+            }
             break;
         }
         case CWIST_BIND_UINT: {
@@ -222,21 +249,38 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
                 char *end = NULL;
                 errno = 0;
                 v = strtoull(value, &end, 10);
-                if (errno == ERANGE || end == value || *end != '\0') {
+                if (errno == ERANGE || end == value || *end != '\0' || value[0] == '-') {
                     bind_add_error(r, f->json_key, "expected unsigned integer");
                     return false;
                 }
             }
-            memcpy(dest, &v, f->target_size <= sizeof(v) ? f->target_size : sizeof(v));
+            if (f->target_size == sizeof(uint8_t) && v <= UINT8_MAX) {
+                uint8_t typed = (uint8_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else if (f->target_size == sizeof(uint16_t) && v <= UINT16_MAX) {
+                uint16_t typed = (uint16_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else if (f->target_size == sizeof(uint32_t) && v <= UINT32_MAX) {
+                uint32_t typed = (uint32_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else if (f->target_size == sizeof(uint64_t)) {
+                uint64_t typed = (uint64_t)v;
+                memcpy(dest, &typed, sizeof(typed));
+            } else {
+                bind_add_error(r, f->json_key, "unsigned integer is outside the target range");
+                return false;
+            }
             break;
         }
         case CWIST_BIND_FLOAT: {
             float v = 0.0f;
             if (value) {
                 char *end = NULL;
+                errno = 0;
                 v = strtof(value, &end);
-                if (end == value || *end != '\0') {
-                    bind_add_error(r, f->json_key, "expected float");
+                if (errno == ERANGE || end == value || *end != '\0' ||
+                    !cwist_number_long_double_is_finite(v)) {
+                    bind_add_error(r, f->json_key, "expected finite float");
                     return false;
                 }
             }
@@ -247,9 +291,11 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
             double v = 0.0;
             if (value) {
                 char *end = NULL;
+                errno = 0;
                 v = strtod(value, &end);
-                if (end == value || *end != '\0') {
-                    bind_add_error(r, f->json_key, "expected double");
+                if (errno == ERANGE || end == value || *end != '\0' ||
+                    !cwist_number_long_double_is_finite(v)) {
+                    bind_add_error(r, f->json_key, "expected finite double");
                     return false;
                 }
             }
@@ -294,7 +340,7 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
                 *pp = NULL;
             }
             if (value) {
-                *pp = cJSON_Parse(value);
+                *pp = cJSON_ParseWithOpts(value, NULL, true);
                 if (!*pp) {
                     bind_add_error(r, f->json_key, "invalid nested JSON");
                     return false;
@@ -323,9 +369,10 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
 
     cJSON *root = NULL;
     if (is_json) {
-        root = cJSON_Parse(payload);
-        if (!root) {
-            bind_add_error(result, "(root)", "JSON parse error");
+        root = cJSON_ParseWithOpts(payload, NULL, true);
+        if (!root || !cJSON_IsObject(root)) {
+            cJSON_Delete(root);
+            bind_add_error(result, "(root)", "expected a JSON object");
             return false;
         }
     }
@@ -344,12 +391,19 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                     /* Keep number as string for uniform validation then convert */
                     static __thread char numbuf[64];
                     double intpart;
-                    if (modf(item->valuedouble, &intpart) == 0.0) {
+                    if (modf(item->valuedouble, &intpart) == 0.0 &&
+                        item->valuedouble >= -9223372036854775808.0 &&
+                        item->valuedouble < 9223372036854775808.0) {
                         snprintf(numbuf, sizeof(numbuf), "%lld", (long long)item->valuedouble);
-                    } else {
+                        raw_value = numbuf;
+                    } else if (cwist_number_long_double_is_finite(item->valuedouble) &&
+                               intpart != item->valuedouble) {
                         snprintf(numbuf, sizeof(numbuf), "%g", item->valuedouble);
+                        raw_value = numbuf;
+                    } else {
+                        bind_add_error(result, f->json_key,
+                                       "number is outside the supported range");
                     }
-                    raw_value = numbuf;
                 } else if (cJSON_IsBool(item)) {
                     raw_value = cJSON_IsTrue(item) ? "true" : "false";
                 } else if (cJSON_IsNull(item)) {
@@ -368,13 +422,12 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                     const char *start = cursor + key_len + 1;
                     const char *end = strchr(start, '&');
                     size_t vlen = end ? (size_t)(end - start) : strlen(start);
-                    /* Zero-copy reference into payload; safe because req->body is stable */
-                    raw_value = start;
-                    /* Temporarily null-terminate for validation (destructive to body). */
-                    /* We make a bounded copy instead to be safe. */
+                    if (vlen >= 4096) {
+                        bind_add_error(result, f->json_key, "form value is too long");
+                        break;
+                    }
                     if (vlen > 0) {
                         static __thread char formbuf[4096];
-                        if (vlen >= sizeof(formbuf)) vlen = sizeof(formbuf) - 1;
                         memcpy(formbuf, start, vlen);
                         formbuf[vlen] = '\0';
                         raw_value = formbuf;
