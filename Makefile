@@ -366,6 +366,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http2_flow_control.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
+       src/net/http/http_client_file.c \
        src/net/proxy/proxy.c \
        src/net/proxy/transport.c \
        src/net/http/https.c \
