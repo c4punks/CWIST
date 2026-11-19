@@ -87,6 +87,32 @@ static int t_nack_redelivers(cwist_job_queue_t *q) {
     return 0;
 }
 
+static int t_identical_nacked_jobs(cwist_job_queue_t *q) {
+    for (int i = 0; i < 2; i++) {
+        cwist_error_t err = cwist_job_queue_enqueue(q, "same-job", 8, "same-type");
+        CHECK(err.error.err_i16 == 0, "identical enqueue failed");
+    }
+    for (int i = 0; i < 2; i++) {
+        cwist_job_t *job = NULL;
+        cwist_error_t err = cwist_job_queue_claim(q, 5000, &job);
+        CHECK(err.error.err_i16 == 0 && job, "identical initial claim failed");
+        err = cwist_job_queue_nack(q, job);
+        CHECK(err.error.err_i16 == 0, "identical nack failed");
+    }
+    for (int i = 0; i < 2; i++) {
+        cwist_job_t *job = NULL;
+        cwist_error_t err = cwist_job_queue_claim(q, 5000, &job);
+        CHECK(err.error.err_i16 == 0 && job, "identical redelivery was lost");
+        size_t len = 0;
+        const void *payload = cwist_job_payload(job, &len);
+        CHECK(len == 8 && memcmp(payload, "same-job", 8) == 0, "identical payload mismatch");
+        CHECK(cwist_job_attempts(job) == 2, "identical attempts mismatch");
+        err = cwist_job_queue_ack(q, job);
+        CHECK(err.error.err_i16 == 0, "identical ack failed");
+    }
+    return 0;
+}
+
 /* visibility timeout: an unacked job becomes claimable again. */
 static int t_visibility_timeout(cwist_job_queue_t *q, uint64_t visibility_ms) {
     cwist_error_t err = cwist_job_queue_enqueue(q, "payload-B", 9, NULL);
@@ -159,6 +185,12 @@ static int run_suite(cwist_job_queue_t *(*create)(void *ctx, const char *name,
     q = create(ctx, name, &(cwist_job_queue_opts_t){.name = name});
     if (!q) return -2;
     if (t_nack_redelivers(q) != 0) return -1;
+    cwist_job_queue_destroy(q);
+
+    make_name(name, sizeof(name), tag);
+    q = create(ctx, name, &(cwist_job_queue_opts_t){.name = name});
+    if (!q) return -2;
+    if (t_identical_nacked_jobs(q) != 0) return -1;
     cwist_job_queue_destroy(q);
 
     make_name(name, sizeof(name), tag);
