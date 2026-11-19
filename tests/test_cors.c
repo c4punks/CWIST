@@ -19,6 +19,8 @@ void test_cors_options() {
 
     cwist_http_request *req = cwist_http_request_create();
     req->method = CWIST_HTTP_OPTIONS;
+    cwist_http_header_add(&req->headers, "Origin", "https://example.com");
+    cwist_http_header_add(&req->headers, "Access-Control-Request-Method", "GET");
 
     cwist_http_response *res = cwist_http_response_create();
 
@@ -67,9 +69,24 @@ void test_cors_simple() {
     printf("Passed CORS Simple Request.\n");
 }
 
+static void test_plain_options_reaches_application(void) {
+    cwist_middleware_func cors = cwist_mw_cors();
+    cwist_http_request *req = cwist_http_request_create();
+    req->method = CWIST_HTTP_OPTIONS;
+    cwist_http_response *res = cwist_http_response_create();
+    next_called = false;
+    cors(req, res, dummy_next);
+    assert(next_called);
+    assert(res->status_code != CWIST_HTTP_NO_CONTENT);
+    assert(cwist_http_header_get(res->headers, "Access-Control-Allow-Methods") == NULL);
+    cwist_http_request_destroy(req);
+    cwist_http_response_destroy(res);
+}
+
 int main() {
     test_cors_options();
     test_cors_simple();
+    test_plain_options_reaches_application();
     printf("All CORS tests passed!\n");
     return 0;
 }
