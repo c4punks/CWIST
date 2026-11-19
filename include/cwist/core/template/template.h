@@ -51,9 +51,9 @@ typedef struct {
  * from the provided cJSON context.
  *
  * It supports:
- * - Variable replacement: {{ key }}
- * - Variable filters: {{ key | upper }}, {{ key | lower }}, {{ key | escape }},
- *                     {{ key | trim }}, {{ key | length }}, {{ key | default("n/a") }}
+ * - Variable replacement with HTML autoescape: {{ key }} (use |safe to opt out)
+ * - Variable filters and chains: {{ key | upper | escape }}, {{ key | trim }},
+ *                     {{ key | length }}, {{ key | default("n/a") }}, {{ key | safe }}
  * - Simple conditionals: {% if key %}...{% endif %}
  * - Negated conditionals: {% if not key %}...{% endif %}
  * - Else branches: {% if key %}...{% else %}...{% endif %}
