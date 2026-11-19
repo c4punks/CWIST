@@ -29,6 +29,8 @@ typedef struct {
     size_t data_len;
     size_t data_cap;
 
+    bool body_end;
+    cwist_multipart_field **next_field;
     cwist_multipart_result *result;
 } mp_parse_ctx;
 
@@ -234,12 +236,18 @@ static int mp_on_part_data_end(multipart_parser *p) {
     }
     field->data = ctx->data;
     field->data_len = ctx->data_len;
-    field->next = ctx->result->fields;
-    ctx->result->fields = field;
+    *ctx->next_field = field;
+    ctx->next_field = &field->next;
 
     ctx->data = NULL;
     ctx->data_len = 0;
     ctx->data_cap = 0;
+    return 0;
+}
+
+static int mp_on_body_end(multipart_parser *p) {
+    mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
+    ctx->body_end = true;
     return 0;
 }
 
@@ -268,6 +276,7 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
 
     mp_parse_ctx ctx = {0};
     ctx.result = result;
+    ctx.next_field = &result->fields;
 
     multipart_parser_settings settings = {
         .on_header_field = mp_on_header_field,
@@ -276,6 +285,7 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
         .on_part_data_begin = mp_on_part_data_begin,
         .on_part_data = mp_on_part_data,
         .on_part_data_end = mp_on_part_data_end,
+        .on_body_end = mp_on_body_end,
     };
 
     /* multipart-parser-c expects the leading dashes in the boundary. */
@@ -309,9 +319,8 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
         ctx.data = NULL;
     }
 
-    /* The parser stops early on malformed input; report it as NULL per the
-     * documented contract. */
-    if (consumed != body_len) {
+    /* The parser can consume a truncated body without seeing its close delimiter. */
+    if (consumed != body_len || !ctx.body_end) {
         cwist_multipart_result_destroy(result);
         return NULL;
     }
