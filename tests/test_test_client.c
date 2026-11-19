@@ -69,6 +69,13 @@ static void query_handler(cwist_http_request *req, cwist_http_response *res) {
     res->status_code = CWIST_HTTP_OK;
 }
 
+static void path_param_handler(cwist_http_request *req, cwist_http_response *res) {
+    const char *value = cwist_query_map_get(req->path_params, "value");
+    assert(value != NULL);
+    cwist_sstring_assign(res->body, value);
+    res->status_code = CWIST_HTTP_OK;
+}
+
 static void upload_handler(cwist_http_request *req, cwist_http_response *res) {
     const char *ct = cwist_http_header_get(req->headers, "Content-Type");
     if (!ct) {
@@ -114,6 +121,36 @@ int main(void) {
     cwist_http_response *res = cwist_test_client_get(client, "/");
     FAIL_IF(!res || !res->body, "get res");
     FAIL_IF(strcmp(res->body->data, "hello") != 0, "get body");
+    cwist_http_response_destroy(res);
+
+    cwist_app_get(app, "/routing/:value", path_param_handler);
+    res = cwist_test_client_get(client, "/routing/John%20Doe%2Fa+b");
+    FAIL_IF(!res || strcmp(res->body->data, "John Doe/a+b") != 0, "decoded path parameter");
+    cwist_http_response_destroy(res);
+
+    char long_path[317];
+    memcpy(long_path, "/routing/", 9);
+    memset(long_path + 9, 'A', 300);
+    long_path[309] = '\0';
+    res = cwist_test_client_get(client, long_path);
+    FAIL_IF(!res || res->body->size != 300, "long path parameter");
+    cwist_http_response_destroy(res);
+
+    res = cwist_test_client_get(client, "/routing/bad%00");
+    FAIL_IF(!res || res->status_code != CWIST_HTTP_NOT_FOUND, "encoded NUL rejection");
+    cwist_http_response_destroy(res);
+    res = cwist_test_client_get(client, "/routing/bad%");
+    FAIL_IF(!res || res->status_code != CWIST_HTTP_NOT_FOUND, "malformed escape rejection");
+    cwist_http_response_destroy(res);
+
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_HEAD, "/routing/a%20b", NULL);
+    FAIL_IF(!res || res->status_code != CWIST_HTTP_OK, "HEAD GET fallback");
+    cwist_http_response_destroy(res);
+
+    res = cwist_test_client_post(client, "/routing/value", "not allowed");
+    FAIL_IF(!res || res->status_code != CWIST_HTTP_METHOD_NOT_ALLOWED, "method status");
+    const char *allow = cwist_http_header_get(res->headers, "Allow");
+    FAIL_IF(!allow || strcmp(allow, "GET, HEAD") != 0, "method Allow header");
     cwist_http_response_destroy(res);
 
     /* POST */
