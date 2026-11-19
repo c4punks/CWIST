@@ -121,7 +121,7 @@ $(document).ready(function(){initNavTree('d8/d7c/grpc__status__message_8h_source
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;stdint.h&gt;</span></div>
 <div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;string.h&gt;</span></div>
 <div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span> </div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">static</span> <span class="keywordtype">char</span> *cwist_grpc_status_message_encode(<span class="keyword">const</span> <span class="keywordtype">char</span> *message) {</div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">char</span> *cwist_grpc_status_message_encode(<span class="keyword">const</span> <span class="keywordtype">char</span> *message) {</div>
 <div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span>    <span class="keywordflow">if</span> (!message) <span class="keywordflow">return</span> NULL;</div>
 <div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> hex[] = <span class="stringliteral">&quot;0123456789ABCDEF&quot;</span>;</div>
 <div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    <span class="keywordtype">size_t</span> len = strlen(message);</div>
@@ -143,7 +143,7 @@ $(document).ready(function(){initNavTree('d8/d7c/grpc__status__message_8h_source
 <div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>    <span class="keywordflow">return</span> encoded;</div>
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>}</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span> </div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="keyword">static</span> <span class="keywordtype">char</span> *cwist_grpc_status_message_decode(<span class="keyword">const</span> <span class="keywordtype">char</span> *message) {</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">char</span> *cwist_grpc_status_message_decode(<span class="keyword">const</span> <span class="keywordtype">char</span> *message) {</div>
 <div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keywordflow">if</span> (!message) <span class="keywordflow">return</span> NULL;</div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>    <span class="keywordtype">size_t</span> len = strlen(message);</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>    <span class="keywordtype">char</span> *decoded = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(len + 1);</div>
