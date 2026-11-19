@@ -20,6 +20,7 @@
 #include <ctype.h>
 #include <stdatomic.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <time.h>
@@ -1168,6 +1169,19 @@ static int h2_send_goaway(h2_conn *hc, uint32_t last_stream_id, uint32_t error_c
     h2_put_u31(payload, last_stream_id);
     h2_put_u32(payload + 4, error_code);
     return h2_write_frame(hc, CWIST_HTTP2_FRAME_GOAWAY, 0, 0, payload, 8);
+}
+
+static void h2_drain_peer_goaway(cwist_https_connection *conn) {
+    if (!conn || conn->fd < 0) return;
+    shutdown(conn->fd, SHUT_WR);
+    struct timeval timeout = {.tv_usec = 50000};
+    setsockopt(conn->fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    unsigned char buf[2048];
+    for (int i = 0; i < 8; i++) {
+        ssize_t n = recv(conn->fd, buf, sizeof(buf), 0);
+        if (n == 0) break;
+        if (n < 0 && errno != EINTR) break;
+    }
 }
 
 /* Remember a stream we reset so late frames from the peer are ignored. */
@@ -4235,6 +4249,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
 
             case CWIST_HTTP2_FRAME_GOAWAY: {
+                h2_drain_peer_goaway(conn);
                 connected = false;
                 break;
             }
