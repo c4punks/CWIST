@@ -30,8 +30,54 @@
 #include <sched.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+int posix_memalign(void **memptr, size_t alignment, size_t size) {
+    if (!memptr || alignment < sizeof(void *) || (alignment & (alignment - 1)) != 0) return EINVAL;
+    if (size > SIZE_MAX - (alignment - 1)) return ENOMEM;
+    void *ptr = aligned_alloc(alignment, (size + alignment - 1) & ~(alignment - 1));
+    if (!ptr) return ENOMEM;
+    *memptr = ptr;
+    return 0;
+}
+
+ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
+    if (!lineptr || !n || !stream) return -1;
+    char *buffer = *lineptr;
+    size_t capacity = *n;
+    if (!buffer || capacity == 0) {
+        capacity = 128;
+        buffer = malloc(capacity);
+        if (!buffer) return -1;
+    }
+    size_t len = 0;
+    int c;
+    while ((c = fgetc(stream)) != EOF) {
+        if (len + 1 >= capacity) {
+            size_t grown = capacity * 2;
+            char *next = realloc(buffer, grown);
+            if (!next) {
+                if (!*lineptr) free(buffer);
+                return -1;
+            }
+            buffer = next;
+            capacity = grown;
+        }
+        buffer[len++] = (char)c;
+        if (c == '\n') break;
+    }
+    if (len == 0) {
+        if (!*lineptr) free(buffer);
+        return -1;
+    }
+    buffer[len] = '\0';
+    *lineptr = buffer;
+    *n = capacity;
+    return (ssize_t)len;
+}
 
 /* --- pthread: one thread, nothing contends --------------------------------- */
 

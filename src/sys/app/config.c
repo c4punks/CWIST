@@ -4,6 +4,10 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/config.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
+#if defined(CWIST_BAREMETAL)
+#include "../port/baremetal_compat.h"
+#endif
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -38,6 +42,7 @@ cwist_config *cwist_config_create(void) {
         cwist_free(cfg);
         return NULL;
     }
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(cfg->buckets);
     return cfg;
 }
 

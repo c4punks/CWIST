@@ -26,6 +26,7 @@
  */
 #include <cwist/net/graphql/graphql_ws.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/net/websocket/websocket_async.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -398,6 +399,7 @@ static bool gql_ws_pending_push(gql_ws_conn_t *conn, char *msg) {
         size_t new_cap = conn->pending_cap ? conn->pending_cap * 2 : 8;
         char **np = (char **)cwist_alloc_array(new_cap, sizeof(char *));
         if (!np) return false;
+        if (cwist_full_gc_enabled()) cwist_gc_scope_disown(np);
         if (conn->pending_count > 0)
             memcpy(np, conn->pending, conn->pending_count * sizeof(char *));
         cwist_free(conn->pending);
