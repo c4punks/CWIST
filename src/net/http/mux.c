@@ -3,6 +3,7 @@
 #include <cwist/net/http/http.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
+#include "path_decode.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -203,8 +204,8 @@ void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, cons
  * @param route_tmpl Route template with `:name` placeholders for variable segments.
  * @param req_path Request path to test against the template.
  * @param out_params On match, receives an allocated query map with extracted parameters
- *                 (NULL when the template had no parameters). Left untouched on mismatch;
- *                 any partially built map is freed internally.
+ *                 (NULL when the template had no parameters). Pass NULL to validate without
+ *                 capturing. Left untouched on mismatch; partial maps are freed internally.
  * @return true when the path matches the template exactly (trailing slash ignored), otherwise
  * false.
  * @retval true  On match, *out_params owns the extracted parameter map (caller-owned).
@@ -223,18 +224,19 @@ static bool match_parametric_route(const char *route_tmpl, const char *req_path,
             size_t t_len = t_next ? (size_t)(t_next - t) : strlen(t);
             const char *p_next = strchr(p, '/');
             size_t p_len = p_next ? (size_t)(p_next - p) : strlen(p);
-            if (t_len >= 256 || p_len >= 256) {
+            char *param_value = NULL;
+            if (t_len >= 256 ||
+                cwist_http_path_segment_decode(p, p_len, out_params ? &param_value : NULL) != 0) {
                 if (params) cwist_query_map_destroy(params);
                 return false;
             }
-            char param_name[256] = {0};
-            memcpy(param_name, t, t_len);
-
-            char param_value[256] = {0};
-            memcpy(param_value, p, p_len);
-
-            if (!params) params = cwist_query_map_create();
-            cwist_query_map_set(params, param_name, param_value);
+            if (out_params) {
+                char param_name[256] = {0};
+                memcpy(param_name, t, t_len);
+                if (!params) params = cwist_query_map_create();
+                if (params) cwist_query_map_set(params, param_name, param_value);
+                cwist_free(param_value);
+            }
 
             t += t_len;
             p += p_len;
@@ -247,12 +249,11 @@ static bool match_parametric_route(const char *route_tmpl, const char *req_path,
         }
     }
 
-    // Ignore trailing slashes
     if (*t == '/' && *(t + 1) == '\0') t++;
     if (*p == '/' && *(p + 1) == '\0') p++;
 
     if (*t == '\0' && *p == '\0') {
-        *out_params = params;
+        if (out_params) *out_params = params;
         return true;
     }
 
@@ -439,17 +440,15 @@ void cwist_mux_route_use(cwist_mux_route *route, cwist_middleware_func mw) {
  * @param res HTTP response object passed through to the matched handler.
  * @return true when a route was found and its handler was executed, otherwise false.
  */
-bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_http_response *res) {
-    if (!router || !req || !res) return false;
-
+static bool mux_serve_method(cwist_mux_router *router, cwist_http_request *req,
+                             cwist_http_response *res, cwist_http_method_t method) {
     const char *path = (req->path && req->path->data) ? req->path->data : "/";
-    cwist_mux_signature signature = cwist_mux_signature_from_path(req->method, path);
+    cwist_mux_signature signature = cwist_mux_signature_from_path(method, path);
     size_t idx = cwist_mux_bucket_index(router, &signature);
     cwist_mux_route *curr = router->buckets[idx];
 
-    // 1. Try exact match (O(1))
     while (curr) {
-        if (curr->method == req->method && curr->signature_hi == signature.hi &&
+        if (curr->method == method && curr->signature_hi == signature.hi &&
             curr->signature_lo == signature.lo && curr->path && curr->path->data &&
             strcmp(curr->path->data, path) == 0) {
             if (curr->middleware) {
@@ -462,16 +461,13 @@ bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_ht
         curr = curr->bucket_next;
     }
 
-    // 2. Try parametric matching (linear search)
     curr = router->param_routes;
     while (curr) {
-        if (curr->method == req->method && curr->path && curr->path->data) {
+        if (curr->method == method && curr->path && curr->path->data) {
             cwist_query_map *extracted_params = NULL;
             if (match_parametric_route(curr->path->data, path, &extracted_params)) {
                 if (extracted_params) {
-                    if (req->path_params) {
-                        cwist_query_map_destroy(req->path_params);
-                    }
+                    if (req->path_params) cwist_query_map_destroy(req->path_params);
                     req->path_params = extracted_params;
                 }
                 if (curr->middleware) {
@@ -485,21 +481,66 @@ bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_ht
         curr = curr->param_next;
     }
 
-    // 3. Try wildcard matching (linear search)
     curr = router->wildcard_routes;
     while (curr) {
-        if (curr->method == req->method && curr->path && curr->path->data) {
-            if (match_wildcard_route(curr->path->data, path)) {
-                if (curr->middleware) {
-                    run_middleware_chain(curr->middleware, req, res, curr->handler);
-                } else {
-                    curr->handler(req, res);
-                }
-                return true;
+        if (curr->method == method && curr->path && curr->path->data &&
+            match_wildcard_route(curr->path->data, path)) {
+            if (curr->middleware) {
+                run_middleware_chain(curr->middleware, req, res, curr->handler);
+            } else {
+                curr->handler(req, res);
             }
+            return true;
         }
         curr = curr->param_next;
     }
-
     return false;
+}
+
+static bool mux_method_not_allowed(cwist_mux_router *router, const char *path,
+                                   cwist_http_response *res) {
+    bool allowed[CWIST_HTTP_UNKNOWN] = {0};
+    for (cwist_mux_route *route = router->routes; route; route = route->next) {
+        if (!route->path || !route->path->data || route->method >= CWIST_HTTP_UNKNOWN) continue;
+        bool match = route->is_wildcard
+                         ? match_wildcard_route(route->path->data, path)
+                         : route->is_parametric
+                               ? match_parametric_route(route->path->data, path, NULL)
+                               : strcmp(route->path->data, path) == 0;
+        if (match) allowed[route->method] = true;
+    }
+    if (allowed[CWIST_HTTP_GET]) allowed[CWIST_HTTP_HEAD] = true;
+
+    char allow[128] = {0};
+    size_t len = 0;
+    for (int method = 0; method < CWIST_HTTP_UNKNOWN; method++) {
+        if (!allowed[method]) continue;
+        const char *name = cwist_http_method_to_string((cwist_http_method_t)method);
+        size_t name_len = strlen(name);
+        if (len + name_len + 2 >= sizeof(allow)) return false;
+        if (len) {
+            memcpy(allow + len, ", ", 2);
+            len += 2;
+        }
+        memcpy(allow + len, name, name_len);
+        len += name_len;
+        allow[len] = '\0';
+    }
+    if (!len) return false;
+    res->status_code = CWIST_HTTP_METHOD_NOT_ALLOWED;
+    cwist_http_header_add(&res->headers, "Allow", allow);
+    cwist_http_response_set_body_ptr(res, "405 Method Not Allowed",
+                                     sizeof("405 Method Not Allowed") - 1);
+    return true;
+}
+
+bool cwist_mux_serve(cwist_mux_router *router, cwist_http_request *req, cwist_http_response *res) {
+    if (!router || !req || !res) return false;
+    if (mux_serve_method(router, req, res, req->method)) return true;
+    if (req->method == CWIST_HTTP_HEAD &&
+        mux_serve_method(router, req, res, CWIST_HTTP_GET)) {
+        return true;
+    }
+    const char *path = (req->path && req->path->data) ? req->path->data : "/";
+    return mux_method_not_allowed(router, path, res);
 }
