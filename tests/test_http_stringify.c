@@ -57,12 +57,16 @@ static void check_response(int custom, int pointer, int keep_alive, size_t body_
     REQUIRE(releases == 0);
     if (!custom) {
         char expected[128];
-        int n = snprintf(expected, sizeof(expected),
-                         "HTTP/1.1 200 OK\r\nContent-Length: %zu\r\nConnection: %s\r\n\r\n",
-                         body_len, keep_alive ? "keep-alive" : "close");
+        int n = snprintf(expected, sizeof(expected), "HTTP/1.1 200 OK\r\nContent-Length: %zu",
+                         body_len);
         REQUIRE(n > 0 && (size_t)n < sizeof(expected));
-        REQUIRE(header_len == (size_t)n);
-        REQUIRE(memcmp(wire->data, expected, header_len) == 0);
+        REQUIRE(memcmp(wire->data, expected, (size_t)n) == 0);
+        REQUIRE(strstr(wire->data, "\r\nDate: ") != NULL);
+        char connection[64];
+        n = snprintf(connection, sizeof(connection), "\r\nConnection: %s\r\n\r\n",
+                     keep_alive ? "keep-alive" : "close");
+        REQUIRE(n > 0 && (size_t)n < sizeof(connection));
+        REQUIRE(memcmp(wire->data + header_len - (size_t)n, connection, (size_t)n) == 0);
     } else {
         REQUIRE(strstr(wire->data, "X-Test: marker\r\n") != NULL);
         REQUIRE(strstr(wire->data, "Date: Sun, 13 Sep 2026 00:00:00 GMT\r\n") != NULL);
