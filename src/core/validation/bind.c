@@ -353,6 +353,42 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
     return true;
 }
 
+static int bind_form_hex(unsigned char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static char *bind_form_decode(const char *src, size_t len) {
+    char *decoded = cwist_alloc(len + 1);
+    if (!decoded) return NULL;
+    size_t out = 0;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)src[i];
+        if (c == '+') {
+            decoded[out++] = ' ';
+        } else if (c == '%') {
+            if (i + 2 >= len) {
+                cwist_free(decoded);
+                return NULL;
+            }
+            int hi = bind_form_hex((unsigned char)src[i + 1]);
+            int lo = bind_form_hex((unsigned char)src[i + 2]);
+            if (hi < 0 || lo < 0 || (hi == 0 && lo == 0)) {
+                cwist_free(decoded);
+                return NULL;
+            }
+            decoded[out++] = (char)((hi << 4) | lo);
+            i += 2;
+        } else {
+            decoded[out++] = (char)c;
+        }
+    }
+    decoded[out] = '\0';
+    return decoded;
+}
+
 /**
  * @brief Core binding logic shared between JSON and Form parsers.
  */
@@ -381,6 +417,7 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
         const cwist_bind_field_t *f = &schema->fields[i];
         const char *raw_value = NULL;
         char *allocated_json = NULL;
+        char *allocated_form = NULL;
 
         if (is_json && root) {
             const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, f->json_key);
@@ -414,30 +451,30 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                 }
             }
         } else {
-            /* Form parsing: simple key=value scan (naïve, no unescaping) */
             const char *cursor = payload;
-            size_t key_len = strlen(f->json_key);
             while (cursor && *cursor) {
-                if (strncmp(cursor, f->json_key, key_len) == 0 && cursor[key_len] == '=') {
-                    const char *start = cursor + key_len + 1;
-                    const char *end = strchr(start, '&');
-                    size_t vlen = end ? (size_t)(end - start) : strlen(start);
-                    if (vlen >= 4096) {
-                        bind_add_error(result, f->json_key, "form value is too long");
+                const char *amp = strchr(cursor, '&');
+                const char *end = amp ? amp : cursor + strlen(cursor);
+                const char *eq = memchr(cursor, '=', (size_t)(end - cursor));
+                if (eq) {
+                    char *key = bind_form_decode(cursor, (size_t)(eq - cursor));
+                    char *value = bind_form_decode(eq + 1, (size_t)(end - eq - 1));
+                    if (!key || !value) {
+                        cwist_free(key);
+                        cwist_free(value);
+                        bind_add_error(result, f->json_key, "malformed form encoding");
                         break;
                     }
-                    if (vlen > 0) {
-                        static __thread char formbuf[4096];
-                        memcpy(formbuf, start, vlen);
-                        formbuf[vlen] = '\0';
-                        raw_value = formbuf;
-                    } else {
-                        raw_value = "";
+                    if (strcmp(key, f->json_key) == 0) {
+                        raw_value = value;
+                        allocated_form = value;
+                        cwist_free(key);
+                        break;
                     }
-                    break;
+                    cwist_free(key);
+                    cwist_free(value);
                 }
-                const char *next = strchr(cursor, '&');
-                cursor = next ? next + 1 : NULL;
+                cursor = amp ? amp + 1 : NULL;
             }
         }
 
@@ -453,11 +490,8 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
             }
         }
 
-        /* Clean up temporary printed JSON if we allocated one above */
-        if (allocated_json) {
-            cJSON_free(allocated_json);
-            allocated_json = NULL;
-        }
+        cJSON_free(allocated_json);
+        cwist_free(allocated_form);
     }
 
     if (root) cJSON_Delete(root);
@@ -494,8 +528,8 @@ bool cwist_app_req_bind_json(cwist_http_request *req, const cwist_bind_schema_t 
 /**
  * @brief Validate and bind a form-encoded (key=value) request body into a struct per the schema.
  *
- * Uses a simple key=value scan of the body without URL unescaping; values are
- * bounded to an internal buffer before validation.
+ * Decodes application/x-www-form-urlencoded keys and values before matching
+ * and validation. Malformed escapes and decoded NUL bytes are rejected.
  *
  * @param req HTTP request whose body contains form text; may be NULL.
  * @param schema Declarative field schema; must not be NULL.
