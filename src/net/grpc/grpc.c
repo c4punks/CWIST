@@ -9,6 +9,7 @@
 #include <cwist/core/mem/alloc.h>
 #include "../../sys/app/app_route_internal.h"
 #include "grpc_status_message.h"
+#include "../http/cond_clock.h"
 #include <ctype.h>
 #include <limits.h>
 #include <pthread.h>
@@ -1188,7 +1189,7 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
             /* Poll cancellation/deadline on a short tick; status changes
              * wake us immediately through the registry condvar. */
             struct timespec ts;
-            clock_gettime(CLOCK_REALTIME, &ts);
+            clock_gettime(cwist_cond_clockid(), &ts);
             ts.tv_nsec += 100000000L;
             if (ts.tv_nsec >= 1000000000L) {
                 ts.tv_sec++;
@@ -1223,7 +1224,7 @@ int cwist_app_grpc_health(cwist_app *app) {
     if (!reg) return -1;
     memset(reg, 0, sizeof(*reg));
     pthread_mutex_init(&reg->mu, NULL);
-    pthread_cond_init(&reg->cond, NULL);
+    cwist_cond_init_clock(&reg->cond);
     atomic_store(&reg->watchers, 0);
     if (grpc_register_route(app, "grpc.health.v1.Health", "Check", 0, grpc_health_check, NULL,
                             reg) != 0)
@@ -1888,7 +1889,7 @@ int cwist_grpc_stream_recv(cwist_grpc_stream *stream, cwist_grpc_message *out) {
             uint64_t left = stream->deadline_ms - now;
             struct timespec ts;
             struct timespec rt;
-            clock_gettime(CLOCK_REALTIME, &rt);
+            clock_gettime(cwist_cond_clockid(), &rt);
             ts.tv_sec = rt.tv_sec + (time_t)(left / 1000);
             ts.tv_nsec = rt.tv_nsec + (long)((left % 1000) * 1000000);
             if (ts.tv_nsec >= 1000000000L) {
@@ -1992,7 +1993,7 @@ static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req, cwist_h
     if (!session) return NULL;
     memset(session, 0, sizeof(*session));
     pthread_mutex_init(&session->mu, NULL);
-    pthread_cond_init(&session->cond, NULL);
+    cwist_cond_init_clock(&session->cond);
     pthread_mutex_init(&session->wmu, NULL);
     session->h2s = stream;
     session->conn_ctx = ctx;

@@ -1119,7 +1119,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 
         /* I/O loop until stream is created */
         struct timespec stream_deadline;
-        clock_gettime(CLOCK_REALTIME, &stream_deadline);
+        clock_gettime(CLOCK_MONOTONIC, &stream_deadline);
         stream_deadline.tv_sec += client->conn_timeout_ms / 1000;
         stream_deadline.tv_nsec += (client->conn_timeout_ms % 1000) * 1000000;
         if (stream_deadline.tv_nsec >= 1000000000) {
@@ -1154,7 +1154,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
                 break;
             }
             struct timespec now;
-            clock_gettime(CLOCK_REALTIME, &now);
+            clock_gettime(CLOCK_MONOTONIC, &now);
             if (now.tv_sec > stream_deadline.tv_sec ||
                 (now.tv_sec == stream_deadline.tv_sec && now.tv_nsec >= stream_deadline.tv_nsec)) {
                 break;
@@ -1201,7 +1201,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 
         /* I/O loop until response is ready or timeout */
         struct timespec deadline;
-        clock_gettime(CLOCK_REALTIME, &deadline);
+        clock_gettime(CLOCK_MONOTONIC, &deadline);
         deadline.tv_sec += client->timeout_ms / 1000;
         deadline.tv_nsec += (client->timeout_ms % 1000) * 1000000;
         if (deadline.tv_nsec >= 1000000000) {
@@ -1216,7 +1216,7 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
             h3c_process_io(client, 100);
             pthread_mutex_lock(&client->mtx);
             struct timespec now;
-            clock_gettime(CLOCK_REALTIME, &now);
+            clock_gettime(CLOCK_MONOTONIC, &now);
             if (now.tv_sec > deadline.tv_sec ||
                 (now.tv_sec == deadline.tv_sec && now.tv_nsec >= deadline.tv_nsec)) {
                 break;
