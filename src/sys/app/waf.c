@@ -3,6 +3,7 @@
 #include <cwist/net/http/http.h>
 #include <cwist/core/mem/alloc.h>
 #include <string.h>
+#include <strings.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -34,10 +35,7 @@ static const waf_signature waf_signatures[] = {{"<script", 7},
                                                {"insert into", 11},
                                                {"delete from", 11},
                                                {" or 1=1", 7},
-                                               {" and 1=1", 8},
-                                               {"--", 2},
-                                               {"/*", 2},
-                                               {"*/", 2}};
+                                               {" and 1=1", 8}};
 
 #define WAF_MAX_PATTERNS 64
 #define WAF_MAX_TEXT 4096
@@ -176,22 +174,56 @@ char *cwist_sanitize_html(const char *input) {
     return output;
 }
 
-/** @brief Check every header key/value pair in a linked list for hostile
- * signatures.
- * @param header First node of the header list; may be NULL (treated as safe).
- * @return true if all present keys and values pass cwist_waf_is_safe(). */
+static int waf_hex(unsigned char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    return -1;
+}
+
+static bool waf_url_safe(const cwist_sstring *input, bool plus_is_space) {
+    if (!input || !input->data) return true;
+    const char *data = input->data;
+    size_t len = input->size;
+    if (!memchr(data, '%', len) && !(plus_is_space && memchr(data, '+', len)))
+        return cwist_waf_is_safe(data, len);
+
+    char *decoded = (char *)cwist_alloc(len + 1);
+    if (!decoded) return false;
+    size_t out = 0;
+    for (size_t i = 0; i < len;) {
+        if (data[i] == '%') {
+            if (i + 2 >= len) goto invalid;
+            int hi = waf_hex((unsigned char)data[i + 1]);
+            int lo = waf_hex((unsigned char)data[i + 2]);
+            if (hi < 0 || lo < 0) goto invalid;
+            decoded[out++] = (char)((hi << 4) | lo);
+            i += 3;
+        } else {
+            decoded[out++] = plus_is_space && data[i] == '+' ? ' ' : data[i];
+            i++;
+        }
+    }
+    bool safe = cwist_waf_is_safe(decoded, out);
+    cwist_free(decoded);
+    return safe;
+
+invalid:
+    cwist_free(decoded);
+    return false;
+}
+
 static bool waf_headers_safe(const cwist_http_header_node *header) {
     for (; header; header = header->next) {
-        if ((header->key && !cwist_waf_is_safe(header->key->data, header->key->size)) ||
-            (header->value && !cwist_waf_is_safe(header->value->data, header->value->size)))
-            return false;
+        if (header->key && !cwist_waf_is_safe(header->key->data, header->key->size)) return false;
     }
     return true;
 }
 
 /** @brief Middleware handler that screens a request with the WAF checks.
  *
- * Runs cwist_waf_is_safe() over the request path, query, body, and headers.
+ * Decodes path, query, and form-body URL encoding before scanning. Header
+ * names are screened without rejecting generic header values such as Accept.
  * If any part fails, the response is set to HTTP 400 with a fixed body and
  * the next handler is not invoked; otherwise the request is passed through.
  *
@@ -200,10 +232,13 @@ static bool waf_headers_safe(const cwist_http_header_node *header) {
  * @param next Next handler in the chain, invoked when the request passes. */
 static void waf_handler(cwist_http_request *req, cwist_http_response *res,
                         cwist_handler_func next) {
-    bool safe = req && (!req->path || cwist_waf_is_safe(req->path->data, req->path->size)) &&
-                (!req->query || cwist_waf_is_safe(req->query->data, req->query->size)) &&
-                (!req->body || cwist_waf_is_safe(req->body->data, req->body->size)) &&
-                waf_headers_safe(req ? req->headers : NULL);
+    const char *content_type = req ? cwist_http_header_get(req->headers, "Content-Type") : NULL;
+    bool form_body = content_type &&
+                     strncasecmp(content_type, "application/x-www-form-urlencoded", 33) == 0;
+    bool safe = req && waf_url_safe(req->path, false) && waf_url_safe(req->query, true) &&
+                (form_body ? waf_url_safe(req->body, true)
+                           : (!req->body || cwist_waf_is_safe(req->body->data, req->body->size))) &&
+                waf_headers_safe(req->headers);
     if (!safe) {
         res->status_code = CWIST_HTTP_BAD_REQUEST;
         cwist_sstring_assign(res->body, "Request rejected by WAF");
