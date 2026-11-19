@@ -84,6 +84,7 @@
 
 #define H2_ERR_NO_ERROR 0x0
 #define H2_ERR_PROTOCOL_ERROR 0x1
+#define H2_ERR_INTERNAL_ERROR 0x2
 #define H2_ERR_FLOW_CONTROL_ERROR 0x3
 #define H2_ERR_SETTINGS_TIMEOUT 0x4
 #define H2_ERR_STREAM_CLOSED 0x5
@@ -1749,6 +1750,7 @@ typedef struct h2_header_state {
     bool is_connect;
     bool is_request;
     uint32_t header_count;
+    size_t header_list_size;
 } h2_header_state;
 
 static bool h2_field_name_is_valid(const char *name, size_t len) {
@@ -1788,6 +1790,11 @@ static int h2_apply_header(h2_stream *s, const char *name, size_t name_len, cons
     if (!s || !s->req || !name || !value || !st || !h2_field_name_is_valid(name, name_len) ||
         !h2_field_value_is_valid(value, value_len))
         return -1;
+    uint64_t field_size = (uint64_t)name_len + (uint64_t)value_len + 32;
+    if (field_size > CWIST_HTTP2_MAX_HEADER_BLOCK_SIZE ||
+        st->header_list_size > CWIST_HTTP2_MAX_HEADER_BLOCK_SIZE - field_size)
+        return -1;
+    st->header_list_size += (size_t)field_size;
     cwist_http_request *req = s->req;
     st->header_count++;
     if (st->header_count > CWIST_HTTP2_MAX_HEADERS_PER_REQUEST) {
@@ -2130,6 +2137,26 @@ static size_t h2_encode_response_headers(cwist_http_response *res, unsigned char
             pos += n;
         }
         size_t n = h2_encode_string(dst + pos, dst_cap - pos, cl_str);
+        if (n == 0) return 0;
+        pos += n;
+    }
+
+    bool have_date = false;
+    for (cwist_http_header_node *n = res->headers; n; n = n->next) {
+        if (n->key && n->key->data && strcasecmp(n->key->data, "date") == 0) {
+            have_date = true;
+            break;
+        }
+    }
+    char date_str[36];
+    if (!have_date && cwist_get_cached_date_header(date_str)) {
+        int name_idx = h2_static_table_find_name("date");
+        if (pos + 1 > dst_cap) return 0;
+        dst[pos] = 0x00;
+        size_t n = h2_encode_integer(dst + pos, dst_cap - pos, (uint32_t)name_idx, 4);
+        if (n == 0) return 0;
+        pos += n;
+        n = h2_encode_string(dst + pos, dst_cap - pos, date_str);
         if (n == 0) return 0;
         pos += n;
     }
@@ -4080,6 +4107,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         hook_rc =
                             hooks->on_data(hc->hook_ctx, s->hook_ctx, data, data_len, end_stream);
                     if (hook_rc != 0) {
+                        if (h2_send_rst_stream(hc, stream_id, H2_ERR_INTERNAL_ERROR) != 0)
+                            connected = false;
                         h2_stream_remove(hc, stream_id);
                         s = NULL;
                         break;

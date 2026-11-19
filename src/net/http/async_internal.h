@@ -15,6 +15,8 @@
 struct cwist_async;
 struct cwist_https_connection;
 
+bool cwist_get_cached_date_header(char out_buf[36]);
+
 /** Current generation of the C1M worker reactors; changes when the pool is destroyed. */
 uint64_t cwist_http_reactor_generation(void);
 

@@ -2152,11 +2152,12 @@ void cwist_http_header_free_all(cwist_http_header_node *head) {
  *       recompute needs no lock: at a second boundary every worker recomputes
  *       its own copy once and concurrent one-time recomputes yield the same value.
  */
-static void cwist_get_cached_date_header(char out_buf[36]) {
+bool cwist_get_cached_date_header(char out_buf[36]) {
     static _Thread_local time_t cached_sec = (time_t)-1;
     static _Thread_local char date_str[36];
 
     time_t now = time(NULL);
+    if (now == (time_t)-1) return false;
     if (now != cached_sec) {
         struct tm gmt;
 #if defined(_WIN32)
@@ -2169,6 +2170,7 @@ static void cwist_get_cached_date_header(char out_buf[36]) {
     }
     memcpy(out_buf, date_str, 30);
     out_buf[29] = '\0';
+    return true;
 }
 
 /* --- Request Lifecycle --- */
