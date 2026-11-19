@@ -1,5 +1,6 @@
 #include <cwist/core/seq/seq_auth.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 
 #if defined(__EMSCRIPTEN__) || defined(__wasi__)
 /* WASM links no OpenSSL: HMAC-SHA256 comes from the bundled header-only
@@ -53,7 +54,7 @@ static int seq_auth_memcmp(const uint8_t *a, const uint8_t *b, size_t len) {
 #if defined(__EMSCRIPTEN__)
 EM_JS(int, seq_auth_random_js, (uint8_t *buf, int len), {
     // clang-format off - JS body, not C: keep make format away from it
-    if (typeof crypto === 'undefined' || !crypto.getRandomValues) return 0;
+    if (typeof crypto == = 'undefined' || !crypto.getRandomValues) return 0;
     crypto.getRandomValues(new Uint8Array(Module.HEAPU8.buffer, buf, len));
     return 1;
     // clang-format on
@@ -243,6 +244,8 @@ cwist_seq_auth_context_create(const uint8_t key[CWIST_SEQ_AUTH_KEY_SIZE],
     }
     ctx->nonces = cwist_alloc_array(replay_window, CWIST_SEQ_AUTH_NONCE_SIZE);
     ctx->completed_ids = cwist_alloc_array(replay_window, CWIST_SEQ_AUTH_MESSAGE_ID_SIZE);
+    if (ctx->nonces && cwist_full_gc_enabled()) cwist_gc_scope_disown(ctx->nonces);
+    if (ctx->completed_ids && cwist_full_gc_enabled()) cwist_gc_scope_disown(ctx->completed_ids);
     if (!ctx->nonces || !ctx->completed_ids) {
         cwist_seq_auth_context_destroy(ctx);
         return NULL;

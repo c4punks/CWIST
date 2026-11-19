@@ -276,6 +276,7 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
     }
 
     s->workers = (pthread_t *)cwist_alloc_array(worker_count, sizeof(pthread_t));
+    if (s->workers && cwist_full_gc_enabled()) cwist_gc_scope_disown(s->workers);
     if (!s->workers) {
         cwist_io_queue_destroy(s->queue);
         cwist_free(s);

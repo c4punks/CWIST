@@ -39,6 +39,7 @@
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/db/nuke_db.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/core/utils/json_builder.h>
 /* Libttak headers */
 #include <ttak/mem/mem.h>
@@ -540,6 +541,7 @@ static cwist_route_table *cwist_route_table_create(void) {
         cwist_free(table);
         return NULL;
     }
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(table->buckets);
     table->param_routes = NULL;
     return table;
 }

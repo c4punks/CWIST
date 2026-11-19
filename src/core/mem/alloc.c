@@ -288,13 +288,10 @@ void *cwist_alloc(size_t size) {
  * @return Zeroed array allocation, or NULL when overflow or allocation fails.
  */
 void *cwist_alloc_array(size_t count, size_t elem_size) {
-    if (count == 0 || elem_size == 0) {
-        return cwist_malloc(1);
-    }
-    if (elem_size > SIZE_MAX / count) {
-        return NULL;
-    }
-    return cwist_malloc(count * elem_size);
+    if (count && elem_size > SIZE_MAX / count) return NULL;
+    void *ptr = cwist_malloc(count && elem_size ? count * elem_size : 1);
+    if (ptr && cwist_full_gc_enabled()) cwist_gc_scope_track(ptr);
+    return ptr;
 }
 
 /**

@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/big_dumb_reply.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/mem/gc.h>
 #include <cwist/core/siphash/siphash.h>
 #include <cwist/sys/sys_info.h>
 #include <cwist/core/macros.h>
@@ -519,6 +520,7 @@ cwist_bdr_t *cwist_bdr_create(void) {
         cwist_free(bdr);
         return NULL;
     }
+    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(bdr->buckets);
     bdr->latency_threshold_ms = 10;
     atomic_init(&bdr->current_bytes, 0);
     bdr->max_bytes = BDR_DEFAULT_MAX_BYTES;
