@@ -119,7 +119,7 @@ static void test_csrf_multipart_form_token(void) {
     cwist_http_request *post = cwist_http_request_create();
     cwist_http_response *post_res = cwist_http_response_create();
     post->method = CWIST_HTTP_POST;
-    char cookie[96];
+    char cookie[192];
     snprintf(cookie, sizeof(cookie), "csrf_token=%s", token);
     cwist_http_header_add(&post->headers, "Cookie", cookie);
     cwist_http_header_add(&post->headers, "Content-Type",
@@ -150,11 +150,11 @@ static void test_csrf_url_encoded_header_and_rejection(void) {
     seed->method = CWIST_HTTP_GET;
     mw(seed, seed_res, test_next);
     const char *token = cwist_csrf_token(seed);
-    assert(token && strlen(token) == 64);
+    assert(token && strlen(token) == 129);
     cwist_http_request *post = cwist_http_request_create();
     cwist_http_response *post_res = cwist_http_response_create();
     post->method = CWIST_HTTP_POST;
-    char cookie[96];
+    char cookie[192];
     snprintf(cookie, sizeof(cookie), "csrf_token=%s", token);
     cwist_http_header_add(&post->headers, "Cookie", cookie);
     cwist_http_header_add(&post->headers, "X-CSRF-Token", token);
@@ -178,12 +178,32 @@ static void test_csrf_url_encoded_header_and_rejection(void) {
     cwist_app_destroy(app);
 }
 
+static void test_csrf_rejects_unsigned_cookie(void) {
+    cwist_app *app = cwist_app_create();
+    cwist_middleware_func mw = cwist_mw_csrf(app);
+    cwist_http_request *post = cwist_http_request_create();
+    cwist_http_response *post_res = cwist_http_response_create();
+    post->method = CWIST_HTTP_POST;
+    cwist_http_header_add(&post->headers, "Cookie", "csrf_token=x");
+    cwist_sstring_assign(post->body, "_csrf=x");
+    next_called = 0;
+    mw(post, post_res, test_next);
+    assert(next_called == 0 && post_res->status_code == CWIST_HTTP_FORBIDDEN);
+    const char *set_cookie = cwist_http_header_get(post_res->headers, "Set-Cookie");
+    assert(set_cookie && strstr(set_cookie, "; Secure") != NULL);
+    cwist_http_response_destroy(post_res);
+    cwist_http_request_destroy(post);
+    cwist_app_destroy(app);
+    printf("[csrf] unsigned cookie rejected OK\n");
+}
+
 int main(void) {
     test_csrf_safe_issues_cookie();
     test_csrf_unsafe_missing_rejected();
     test_csrf_unsafe_with_token_accepted();
     test_csrf_multipart_form_token();
     test_csrf_url_encoded_header_and_rejection();
+    test_csrf_rejects_unsigned_cookie();
     printf("All CSRF tests passed.\n");
     return 0;
 }
