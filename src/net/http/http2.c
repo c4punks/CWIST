@@ -62,6 +62,7 @@
 
 #define CWIST_HTTP2_FRAME_DATA 0x00
 #define CWIST_HTTP2_FRAME_HEADERS 0x01
+#define CWIST_HTTP2_FRAME_PRIORITY 0x02
 #define CWIST_HTTP2_FRAME_RST_STREAM 0x03
 #define CWIST_HTTP2_FRAME_SETTINGS 0x04
 #define CWIST_HTTP2_FRAME_PING 0x06
@@ -242,6 +243,7 @@ typedef struct cwist_h2_stream {
     uint32_t response_total_chunks;
     uint16_t response_chunk_payload;
     bool response_headers_sent;
+    bool remote_closed; /* END_STREAM received: half-closed (remote) */
     struct cwist_h2_stream *next;
 } h2_stream;
 
@@ -463,6 +465,11 @@ typedef struct h2_conn {
     /* Number of currently open streams; enforced against
      * CWIST_HTTP2_MAX_CONCURRENT_STREAMS on new-stream HEADERS (section 5.1.2). */
     uint32_t active_streams;
+    /* Recently reset-by-us stream IDs. RFC 9113 section 5.1: frames that
+     * arrive on a stream after we sent RST_STREAM are ignored, while frames
+     * on a stream the peer closed are a STREAM_CLOSED error. */
+    uint32_t local_reset_ids[32];
+    uint32_t local_reset_pos;
     /* True when a header block was refused (stream limit) but its
      * CONTINUATION frames must still be consumed and discarded. */
     bool cont_discard;
@@ -1162,6 +1169,28 @@ static int h2_send_goaway(h2_conn *hc, uint32_t last_stream_id, uint32_t error_c
     return h2_write_frame(hc, CWIST_HTTP2_FRAME_GOAWAY, 0, 0, payload, 8);
 }
 
+/* Remember a stream we reset so late frames from the peer are ignored. */
+static void h2_note_local_reset(h2_conn *hc, uint32_t stream_id) {
+    size_t n = sizeof(hc->local_reset_ids) / sizeof(hc->local_reset_ids[0]);
+    hc->local_reset_ids[hc->local_reset_pos % n] = stream_id;
+    hc->local_reset_pos++;
+}
+
+static bool h2_was_locally_reset(const h2_conn *hc, uint32_t stream_id) {
+    size_t n = sizeof(hc->local_reset_ids) / sizeof(hc->local_reset_ids[0]);
+    for (size_t i = 0; i < n; i++)
+        if (stream_id != 0 && hc->local_reset_ids[i] == stream_id) return true;
+    return false;
+}
+
+/* Unbudgeted RST_STREAM for paths that reset a stream we already accepted. */
+static int h2_write_rst_raw(h2_conn *hc, uint32_t stream_id, uint32_t error_code) {
+    unsigned char payload[4];
+    h2_put_u32(payload, error_code);
+    h2_note_local_reset(hc, stream_id);
+    return h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, payload, 4);
+}
+
 /* Send RST_STREAM for stream_id with error_code.
  * Returns  0 on success,
  *         -1 on write error,
@@ -1180,9 +1209,7 @@ static int h2_send_rst_stream(h2_conn *hc, uint32_t stream_id, uint32_t error_co
         h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_ENHANCE_YOUR_CALM);
         return -2;
     }
-    unsigned char payload[4];
-    h2_put_u32(payload, error_code);
-    return h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, payload, 4);
+    return h2_write_rst_raw(hc, stream_id, error_code);
 }
 
 static int h2_send_window_update(h2_conn *hc, uint32_t stream_id, int32_t increment) {
@@ -1478,6 +1505,11 @@ char *h2_huffman_decode(const unsigned char *src, size_t src_len, size_t *out_le
     int bit_cnt = 0;
     size_t src_idx = 0;
     h2_huffman_node *node = h2_huffman_root;
+    /* Bits consumed since the last symbol, and whether all were 1s: the
+     * final padding must be a 1-bit EOS prefix shorter than 8 bits
+     * (RFC 7541 section 5.2). */
+    unsigned pad_bits = 0;
+    bool pad_ones = true;
 
     while (src_idx < src_len || bit_cnt > 0) {
         /* Keep the bit buffer filled with up to 24 bits. */
@@ -1506,6 +1538,8 @@ char *h2_huffman_decode(const unsigned char *src, size_t src_len, size_t *out_le
                 }
                 out[out_pos++] = (char)entry.symbol;
                 bit_cnt -= entry.bits;
+                pad_bits = 0;
+                pad_ones = true;
                 continue;
             }
         }
@@ -1514,6 +1548,8 @@ char *h2_huffman_decode(const unsigned char *src, size_t src_len, size_t *out_le
         if (bit_cnt > 0) {
             int bit = (bit_buf >> (bit_cnt - 1)) & 1;
             bit_cnt--;
+            pad_bits++;
+            if (!bit) pad_ones = false;
             node = node->child[bit];
             if (!node) {
                 cwist_free(out);
@@ -1535,21 +1571,17 @@ char *h2_huffman_decode(const unsigned char *src, size_t src_len, size_t *out_le
                 }
                 out[out_pos++] = (char)node->symbol;
                 node = h2_huffman_root;
+                pad_bits = 0;
+                pad_ones = true;
             }
         } else {
             break;
         }
     }
 
-    if (node != h2_huffman_root) {
-        h2_huffman_node *check = node;
-        while (check && !check->is_terminal) {
-            check = check->child[1];
-        }
-        if (!check || check->symbol != 256) {
-            cwist_free(out);
-            return NULL;
-        }
+    if (node != h2_huffman_root && (pad_bits > 7 || !pad_ones)) {
+        cwist_free(out);
+        return NULL;
     }
 
     out[out_pos] = '\0';
@@ -1810,9 +1842,11 @@ static int h2_decode_header_block(h2_conn *hc, h2_stream *s, const unsigned char
     st.seen_regular = !is_request;
     st.is_request = is_request;
     bool stream_error = false;
+    bool field_seen = false; /* RFC 7541 section 4.2: size updates come first */
 
     while (pos < len) {
         uint8_t b = payload[pos];
+        if ((b & 0xE0) != 0x20) field_seen = true;
         uint32_t name_index = 0;
         char *name = NULL;
         char *value = NULL;
@@ -1841,6 +1875,7 @@ static int h2_decode_header_block(h2_conn *hc, h2_stream *s, const unsigned char
         }
 
         if ((b & 0xE0) == 0x20) {
+            if (field_seen) return H2_DECODE_COMPRESSION_ERROR;
             uint32_t new_size = 0;
             if (h2_decode_integer(payload, len, &pos, 5, &new_size) != 0)
                 return H2_DECODE_COMPRESSION_ERROR;
@@ -2972,10 +3007,34 @@ static bool h2_content_length_matches(const h2_stream *s) {
 }
 
 static int h2_reject_content_length(h2_conn *hc, h2_stream *s) {
-    uint8_t rst[4] = {0, 0, 0, H2_ERR_PROTOCOL_ERROR};
-    h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, s->stream_id, rst, sizeof(rst));
+    h2_write_rst_raw(hc, s->stream_id, H2_ERR_PROTOCOL_ERROR);
     h2_stream_remove(hc, s->stream_id);
     return 1;
+}
+
+/**
+ * @brief Validate a header block that arrived on an already open stream.
+ * Called after the block was decoded, so the HPACK state stays in sync.
+ * RFC 9113 section 5.1: HEADERS on a half-closed (remote) stream is a
+ * STREAM_CLOSED stream error. Section 8.1: a second header block on a request
+ * is a trailer section and must carry END_STREAM.
+ * @retval 0 Valid trailers.
+ * @retval 1 Stream reset; framing continues.
+ * @retval -2 Outbound RST budget exhausted; GOAWAY already sent.
+ */
+static int h2_check_followup_headers(h2_conn *hc, h2_stream *s, bool end_stream) {
+    uint32_t err = 0;
+    if (s->remote_closed)
+        err = H2_ERR_STREAM_CLOSED;
+    else if (!end_stream)
+        err = H2_ERR_PROTOCOL_ERROR;
+    if (!err) return 0;
+    uint32_t id = s->stream_id;
+    if (s->hook_ctx && hc->hooks && hc->hooks->on_cancel)
+        hc->hooks->on_cancel(hc->hook_ctx, s->hook_ctx);
+    int rst_rc = h2_send_rst_stream(hc, id, err);
+    h2_stream_remove(hc, id);
+    return rst_rc == -2 ? -2 : 1;
 }
 
 /**
@@ -3016,7 +3075,9 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
             if (!s) return goaway_sent ? -2 : (refused ? 1 : -1);
         }
         if (payload && block_len > 0) {
-            return h2_decode_stream_headers(hc, s, payload + block_offset, block_len, is_new);
+            int rc = h2_decode_stream_headers(hc, s, payload + block_offset, block_len, is_new);
+            if (rc != 0 || is_new) return rc;
+            return h2_check_followup_headers(hc, s, end_stream);
         }
         /* An empty request header block still owes :method and :path. */
         if (is_new) {
@@ -3024,7 +3085,7 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
             h2_stream_remove(hc, stream_id);
             return (rst_rc == -2) ? -2 : 1;
         }
-        return 0;
+        return h2_check_followup_headers(hc, s, end_stream);
     }
 
     if (block_len > CWIST_HTTP2_MAX_HEADER_BLOCK_SIZE) {
@@ -3141,6 +3202,9 @@ static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id, const unsigne
         }
         if (s && hc->cont_buf && hc->cont_len > 0) {
             rc = h2_decode_stream_headers(hc, s, hc->cont_buf, hc->cont_len, is_new);
+            if (rc == 0 && !is_new) rc = h2_check_followup_headers(hc, s, hc->cont_end_stream);
+        } else if (s && !is_new) {
+            rc = h2_check_followup_headers(hc, s, hc->cont_end_stream);
         } else if (s && is_new) {
             /* Empty request header block: mandatory pseudo-headers missing. */
             int rst_rc = h2_send_rst_stream(hc, s->stream_id, H2_ERR_PROTOCOL_ERROR);
@@ -3228,29 +3292,35 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
  * @param stream_id Stream to credit (0 = connection-level).
  * @param payload 4-byte increment with the reserved high bit masked.
  * @param len Must be exactly 4.
- * @retval 0 Credit applied or ignored.
- * @retval -1 Malformed frame, non-positive increment, or window overflow;
- *         caller sends GOAWAY.
+ * @retval 0 Credit applied or ignored (closed stream, RFC 9113 section 6.9).
+ * @retval >0 Stream error: the H2_ERR_* code to reset @p stream_id with
+ *         (zero increment or stream window overflow, section 6.9.1).
+ * @retval -1 Connection error PROTOCOL_ERROR (idle stream or zero
+ *         connection-level increment).
+ * @retval -2 Connection error FLOW_CONTROL_ERROR (connection window
+ *         overflow).
  */
 static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id, const unsigned char *payload,
                                    size_t len) {
     if (len != 4) return -1;
 
     int32_t increment = (int32_t)h2_get_u31(payload);
-    if (increment <= 0) return -1;
 
     if (stream_id == 0) {
-        if ((uint64_t)hc->fc.send_window + (uint32_t)increment > CWIST_HTTP2_MAX_WINDOW) return -1;
+        if (increment <= 0) return -1;
+        if ((uint64_t)hc->fc.send_window + (uint32_t)increment > CWIST_HTTP2_MAX_WINDOW) return -2;
         hc->fc.send_window += (uint32_t)increment;
     } else {
         h2_stream *s = h2_stream_find(hc, stream_id);
         if (!s) {
-            /* RFC 7540: WINDOW_UPDATE on closed stream is a STREAM_CLOSED error
-             * or may be ignored depending on state. We ignore for leniency. */
+            /* Idle client stream: connection error (section 5.1). A closed
+             * stream may still see WINDOW_UPDATE in flight; ignore it. */
+            if ((stream_id & 1u) && stream_id > hc->last_processed_stream_id) return -1;
             return 0;
         }
+        if (increment <= 0) return H2_ERR_PROTOCOL_ERROR;
         int64_t next = (int64_t)s->fc.send_window + (uint32_t)increment;
-        if (next > CWIST_HTTP2_MAX_WINDOW) return -1;
+        if (next > CWIST_HTTP2_MAX_WINDOW) return H2_ERR_FLOW_CONTROL_ERROR;
         s->fc.send_window = (int32_t)next;
     }
     h2_fc_credit_signal(hc);
@@ -3277,6 +3347,8 @@ static int cwist_http2_verify_preface(h2_conn *hc) {
     }
 
     if (memcmp(buffer, CWIST_HTTP2_CONNECTION_PREFACE, CWIST_HTTP2_CONNECTION_PREFACE_LEN) != 0) {
+        /* RFC 9113 section 3.4: an invalid preface is a connection error. */
+        if (h2_send_goaway(hc, 0, H2_ERR_PROTOCOL_ERROR) == 0) (void)h2_out_flush(hc);
         return -1;
     }
 
@@ -3706,6 +3778,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
 
         switch (type) {
             case CWIST_HTTP2_FRAME_SETTINGS: {
+                if (stream_id != 0) { /* RFC 9113 section 6.5 */
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    connected = false;
+                    break;
+                }
                 int settings_rc =
                     h2_handle_settings(hc, payload, len, flags & CWIST_HTTP2_FLAG_ACK);
                 if (settings_rc != 0) {
@@ -3739,7 +3816,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     block_len -= (size_t)pad_len + 1;
                 }
                 if (flags & CWIST_HTTP2_FLAG_PRIORITY) {
-                    if (block_len < 5) {
+                    if (block_len < 5 || h2_get_u31(payload + block_offset) == stream_id) {
+                        /* Truncated priority, or a stream depending on itself
+                         * (RFC 9113 section 5.3.1). Escalated to a connection
+                         * error: the header block is not decoded, so the HPACK
+                         * state could not stay in sync with a stream reset. */
                         h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                         connected = false;
                         break;
@@ -3765,6 +3846,9 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 }
                 {
                     h2_stream *s = h2_stream_find(hc, stream_id);
+                    if (s && (flags & CWIST_HTTP2_FLAG_END_STREAM) &&
+                        (flags & CWIST_HTTP2_FLAG_END_HEADERS))
+                        s->remote_closed = true;
                     if (s && s->hook_ctx) {
                         /* Client trailers on a hook-taken stream: END_STREAM
                          * terminates the inbound message flow. */
@@ -3846,6 +3930,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                 }
                 if ((flags & CWIST_HTTP2_FLAG_END_HEADERS) && hc->cont_end_stream) {
                     h2_stream *s = h2_stream_find(hc, stream_id);
+                    if (s) s->remote_closed = true;
                     if (s && s->req && !h2_content_length_matches(s)) {
                         h2_reject_content_length(hc, s);
                         break;
@@ -3905,16 +3990,33 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     data_len = len - 1 - payload[0];
                 }
                 h2_stream *s = h2_stream_find(hc, stream_id);
-                if (!s) {
-                    /* DATA on closed/unknown stream: must check if it violates flow control */
-                    /* For simplicity, we treat it as a stream error by ignoring the data
-                     * but still accounting connection-level window. */
+                if (!s && (stream_id & 1u) && stream_id > hc->last_processed_stream_id) {
+                    /* RFC 9113 section 5.1: DATA on an idle stream. */
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    connected = false;
+                    break;
+                }
+                if (!s || s->remote_closed) {
+                    /* Closed or half-closed (remote) stream. The payload still
+                     * counts against the connection window (section 6.9). */
                     if (!cwist_http2_flow_control_receive(&hc->fc, len)) {
                         h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
                         connected = false;
-                    } else {
-                        cwist_http2_flow_control_consume(&hc->fc, len);
+                        break;
                     }
+                    cwist_http2_flow_control_consume(&hc->fc, len);
+                    if (h2_auto_window_update(hc, NULL) != 0) {
+                        connected = false;
+                        break;
+                    }
+                    /* Frames racing our own RST_STREAM are ignored; otherwise
+                     * this is a STREAM_CLOSED stream error. */
+                    if (!s && h2_was_locally_reset(hc, stream_id)) break;
+                    if (s && s->hook_ctx && hooks && hooks->on_cancel)
+                        hooks->on_cancel(hc->hook_ctx, s->hook_ctx);
+                    int rst_rc = h2_send_rst_stream(hc, stream_id, H2_ERR_STREAM_CLOSED);
+                    if (s) h2_stream_remove(hc, stream_id);
+                    if (rst_rc != 0) connected = false;
                     break;
                 }
                 if (len > 0) {
@@ -3938,6 +4040,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     /* Hook-taken stream: DATA is fed to the hook as it
                      * arrives instead of being buffered for dispatch. */
                     int end_stream = (flags & CWIST_HTTP2_FLAG_END_STREAM) != 0;
+                    if (end_stream) s->remote_closed = true;
                     if (end_stream && !hc->sequenced_data && !h2_content_length_matches(s)) {
                         h2_reject_content_length(hc, s);
                         s = NULL;
@@ -3977,9 +4080,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                                 /* A conflicting duplicate is corruption, not a
                                  * retransmission.  Refuse the stream without
                                  * exposing a mixed body to the application. */
-                                uint8_t rst[4] = {0, 0, 0, H2_ERR_PROTOCOL_ERROR};
-                                h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst,
-                                               sizeof(rst));
+                                h2_write_rst_raw(hc, stream_id, H2_ERR_PROTOCOL_ERROR);
                                 h2_stream_remove(hc, stream_id);
                                 break;
                             }
@@ -3987,8 +4088,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         /* Malformed sequence chunks are ignored (discarded). */
                     } else if (!hc->sequenced_data) {
                         if (s->req->body->size + data_len > CWIST_HTTP_MAX_BODY_SIZE) {
-                            uint8_t rst[4] = {0, 0, 0, H2_ERR_REFUSED_STREAM};
-                            h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst, 4);
+                            h2_write_rst_raw(hc, stream_id, H2_ERR_REFUSED_STREAM);
                             h2_stream_remove(hc, stream_id);
                             break;
                         }
@@ -3997,6 +4097,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     }
                 }
                 if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
+                    s->remote_closed = true;
                     /* No assembler means no sequenced chunks ever arrived;
                      * an empty DATA END_STREAM is a complete empty body. */
                     bool sequence_complete = !hc->sequenced_data || !s->body_assembler;
@@ -4019,9 +4120,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                          * HTTP/2 represents "retry this unprocessed request"
                          * with REFUSED_STREAM.  Never call the handler with a
                          * partial sequenced body. */
-                        uint8_t rst[4] = {0, 0, 0, H2_ERR_REFUSED_STREAM};
-                        h2_write_frame(hc, CWIST_HTTP2_FRAME_RST_STREAM, 0, stream_id, rst,
-                                       sizeof(rst));
+                        h2_write_rst_raw(hc, stream_id, H2_ERR_REFUSED_STREAM);
                         h2_auto_window_update(hc, s);
                         h2_stream_remove(hc, stream_id);
                         break;
@@ -4101,6 +4200,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
 
             case CWIST_HTTP2_FRAME_PING: {
+                if (stream_id != 0) { /* RFC 9113 section 6.7 */
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    connected = false;
+                    break;
+                }
                 if (len != 8) {
                     h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
                     connected = false;
@@ -4140,12 +4244,58 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     connected = false;
                     break;
                 }
-                if (h2_handle_window_update(hc, stream_id, payload, len) != 0) {
-                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FLOW_CONTROL_ERROR);
+                int wu_rc = h2_handle_window_update(hc, stream_id, payload, len);
+                if (wu_rc < 0) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id,
+                                   wu_rc == -2 ? H2_ERR_FLOW_CONTROL_ERROR : H2_ERR_PROTOCOL_ERROR);
                     connected = false;
+                } else if (wu_rc > 0) {
+                    /* Stream error: reset only the offending stream. */
+                    h2_stream *ws = h2_stream_find(hc, stream_id);
+                    if (ws && ws->hook_ctx && hooks && hooks->on_cancel)
+                        hooks->on_cancel(hc->hook_ctx, ws->hook_ctx);
+                    int rst_rc = h2_send_rst_stream(hc, stream_id, (uint32_t)wu_rc);
+                    h2_stream_remove(hc, stream_id);
+                    if (rst_rc != 0) connected = false;
                 }
                 break;
             }
+
+            case CWIST_HTTP2_FRAME_PRIORITY: {
+                /* RFC 9113 section 6.3: the priority scheme is deprecated and
+                 * the signal is ignored, but the frame is still validated. */
+                if (stream_id == 0) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    connected = false;
+                    break;
+                }
+                uint32_t prio_err = 0;
+                if (len != 5)
+                    prio_err = H2_ERR_FRAME_SIZE_ERROR;
+                else if (h2_get_u31(payload) == stream_id) /* section 5.3.1 */
+                    prio_err = H2_ERR_PROTOCOL_ERROR;
+                if (!prio_err) break;
+                if ((stream_id & 1u) && stream_id > hc->last_processed_stream_id) {
+                    /* RST_STREAM must not be sent on an idle stream. */
+                    h2_send_goaway(hc, hc->last_processed_stream_id, prio_err);
+                    connected = false;
+                    break;
+                }
+                {
+                    h2_stream *ps = h2_stream_find(hc, stream_id);
+                    if (ps && ps->hook_ctx && hooks && hooks->on_cancel)
+                        hooks->on_cancel(hc->hook_ctx, ps->hook_ctx);
+                }
+                if (h2_send_rst_stream(hc, stream_id, prio_err) != 0) connected = false;
+                h2_stream_remove(hc, stream_id);
+                break;
+            }
+
+            case CWIST_HTTP2_FRAME_PUSH_PROMISE:
+                /* RFC 9113 section 8.4: a client cannot push. */
+                h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                connected = false;
+                break;
 
             default:
                 /* Unknown frames MUST be ignored (RFC 7540 Section 5.5) */
