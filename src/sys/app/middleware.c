@@ -568,6 +568,7 @@ static void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_respon
         res->status_code = CWIST_HTTP_UNAUTHORIZED;
         cwist_sstring_assign(res->body, "{\"error\":\"Missing Authorization header\"}");
         cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+        cwist_http_header_add(&res->headers, "WWW-Authenticate", "Bearer realm=\"api\"");
         return;
     }
 
@@ -576,6 +577,8 @@ static void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_respon
         res->status_code = CWIST_HTTP_UNAUTHORIZED;
         cwist_sstring_assign(res->body, "{\"error\":\"Invalid Authorization scheme\"}");
         cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+        cwist_http_header_add(&res->headers, "WWW-Authenticate",
+                              "Bearer realm=\"api\", error=\"invalid_request\"");
         return;
     }
 
@@ -587,6 +590,8 @@ static void cwist_mw_jwt_auth_handler(cwist_http_request *req, cwist_http_respon
         res->status_code = CWIST_HTTP_UNAUTHORIZED;
         cwist_sstring_assign(res->body, "{\"error\":\"Invalid or expired token\"}");
         cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+        cwist_http_header_add(&res->headers, "WWW-Authenticate",
+                              "Bearer realm=\"api\", error=\"invalid_token\"");
         return;
     }
 
