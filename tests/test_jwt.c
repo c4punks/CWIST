@@ -10,6 +10,9 @@
 #include <assert.h>
 #include <limits.h>
 #include <time.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
+#include <stdlib.h>
 
 static void test_sign_and_verify(void) {
     printf("Testing JWT sign and verify...\n");
@@ -308,6 +311,48 @@ static void test_input_shape_and_time_bounds(void) {
     printf("  Passed input shape and time bounds.\n");
 }
 
+static void test_b64url(const unsigned char *input, size_t len, char *out) {
+    EVP_EncodeBlock((unsigned char *)out, input, (int)len);
+    for (char *p = out; *p; p++) {
+        if (*p == '+') *p = '-';
+        if (*p == '/') *p = '_';
+    }
+    size_t out_len = strlen(out);
+    while (out_len && out[out_len - 1] == '=') out[--out_len] = '\0';
+}
+
+static char *sign_test_token(const char *header, const char *payload, const char *secret) {
+    char header64[256], payload64[512], signature64[64];
+    test_b64url((const unsigned char *)header, strlen(header), header64);
+    test_b64url((const unsigned char *)payload, strlen(payload), payload64);
+    char signing_input[1024];
+    int input_len = snprintf(signing_input, sizeof(signing_input), "%s.%s", header64, payload64);
+    assert(input_len > 0 && (size_t)input_len < sizeof(signing_input));
+    unsigned char signature[EVP_MAX_MD_SIZE];
+    unsigned int signature_len = 0;
+    assert(HMAC(EVP_sha256(), secret, (int)strlen(secret), (unsigned char *)signing_input,
+                (size_t)input_len, signature, &signature_len) != NULL);
+    test_b64url(signature, signature_len, signature64);
+    size_t token_len = strlen(signing_input) + strlen(signature64) + 2;
+    char *token = malloc(token_len);
+    assert(token != NULL);
+    snprintf(token, token_len, "%s.%s", signing_input, signature64);
+    return token;
+}
+
+static void test_crit_and_exact_expiry(void) {
+    char *token = sign_test_token("{\"alg\":\"HS256\",\"typ\":\"JWT\",\"crit\":[\"exp\"]}",
+                                  "{\"sub\":\"1\"}", "secret");
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    free(token);
+
+    char payload[128];
+    snprintf(payload, sizeof(payload), "{\"sub\":\"1\",\"exp\":%ld}", (long)time(NULL));
+    token = sign_test_token("{\"alg\":\"HS256\",\"typ\":\"JWT\"}", payload, "secret");
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    free(token);
+}
+
 int main(void) {
     test_input_shape_and_time_bounds();
     test_malformed_time_claim_types();
@@ -321,6 +366,7 @@ int main(void) {
     test_sign_verify_chunks();
     test_malformed_b64url_remainder();
     test_corrupt_chunk_feed();
+    test_crit_and_exact_expiry();
     printf("All JWT tests passed!\n");
     return 0;
 }

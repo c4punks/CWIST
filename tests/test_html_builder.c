@@ -114,12 +114,30 @@ void test_void_elements(void) {
     printf("Passed test_void_elements\n");
 }
 
+static void test_invalid_names(void) {
+    assert(cwist_html_element_create("x onload=alert(1)") == NULL);
+    assert(cwist_html_element_create("a><script>") == NULL);
+    assert(cwist_html_element_create("custom-element") != NULL);
+    cwist_html_element_t *el = cwist_html_element_create("div");
+    assert(el != NULL);
+    cwist_html_element_add_attr(el, "x onload=alert(1)", "bad");
+    cwist_html_element_add_attr(el, "safe", "ok");
+    cJSON_AddStringToObject(el->attributes, "bad/name", "bad");
+    cwist_sstring *rendered = cwist_html_render(el);
+    assert(rendered != NULL);
+    assert(strcmp(rendered->data, "<div safe=\"ok\"></div>") == 0);
+    cwist_sstring_destroy(rendered);
+    cwist_html_element_destroy(el);
+    printf("Passed test_invalid_names\n");
+}
+
 int main(void) {
     test_basic_element();
     test_attribute_escaping();
     test_boolean_and_numeric_attributes();
     test_nested_children_and_null_safety();
     test_void_elements();
+    test_invalid_names();
     printf("All HTML builder tests passed!\n");
     return 0;
 }
