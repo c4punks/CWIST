@@ -2,10 +2,12 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/csrf.h>
 #include <cwist/net/http/cookie.h>
+#include <cwist/net/http/multipart.h>
 #include <cwist/core/mem/alloc.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 
 #define CWIST_CSRF_COOKIE_NAME "csrf_token"
@@ -88,6 +90,29 @@ static int hex_value(unsigned char c) {
     return -1;
 }
 
+static char *csrf_multipart_value(const cwist_http_request *req) {
+    const char *content_type = cwist_http_header_get(req->headers, "Content-Type");
+    char *boundary = cwist_multipart_extract_boundary(content_type);
+    if (!boundary) return NULL;
+    cwist_multipart_result *parts = cwist_multipart_parse(req->body->data, req->body->size, boundary);
+    cwist_free(boundary);
+    if (!parts) return NULL;
+    char *value = NULL;
+    for (cwist_multipart_field *field = parts->fields; field; field = field->next) {
+        if (!field->name || (strcmp(field->name, "_csrf") != 0 &&
+                             strcmp(field->name, "csrf_token") != 0))
+            continue;
+        value = cwist_alloc(field->data_len + 1);
+        if (value) {
+            if (field->data_len) memcpy(value, field->data, field->data_len);
+            value[field->data_len] = '\0';
+        }
+        break;
+    }
+    cwist_multipart_result_destroy(parts);
+    return value;
+}
+
 /**
  * @brief Extract and URL-decode the CSRF token from a form-encoded body.
  * Scans the request body for a "_csrf" or "csrf_token" field and decodes
@@ -101,6 +126,12 @@ static int hex_value(unsigned char c) {
  */
 static char *csrf_form_value(const cwist_http_request *req) {
     if (!req || !req->body || !req->body->data) return NULL;
+    const char *content_type = cwist_http_header_get(req->headers, "Content-Type");
+    if (content_type && strncasecmp(content_type, "multipart/form-data", 19) == 0)
+        return csrf_multipart_value(req);
+    if (content_type &&
+        strncasecmp(content_type, "application/x-www-form-urlencoded", 33) != 0)
+        return NULL;
     const char *body = req->body->data;
     size_t len = req->body->size;
     size_t pos = 0;
