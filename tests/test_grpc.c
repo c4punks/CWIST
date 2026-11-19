@@ -2,6 +2,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/test_client.h>
 #include <cwist/net/grpc/grpc.h>
+#include "../../src/net/grpc/grpc_status_message.h"
 #include <cwist/core/mem/alloc.h>
 #include <assert.h>
 #include <stdio.h>
@@ -830,6 +831,28 @@ int main(void) {
         cwist_test_client_destroy(replace_client);
         cwist_app_destroy(replace_app);
         cwist_free(replace_frame);
+    }
+
+    {
+        char *encoded = cwist_grpc_status_message_encode("100% complete\r\n");
+        assert(encoded != NULL && strcmp(encoded, "100%25 complete%0D%0A") == 0);
+        char *decoded = cwist_grpc_status_message_decode(encoded);
+        assert(decoded != NULL && strcmp(decoded, "100% complete\r\n") == 0);
+        cwist_free(encoded);
+        cwist_free(decoded);
+        decoded = cwist_grpc_status_message_decode("bad%ZZ%00");
+        assert(decoded != NULL && strcmp(decoded, "bad%ZZ%00") == 0);
+        cwist_free(decoded);
+        encoded = cwist_grpc_status_message_encode("\xec\x95\x88");
+        assert(encoded != NULL && strcmp(encoded, "%EC%95%88") == 0);
+        cwist_free(encoded);
+
+        cwist_http_response *message_res = cwist_http_response_create();
+        assert(message_res != NULL);
+        cwist_grpc_set_error(message_res, CWIST_GRPC_INVALID_ARGUMENT, "100% complete\r\n");
+        assert(strcmp(cwist_http_header_get(message_res->headers, "grpc-message"),
+                      "100%25 complete%0D%0A") == 0);
+        cwist_http_response_destroy(message_res);
     }
 
     /* grpc-timeout parsing */
