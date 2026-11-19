@@ -570,6 +570,96 @@ static void test_error_response_long_message(void) {
     printf("Passed error response with a long message.\n");
 }
 
+static void test_request_target_and_header_hardening(void) {
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\nX-A: b\r\n c\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\nGarbage\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\nX-A: b\rc\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\nX-A: b\001c\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("POST / HTTP/1.0\r\nTransfer-Encoding: chunked\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: a b\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: example.com:99999\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\nHost: h\n\n", CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET index HTTP/1.1\r\nHost: h\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET /#fragment HTTP/1.1\r\nHost: h\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("POST / HTTP/1.1\r\nHost: h\r\nContent-Length: 20000000\r\n"
+                           "Expect: 100-continue\r\n\r\n",
+                           CWIST_HTTP_PARSE_BODY_TOO_LARGE, 413);
+    expect_parse_rejection("POST / HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked\r\n\r\n"
+                           "5;bad@\r\nhello\r\n0\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+
+    static const char raw_nul[] = "GET / HTTP/1.1\r\nHost: h\r\nX-A: b\0c\r\n\r\n";
+    cwist_http_request *nul = cwist_http_parse_request_len(raw_nul, sizeof(raw_nul) - 1);
+    assert(nul == NULL);
+
+    cwist_http_request *req = expect_parse_success(
+        "GET http://other.example/a?x=1 HTTP/1.1\r\nHost: ignored.example\r\n\r\n");
+    assert(strcmp(req->path->data, "/a") == 0);
+    assert(strcmp(req->query->data, "x=1") == 0);
+    assert(strcmp(cwist_http_header_get(req->headers, "Host"), "other.example") == 0);
+    cwist_http_request_destroy(req);
+
+    req = expect_parse_success("GET http://other.example HTTP/1.1\r\nHost: h\r\n\r\n");
+    assert(strcmp(req->path->data, "/") == 0);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("OPTIONS * HTTP/1.1\r\nHost: h\r\n\r\n");
+    assert(strcmp(req->path->data, "*") == 0);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("CONNECT example.com:443 HTTP/1.1\r\nHost: example.com\r\n\r\n");
+    assert(strcmp(req->path->data, "example.com:443") == 0);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("GET / HTTP/1.1\r\nHost: h\r\nConnection: close, TE\r\n\r\n");
+    assert(!req->keep_alive);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("GET / HTTP/1.0\r\nConnection: keep-alive, TE\r\n\r\n");
+    assert(req->keep_alive);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("FOO / HTTP/1.1\r\nHost: h\r\n\r\n");
+    assert(req->method == CWIST_HTTP_UNKNOWN);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("POST / HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked\r\n\r\n"
+                               "5;name=value;quoted=\"a\\\"b\"\r\nhello\r\n0\r\n\r\n");
+    assert(req->body && strcmp(req->body->data, "hello") == 0);
+    cwist_http_request_destroy(req);
+}
+
+static void test_http10_streaming_and_date(void) {
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+    cwist_sstring_assign(res->version, "HTTP/1.0");
+    assert(cwist_http_response_stream_begin(res) == 0);
+    assert(cwist_http_response_stream_write(res, "abc", 3) == 0);
+    assert(cwist_http_response_stream_end(res) == 0);
+    char *wire = NULL;
+    size_t wire_len = 0;
+    assert(cwist_http_response_serialize(res, &wire, &wire_len) == 0);
+    assert(strstr(wire, "HTTP/1.0 200 OK\r\n") != NULL);
+    assert(strstr(wire, "Transfer-Encoding") == NULL);
+    assert(strstr(wire, "Connection: close\r\n") != NULL);
+    assert(strstr(wire, "\r\n\r\nabc") != NULL);
+    assert(strstr(wire, "3\r\nabc") == NULL);
+    free(wire);
+    cwist_http_response_destroy(res);
+
+    res = cwist_http_response_create();
+    assert(res != NULL);
+    char headers[1024];
+    size_t header_len = cwist_http_serialize_headers(res, headers, sizeof(headers));
+    assert(header_len > 0 && header_len < sizeof(headers));
+    headers[header_len] = '\0';
+    assert(strstr(headers, "Date: ") != NULL);
+    cwist_http_response_destroy(res);
+}
+
 int main() {
     test_methods();
     test_request_lifecycle();
@@ -582,6 +672,8 @@ int main() {
     test_cl_te_smuggling_rules();
     test_malformed_request_line();
     test_expect_100_continue_flow();
+    test_request_target_and_header_hardening();
+    test_http10_streaming_and_date();
     test_head_response_headers_only();
     test_no_content_statuses();
     test_response_header_overflow();

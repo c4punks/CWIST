@@ -2534,6 +2534,8 @@ int headers_have_content_length(cwist_http_header_node *headers) {
  * @return Number of bytes written, or 0 when the complete block does not fit.
  */
 static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_size) {
+    const bool http10 = res->version && res->version->data && res->version->size == 8 &&
+                        memcmp(res->version->data, "HTTP/1.0", 8) == 0;
     const bool bodyless = CWIST_HTTP_STATUS_FORBIDS_BODY(res->status_code);
     size_t body_len = 0;
     if (!bodyless) {
@@ -2550,7 +2552,7 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
      * Streamed responses take the general path: chunked mode needs the
      * Transfer-Encoding header the fast path cannot emit. */
     if (res->status_code == 200 && !res->headers && !res->alt_svc && !res->stream_mode &&
-        buf_size >= 128) {
+        !http10 && buf_size >= 128) {
         /* Compact ring/line buffer optimization for high-throughput pipelining */
         static const char status_prefix[] = "HTTP/1.1 200 OK\r\nContent-Length: ";
         memcpy(buf, status_prefix, sizeof(status_prefix) - 1);
@@ -2567,6 +2569,13 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         size_t num_len = (num_buf + sizeof(num_buf)) - p;
         memcpy(buf + offset, p, num_len);
         offset += num_len;
+
+        char date_str[36];
+        if (cwist_get_cached_date_header(date_str)) {
+            memcpy(buf + offset, "\r\nDate: ", 8);
+            memcpy(buf + offset + 8, date_str, 29);
+            offset += 37;
+        }
 
         if (res->keep_alive) {
             static const char conn_ka[] = "\r\nConnection: keep-alive\r\n\r\n";
@@ -2670,7 +2679,7 @@ static size_t serialize_headers(cwist_http_response *res, char *buf, size_t buf_
         offset += 37;
     }
 
-    if (!bodyless && res->stream_mode && !have_te && !have_clen) {
+    if (!bodyless && res->stream_mode && !http10 && !have_te && !have_clen) {
         static const char te_chunked[] = "Transfer-Encoding: chunked\r\n";
         if (offset + sizeof(te_chunked) - 1 > buf_size) return 0;
         memcpy(buf + offset, te_chunked, sizeof(te_chunked) - 1);
@@ -4274,11 +4283,66 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
     return s;
 }
 
-/**
- * @brief Parse a raw HTTP request buffer into a CWIST request object.
- * @param raw_request NUL-terminated request buffer containing headers and optional body.
- * @return Parsed request object, or NULL on malformed input.
- */
+static bool http_host_is_valid(const char *host, size_t len) {
+    if (!host || len == 0) return false;
+    size_t pos = 0;
+    if (host[0] == '[') {
+        const char *close = memchr(host, ']', len);
+        if (!close || close == host + 1) return false;
+        for (size_t i = 1; i < (size_t)(close - host); i++) {
+            unsigned char c = (unsigned char)host[i];
+            if (!isxdigit(c) && c != ':' && c != '.' && c != '%') return false;
+        }
+        pos = (size_t)(close - host) + 1;
+    } else {
+        while (pos < len && host[pos] != ':') {
+            unsigned char c = (unsigned char)host[pos];
+            if (isalnum(c) || c == '-' || c == '.' || c == '_' || c == '~' || c == '!' ||
+                c == '$' || c == '&' || c == '\'' || c == '(' || c == ')' || c == '*' ||
+                c == '+' || c == ',' || c == ';' || c == '=') {
+                pos++;
+            } else if (c == '%' && pos + 2 < len && isxdigit((unsigned char)host[pos + 1]) &&
+                       isxdigit((unsigned char)host[pos + 2])) {
+                pos += 3;
+            } else {
+                return false;
+            }
+        }
+        if (pos == 0) return false;
+    }
+    if (pos == len) return true;
+    if (host[pos++] != ':' || pos == len) return false;
+    unsigned long port = 0;
+    for (; pos < len; pos++) {
+        unsigned char c = (unsigned char)host[pos];
+        if (!isdigit(c) || port > 65535) return false;
+        port = port * 10 + (unsigned long)(c - '0');
+    }
+    return port <= 65535;
+}
+
+static bool http_header_token_present(const char *value, size_t len, const char *wanted) {
+    size_t wanted_len = strlen(wanted);
+    size_t pos = 0;
+    while (pos < len) {
+        while (pos < len && (value[pos] == ' ' || value[pos] == '\t' || value[pos] == ',')) pos++;
+        size_t start = pos;
+        while (pos < len && value[pos] != ',') pos++;
+        size_t end = pos;
+        while (end > start && (value[end - 1] == ' ' || value[end - 1] == '\t')) end--;
+        if (end - start == wanted_len && strncasecmp(value + start, wanted, wanted_len) == 0)
+            return true;
+    }
+    return false;
+}
+
+static bool http_has_bare_lf(const char *buf, size_t len) {
+    for (size_t i = 0; i < len; i++) {
+        if (buf[i] == '\n' && (i == 0 || buf[i - 1] != '\r')) return true;
+    }
+    return false;
+}
+
 /**
  * @brief Validate the combined Transfer-Encoding header list (RFC 9112 section 6.1).
  * Headers are prepended during parsing, so the first TE node found is the
@@ -4335,6 +4399,8 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
                                          cwist_http_parse_error_t *err_out) {
     if (!raw_request || !header_end) return NULL;
 
+    const char *absolute_authority = NULL;
+    size_t absolute_authority_len = 0;
     const char *line_start = raw_request;
     const char *line_end = cwist_simd_find_crlf(line_start, (size_t)(header_end - line_start + 2));
     if (!line_end || line_end > header_end) {
@@ -4378,12 +4444,48 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
 
         const char *path_start = sp1 + 1;
         const char *path_end = sp2;
+        size_t target_len = (size_t)(path_end - path_start);
+        if (target_len == 0 || memchr(path_start, '#', target_len)) goto malformed_request;
+        if (path_start[0] != '/' && !(target_len == 1 && path_start[0] == '*' &&
+                                      req->method == CWIST_HTTP_OPTIONS) &&
+            req->method != CWIST_HTTP_CONNECT) {
+            const char *scheme = path_start;
+            const char *scheme_end = NULL;
+            for (size_t i = 0; i < target_len; i++) {
+                if (path_start[i] == ':' && i + 2 < target_len && path_start[i + 1] == '/' &&
+                    path_start[i + 2] == '/') {
+                    scheme_end = path_start + i;
+                    break;
+                }
+                unsigned char c = (unsigned char)path_start[i];
+                if ((i == 0 && !isalpha(c)) ||
+                    (i > 0 && !isalnum(c) && c != '+' && c != '-' && c != '.'))
+                    goto malformed_request;
+            }
+            if (!scheme_end || scheme_end == scheme) goto malformed_request;
+            absolute_authority = scheme_end + 3;
+            const char *authority_end = absolute_authority;
+            while (authority_end < path_end && *authority_end != '/' && *authority_end != '?')
+                authority_end++;
+            absolute_authority_len = (size_t)(authority_end - absolute_authority);
+            if (!http_host_is_valid(absolute_authority, absolute_authority_len))
+                goto malformed_request;
+            path_start = authority_end;
+        }
+
+        if (req->method == CWIST_HTTP_CONNECT &&
+            !http_host_is_valid(path_start, (size_t)(path_end - path_start)))
+            goto malformed_request;
         const char *query_sep =
             (const char *)memchr(path_start, '?', (size_t)(path_end - path_start));
-
+        bool absolute_root = absolute_authority && path_start == path_end;
         if (query_sep) {
-            cwist_http_sstring_assign_arena(req->path, (cwist_arena_t *)req->arena, path_start,
-                                            (size_t)(query_sep - path_start));
+            bool absolute_query_root = absolute_authority && query_sep == path_start;
+            cwist_http_sstring_assign_arena(req->path, (cwist_arena_t *)req->arena,
+                                            absolute_query_root ? "/" : path_start,
+                                            absolute_query_root
+                                                ? 1
+                                                : (size_t)(query_sep - path_start));
             cwist_http_sstring_assign_arena(req->query, (cwist_arena_t *)req->arena, query_sep + 1,
                                             (size_t)(path_end - (query_sep + 1)));
             req->query_params = cwist_query_map_create_in_arena(req->arena);
@@ -4391,8 +4493,9 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
                 cwist_query_map_parse(req->query_params, req->query->data);
             }
         } else {
-            cwist_http_sstring_assign_arena(req->path, (cwist_arena_t *)req->arena, path_start,
-                                            (size_t)(path_end - path_start));
+            cwist_http_sstring_assign_arena(req->path, (cwist_arena_t *)req->arena,
+                                            absolute_root ? "/" : path_start,
+                                            absolute_root ? 1 : (size_t)(path_end - path_start));
             cwist_http_sstring_assign_arena(req->query, (cwist_arena_t *)req->arena, "", 0);
         }
 
@@ -4407,37 +4510,41 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
 
     // 2. Headers (SIMD colon and CRLF scanning + SWAR)
     /* RFC 9110/9112 validation state tracked during the single header pass. */
-    bool has_host = false, host_dup = false, host_empty = false;
+    bool has_host = false, host_dup = false, host_empty = false, host_bad = false;
     bool cl_seen = false, cl_bad = false;
     size_t cl_value = 0;
     bool te_seen = false;
     bool expect_100 = false, expect_bad = false;
-    const bool is_http11 = req->version->data && strncmp(req->version->data, "HTTP/1.1", 8) == 0;
+    bool connection_close = false, connection_keep_alive = false;
+    const bool is_http11 = req->version->data && req->version->size == 8 &&
+                           memcmp(req->version->data, "HTTP/1.1", 8) == 0;
 
     line_start = line_end + 2;
     while (line_start < header_end) {
         line_end = cwist_simd_find_crlf(line_start, (size_t)(header_end + 2 - line_start));
         if (!line_end || line_end == line_start) break;
 
+        if (*line_start == ' ' || *line_start == '\t') goto malformed_request;
         const char *colon = cwist_simd_find_char(line_start, (size_t)(line_end - line_start), ':');
+        if (!colon) goto malformed_request;
         if (colon) {
             size_t key_len = colon - line_start;
             bool valid_name = key_len > 0;
             for (size_t i = 0; i < key_len; i++) {
                 unsigned char c = (unsigned char)line_start[i];
-                if (!(isalnum(c) || strchr("!#$%&'*+-.^_`|~", c))) {
+                if (c == 0 || !(isalnum(c) || strchr("!#$%&'*+-.^_`|~", c))) {
                     valid_name = false;
                     break;
                 }
             }
-            if (!valid_name) {
-                cwist_http_request_destroy(req);
-                if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
-                return NULL;
-            }
+            if (!valid_name) goto malformed_request;
             const char *val_start = colon + 1;
-            while (val_start < line_end && *val_start == ' ') val_start++;
+            while (val_start < line_end && (*val_start == ' ' || *val_start == '\t')) val_start++;
             size_t val_len = line_end - val_start;
+            for (size_t i = 0; i < val_len; i++) {
+                unsigned char c = (unsigned char)val_start[i];
+                if ((c < 0x20 && c != '\t') || c == 0x7f) goto malformed_request;
+            }
 
             cwist_error_t herr =
                 cwist_http_header_add_ex_len(&req->headers, (cwist_arena_t *)req->arena, line_start,
@@ -4461,12 +4568,10 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
                     uint16_t w1;
                     memcpy(&w1, line_start + 8, 2);
                     if ((w1 | 0x2020) == 0x6e6f) { /* "on" */
-                        if (val_len == 5 && (val_start[0] == 'c' || val_start[0] == 'C')) {
-                            if (strncasecmp(val_start, "close", 5) == 0) req->keep_alive = false;
-                        } else if (val_len == 10 && (val_start[0] == 'k' || val_start[0] == 'K')) {
-                            if (strncasecmp(val_start, "keep-alive", 10) == 0)
-                                req->keep_alive = true;
-                        }
+                        if (http_header_token_present(val_start, val_len, "close"))
+                            connection_close = true;
+                        if (http_header_token_present(val_start, val_len, "keep-alive"))
+                            connection_keep_alive = true;
                     }
                 }
             } else if (key_len == 14 && (k0 == 'C' || k0 == 'c')) {
@@ -4510,7 +4615,11 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
                     size_t vlen = val_len;
                     while (vlen > 0 && (val_start[vlen - 1] == ' ' || val_start[vlen - 1] == '\t'))
                         vlen--;
-                    if (vlen == 0) host_empty = true;
+                    if (vlen == 0) {
+                        host_empty = true;
+                    } else if (!http_host_is_valid(val_start, vlen)) {
+                        host_bad = true;
+                    }
                 }
             } else if (key_len == 17 && (k0 == 'T' || k0 == 't')) {
                 if (strncasecmp(line_start, "Transfer-Encoding", 17) == 0) te_seen = true;
@@ -4533,24 +4642,24 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
         line_start = line_end + 2;
     }
 
-    /* RFC 9112 section 3.2: HTTP/1.1 requests must carry exactly one non-empty Host. */
-    if (is_http11 && (!has_host || host_dup || host_empty)) {
+    /* RFC 9112 section 3.2: HTTP/1.1 requests must carry exactly one valid Host. */
+    if ((is_http11 && !has_host) ||
+        (has_host && (host_dup || host_empty || host_bad)))
+        goto malformed_request;
+    if (cl_bad) goto malformed_request;
+    if (cl_seen && cl_value > CWIST_HTTP_MAX_BODY_SIZE) {
         cwist_http_request_destroy(req);
-        if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+        if (err_out) *err_out = CWIST_HTTP_PARSE_BODY_TOO_LARGE;
         return NULL;
     }
-    if (cl_bad) {
-        cwist_http_request_destroy(req);
-        if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
-        return NULL;
+    if (connection_close) {
+        req->keep_alive = false;
+    } else if (connection_keep_alive) {
+        req->keep_alive = true;
     }
     if (te_seen) {
         /* RFC 9112 section 6.3: TE and CL together are a request-smuggling vector. */
-        if (cl_seen) {
-            cwist_http_request_destroy(req);
-            if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
-            return NULL;
-        }
+        if (cl_seen || !is_http11) goto malformed_request;
         int tev = http_validate_transfer_encoding(req->headers);
         if (tev != 0) {
             cwist_http_request_destroy(req);
@@ -4568,6 +4677,15 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
     }
     req->te_chunked_seen = te_seen;
     req->expect_100_seen = expect_100;
+    if (absolute_authority) {
+        for (cwist_http_header_node *n = req->headers; n; n = n->next) {
+            if (n->key && n->key->data && strcasecmp(n->key->data, "Host") == 0) {
+                cwist_http_sstring_assign_arena(n->value, (cwist_arena_t *)req->arena,
+                                                absolute_authority, absolute_authority_len);
+                break;
+            }
+        }
+    }
 
     const char *body_start = header_end + 4;
     size_t available = raw_len - (size_t)(body_start - raw_request);
@@ -4581,6 +4699,11 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
 
     if (err_out) *err_out = CWIST_HTTP_PARSE_OK;
     return req;
+
+malformed_request:
+    cwist_http_request_destroy(req);
+    if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+    return NULL;
 }
 
 /**
@@ -4676,16 +4799,19 @@ static int cwist_response_stream_flush(cwist_http_response *res) {
 }
 
 /**
- * @brief Switch a response to chunked streaming mode.
+ * @brief Switch a response to streaming mode.
  *
- * Discards any body assigned before the switch. Incompatible with pointer
- * or file-stream bodies.
+ * HTTP/1.1 uses chunked framing. HTTP/1.0 writes raw bytes and closes the
+ * connection to delimit the body. Incompatible with pointer or file bodies.
  * @return 0 on success, -1 otherwise.
  */
 int cwist_http_response_stream_begin(cwist_http_response *res) {
     if (!res || res->stream_mode || res->is_ptr_body || res->use_file_stream) return -1;
     res->stream_mode = true;
-    /* A body assigned before begin is discarded: chunked framing owns the
+    if (res->version && res->version->data && res->version->size == 8 &&
+        memcmp(res->version->data, "HTTP/1.0", 8) == 0)
+        res->keep_alive = false;
+    /* A body assigned before begin is discarded: streaming owns the
      * payload from here on. */
     if (res->body) res->body->size = 0; /* discard any body assigned before begin */
     return 0;
@@ -4707,15 +4833,21 @@ int cwist_http_response_stream_write(cwist_http_response *res, const char *data,
         res->stream_buf = cwist_http_sstring_create(res->arena);
         if (!res->stream_buf) return -1;
     }
-    char frame_hdr[24];
-    int frame_hdr_len = snprintf(frame_hdr, sizeof(frame_hdr), "%zx\r\n", len);
-    if (frame_hdr_len <= 0) return -1;
-    cwist_error_t append_err =
-        cwist_sstring_append_len(res->stream_buf, frame_hdr, (size_t)frame_hdr_len);
-    if (cwist_error_is_ok(&append_err))
+    bool http10 = res->version && res->version->data && res->version->size == 8 &&
+                  memcmp(res->version->data, "HTTP/1.0", 8) == 0;
+    cwist_error_t append_err;
+    if (http10) {
         append_err = cwist_sstring_append_len(res->stream_buf, data, len);
-    if (cwist_error_is_ok(&append_err))
-        append_err = cwist_sstring_append_len(res->stream_buf, "\r\n", 2);
+    } else {
+        char frame_hdr[24];
+        int frame_hdr_len = snprintf(frame_hdr, sizeof(frame_hdr), "%zx\r\n", len);
+        if (frame_hdr_len <= 0) return -1;
+        append_err = cwist_sstring_append_len(res->stream_buf, frame_hdr, (size_t)frame_hdr_len);
+        if (cwist_error_is_ok(&append_err))
+            append_err = cwist_sstring_append_len(res->stream_buf, data, len);
+        if (cwist_error_is_ok(&append_err))
+            append_err = cwist_sstring_append_len(res->stream_buf, "\r\n", 2);
+    }
     if (!cwist_error_is_ok(&append_err)) return -1;
     if (cwist_response_stream_flush(res) != 0) {
         res->stream_failed = true;
@@ -4725,8 +4857,9 @@ int cwist_http_response_stream_write(cwist_http_response *res, const char *data,
 }
 
 /**
- * @brief Terminate a streaming response with the final zero-length chunk and
- * flush.
+ * @brief Terminate a streaming response and flush.
+ *
+ * HTTP/1.1 writes the final zero-length chunk. HTTP/1.0 needs no trailer.
  * @return 0 on success, -1 on error.
  */
 int cwist_http_response_stream_end(cwist_http_response *res) {
@@ -4735,12 +4868,16 @@ int cwist_http_response_stream_end(cwist_http_response *res) {
         res->stream_ended = true;
         return cwist_response_stream_flush(res);
     }
-    if (!res->stream_buf) {
-        res->stream_buf = cwist_http_sstring_create(res->arena);
-        if (!res->stream_buf) return -1;
+    bool http10 = res->version && res->version->data && res->version->size == 8 &&
+                  memcmp(res->version->data, "HTTP/1.0", 8) == 0;
+    if (!http10) {
+        if (!res->stream_buf) {
+            res->stream_buf = cwist_http_sstring_create(res->arena);
+            if (!res->stream_buf) return -1;
+        }
+        cwist_error_t end_err = cwist_sstring_append_len(res->stream_buf, "0\r\n\r\n", 5);
+        if (!cwist_error_is_ok(&end_err)) return -1;
     }
-    cwist_error_t end_err = cwist_sstring_append_len(res->stream_buf, "0\r\n\r\n", 5);
-    if (!cwist_error_is_ok(&end_err)) return -1;
     if (cwist_response_stream_flush(res) != 0) {
         res->stream_failed = true;
         return -1;
@@ -4753,10 +4890,14 @@ int cwist_http_response_stream_end(cwist_http_response *res) {
  * @brief Read and reassemble a chunked transfer-encoded body.
  * @return 0 on success, -1 on error.
  */
+static bool http_is_token_char(unsigned char c) {
+    return c != 0 && (isalnum(c) || strchr("!#$%&'*+-.^_`|~", c) != NULL);
+}
+
 static int http_parse_chunk_size(const char *line, size_t len, size_t *out_size) {
-    size_t value = 0, digits = 0;
-    for (size_t i = 0; i < len && line[i] != ';'; ++i) {
-        unsigned char c = (unsigned char)line[i];
+    size_t value = 0, pos = 0;
+    while (pos < len && line[pos] != ';' && line[pos] != ' ' && line[pos] != '\t') {
+        unsigned char c = (unsigned char)line[pos];
         unsigned int digit;
         if (c >= '0' && c <= '9')
             digit = c - '0';
@@ -4768,9 +4909,45 @@ static int http_parse_chunk_size(const char *line, size_t len, size_t *out_size)
             return -1;
         if (value > (CWIST_HTTP_MAX_BODY_SIZE - digit) / 16) return -1;
         value = value * 16 + digit;
-        ++digits;
+        ++pos;
     }
-    if (!digits) return -1;
+    if (pos == 0) return -1;
+    while (pos < len) {
+        while (pos < len && (line[pos] == ' ' || line[pos] == '\t')) pos++;
+        if (pos >= len || line[pos++] != ';') return -1;
+        while (pos < len && (line[pos] == ' ' || line[pos] == '\t')) pos++;
+        size_t name_start = pos;
+        while (pos < len && http_is_token_char((unsigned char)line[pos])) pos++;
+        if (pos == name_start) return -1;
+        while (pos < len && (line[pos] == ' ' || line[pos] == '\t')) pos++;
+        if (pos < len && line[pos] == '=') {
+            pos++;
+            while (pos < len && (line[pos] == ' ' || line[pos] == '\t')) pos++;
+            if (pos < len && line[pos] == '"') {
+                pos++;
+                bool closed = false;
+                while (pos < len) {
+                    unsigned char c = (unsigned char)line[pos++];
+                    if (c == '"') {
+                        closed = true;
+                        break;
+                    }
+                    if (c == '\\') {
+                        if (pos >= len) return -1;
+                        c = (unsigned char)line[pos++];
+                    }
+                    if ((c < 0x20 && c != '\t') || c == 0x7f) return -1;
+                }
+                if (!closed) return -1;
+            } else {
+                size_t value_start = pos;
+                while (pos < len && http_is_token_char((unsigned char)line[pos])) pos++;
+                if (pos == value_start) return -1;
+            }
+            while (pos < len && (line[pos] == ' ' || line[pos] == '\t')) pos++;
+        }
+        if (pos < len && line[pos] != ';' && line[pos] != ' ' && line[pos] != '\t') return -1;
+    }
     *out_size = value;
     return 0;
 }
@@ -4918,6 +5095,10 @@ cwist_http_request *cwist_http_receive_request(int client_fd, char *read_buf, si
     struct timespec header_start;
     clock_gettime(CLOCK_MONOTONIC, &header_start);
     while (!(header_end = (char *)cwist_simd_find_crlfcrlf(read_buf, total_received))) {
+        if (http_has_bare_lf(read_buf, total_received)) {
+            if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+            return NULL;
+        }
         if (total_received >= buf_size - 1) {
             /* Fat Cookie/Authorization combinations can legitimately push a
              * header block past the read buffer; without this trail the drop
@@ -5227,6 +5408,10 @@ cwist_recv_status_t cwist_http_receive_request_nb(cwist_http_async_conn_t *conn,
 
     char *header_end = (char *)cwist_simd_find_crlfcrlf(conn->rbuf, conn->len);
     if (!header_end) {
+        if (http_has_bare_lf(conn->rbuf, conn->len)) {
+            if (err_out) *err_out = CWIST_HTTP_PARSE_MALFORMED;
+            return CWIST_RECV_FATAL;
+        }
         if (conn->len >= CWIST_HTTP_READ_BUFFER_SIZE - 1) {
             cwist_metric_inc(cwist_metrics_registry(), CWIST_METRIC_HTTP_HEADER_OVERFLOW);
             CWIST_LOG_WARN("[http] dropping async connection: headers exceed %d-byte read buffer",
