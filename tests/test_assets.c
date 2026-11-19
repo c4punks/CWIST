@@ -6,6 +6,9 @@
 #include <cwist/core/html/component.h>
 #include <cwist/core/html/css_composer.h>
 #include <cwist/net/http/html_response.h>
+#include <pthread.h>
+#include <sched.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -357,8 +360,48 @@ static void test_pipeline(void) {
     printf("Passed test_pipeline\n");
 }
 
+typedef struct {
+    cwist_app *app;
+    _Atomic int *start;
+    int index;
+    bool success;
+} asset_thread_args;
+
+static void *asset_add_worker(void *arg) {
+    asset_thread_args *args = arg;
+    while (!atomic_load_explicit(args->start, memory_order_acquire)) sched_yield();
+    char name[64];
+    snprintf(name, sizeof(name), "css/thread-%d.css", args->index);
+    args->success = ok(cwist_app_asset_add(args->app, name, APP_CSS, strlen(APP_CSS), NULL));
+    return NULL;
+}
+
+static void test_concurrent_first_registration(void) {
+    enum { THREADS = 8 };
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    pthread_t threads[THREADS];
+    asset_thread_args args[THREADS];
+    _Atomic int start = 0;
+    for (int i = 0; i < THREADS; i++) {
+        args[i] = (asset_thread_args){.app = app, .start = &start, .index = i};
+        assert(pthread_create(&threads[i], NULL, asset_add_worker, &args[i]) == 0);
+    }
+    atomic_store_explicit(&start, 1, memory_order_release);
+    for (int i = 0; i < THREADS; i++) {
+        assert(pthread_join(threads[i], NULL) == 0);
+        assert(args[i].success);
+        char name[64];
+        snprintf(name, sizeof(name), "css/thread-%d.css", i);
+        assert(cwist_app_asset_url(app, name) != NULL);
+    }
+    cwist_app_destroy(app);
+    printf("Passed test_concurrent_first_registration\n");
+}
+
 int main(void) {
     printf("Testing content-hashed assets...\n");
+    test_concurrent_first_registration();
     test_serving();
     test_names_and_types();
     test_prefix_and_file();

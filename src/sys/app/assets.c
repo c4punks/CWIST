@@ -12,6 +12,7 @@
 #include <cwist/sys/app/assets.h>
 #include <cwist/core/crypto/sha256.h>
 #include <cwist/core/mem/alloc.h>
+#include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
@@ -71,7 +72,8 @@ static char *normalize_prefix(const char *url_prefix) {
     return out;
 }
 
-/** Whether `name` is a non-empty relative path of safe segments (no ".", "..", or empty segments). */
+/** Whether `name` is a non-empty relative path of safe segments (no ".", "..", or empty segments).
+ */
 static bool name_is_valid(const char *name) {
     if (!name || !*name || name[0] == '/') return false;
     const char *seg = name;
@@ -86,11 +88,8 @@ static bool name_is_valid(const char *name) {
             seg = p + 1;
             continue;
         }
-        bool ok = (c >= 'a' && c <= 'z')
-            || (c >= 'A' && c <= 'Z')
-            || (c >= '0' && c <= '9')
-            || c == '.' || c == '-'
-            || c == '_' || c == '~';
+        bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+                  c == '.' || c == '-' || c == '_' || c == '~';
         if (!ok) return false;
     }
 }
@@ -168,18 +167,30 @@ static void asset_free(struct cwist_asset *asset) {
     cwist_free(asset);
 }
 
+static pthread_mutex_t g_registry_lock = PTHREAD_MUTEX_INITIALIZER;
+
 /** Fetch the app's registry, creating it (with the default prefix) when `create` is set. */
 static cwist_asset_registry *registry_get(cwist_app *app, bool create) {
-    if (app->assets || !create) return (cwist_asset_registry *)app->assets;
+    pthread_mutex_lock(&g_registry_lock);
+    if (app->assets || !create) {
+        cwist_asset_registry *reg = (cwist_asset_registry *)app->assets;
+        pthread_mutex_unlock(&g_registry_lock);
+        return reg;
+    }
     cwist_asset_registry *reg = (cwist_asset_registry *)cwist_alloc(sizeof(*reg));
-    if (!reg) return NULL;
+    if (!reg) {
+        pthread_mutex_unlock(&g_registry_lock);
+        return NULL;
+    }
     reg->prefix = cwist_strdup(CWIST_ASSET_DEFAULT_PREFIX);
     if (!reg->prefix) {
         cwist_free(reg);
+        pthread_mutex_unlock(&g_registry_lock);
         return NULL;
     }
     atomic_init(&reg->head, NULL);
     app->assets = reg;
+    pthread_mutex_unlock(&g_registry_lock);
     return reg;
 }
 
@@ -199,12 +210,19 @@ cwist_error_t cwist_app_asset_prefix(cwist_app *app, const char *url_prefix) {
     char *prefix = normalize_prefix(url_prefix);
     if (!prefix) return asset_result(-1);
     cwist_asset_registry *reg = registry_get(app, true);
-    if (!reg || atomic_load_explicit(&reg->head, memory_order_acquire)) {
+    if (!reg) {
+        cwist_free(prefix);
+        return asset_result(-1);
+    }
+    pthread_mutex_lock(&g_registry_lock);
+    if (atomic_load_explicit(&reg->head, memory_order_acquire)) {
+        pthread_mutex_unlock(&g_registry_lock);
         cwist_free(prefix);
         return asset_result(-1);
     }
     cwist_free(reg->prefix);
     reg->prefix = prefix;
+    pthread_mutex_unlock(&g_registry_lock);
     return asset_result(0);
 }
 
@@ -278,7 +296,9 @@ static cwist_error_t asset_publish(cwist_app *app, const char *name, unsigned ch
         break;
     }
 
+    pthread_mutex_lock(&g_registry_lock);
     struct cwist_asset *asset = asset_build(reg, name, data, len, content_type, hash);
+    pthread_mutex_unlock(&g_registry_lock);
     if (!asset) return asset_result(-1);
 
     struct cwist_asset *head = atomic_load_explicit(&reg->head, memory_order_relaxed);
@@ -305,12 +325,9 @@ static cwist_error_t asset_publish(cwist_app *app, const char *name, unsigned ch
  */
 cwist_error_t cwist_app_asset_add(cwist_app *app, const char *name, const void *data, size_t len,
                                   const char *content_type) {
-    if (!app || !name_is_valid(name)
-             || (!data && len > 0))
-        return asset_result(-1);
+    if (!app || !name_is_valid(name) || (!data && len > 0)) return asset_result(-1);
 
-    if (content_type
-            && (!*content_type || !header_value_is_valid(content_type))) {
+    if (content_type && (!*content_type || !header_value_is_valid(content_type))) {
         return asset_result(-1);
     }
     unsigned char *copy = (unsigned char *)cwist_alloc(len ? len : 1);
@@ -408,9 +425,10 @@ const char *cwist_app_asset_url(cwist_app *app, const char *name) {
  * @return true on a match, false otherwise.
  */
 bool cwist_assets_match(cwist_app *app, const cwist_http_request *req, cwist_asset_match *out) {
-    if (!app || !app->assets || !req || !req->path || !req->path->data) return false;
+    if (!app || !req || !req->path || !req->path->data) return false;
     if (req->method != CWIST_HTTP_GET && req->method != CWIST_HTTP_HEAD) return false;
-    cwist_asset_registry *reg = (cwist_asset_registry *)app->assets;
+    cwist_asset_registry *reg = registry_get(app, false);
+    if (!reg) return false;
 
     const char *path = req->path->data;
     size_t plen = strlen(reg->prefix);
@@ -484,7 +502,8 @@ void cwist_assets_respond(cwist_http_request *req, cwist_http_response *res,
     const char *inm = cwist_http_header_get(req->headers, "If-None-Match");
     bool not_modified = inm && etag_matches(inm, asset->etag);
 
-    bool ok = assets_add_header(res, "ETag", asset->etag) && assets_add_header(res, "Cache-Control", cache);
+    bool ok = assets_add_header(res, "ETag", asset->etag) &&
+              assets_add_header(res, "Cache-Control", cache);
     if (ok && !not_modified) ok = assets_add_header(res, "Content-Type", asset->content_type);
     if (!ok) {
         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
@@ -516,14 +535,19 @@ int cwist_assets_clone(void **dst, const void *src) {
     if (!src) return 0;
 
     const cwist_asset_registry *from = (const cwist_asset_registry *)src;
+    pthread_mutex_lock(&g_registry_lock);
     cwist_asset_registry *reg = (cwist_asset_registry *)cwist_alloc(sizeof(*reg));
-    if (!reg) return -1;
+    if (!reg) {
+        pthread_mutex_unlock(&g_registry_lock);
+        return -1;
+    }
 
     reg->prefix = cwist_strdup(from->prefix);
     atomic_init(&reg->head, NULL);
 
     if (!reg->prefix) {
         cwist_free(reg);
+        pthread_mutex_unlock(&g_registry_lock);
         return -1;
     }
 
@@ -559,10 +583,12 @@ int cwist_assets_clone(void **dst, const void *src) {
     atomic_init(&reg->head, head);
     if (!ok) {
         cwist_assets_destroy(reg);
+        pthread_mutex_unlock(&g_registry_lock);
         return -1;
     }
 
     *dst = reg;
+    pthread_mutex_unlock(&g_registry_lock);
     return 0;
 }
 
