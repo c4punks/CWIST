@@ -6,6 +6,7 @@
 #include <cwist/sys/metrics/metrics.h>
 #include <cwist/sys/health/healthz.h>
 #include <cwist/net/http/http.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -20,7 +21,7 @@ void test_metrics_counter(void) {
     cwist_metric_add(reg, CWIST_METRIC_REQUESTS_TOTAL, 3);
 
     uintmax_t v = cwist_metric_load(reg, CWIST_METRIC_REQUESTS_TOTAL);
-    assert(v == 5);
+    assert(v == 5000);
     printf("  OK\n");
 }
 
@@ -31,7 +32,11 @@ void test_metrics_gauge(void) {
 
     cwist_metric_set(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH, 87.5);
     uintmax_t v = cwist_metric_load(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH);
-    assert(v == 87500); /* scaled by 1000 */
+    assert(v == 87500);
+    cwist_metric_set(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH, -12.5);
+    assert((intmax_t)cwist_metric_load(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH) == -12500);
+    cwist_metric_set(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH, strtold("nan", NULL));
+    assert((intmax_t)cwist_metric_load(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH) == -12500);
     printf("  OK\n");
 }
 
@@ -41,12 +46,12 @@ void test_metrics_prometheus_render(void) {
     cwist_metrics_reset(reg);
 
     cwist_metric_inc(reg, CWIST_METRIC_REQUESTS_TOTAL);
-    cwist_metric_set(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH, 100.0);
+    cwist_metric_set(reg, CWIST_METRIC_FLOW_WINDOW_HEALTH, -12.5);
 
     char *text = cwist_metrics_render_prometheus(reg);
     assert(text != NULL);
-    assert(strstr(text, "cwist_requests_total") != NULL);
-    assert(strstr(text, "cwist_flow_window_health") != NULL);
+    assert(strstr(text, "cwist_requests_total 1.000") != NULL);
+    assert(strstr(text, "cwist_flow_window_health -12.500") != NULL);
     assert(strstr(text, "# HELP") != NULL);
     assert(strstr(text, "# TYPE") != NULL);
     free(text);
@@ -142,7 +147,7 @@ void test_metrics_middleware_wiring(void) {
     mw(req, res, dummy_next_metrics);
 
     uintmax_t total = cwist_metric_load(reg, CWIST_METRIC_REQUESTS_TOTAL);
-    assert(total == 1);
+    assert(total == 1000);
 
     cwist_http_request_destroy(req);
     cwist_http_response_destroy(res);
@@ -158,7 +163,7 @@ void test_metrics_continuation_shed(void) {
     assert(initial_shed >= 0);
 
     uintmax_t metric_val = cwist_metric_load(reg, CWIST_METRIC_HTTP_CONTINUATION_SHED);
-    assert(metric_val == (uintmax_t)initial_shed);
+    assert(metric_val == (uintmax_t)initial_shed * 1000);
 
     char *text = cwist_metrics_render_prometheus(reg);
     assert(text != NULL);

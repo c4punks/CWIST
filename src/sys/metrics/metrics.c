@@ -8,6 +8,7 @@
 #include <cwist/net/http/https.h>
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/mem/alloc.h>
+#include "../../core/utils/number_internal.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,26 +63,22 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
         {.name = "cwist_http_continuation_shed_total",
          .help = "Pipelined HTTP/1.1 continuations dropped due to full reactor queue",
          .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_TOTAL] =
-        {.name = "cwist_tls_handshakes_total",
-         .help = "TLS handshakes completed (full + resumed)",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_RESUMED] =
-        {.name = "cwist_tls_handshakes_resumed_total",
-         .help = "TLS handshakes resumed via session ID or ticket",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CONNECTIONS_ACTIVE] =
-        {.name = "cwist_tls_connections_active",
-         .help = "Currently established TLS connections",
-         .type = CWIST_METRIC_GAUGE},
-    [CWIST_METRIC_TLS_HANDSHAKES_TLS12] =
-        {.name = "cwist_tls_handshakes_tls12_total",
-         .help = "TLS handshakes that negotiated TLS 1.2",
-         .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_HANDSHAKES_TLS13] =
-        {.name = "cwist_tls_handshakes_tls13_total",
-         .help = "TLS handshakes that negotiated TLS 1.3",
-         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_TOTAL] = {.name = "cwist_tls_handshakes_total",
+                                           .help = "TLS handshakes completed (full + resumed)",
+                                           .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_RESUMED] = {.name = "cwist_tls_handshakes_resumed_total",
+                                             .help =
+                                                 "TLS handshakes resumed via session ID or ticket",
+                                             .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CONNECTIONS_ACTIVE] = {.name = "cwist_tls_connections_active",
+                                             .help = "Currently established TLS connections",
+                                             .type = CWIST_METRIC_GAUGE},
+    [CWIST_METRIC_TLS_HANDSHAKES_TLS12] = {.name = "cwist_tls_handshakes_tls12_total",
+                                           .help = "TLS handshakes that negotiated TLS 1.2",
+                                           .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_HANDSHAKES_TLS13] = {.name = "cwist_tls_handshakes_tls13_total",
+                                           .help = "TLS handshakes that negotiated TLS 1.3",
+                                           .type = CWIST_METRIC_COUNTER},
     [CWIST_METRIC_TLS_CIPHERS_AES128_GCM] =
         {.name = "cwist_tls_ciphers_aes128_gcm_total",
          .help = "TLS handshakes negotiated with TLS_AES_128_GCM_SHA256",
@@ -94,10 +91,9 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
         {.name = "cwist_tls_ciphers_chacha20_total",
          .help = "TLS handshakes negotiated with TLS_CHACHA20_POLY1305_SHA256",
          .type = CWIST_METRIC_COUNTER},
-    [CWIST_METRIC_TLS_CIPHERS_OTHER] =
-        {.name = "cwist_tls_ciphers_other_total",
-         .help = "TLS handshakes negotiated with any other cipher",
-         .type = CWIST_METRIC_COUNTER},
+    [CWIST_METRIC_TLS_CIPHERS_OTHER] = {.name = "cwist_tls_ciphers_other_total",
+                                        .help = "TLS handshakes negotiated with any other cipher",
+                                        .type = CWIST_METRIC_COUNTER},
 };
 
 /* -------------------------------------------------------------------------
@@ -182,7 +178,7 @@ static void cwist_metrics_sync_tls(cwist_metrics_registry_t *reg) {
  */
 void cwist_metric_inc(cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
-    atomic_fetch_add_explicit(&reg->metrics[id].value.raw, 1, memory_order_relaxed);
+    atomic_fetch_add_explicit(&reg->metrics[id].value.raw, 1000, memory_order_relaxed);
     atomic_fetch_add_explicit(&reg->metrics[id].count, 1, memory_order_relaxed);
 }
 
@@ -196,9 +192,17 @@ void cwist_metric_inc(cwist_metrics_registry_t *reg, cwist_metric_id_t id) {
  * @param delta Value increment to add.
  */
 void cwist_metric_add(cwist_metrics_registry_t *reg, cwist_metric_id_t id, uintmax_t delta) {
-    if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
-    atomic_fetch_add_explicit(&reg->metrics[id].value.raw, delta, memory_order_relaxed);
+    if (!reg || id < 0 || id >= CWIST_METRIC_COUNT || delta > UINTMAX_MAX / 1000) return;
+    atomic_fetch_add_explicit(&reg->metrics[id].value.raw, delta * 1000, memory_order_relaxed);
     atomic_fetch_add_explicit(&reg->metrics[id].count, 1, memory_order_relaxed);
+}
+
+static bool cwist_metric_scaled_value(long double value, intmax_t *scaled) {
+    if (!cwist_number_long_double_is_finite(value) || value > (long double)INTMAX_MAX / 1000.0L ||
+        value < (long double)INTMAX_MIN / 1000.0L)
+        return false;
+    *scaled = (intmax_t)roundl(value * 1000.0L);
+    return true;
 }
 
 /**
@@ -213,8 +217,9 @@ void cwist_metric_add(cwist_metrics_registry_t *reg, cwist_metric_id_t id, uintm
  */
 void cwist_metric_set(cwist_metrics_registry_t *reg, cwist_metric_id_t id, long double value) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
-    uintmax_t scaled = (uintmax_t)roundl(value * 1000.0L);
-    atomic_store_explicit(&reg->metrics[id].value.raw, scaled, memory_order_relaxed);
+    intmax_t scaled;
+    if (!cwist_metric_scaled_value(value, &scaled)) return;
+    atomic_store_explicit(&reg->metrics[id].value.raw, (uintmax_t)scaled, memory_order_relaxed);
 }
 
 /**
@@ -231,10 +236,11 @@ void cwist_metric_set(cwist_metrics_registry_t *reg, cwist_metric_id_t id, long 
  */
 void cwist_metric_observe(cwist_metrics_registry_t *reg, cwist_metric_id_t id, long double value) {
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return;
-    uintmax_t scaled = (uintmax_t)roundl(value * 1000.0L);
-    atomic_fetch_add_explicit(&reg->metrics[id].value.raw, scaled, memory_order_relaxed);
+    intmax_t scaled;
+    if (!cwist_metric_scaled_value(value, &scaled)) return;
+    atomic_fetch_add_explicit(&reg->metrics[id].value.raw, (uintmax_t)scaled, memory_order_relaxed);
     atomic_fetch_add_explicit(&reg->metrics[id].count, 1, memory_order_relaxed);
-    atomic_fetch_add_explicit(&reg->metrics[id].sum, scaled, memory_order_relaxed);
+    atomic_fetch_add_explicit(&reg->metrics[id].sum, (uintmax_t)scaled, memory_order_relaxed);
 }
 
 /**
@@ -252,7 +258,7 @@ uintmax_t cwist_metric_load(const cwist_metrics_registry_t *reg, cwist_metric_id
     if (!reg || id < 0 || id >= CWIST_METRIC_COUNT) return 0;
     cwist_metrics_sync_tls((cwist_metrics_registry_t *)reg);
     if (id == CWIST_METRIC_HTTP_CONTINUATION_SHED) {
-        return (uintmax_t)cwist_http_continuation_shed_count();
+        return (uintmax_t)cwist_http_continuation_shed_count() * 1000;
     }
     return atomic_load_explicit(&reg->metrics[id].value.raw, memory_order_acquire);
 }
@@ -311,15 +317,25 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
         const cwist_metric_t *m = &reg->metrics[i];
         uintmax_t raw = atomic_load_explicit(&m->value.raw, memory_order_acquire);
         uintmax_t cnt = atomic_load_explicit(&m->count, memory_order_acquire);
+        const char *sign = "";
+        uintmax_t whole = raw / 1000;
+        uintmax_t fraction = raw % 1000;
+        if ((m->type == CWIST_METRIC_GAUGE || m->type == CWIST_METRIC_HISTOGRAM) &&
+            (intmax_t)raw < 0) {
+            sign = "-";
+            uintmax_t magnitude = (uintmax_t)(-((intmax_t)raw + 1)) + 1;
+            whole = magnitude / 1000;
+            fraction = magnitude % 1000;
+        }
 
-        int need = snprintf(NULL, 0,
-                            "# HELP %s %s\n"
-                            "# TYPE %s %s\n"
-                            "%s %lu.%03lu\n"
-                            "%s_count %lu\n\n",
-                            m->name, m->help, m->name, type_str(m->type), m->name,
-                            (unsigned long)(raw / 1000), (unsigned long)(raw % 1000), m->name,
-                            (unsigned long)cnt);
+        int need =
+            snprintf(NULL, 0,
+                     "# HELP %s %s\n"
+                     "# TYPE %s %s\n"
+                     "%s %s%lu.%03lu\n"
+                     "%s_count %lu\n\n",
+                     m->name, m->help, m->name, type_str(m->type), m->name, sign,
+                     (unsigned long)whole, (unsigned long)fraction, m->name, (unsigned long)cnt);
         if (need < 0) {
             free(buf);
             return NULL;
@@ -338,14 +354,14 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
             cap = new_cap;
         }
 
-        int written = snprintf(buf + len, cap - len,
-                               "# HELP %s %s\n"
-                               "# TYPE %s %s\n"
-                               "%s %lu.%03lu\n"
-                               "%s_count %lu\n\n",
-                               m->name, m->help, m->name, type_str(m->type), m->name,
-                               (unsigned long)(raw / 1000), (unsigned long)(raw % 1000), m->name,
-                               (unsigned long)cnt);
+        int written =
+            snprintf(buf + len, cap - len,
+                     "# HELP %s %s\n"
+                     "# TYPE %s %s\n"
+                     "%s %s%lu.%03lu\n"
+                     "%s_count %lu\n\n",
+                     m->name, m->help, m->name, type_str(m->type), m->name, sign,
+                     (unsigned long)whole, (unsigned long)fraction, m->name, (unsigned long)cnt);
         if (written < 0 || (size_t)written >= cap - len) {
             free(buf);
             return NULL;
