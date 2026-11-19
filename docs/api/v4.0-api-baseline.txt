@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (818) ==
+== functions (819) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -388,6 +388,7 @@ cwist_http_pool_submit
 cwist_http_pool_submit_async
 cwist_http_receive_request
 cwist_http_receive_request_nb
+cwist_http_request_client_ip
 cwist_http_request_create
 cwist_http_request_destroy
 cwist_http_request_fragment_target
@@ -824,7 +825,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (819) ==
+== function signatures (820) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1209,6 +1210,7 @@ cwist_http_pool_submit: void (int, void (*)(int, void *), void *)
 cwist_http_pool_submit_async: bool (int, cwist_async_handler_t, void *)
 cwist_http_receive_request: cwist_http_request * (int, char *, size_t, size_t *, cwist_http_parse_error_t *)
 cwist_http_receive_request_nb: cwist_recv_status_t (cwist_http_async_conn_t *, cwist_http_request **, cwist_http_parse_error_t *)
+cwist_http_request_client_ip: cwist_sstring * (const cwist_http_request *)
 cwist_http_request_create: cwist_http_request * (void)
 cwist_http_request_destroy: void (cwist_http_request *)
 cwist_http_request_fragment_target: const char * (const cwist_http_request *)

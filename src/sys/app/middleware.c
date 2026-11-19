@@ -242,7 +242,7 @@ static void cwist_mw_access_log_common_handler(cwist_http_request *req, cwist_ht
     gettimeofday(&end, NULL);
 
     const char *rid = access_log_request_id(req, res);
-    cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
+    cwist_sstring *ip = cwist_http_request_client_ip(req);
     const char *ip_str = ip ? ip->data : "-";
 
     char time_buf[64];
@@ -282,7 +282,7 @@ static void cwist_mw_access_log_combined_handler(cwist_http_request *req, cwist_
     gettimeofday(&end, NULL);
 
     const char *rid = access_log_request_id(req, res);
-    cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
+    cwist_sstring *ip = cwist_http_request_client_ip(req);
     const char *ip_str = ip ? ip->data : "-";
 
     char time_buf[64];
@@ -330,7 +330,7 @@ static void cwist_mw_access_log_json_handler(cwist_http_request *req, cwist_http
     long msec = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_usec - start.tv_usec) / 1000;
 
     const char *rid = access_log_request_id(req, res);
-    cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
+    cwist_sstring *ip = cwist_http_request_client_ip(req);
     const char *ip_str = ip ? ip->data : "-";
 
     char time_buf[64];
@@ -435,7 +435,7 @@ static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_r
                                            cwist_handler_func next, int rpm) {
     if (rpm <= 0) rpm = 60;
 
-    cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
+    cwist_sstring *ip = cwist_http_request_client_ip(req);
     if (!ip) {
         next(req, res);
         return;

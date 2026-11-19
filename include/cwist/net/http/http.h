@@ -300,6 +300,13 @@ void cwist_http_send_error_response(int fd, int status, const char *msg);
 cwist_sstring *cwist_get_client_ip_from_fd(int fd);
 
 /**
+ * @brief Resolve the request peer address for HTTP/1, HTTP/2, or HTTP/3.
+ * @return Newly allocated textual IP, or NULL when the peer is unknown.
+ *         IPv4-mapped IPv6 addresses are normalized to IPv4.
+ */
+cwist_sstring *cwist_http_request_client_ip(const cwist_http_request *req);
+
+/**
  * @brief Format a time_t as an HTTP-date (RFC 7231).
  */
 void cwist_http_format_date(time_t t, char *buf, size_t len);

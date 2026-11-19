@@ -1274,6 +1274,16 @@ static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_err
     __atomic_store_n(&h3_ctx->last_close_received, 1, __ATOMIC_RELEASE);
 }
 
+cwist_sstring *cwist_http3_request_client_ip(const cwist_http_request *req) {
+    if (!req || !req->private_data) return NULL;
+    lsquic_conn_t *conn = lsquic_stream_conn((const lsquic_stream_t *)req->private_data);
+    if (!conn) return NULL;
+    const struct sockaddr *local = NULL;
+    const struct sockaddr *peer = NULL;
+    if (lsquic_conn_get_sockaddr(conn, &local, &peer) != 0) return NULL;
+    return cwist_http_client_ip_from_sockaddr(peer);
+}
+
 /**
  * @brief on_new_stream callback: allocate the per-request stream context.
  * @return New stream ctx with an empty cwist_http_request ("HTTP/3"), or

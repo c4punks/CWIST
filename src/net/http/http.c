@@ -30,6 +30,9 @@
 #include "cond_clock.h"
 #include "http_live.h"
 #include "sockopts.h"
+#ifdef CWIST_HTTP3
+#include "http3_global.h"
+#endif
 
 #include <limits.h>
 #include <ctype.h>
@@ -2379,44 +2382,51 @@ time_t cwist_http_parse_date(const char *str) {
     return timegm(&tm);
 }
 
-/**
- * @brief Resolve the peer IP address for a connected client socket.
- * @param fd Connected client socket descriptor.
- * @return New sstring with the textual IP; "127.0.0.1" when unavailable.
- */
-cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
-    cwist_sstring *s = cwist_sstring_create();
-    cwist_sstring_assign(s, "127.0.0.1");
-    // First, check if fd is available
-    // If unavailable, return localhost
-    if (fd <= 0) return s;
-
-#ifndef CWIST_PLATFORM_NO_SOCKETS
-    /* WASI preview1 has no socket peer addresses; the caller only needs a
-     * placeholder when running under a WASM host. */
-    struct sockaddr_storage addr;
-    socklen_t len = sizeof(addr);
-
-    // get client info
-    if (getpeername(fd, (struct sockaddr *)&addr, &len) == -1) {
-        fprintf(stdout, "[ERROR] Failed to get client info from file descriptor");
-        return s;
-    }
-
+cwist_sstring *cwist_http_client_ip_from_sockaddr(const struct sockaddr *addr) {
+    if (!addr) return NULL;
     char ip[INET6_ADDRSTRLEN];
-
-    if (addr.ss_family == AF_INET) {
-        struct sockaddr_in *s = (struct sockaddr_in *)&addr;
-        inet_ntop(AF_INET, &s->sin_addr, ip, sizeof(ip));
-    } else if (addr.ss_family == AF_INET6) {
-        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
-        inet_ntop(AF_INET6, &s->sin6_addr, ip, sizeof(ip));
+    int family = addr->sa_family;
+    const void *src = NULL;
+    if (family == AF_INET) {
+        src = &((const struct sockaddr_in *)addr)->sin_addr;
+    } else if (family == AF_INET6) {
+        const struct in6_addr *v6 = &((const struct sockaddr_in6 *)addr)->sin6_addr;
+        if (IN6_IS_ADDR_V4MAPPED(v6)) {
+            family = AF_INET;
+            src = (const unsigned char *)v6 + 12;
+        } else {
+            src = v6;
+        }
+    } else {
+        return NULL;
     }
-
-    // assign found ip as a value
-    cwist_sstring_assign(s, ip);
-#endif
+    if (!inet_ntop(family, src, ip, sizeof(ip))) return NULL;
+    cwist_sstring *s = cwist_sstring_create();
+    if (s) cwist_sstring_assign(s, ip);
     return s;
+}
+
+cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
+#ifndef CWIST_PLATFORM_NO_SOCKETS
+    if (fd >= 0) {
+        struct sockaddr_storage addr;
+        socklen_t len = sizeof(addr);
+        if (getpeername(fd, (struct sockaddr *)&addr, &len) == 0)
+            return cwist_http_client_ip_from_sockaddr((const struct sockaddr *)&addr);
+    }
+#else
+    (void)fd;
+#endif
+    return NULL;
+}
+
+cwist_sstring *cwist_http_request_client_ip(const cwist_http_request *req) {
+    if (!req) return NULL;
+#ifdef CWIST_HTTP3
+    if (req->version && req->version->data && strcmp(req->version->data, "HTTP/3") == 0)
+        return cwist_http3_request_client_ip(req);
+#endif
+    return cwist_get_client_ip_from_fd(req->client_fd);
 }
 
 /**
