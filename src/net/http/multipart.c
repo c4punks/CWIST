@@ -15,14 +15,14 @@
 typedef struct {
     char header_field[256];
     size_t header_field_len;
-    char header_value[1024];
+    char header_value[4096];
     size_t header_value_len;
     /* Set once a value was delivered for the current header, even an empty
      * one; header_value_len alone cannot express "seen but empty". */
     bool have_value;
 
-    char name[256];
-    char filename[256];
+    char *name;
+    char *filename;
     char content_type[256];
 
     char *data;
@@ -58,7 +58,7 @@ static bool mp_token_char(unsigned char c) {
     return c > 32 && c < 127 && c != '\\' && c != '"' && !strchr("()<>@,;:/[]?={}", c);
 }
 
-static int mp_disposition_param(const char *value, const char *key, char *out, size_t cap) {
+static int mp_disposition_param(const char *value, const char *key, char **out) {
     size_t key_len = strlen(key);
     const char *p = value;
     while (*p) {
@@ -81,6 +81,9 @@ static int mp_disposition_param(const char *value, const char *key, char *out, s
         p++;
         while (isspace((unsigned char)*p)) p++;
 
+        size_t cap = strlen(value) + 1;
+        char *decoded = (char *)cwist_alloc(cap);
+        if (!decoded) return -1;
         size_t out_len = 0;
         if (*p == '"') {
             p++;
@@ -92,20 +95,26 @@ static int mp_disposition_param(const char *value, const char *key, char *out, s
                 }
                 if (*p == '\\') {
                     p++;
-                    if (!*p) return -1;
+                    if (!*p) goto invalid;
                 }
-                if (out_len + 1 >= cap) return -1;
-                out[out_len++] = *p++;
+                if (out_len + 1 >= cap) goto invalid;
+                decoded[out_len++] = *p++;
             }
-            if (!closed) return -1;
+            if (!closed) goto invalid;
         } else {
             while (*p && *p != ';' && !isspace((unsigned char)*p)) {
-                if (!mp_token_char((unsigned char)*p) || out_len + 1 >= cap) return -1;
-                out[out_len++] = *p++;
+                if (!mp_token_char((unsigned char)*p) || out_len + 1 >= cap) goto invalid;
+                decoded[out_len++] = *p++;
             }
         }
-        out[out_len] = '\0';
+        decoded[out_len] = '\0';
+        cwist_free(*out);
+        *out = decoded;
         return 1;
+
+invalid:
+        cwist_free(decoded);
+        return -1;
     }
     return 0;
 }
@@ -116,9 +125,8 @@ static int mp_parse_headers(mp_parse_ctx *ctx) {
     ctx->header_value[ctx->header_value_len] = '\0';
 
     if (strcasecmp(ctx->header_field, "Content-Disposition") == 0) {
-        if (mp_disposition_param(ctx->header_value, "name", ctx->name, sizeof(ctx->name)) < 0 ||
-            mp_disposition_param(ctx->header_value, "filename", ctx->filename,
-                                 sizeof(ctx->filename)) < 0)
+        if (mp_disposition_param(ctx->header_value, "name", &ctx->name) < 0 ||
+            mp_disposition_param(ctx->header_value, "filename", &ctx->filename) < 0)
             return 1;
     } else if (strcasecmp(ctx->header_field, "Content-Type") == 0) {
         size_t vlen = strlen(ctx->header_value);
@@ -154,8 +162,10 @@ static int mp_on_part_data_begin(multipart_parser *p) {
     ctx->header_field_len = 0;
     ctx->header_value_len = 0;
     ctx->have_value = false;
-    ctx->name[0] = '\0';
-    ctx->filename[0] = '\0';
+    cwist_free(ctx->name);
+    cwist_free(ctx->filename);
+    ctx->name = NULL;
+    ctx->filename = NULL;
     ctx->content_type[0] = '\0';
     if (ctx->data) {
         cwist_free(ctx->data);
@@ -200,10 +210,9 @@ static int mp_on_part_data(multipart_parser *p, const char *at, size_t len) {
 /**
  * @brief multipart-parser-c callback: end of a part.
  *
- * Allocates a cwist_multipart_field, copies name/filename/content_type into
- * freshly allocated strings, and transfers ownership of the accumulated
- * ctx->data buffer to the field (no copy). The field is prepended to
- * ctx->result->fields and the accumulation state is reset to empty.
+ * Allocates a cwist_multipart_field, transfers name/filename/data ownership,
+ * and copies content_type. The field is prepended to ctx->result->fields and
+ * the accumulation state is reset to empty.
  *
  * @param p Parser instance (carries mp_parse_ctx).
  * @return 0 on success, 1 if memory allocation failed (aborts parsing).
@@ -215,14 +224,10 @@ static int mp_on_part_data_end(multipart_parser *p) {
     if (!field) return 1;
     memset(field, 0, sizeof(*field));
 
-    if (ctx->name[0]) {
-        field->name = (char *)cwist_alloc(strlen(ctx->name) + 1);
-        if (field->name) strcpy(field->name, ctx->name);
-    }
-    if (ctx->filename[0]) {
-        field->filename = (char *)cwist_alloc(strlen(ctx->filename) + 1);
-        if (field->filename) strcpy(field->filename, ctx->filename);
-    }
+    field->name = ctx->name;
+    field->filename = ctx->filename;
+    ctx->name = NULL;
+    ctx->filename = NULL;
     if (ctx->content_type[0]) {
         field->content_type = (char *)cwist_alloc(strlen(ctx->content_type) + 1);
         if (field->content_type) strcpy(field->content_type, ctx->content_type);
@@ -293,6 +298,9 @@ cwist_multipart_result *cwist_multipart_parse(const char *body, size_t body_len,
     multipart_parser_set_data(parser, &ctx);
     size_t consumed = multipart_parser_execute(parser, body, body_len);
     multipart_parser_free(parser);
+
+    cwist_free(ctx.name);
+    cwist_free(ctx.filename);
 
     /* Truncated body: on_part_data_end never fired, so release the in-flight
      * part buffer here. */

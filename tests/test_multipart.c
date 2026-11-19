@@ -139,22 +139,26 @@ static void test_malformed_input_returns_null(void) {
     printf("  Passed.\n");
 }
 
-static void test_oversized_metadata_rejected(void) {
-    printf("Testing oversized metadata rejection...\n");
-    char name[257];
-    memset(name, 'n', 256);
-    name[256] = '\0';
-    char body[2048];
+static void test_long_disposition_parameters(void) {
+    printf("Testing long Content-Disposition parameters...\n");
+    char name[1001];
+    memset(name, 'n', 1000);
+    name[1000] = '\0';
+    char body[4096];
     snprintf(body, sizeof(body),
              "--" B "\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\nvalue\r\n--" B "--\r\n",
              name);
-    assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
+    cwist_multipart_result *r = cwist_multipart_parse(body, strlen(body), B);
+    assert(r != NULL && r->fields->name && strcmp(r->fields->name, name) == 0);
+    cwist_multipart_result_destroy(r);
 
     snprintf(body, sizeof(body),
              "--" B "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"%s\"\r\n\r\n"
              "value\r\n--" B "--\r\n",
              name);
-    assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
+    r = cwist_multipart_parse(body, strlen(body), B);
+    assert(r != NULL && r->fields->filename && strcmp(r->fields->filename, name) == 0);
+    cwist_multipart_result_destroy(r);
 
     char value[1025];
     memset(value, 'v', 1024);
@@ -163,8 +167,12 @@ static void test_oversized_metadata_rejected(void) {
              "--" B "\r\nX-Long: %s\r\nContent-Disposition: form-data; name=\"ok\"\r\n\r\n"
              "value\r\n--" B "--\r\n",
              value);
-    assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
+    r = cwist_multipart_parse(body, strlen(body), B);
+    assert(r != NULL && find_field(r, "ok") != NULL);
+    cwist_multipart_result_destroy(r);
 
+    memset(name, 'n', 256);
+    name[256] = '\0';
     snprintf(body, sizeof(body), "--" B "\r\n%s: value\r\n\r\nvalue\r\n--" B "--\r\n", name);
     assert(cwist_multipart_parse(body, strlen(body), B) == NULL);
     printf("  Passed.\n");
@@ -252,7 +260,7 @@ int main(void) {
     test_empty_header_value_does_not_swallow_next_header();
     test_truncated_body_drops_partial_part();
     test_malformed_input_returns_null();
-    test_oversized_metadata_rejected();
+    test_long_disposition_parameters();
     test_disposition_parameter_forms();
     test_extract_boundary();
     printf("All multipart tests passed.\n");
