@@ -8,6 +8,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/err/cwist_err.h>
 #include "curl_global.h"
+#include "http_client_file.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -352,6 +353,12 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
 
     *out_response = NULL;
 
+    if (strncasecmp(url, "file://", 7) == 0) {
+        err.error.err_i16 =
+            cwist_http_client_file_request(url, method, client->timeout_ms, out_response);
+        return err;
+    }
+
     CURL *curl = client->curl;
 
     /* Reset handle for reuse */
@@ -360,6 +367,8 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
     /* Re-apply persistent settings after reset */
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, client->follow_redirects ? 1L : 0L);
     curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
+    curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "http,https");
+    curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)client->timeout_ms);
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
     curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
