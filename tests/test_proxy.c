@@ -410,6 +410,16 @@ static void run_ws_upstream(void) {
                 close(c);
                 continue;
             }
+            static const char *const forbidden[] = {
+                "Proxy-Authorization:", "Forwarded:", "X-Real-IP:", "Keep-Alive:",
+                "TE:", "Trailer:", "Transfer-Encoding:", "X-Secret:",
+            };
+            for (size_t i = 0; i < sizeof(forbidden) / sizeof(forbidden[0]); i++) {
+                if (strstr(buf, forbidden[i])) _exit(40 + (int)i);
+            }
+            if (!strstr(buf, "Sec-WebSocket-Key:") || !strstr(buf, "Upgrade: websocket") ||
+                !strstr(buf, "Connection: Upgrade"))
+                _exit(50);
             const char *resp = "HTTP/1.1 101 Switching Protocols\r\n"
                                "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                                "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n";
@@ -812,9 +822,13 @@ static void test_ws_passthrough(void) {
     CHECK(fd >= 0, "connect to the WS proxy front");
     if (fd < 0) return;
     const char *up = "GET / HTTP/1.1\r\nHost: ws.test:19967\r\n"
-                     "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                     "Upgrade: websocket\r\nConnection: Upgrade, X-Secret\r\n"
                      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-                     "Sec-WebSocket-Version: 13\r\n\r\n";
+                     "Sec-WebSocket-Version: 13\r\n"
+                     "Proxy-Authorization: Bearer proxy-secret\r\n"
+                     "Forwarded: for=6.6.6.6\r\nX-Real-IP: 6.6.6.6\r\n"
+                     "Keep-Alive: timeout=99\r\nTE: trailers\r\nTrailer: X-Trailer\r\n"
+                     "X-Secret: must-not-forward\r\n\r\n";
     CHECK(write(fd, up, strlen(up)) == (ssize_t)strlen(up), "send upgrade request");
     char buf[4096];
     size_t used = 0;
