@@ -48,7 +48,6 @@ cwist_grpc_stream_set_writer
 cwist_h2_async_queue_acquire
 cwist_h2_async_queue_enqueue
 cwist_h2_async_queue_release
-cwist_http2_push_resource
 cwist_http2_stream_send_data
 cwist_http2_stream_send_headers
 cwist_http2_stream_send_trailers
