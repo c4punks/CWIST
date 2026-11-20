@@ -1045,7 +1045,10 @@ static bool proxy_peer_ip(int fd, char *out, size_t cap) {
         return inet_ntop(AF_INET, &((struct sockaddr_in *)&ss)->sin_addr, out, (socklen_t)cap);
     }
     if (ss.ss_family == AF_INET6) {
-        return inet_ntop(AF_INET6, &((struct sockaddr_in6 *)&ss)->sin6_addr, out, (socklen_t)cap);
+        const struct in6_addr *addr = &((struct sockaddr_in6 *)&ss)->sin6_addr;
+        if (IN6_IS_ADDR_V4MAPPED(addr))
+            return inet_ntop(AF_INET, (const unsigned char *)addr + 12, out, (socklen_t)cap);
+        return inet_ntop(AF_INET6, addr, out, (socklen_t)cap);
     }
     return false;
 }
