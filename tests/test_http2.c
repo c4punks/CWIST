@@ -879,6 +879,86 @@ static void test_http2_write_frame(SSL *client, uint8_t type, uint8_t flags, uin
     if (len) assert(ssl_write_all(client, payload, len) == 0);
 }
 
+static void http2_push_handler(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
+    (void)user_ctx;
+    if (strcmp(req->path->data, "/push") == 0) {
+        int rc = cwist_http2_push_resource(req, "/style.css", "text/css",
+                                           (const unsigned char *)"body{}", 6);
+        if (rc != 0) {
+            cwist_sstring_assign(res->body, "push disabled");
+            return;
+        }
+    }
+    cwist_sstring_assign(res->body, "main");
+}
+
+static void test_http2_server_push(void) {
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char initial[] = {0x82, 0x87, 0x04, 0x05, '/',  'p', 'u', 's', 'h',
+                                            0x41, 0x10, 'o',  'r',  'i',  'g', 'i', 'n', 'a', 'l',
+                                            '.',  'e',  'x',  'a',  'm',  'p', 'l', 'e'};
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx server = {
+        .fd = sv[0], .handler = http2_push_handler, .standard_data = true};
+    pthread_t tid;
+    SSL *client = test_http2_start_client(sv, &server, &tid);
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
+    test_http2_write_frame(client, 0x1, 0x5, 1, initial, sizeof(initial));
+
+    bool promised = false, pushed_body = false, main_body = false;
+    for (int i = 0; i < 30 && !(promised && pushed_body && main_body); i++) {
+        unsigned char hdr[9];
+        assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
+                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        unsigned char payload[4096];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x5 && stream_id == 1) {
+            assert(len >= 4 && payload[3] == 2);
+            promised = true;
+        } else if (hdr[3] == 0x0 && stream_id == 2) {
+            assert(len == 6 && memcmp(payload, "body{}", 6) == 0);
+            pushed_body = true;
+        } else if (hdr[3] == 0x0 && stream_id == 1) {
+            assert(len == 4 && memcmp(payload, "main", 4) == 0);
+            main_body = true;
+        }
+    }
+    assert(promised && pushed_body && main_body);
+    test_http2_stop_client(client, sv[1], tid);
+
+    static const unsigned char no_push[] = {0, 2, 0, 0, 0, 0};
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx disabled = {
+        .fd = sv[0], .handler = http2_push_handler, .standard_data = true};
+    client = test_http2_start_client(sv, &disabled, &tid);
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    test_http2_write_frame(client, 0x4, 0, 0, no_push, sizeof(no_push));
+    test_http2_write_frame(client, 0x1, 0x5, 1, initial, sizeof(initial));
+    bool saw_main = false, saw_promise = false;
+    for (int i = 0; i < 20 && !saw_main; i++) {
+        unsigned char hdr[9];
+        assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
+                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        unsigned char payload[4096];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x5) saw_promise = true;
+        if (hdr[3] == 0x0 && stream_id == 1) {
+            assert(len == 13 && memcmp(payload, "push disabled", 13) == 0);
+            saw_main = true;
+        }
+    }
+    assert(saw_main && !saw_promise);
+    test_http2_stop_client(client, sv[1], tid);
+}
+
 static void test_http2_decoded_header_list_limit(void) {
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
@@ -2476,6 +2556,7 @@ int main(void) {
     test_http2_stalled_stream_does_not_block_other_streams();
     test_http2_pacing_does_not_block_streams();
     test_http2_response_headers();
+    test_http2_server_push();
     test_http2_decoded_header_list_limit();
     test_http2_hook_error_sends_reset();
     test_http2_hpack_incremental_indexing();

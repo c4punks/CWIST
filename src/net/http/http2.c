@@ -437,6 +437,8 @@ typedef struct h2_conn {
     uint32_t peer_max_frame_size;
     uint32_t peer_initial_window_size;
     uint32_t peer_max_concurrent_streams;
+    bool peer_enable_push;
+    _Atomic uint32_t next_server_stream_id;
     /* Connection-level adaptive flow control: tracks both our advertised
      * receive credit and the peer-advertised send credit, auto-tunes the
      * receive target from PING-measured RTT, and paces sends once RTT is
@@ -522,6 +524,8 @@ static void h2_conn_init(h2_conn *hc, cwist_https_connection *conn) {
     hc->conn = conn;
     hc->peer_max_frame_size = CWIST_HTTP2_MAX_FRAME_SIZE;
     hc->peer_initial_window_size = 65535;
+    hc->peer_enable_push = true;
+    hc->next_server_stream_id = 2;
     /* Start at the RFC-default 65535 on the send side; the startup code
      * bumps our receive credit to 16 MiB on the wire and mirrors that into
      * fc.receive_window. */
@@ -2350,53 +2354,6 @@ static int h2_send_seq_data_frames(h2_conn *hc, cwist_https_connection *conn, ui
     return 0;
 }
 
-static int h2_send_response_raw(cwist_https_connection *conn, uint32_t stream_id,
-                                cwist_http_response *res, uint32_t max_frame_size) {
-    size_t block_len = 0;
-    unsigned char *block = h2_encode_response_block(res, &block_len, false);
-    if (!block) return -1;
-
-    size_t body_len = 0;
-    const unsigned char *body_data = NULL;
-    if (res->use_file_stream) {
-        body_len = res->file_stream_len;
-    } else if (res->is_ptr_body) {
-        body_len = res->ptr_body_len;
-        body_data = (const unsigned char *)res->ptr_body;
-    } else if (res->body) {
-        body_len = res->body->size;
-        body_data = (const unsigned char *)res->body->data;
-    }
-
-    uint8_t header_flags = 0;
-    if (body_len == 0 || h2_status_forbids_body(res->status_code)) {
-        body_len = 0;
-        header_flags |= CWIST_HTTP2_FLAG_END_STREAM;
-    }
-
-    int rc =
-        h2_send_header_block(NULL, conn, stream_id, block, block_len, max_frame_size, header_flags);
-    cwist_free(block);
-    if (rc != 0) return -1;
-
-    if (body_len == 0) return 0;
-
-    if (res->use_file_stream && res->file_stream_fd >= 0) {
-        /* Load file contents and sequence them.  Server push rarely streams
-         * huge files, so a single read is acceptable here. */
-        cwist_scratch_t file_buf_s CWIST_SCRATCH_DEFER = {0};
-        unsigned char *file_buf = (unsigned char *)cwist_scratch_alloc(&file_buf_s, body_len);
-        if (!file_buf) return -1;
-        ssize_t r = pread(res->file_stream_fd, file_buf, body_len, res->file_stream_offset);
-        if (r <= 0 || (size_t)r != body_len) return -1;
-        return h2_send_seq_data_frames(NULL, conn, stream_id, file_buf, body_len, max_frame_size,
-                                       NULL);
-    }
-
-    return h2_send_seq_data_frames(NULL, conn, stream_id, body_data, body_len, max_frame_size,
-                                   NULL);
-}
-
 /**
  * @brief Compute a sequenced chunk payload size that fits the current window.
  */
@@ -2843,7 +2800,8 @@ static int h2_send_grpc_trailers_only(h2_conn *hc, uint32_t stream_id, cwist_htt
     return rc;
 }
 
-static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_response *res) {
+static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_response *res,
+                               bool standard_data) {
     h2_stream *s = h2_stream_find(hc, stream_id);
     if (!s) return -1;
 
@@ -2931,7 +2889,7 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
         return h2_send_grpc_trailers(hc, stream_id, res, max_frame);
     }
 
-    if (hc->sequenced_data) {
+    if (hc->sequenced_data && !standard_data) {
         if (res->use_file_stream && res->file_stream_fd >= 0)
             return h2_send_seq_file_body(hc, s, stream_id, res->file_stream_fd,
                                          res->file_stream_offset, body_len, max_frame);
@@ -3295,6 +3253,7 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
             case 0x1: /* SETTINGS_HEADER_TABLE_SIZE */ break;
             case 0x2: /* SETTINGS_ENABLE_PUSH */
                 if (value > 1) return H2_ERR_PROTOCOL_ERROR;
+                hc->peer_enable_push = value != 0;
                 break;
             case 0x3: /* SETTINGS_MAX_CONCURRENT_STREAMS */
                 hc->peer_max_concurrent_streams = value;
@@ -3452,7 +3411,7 @@ static int h2_async_drain(h2_conn *hc) {
         s->response = n->send;
         s->async_response = n;
         h2_inject_alt_svc(hc->conn, n->send);
-        int rc = h2_send_response_hc(hc, n->stream_id, n->send);
+        int rc = h2_send_response_hc(hc, n->stream_id, n->send, false);
         if (rc == 1) continue;
         h2_stream_remove(hc, n->stream_id);
         if (rc != 0) {
@@ -3473,7 +3432,7 @@ static int h2_resume_responses(h2_conn *hc) {
         h2_stream *next = s->next;
         if (s->response) {
             uint32_t stream_id = s->stream_id;
-            int rc = h2_send_response_hc(hc, stream_id, s->response);
+            int rc = h2_send_response_hc(hc, stream_id, s->response, false);
             if (rc == 1) {
                 s = next;
                 continue;
@@ -3931,7 +3890,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                             }
                             h2_inject_alt_svc(conn, res);
                             s->response = res;
-                            send_rc = h2_send_response_hc(hc, stream_id, res);
+                            send_rc = h2_send_response_hc(hc, stream_id, res, false);
                             if (send_rc < 0) connected = false;
                             if (send_rc != 1) {
                                 s->response = NULL;
@@ -4001,7 +3960,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                             }
                             h2_inject_alt_svc(conn, res);
                             s->response = res;
-                            send_rc = h2_send_response_hc(hc, stream_id, res);
+                            send_rc = h2_send_response_hc(hc, stream_id, res, false);
                             if (send_rc < 0) connected = false;
                             if (send_rc != 1) {
                                 s->response = NULL;
@@ -4191,7 +4150,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                         }
                         h2_inject_alt_svc(conn, res);
                         s->response = res;
-                        send_rc = h2_send_response_hc(hc, stream_id, res);
+                        send_rc = h2_send_response_hc(hc, stream_id, res, false);
                         if (send_rc < 0) connected = false;
                         if (send_rc != 1) {
                             s->response = NULL;
@@ -4384,35 +4343,38 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
  */
 int cwist_http2_push_resource(cwist_http_request *req, const char *path, const char *content_type,
                               const unsigned char *data, size_t data_len) {
-    if (!req || !req->private_data || !path) return -1;
+    if (!req || !req->private_data || !path || (data_len > 0 && !data)) return -1;
 
     cwist_https_connection *conn = (cwist_https_connection *)req->private_data;
-    uint32_t original_stream_id = req->stream_id;
+    h2_conn *hc = (h2_conn *)conn->proto_state;
+    if (!hc || !hc->peer_enable_push) return -1;
 
     const char *authority = NULL;
-    cwist_http_header_node *h = req->headers;
-    while (h) {
+    for (cwist_http_header_node *h = req->headers; h; h = h->next) {
         if (h->key && h->key->data && strcasecmp(h->key->data, "host") == 0) {
             authority = h->value ? h->value->data : NULL;
             break;
         }
-        h = h->next;
     }
     if (!authority) return -1;
 
-    static _Atomic uint32_t next_server_stream = 2;
-    uint32_t promised_stream_id = atomic_fetch_add(&next_server_stream, 2);
+    uint32_t active_pushes = 0;
+    for (h2_stream *s = hc->streams; s; s = s->next) {
+        if ((s->stream_id & 1u) == 0) active_pushes++;
+    }
+    if (hc->peer_max_concurrent_streams > 0 &&
+        active_pushes >= hc->peer_max_concurrent_streams)
+        return -1;
+    uint32_t next_id = atomic_load_explicit(&hc->next_server_stream_id, memory_order_relaxed);
+    if (next_id == 0 || next_id > 0x7ffffffe) return -1;
+    uint32_t promised_stream_id = atomic_fetch_add_explicit(&hc->next_server_stream_id, 2,
+                                                            memory_order_relaxed);
 
     unsigned char header_block[4096];
     size_t pos = 0;
-
-    if (pos >= sizeof(header_block)) return -1;
     header_block[pos++] = 0x82;
-
-    if (pos >= sizeof(header_block)) return -1;
     header_block[pos++] = 0x87;
 
-    if (pos + 1 > sizeof(header_block)) return -1;
     header_block[pos] = 0x00;
     size_t n = h2_encode_integer(header_block + pos, sizeof(header_block) - pos, 0, 4);
     if (n == 0) return -1;
@@ -4424,7 +4386,6 @@ int cwist_http2_push_resource(cwist_http_request *req, const char *path, const c
     if (n == 0) return -1;
     pos += n;
 
-    if (pos + 1 > sizeof(header_block)) return -1;
     header_block[pos] = 0x00;
     n = h2_encode_integer(header_block + pos, sizeof(header_block) - pos, 0, 4);
     if (n == 0) return -1;
@@ -4439,23 +4400,28 @@ int cwist_http2_push_resource(cwist_http_request *req, const char *path, const c
     unsigned char pp_payload[4096 + 4];
     h2_put_u31(pp_payload, promised_stream_id);
     memcpy(pp_payload + 4, header_block, pos);
+    if (h2_write_frame(hc, 0x05, CWIST_HTTP2_FLAG_END_HEADERS, req->stream_id, pp_payload,
+                       (uint32_t)(pos + 4)) != 0)
+        return -1;
 
-    if (h2_write_frame_now(conn, 0x05, CWIST_HTTP2_FLAG_END_HEADERS, original_stream_id, pp_payload,
-                           (uint32_t)(pos + 4)) != 0) {
+    cwist_http_response *res = cwist_http_response_create_in_arena(req->arena);
+    if (!res) {
+        h2_send_rst_stream(hc, promised_stream_id, 0x08);
         return -1;
     }
-
-    cwist_http_response *res = cwist_http_response_create_in_arena(req ? req->arena : NULL);
-    if (!res) return -1;
     res->status_code = CWIST_HTTP_OK;
-    if (content_type) {
-        cwist_http_header_add(&res->headers, "content-type", content_type);
-    }
-    if (data && data_len > 0) {
-        cwist_sstring_assign_len(res->body, (const char *)data, data_len);
-    }
+    if (content_type) cwist_http_header_add(&res->headers, "content-type", content_type);
+    if (data && data_len > 0) cwist_sstring_assign_len(res->body, (const char *)data, data_len);
 
-    int ret = h2_send_response_raw(conn, promised_stream_id, res, CWIST_HTTP2_MAX_FRAME_SIZE);
+    h2_stream *s = h2_stream_create(hc, promised_stream_id);
+    if (!s) {
+        cwist_http_response_destroy(res);
+        h2_send_rst_stream(hc, promised_stream_id, 0x08);
+        return -1;
+    }
+    int ret = h2_send_response_hc(hc, promised_stream_id, res, true);
+    if (ret != 0) h2_send_rst_stream(hc, promised_stream_id, 0x08);
+    h2_stream_remove(hc, promised_stream_id);
     cwist_http_response_destroy(res);
-    return ret;
+    return ret == 0 ? 0 : -1;
 }
