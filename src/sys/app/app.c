@@ -3921,6 +3921,15 @@ static void app_http_handler_run(int client_fd, cwist_app *app, const char *init
 
     close(client_fd);
 }
+
+static int cwist_app_make_socket(struct sockaddr_storage *addr, const char *address, uint16_t port,
+                                 uint16_t backlog) {
+#ifdef __wasi__
+    return cwist_make_socket_ipv4((struct sockaddr_in *)addr, address, port, backlog);
+#else
+    return cwist_make_socket_dual((struct sockaddr_in6 *)addr, address, port, backlog);
+#endif
+}
 #endif /* CWIST_PLATFORM_NO_SOCKETS (socket serving machinery) */
 #endif /* __EMSCRIPTEN__ (socket serving machinery) */
 
@@ -4801,8 +4810,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     }
 
     for (size_t i = 0; i < port_count; i++) {
-        struct sockaddr_in6 addr;
-        int fd = cwist_make_socket_dual(&addr, "0.0.0.0", bind_ports[i], 32768);
+        struct sockaddr_storage addr;
+        int fd = cwist_app_make_socket(&addr, "0.0.0.0", bind_ports[i], 32768);
         if (fd < 0) {
             perror("Failed to bind multiport listener");
             cwist_multiport_close_all(pfds, i);
@@ -5034,8 +5043,8 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
      * kernel load-balances incoming connections.  Creating it here avoids the
      * previous anti-pattern where workers forked before binding and inherited
      * threads that do not exist in the child. */
-    struct sockaddr_in6 addr;
-    int server_fd = cwist_make_socket_dual(&addr, "0.0.0.0", port, 32768);
+    struct sockaddr_storage addr;
+    int server_fd = cwist_app_make_socket(&addr, "0.0.0.0", port, 32768);
     if (server_fd < 0) {
         perror("Failed to bind port");
         return -1;
@@ -5045,12 +5054,12 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
     /* Bind the HTTP/3 UDP socket before forking as well.  The thread that
      * services it is started per-process after the fork. */
     int udp_fd = -1;
-#ifndef CWIST_PLATFORM_NO_PROC
+#if defined(CWIST_HTTP3) && !defined(CWIST_PLATFORM_NO_PROC)
     if (app->h3_ctx && (app->use_http3 || app->use_https3)) {
         udp_fd = cwist_multiport_bind_udp(port);
         if (udp_fd < 0) perror("Failed to bind UDP port for HTTP/3");
     }
-#endif /* __wasi__ (no UDP/threads) */
+#endif
 
     // Fork worker processes before any threads are created.
     int workers = 1;
@@ -5157,7 +5166,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
 
     if (is_worker_child) {
         close(server_fd);
-        server_fd = cwist_make_socket_dual(&addr, "0.0.0.0", port, 32768);
+        server_fd = cwist_app_make_socket(&addr, "0.0.0.0", port, 32768);
         if (server_fd >= 0) {
             __atomic_store_n(&g_cwist_listen_fd, server_fd, __ATOMIC_SEQ_CST);
         }

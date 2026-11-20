@@ -2383,6 +2383,7 @@ time_t cwist_http_parse_date(const char *str) {
 }
 
 cwist_sstring *cwist_http_client_ip_from_sockaddr(const struct sockaddr *addr) {
+#ifndef CWIST_PLATFORM_NO_SOCKETS
     if (!addr) return NULL;
     char ip[INET6_ADDRSTRLEN];
     int family = addr->sa_family;
@@ -2404,6 +2405,10 @@ cwist_sstring *cwist_http_client_ip_from_sockaddr(const struct sockaddr *addr) {
     cwist_sstring *s = cwist_sstring_create();
     if (s) cwist_sstring_assign(s, ip);
     return s;
+#else
+    (void)addr;
+    return NULL;
+#endif
 }
 
 cwist_sstring *cwist_get_client_ip_from_fd(int fd) {

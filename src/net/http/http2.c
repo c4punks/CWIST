@@ -2339,35 +2339,6 @@ static size_t h2_encode_header_pairs(unsigned char *dst, size_t dst_cap,
 }
 
 /**
- * @brief Send a memory body as sequenced DATA frames.
- *
- * Used by the CWIST HTTP/2 DATA extension: every DATA frame carries one
- * sequence chunk so the receiver can reorder and discard duplicates.
- */
-static int h2_send_seq_data_frames(h2_conn *hc, cwist_https_connection *conn, uint32_t stream_id,
-                                   const uint8_t *body_data, size_t body_len,
-                                   uint32_t max_frame_size, uint8_t *send_xor) {
-    uint16_t chunk_payload = CWIST_HTTP2_SEQ_CHUNK_PAYLOAD(max_frame_size);
-    if (chunk_payload == 0) return -1;
-
-    cwist_seq_message_t msg;
-    if (!cwist_seq_split(body_data, body_len, chunk_payload, &msg)) return -1;
-
-    for (size_t i = 0; i < msg.count; i++) {
-        uint8_t flags = (i + 1 == msg.count) ? CWIST_HTTP2_FLAG_END_STREAM : 0;
-        if (h2_write_frame_any(hc, conn, CWIST_HTTP2_FRAME_DATA, flags, stream_id, msg.chunks[i],
-                               (uint32_t)msg.chunk_lens[i]) != 0) {
-            cwist_seq_message_free(&msg);
-            return -1;
-        }
-        if (send_xor) *send_xor ^= h2_xor_bytes(msg.chunks[i], msg.chunk_lens[i]);
-    }
-
-    cwist_seq_message_free(&msg);
-    return 0;
-}
-
-/**
  * @brief Compute a sequenced chunk payload size that fits the current window.
  */
 static uint16_t h2_seq_chunk_payload(h2_conn *hc, h2_stream *s, uint32_t max_frame_size) {
