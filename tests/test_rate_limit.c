@@ -76,9 +76,34 @@ void test_rate_limit_respects_param(void) {
     printf("  OK\n");
 }
 
+void test_rate_limit_instances_are_independent(void) {
+    printf("test_rate_limit_instances_are_independent...\n");
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    req->client_fd = -1;
+    cwist_middleware_func first = cwist_mw_rate_limit_ip(1);
+    cwist_middleware_func second = cwist_mw_rate_limit_ip(1);
+    assert(first && second && first != second);
+
+    first(req, res, dummy_next);
+    assert(res->status_code == CWIST_HTTP_OK);
+    second(req, res, dummy_next);
+    assert(res->status_code == CWIST_HTTP_OK);
+    first(req, res, dummy_next);
+    assert(res->status_code == 429);
+    second(req, res, dummy_next);
+    assert(res->status_code == 429);
+
+    cwist_http_request_destroy(req);
+    cwist_http_response_destroy(res);
+    cwist_mw_rate_limit_reset();
+    printf("  OK\n");
+}
+
 int main(void) {
     test_rate_limit_blocks_after_burst();
     test_rate_limit_respects_param();
+    test_rate_limit_instances_are_independent();
     printf("All rate limit tests passed.\n");
     return 0;
 }
