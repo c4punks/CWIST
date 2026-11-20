@@ -236,7 +236,7 @@ static void test_db_crypt_roundtrip(void) {
     unsigned char *blob = cwist_db_crypt_seal(&ctx, plaintext, pt_len, &blob_len);
     assert(blob != NULL);
     assert(blob_len > pt_len);
-    assert(blob[4] == 0x02);
+    assert(blob[4] == 0x03);
 
     size_t out_len = 0;
     unsigned char *recovered = cwist_db_crypt_open(&ctx, blob, blob_len, &out_len);
@@ -300,6 +300,29 @@ static void test_db_crypt_rejects_tampering(void) {
     printf("  Passed.\n");
 }
 
+static void test_db_crypt_v3_mac(const cwist_db_crypt_ctx_t *ctx, unsigned char *blob,
+                                 size_t blob_len) {
+    static const unsigned char info[] = "CWIST db_crypt v3";
+    unsigned char salt[CWIST_DB_CRYPT_KEY_LEN] = {0};
+    unsigned char prk[CWIST_DB_CRYPT_KEY_LEN];
+    unsigned char keys[CWIST_DB_CRYPT_KEY_LEN * 2];
+    unsigned char input[CWIST_DB_CRYPT_KEY_LEN + sizeof(info)];
+    unsigned int len;
+    assert(HMAC(EVP_sha256(), salt, sizeof(salt), ctx->kek, sizeof(ctx->kek), prk, &len));
+    for (unsigned int i = 0; i < 2; i++) {
+        size_t prefix = i * CWIST_DB_CRYPT_KEY_LEN;
+        if (prefix) memcpy(input, keys, prefix);
+        memcpy(input + prefix, info, sizeof(info) - 1);
+        input[prefix + sizeof(info) - 1] = (unsigned char)(i + 1);
+        assert(HMAC(EVP_sha256(), prk, sizeof(prk), input, prefix + sizeof(info),
+                    keys + i * CWIST_DB_CRYPT_KEY_LEN, &len));
+    }
+    assert(HMAC(EVP_sha256(), keys + CWIST_DB_CRYPT_KEY_LEN, CWIST_DB_CRYPT_KEY_LEN, blob,
+                blob_len - TEST_DB_CRYPT_AUTH_TAG_LEN,
+                blob + blob_len - TEST_DB_CRYPT_AUTH_TAG_LEN, &len));
+    assert(len == TEST_DB_CRYPT_AUTH_TAG_LEN);
+}
+
 static void test_db_crypt_length_guards(void) {
     printf("Testing db_crypt length guards...\n");
 
@@ -313,11 +336,7 @@ static void test_db_crypt_length_guards(void) {
     assert(blob != NULL);
     size_t pt_len_offset = CWIST_DB_CRYPT_HDR_LEN - 8;
     for (int i = 0; i < 8; i++) blob[pt_len_offset + (size_t)i] = 0;
-    unsigned int tag_len = 0;
-    assert(HMAC(EVP_sha256(), ctx.kek, CWIST_DB_CRYPT_KEY_LEN, blob,
-                blob_len - TEST_DB_CRYPT_AUTH_TAG_LEN,
-                blob + blob_len - TEST_DB_CRYPT_AUTH_TAG_LEN, &tag_len) != NULL);
-    assert(tag_len == TEST_DB_CRYPT_AUTH_TAG_LEN);
+    test_db_crypt_v3_mac(&ctx, blob, blob_len);
 
     size_t out_len = 0;
     assert(cwist_db_crypt_open(&ctx, blob, blob_len, &out_len) == NULL);
