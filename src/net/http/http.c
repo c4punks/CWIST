@@ -2225,7 +2225,8 @@ void cwist_http_response_add_security_headers(cwist_http_response *res) {
                                      "usb=(), interest-cohort=()");
     }
     if (!cwist_http_header_get(res->headers, "Cross-Origin-Opener-Policy")) {
-        cwist_http_header_add_static(&res->headers, arena, "Cross-Origin-Opener-Policy", "same-origin");
+        cwist_http_header_add_static(&res->headers, arena, "Cross-Origin-Opener-Policy",
+                                     "same-origin");
     }
 }
 
@@ -4577,7 +4578,6 @@ static void http_send_100_continue(int fd) {
  * @return Heap-allocated response string, or NULL on invalid input.
  */
 cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
-    // Deprecated / Debug only
     if (!res) return NULL;
     cwist_sstring *s = cwist_sstring_create();
     if (!s) return NULL;
