@@ -3052,6 +3052,16 @@ static int h2_check_followup_headers(h2_conn *hc, h2_stream *s, bool end_stream)
     return rst_rc == -2 ? -2 : 1;
 }
 
+static int h2_decode_refused_headers(h2_conn *hc, const unsigned char *block, size_t block_len) {
+    if (!block || block_len == 0) return 0;
+    h2_stream s = {0};
+    s.req = cwist_http_request_create();
+    if (!s.req) return -1;
+    int rc = h2_decode_header_block(hc, &s, block, block_len, true);
+    cwist_http_request_destroy(s.req);
+    return rc == H2_DECODE_COMPRESSION_ERROR ? -1 : 0;
+}
+
 /**
  * @brief Handle a HEADERS frame opening (or continuing) a header block.
  * With END_HEADERS the block is decoded immediately; otherwise buffering for
@@ -3087,7 +3097,14 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
         if (!s) {
             bool refused = false, goaway_sent = false;
             s = h2_request_stream_create(hc, stream_id, &refused, &goaway_sent);
-            if (!s) return goaway_sent ? -2 : (refused ? 1 : -1);
+            if (!s) {
+                if (goaway_sent) return -2;
+                if (refused)
+                    return h2_decode_refused_headers(hc, payload + block_offset, block_len) < 0
+                               ? -1
+                               : 1;
+                return -1;
+            }
         }
         if (payload && block_len > 0) {
             int rc = h2_decode_stream_headers(hc, s, payload + block_offset, block_len, is_new);
@@ -3110,8 +3127,7 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
     }
 
     /* Refused streams must still have their CONTINUATION sequence consumed
-     * (and their header block ignored) so the connection framing stays in
-     * sync. */
+     * and decoded so HPACK dynamic state stays in sync. */
     if (is_new && hc->active_streams >= CWIST_HTTP2_MAX_CONCURRENT_STREAMS) {
         CWIST_LOG_WARN("[h2] refusing stream %u: concurrent stream limit %u reached", stream_id,
                        (unsigned)CWIST_HTTP2_MAX_CONCURRENT_STREAMS);
@@ -3181,18 +3197,6 @@ static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id, const unsigne
         return -2;
     }
 
-    /* Header block of a stream we already refused: consume the frames so
-     * framing stays in sync, but do not decode or buffer them. */
-    if (hc->cont_discard) {
-        if (end_headers) {
-            hc->expecting_continuation = false;
-            hc->cont_discard = false;
-            hc->cont_stream_id = 0;
-            hc->cont_frame_count = 0;
-        }
-        return 0;
-    }
-
     if (len > 0) {
         if (hc->cont_len + len > hc->cont_cap) {
             size_t new_cap = hc->cont_cap * 2;
@@ -3207,6 +3211,15 @@ static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id, const unsigne
     }
 
     if (end_headers) {
+        if (hc->cont_discard) {
+            int rc = h2_decode_refused_headers(hc, hc->cont_buf, hc->cont_len);
+            hc->expecting_continuation = false;
+            hc->cont_discard = false;
+            hc->cont_stream_id = 0;
+            hc->cont_frame_count = 0;
+            hc->cont_len = 0;
+            return rc < 0 ? -1 : 1;
+        }
         h2_stream *s = h2_stream_find(hc, hc->cont_stream_id);
         bool is_new = (s == NULL);
         int rc = 0;

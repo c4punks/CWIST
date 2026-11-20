@@ -1066,6 +1066,46 @@ static void test_http2_max_concurrent_streams(void) {
     printf("Passed HTTP/2 max concurrent streams.\n");
 }
 
+static void test_http2_refused_stream_keeps_hpack_state(void) {
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx server = {
+        .fd = sv[0], .handler = http2_hpack_handler, .standard_data = true};
+    pthread_t tid;
+    SSL *client = test_http2_start_client(sv, &server, &tid);
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char initial[] = {0x82, 0x87, 0x84};
+    static const unsigned char indexed_name[] = {0x40, 0x07, 'x', '-', 't', 'o', 'k', 'e', 'n',
+                                                 0x06, 'a',  'b', 'c', '1', '2', '3'};
+    static const unsigned char indexed[] = {0x82, 0x87, 0x84, 0xbe};
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
+    test_http2_write_frame(client, 0x1, 0x4, 1, initial, sizeof(initial));
+    test_http2_write_frame(client, 0x1, 0, 3, initial, sizeof(initial));
+    test_http2_write_frame(client, 0x9, 0x4, 3, indexed_name, sizeof(indexed_name));
+    test_http2_write_frame(client, 0x1, 0x5, 5, indexed, sizeof(indexed));
+
+    bool answered = false;
+    for (int i = 0; i < 20 && !answered; i++) {
+        unsigned char hdr[9];
+        assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
+                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        unsigned char payload[4096];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x3 && stream_id == 3) {
+            assert(len == 4 && payload[3] == 0x7);
+        } else if (hdr[3] == 0x0 && stream_id == 5) {
+            assert(len == 5 && memcmp(payload, "h2 ok", 5) == 0);
+            answered = true;
+        }
+    }
+    assert(answered);
+    test_http2_stop_client(client, sv[1], tid);
+}
+
 static void test_http2_rapid_reset(void) {
     printf("Testing HTTP/2 Rapid Reset defense (CVE-2023-44487)...\n");
     int sv[2];
@@ -2205,6 +2245,7 @@ int main(void) {
     test_http2_missing_pseudo_header();
     test_http2_malformed_headers_padding();
     test_http2_max_concurrent_streams();
+    test_http2_refused_stream_keeps_hpack_state();
     test_http2_rapid_reset();
     test_http2_idle_stream_rst();
     test_http2_continuation_flood();
