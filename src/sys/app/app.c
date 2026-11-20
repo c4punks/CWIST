@@ -2838,6 +2838,14 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     req->endpoint_opts = CWIST_ENDPOINT_DEFAULT;
     if (res) {
         res->endpoint_opts = req->endpoint_opts;
+        res->keep_alive = req->keep_alive;
+        if (req->version && req->version->data)
+            cwist_sstring_borrow(res->version, req->version->data, req->version->size);
+        if (req->method == CWIST_HTTP_UNKNOWN) {
+            res->status_code = CWIST_HTTP_NOT_IMPLEMENTED;
+            cwist_sstring_assign(res->body, "Method Not Implemented");
+            return;
+        }
     }
 
     const char *path = (req->path && req->path->data) ? req->path->data : "/";
@@ -3061,6 +3069,7 @@ static void static_ssl_http1_handler(cwist_https_connection *conn, void *ctx) {
         }
 
         bool keep_alive = req->keep_alive && res->keep_alive;
+        res->keep_alive = keep_alive;
         bool upgraded = req->upgraded;
 
         /* During shutdown, answer in flight but mark the connection as
@@ -3385,6 +3394,7 @@ static app_serve_result_t app_serve_parsed_request(cwist_app *app, int client_fd
     }
 
     bool keep_alive = req->keep_alive && res->keep_alive;
+    res->keep_alive = keep_alive;
     bool upgraded = req->upgraded;
 
     /* During shutdown, answer in flight but mark the connection as closing
