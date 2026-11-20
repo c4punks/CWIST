@@ -1458,7 +1458,7 @@ TEST_TARGETS = test_worker_affinity \
                test_compress_backends \
                test_builtin_mw_deferred \
                test_log \
-               nuke_missing_user_test \
+               test_nuke_missing_user \
                test_bind \
                test_bind_write_error_response \
                test_metrics \
@@ -2122,12 +2122,12 @@ test_log: $(LIB_NAME) tests/test_log.c
 	./test_log
 
 ifeq ($(CWIST_DB),1)
-nuke_missing_user_test: $(LIB_NAME) tests/nuke_missing_user_test.c
-	$(CC) $(CFLAGS) -o nuke_missing_user_test tests/nuke_missing_user_test.c $(LIB_NAME) $(LIBS)
-	./nuke_missing_user_test
+test_nuke_missing_user: $(LIB_NAME) tests/test_nuke_missing_user.c
+	$(CC) $(CFLAGS) -o test_nuke_missing_user tests/test_nuke_missing_user.c $(LIB_NAME) $(LIBS)
+	./test_nuke_missing_user
 else
 # CWIST_DB=0: the module and its test are compiled out.
-nuke_missing_user_test:
+test_nuke_missing_user:
 	@echo "CWIST_DB=0: skipping $@"
 endif
 
