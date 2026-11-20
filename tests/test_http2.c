@@ -25,6 +25,7 @@ typedef struct test_http2_server_ctx {
     int fd;
     cwist_error_t result;
     cwist_http2_request_handler_func handler;
+    const cwist_http2_stream_hooks *hooks;
     bool standard_data;
 } test_http2_server_ctx;
 
@@ -157,7 +158,8 @@ static void *http2_handler_server_thread(void *arg) {
                                    .negotiated_http2 = true,
                                    .negotiated_protocol = CWIST_HTTPS_PROTOCOL_HTTP2,
                                    .http2_sequenced_data = !ctx->standard_data};
-    ctx->result = cwist_http2_serve_connection(&conn, NULL, ctx->handler);
+    ctx->result = ctx->hooks ? cwist_http2_serve_connection_ex(&conn, NULL, ctx->handler, ctx->hooks)
+                             : cwist_http2_serve_connection(&conn, NULL, ctx->handler);
 
     SSL_shutdown(ssl);
     SSL_free(ssl);
@@ -816,9 +818,10 @@ static void test_http2_response_headers(void) {
         if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
 
         if (type == 0x1 && stream_id == 1) {
-            /* HEADERS frame should contain :status, content-length,
+            /* HEADERS frame should contain :status, content-length, date,
              * content-type, and x-custom. Old code sent only 1 byte (0x88). */
             assert(len > 1);
+            assert(memmem(payload, len, "GMT", 3) != NULL);
             saw_headers = true;
         }
         if (type == 0x0 && stream_id == 1) {
@@ -842,6 +845,158 @@ static void test_http2_response_headers(void) {
 
     pthread_join(tid, NULL);
     printf("Passed HTTP/2 response headers.\n");
+}
+
+static SSL *test_http2_start_client(int sv[2], test_http2_server_ctx *server, pthread_t *tid) {
+    assert(pthread_create(tid, NULL, http2_handler_server_thread, server) == 0);
+    SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(client_ctx != NULL);
+    SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+    SSL *client = SSL_new(client_ctx);
+    assert(client != NULL);
+    assert(SSL_set_fd(client, sv[1]) == 1);
+    assert(SSL_connect(client) == 1);
+    return client;
+}
+
+static void test_http2_stop_client(SSL *client, int fd, pthread_t tid) {
+    SSL_CTX *client_ctx = SSL_get_SSL_CTX(client);
+    SSL_shutdown(client);
+    SSL_free(client);
+    SSL_CTX_free(client_ctx);
+    close(fd);
+    pthread_join(tid, NULL);
+}
+
+static void test_http2_write_frame(SSL *client, uint8_t type, uint8_t flags, uint32_t stream_id,
+                                   const unsigned char *payload, size_t len) {
+    unsigned char hdr[9] = {(unsigned char)(len >> 16), (unsigned char)(len >> 8),
+                            (unsigned char)len, type, flags,
+                            (unsigned char)(stream_id >> 24), (unsigned char)(stream_id >> 16),
+                            (unsigned char)(stream_id >> 8), (unsigned char)stream_id};
+    hdr[5] &= 0x7f;
+    assert(ssl_write_all(client, hdr, sizeof(hdr)) == 0);
+    if (len) assert(ssl_write_all(client, payload, len) == 0);
+}
+
+static void test_http2_decoded_header_list_limit(void) {
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx server = {.fd = sv[0], .handler = http2_test_handler};
+    pthread_t tid;
+    SSL *client = test_http2_start_client(sv, &server, &tid);
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
+
+    size_t block_len = 4013;
+    unsigned char *block = malloc(block_len);
+    assert(block != NULL);
+    block[0] = 0x82;
+    block[1] = 0x87;
+    block[2] = 0x84;
+    block[3] = 0x40;
+    block[4] = 5;
+    memcpy(block + 5, "x-big", 5);
+    block[10] = 0x7f;
+    block[11] = 0xa1;
+    block[12] = 0x1e;
+    memset(block + 13, 'a', 4000);
+    test_http2_write_frame(client, 0x1, 0x5, 1, block, block_len);
+    free(block);
+
+    unsigned char amplified[23];
+    amplified[0] = 0x82;
+    amplified[1] = 0x87;
+    amplified[2] = 0x84;
+    memset(amplified + 3, 0xbe, 20);
+    test_http2_write_frame(client, 0x1, 0x4, 3, amplified, sizeof(amplified));
+
+    bool reset = false;
+    for (int i = 0; i < 20 && !reset; i++) {
+        unsigned char hdr[9];
+        if (ssl_read_exact(client, hdr, sizeof(hdr)) != 0) break;
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
+                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        unsigned char payload[17000];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x3 && stream_id == 3) {
+            assert(len == 4 && payload[3] == 0x1);
+            reset = true;
+        }
+    }
+    assert(reset);
+    test_http2_stop_client(client, sv[1], tid);
+}
+
+typedef struct {
+    cwist_http_request *req;
+} test_http2_hook_stream;
+
+static void *test_http2_take_stream(void *conn_ctx, cwist_http_request *req,
+                                    cwist_h2_stream *stream) {
+    (void)conn_ctx;
+    (void)stream;
+    test_http2_hook_stream *hook = malloc(sizeof(*hook));
+    assert(hook != NULL);
+    hook->req = req;
+    return hook;
+}
+
+static void test_http2_close_stream(void *conn_ctx, void *stream_ctx) {
+    (void)conn_ctx;
+    test_http2_hook_stream *hook = stream_ctx;
+    cwist_http_request_destroy(hook->req);
+    free(hook);
+}
+
+static int test_http2_fail_data(void *conn_ctx, void *stream_ctx, const unsigned char *data,
+                                size_t len, int end_stream) {
+    (void)conn_ctx;
+    (void)stream_ctx;
+    (void)data;
+    (void)len;
+    (void)end_stream;
+    return -1;
+}
+
+static void test_http2_hook_error_sends_reset(void) {
+    cwist_http2_stream_hooks hooks = {0};
+    hooks.on_headers = test_http2_take_stream;
+    hooks.on_data = test_http2_fail_data;
+    hooks.on_close = test_http2_close_stream;
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx server = {.fd = sv[0], .handler = http2_test_handler, .hooks = &hooks};
+    pthread_t tid;
+    SSL *client = test_http2_start_client(sv, &server, &tid);
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char headers[] = {0x82, 0x87, 0x84};
+    static const unsigned char data[] = {'x'};
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
+    test_http2_write_frame(client, 0x1, 0x4, 1, headers, sizeof(headers));
+    test_http2_write_frame(client, 0x0, 0, 1, data, sizeof(data));
+
+    unsigned char hdr[9];
+    unsigned char payload[4096];
+    bool reset = false;
+    for (int i = 0; i < 10 && !reset; i++) {
+        assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
+                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x3 && stream_id == 1) {
+            assert(len == 4 && payload[3] == 0x2);
+            reset = true;
+        }
+    }
+    assert(reset);
+    test_http2_stop_client(client, sv[1], tid);
 }
 
 /* Handler for the HPACK incremental-indexing test: replies "h2 ok" only when
@@ -2321,6 +2476,8 @@ int main(void) {
     test_http2_stalled_stream_does_not_block_other_streams();
     test_http2_pacing_does_not_block_streams();
     test_http2_response_headers();
+    test_http2_decoded_header_list_limit();
+    test_http2_hook_error_sends_reset();
     test_http2_hpack_incremental_indexing();
     test_http2_async_defer();
     test_http2_async_defer_rst_drops();

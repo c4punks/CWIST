@@ -2272,7 +2272,7 @@ void cwist_http_header_free_all(cwist_http_header_node *head) {
  *       recompute needs no lock: at a second boundary every worker recomputes
  *       its own copy once and concurrent one-time recomputes yield the same value.
  */
-static bool cwist_get_cached_date_header(char out_buf[36]) {
+bool cwist_get_cached_date_header(char out_buf[36]) {
     static _Thread_local time_t cached_sec = (time_t)-1;
     static _Thread_local char date_str[36];
 
