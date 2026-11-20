@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['인증_20jwt_20및_20db_20암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md544',1,'']]]
+  ['역사적_20표_3a_20gusuryak_209차_20쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md446',1,'']]]
 ];

@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md365',1,'']]]
+  ['문자열_0',['1. SString (스마트 문자열)',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md427',1,'']]],
+  ['문헌_1',['라틴방진 참고 문헌',['../da/d05/md_docs_2ko_2references_2latin__square__references.html',1,'']]]
 ];

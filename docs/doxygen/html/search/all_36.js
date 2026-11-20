@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['띄우기_0',['1. Hello World: 첫 서버 띄우기',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md539',1,'']]]
+  ['덧붙이기_20복사_0',['덧붙이기 / 복사',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md368',1,'']]]
 ];

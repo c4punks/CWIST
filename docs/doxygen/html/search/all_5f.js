@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['원칙_0',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md417',1,'']]]
+  ['않는_20것_0',['2.4 코드가 만들지 않는 것',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md445',1,'']]]
 ];

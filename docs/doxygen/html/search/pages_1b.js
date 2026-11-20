@@ -8,7 +8,7 @@ var searchData=
   ['wasmtime_5',['Deploy the WASI 0.2 example with Wasmtime',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html',1,'']]],
   ['web_20development_20tutorial_20a_20to_20z_6',['CWIST Web Development Tutorial (A to Z)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html',1,'']]],
   ['web_20server_20benchmark_20methodology_7',['Web Server Benchmark Methodology',['../d6/d42/md_docs_2webserver-benchmark.html',1,'']]],
-  ['websocket_20api_8',['WebSocket API',['../db/dc5/md_docs_2api_2websocket.html',1,'']]],
+  ['websocket_20api_8',['websocket api',['../d7/dec/md_docs_2ko_2api_2websocket.html',1,'WebSocket API'],['../db/dc5/md_docs_2api_2websocket.html',1,'WebSocket API']]],
   ['webtransport_20서버_20만들기_9',['CWIST로 WebTransport 서버 만들기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html',1,'']]],
   ['webtransport_20server_20with_20cwist_10',['Build a WebTransport server with CWIST',['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'']]],
   ['with_20cwist_11',['with cwist',['../de/d87/md_docs_2embedded_2stm32.html',1,'Bare-metal STM32 with CWIST'],['../d4/db0/md_docs_2tutorials_2blog-crud.html',1,'Build a CRUD blog with CWIST'],['../d2/dcb/md_docs_2tutorials_2webtransport-server.html',1,'Build a WebTransport server with CWIST'],['../da/d48/md_docs_2tutorials_2nats-integration.html',1,'Integrate NATS with CWIST']]],

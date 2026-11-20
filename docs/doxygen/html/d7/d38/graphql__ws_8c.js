@@ -2,8 +2,10 @@ var graphql__ws_8c =
 [
     [ "GQL_WS_CLOSE_BAD_REQUEST", "d7/d38/graphql__ws_8c.html#aa6b53348a4b6708e0dd9eb1497b77efc", null ],
     [ "GQL_WS_CLOSE_DUPLICATE_ID", "d7/d38/graphql__ws_8c.html#a80d271e1cc72d94d8f5b7b22a4588236", null ],
+    [ "GQL_WS_CLOSE_INIT_TIMEOUT", "d7/d38/graphql__ws_8c.html#a5f9228eb38f6c46b370a3247f30edfd6", null ],
     [ "GQL_WS_CLOSE_TOO_MANY_INIT", "d7/d38/graphql__ws_8c.html#ab95f164d23b9adbbb5f397f03db3f664", null ],
     [ "GQL_WS_CLOSE_UNAUTHORIZED", "d7/d38/graphql__ws_8c.html#aae247960761be8d65aba2f46192b962c", null ],
+    [ "GQL_WS_INIT_TIMEOUT_MS", "d7/d38/graphql__ws_8c.html#a9be7c474450f464e2160e8e57c3a24d5", null ],
     [ "GQL_WS_MAX_PENDING_BYTES", "d7/d38/graphql__ws_8c.html#a5f60416001094d518bee80c3bdc881ff", null ],
     [ "gql_sub_field_t", "d7/d38/graphql__ws_8c.html#ae61cec4a4a34dd3ce926157889fc056a", null ],
     [ "gql_ws_conn_t", "d7/d38/graphql__ws_8c.html#aef2c4a462e1681ff0e82f5ce20131036", null ],
@@ -15,6 +17,9 @@ var graphql__ws_8c =
     [ "cwist_graphql_publish", "d7/d38/graphql__ws_8c.html#aaeb854b70b085b4aa06250726ed6fb7a", null ],
     [ "cwist_graphql_ws_add_subscription", "d7/d38/graphql__ws_8c.html#a7170a006e65284f9115c6e32e8280fc6", null ],
     [ "cwist_graphql_ws_attach", "d7/d38/graphql__ws_8c.html#a4bd821fd1b3e33b5c8d4e03a7ac1c12b", null ],
+    [ "cwist_graphql_ws_attach_ex", "d7/d38/graphql__ws_8c.html#a8de4e8baedecce82834c218047361137", null ],
     [ "cwist_graphql_ws_create", "d7/d38/graphql__ws_8c.html#a7cfa54fa39ba52785ec9cef66c74edcf", null ],
-    [ "cwist_graphql_ws_destroy", "d7/d38/graphql__ws_8c.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc", null ]
+    [ "cwist_graphql_ws_destroy", "d7/d38/graphql__ws_8c.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc", null ],
+    [ "cwist_graphql_ws_upgrade", "d7/d38/graphql__ws_8c.html#a92cb6bc4a03e17d2e6b3fd6e80818a22", null ],
+    [ "cwist_graphql_ws_upgrade_response", "d7/d38/graphql__ws_8c.html#a260f4cb7f9028e1545769f491f6ce92c", null ]
 ];

@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['마이그레이션_20sqlite_0',['5. 데이터베이스와 마이그레이션 (SQLite)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md543',1,'']]],
-  ['마치며_1',['마치며',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md552',1,'']]]
+  ['동적_20css_20합성기_20wasm_20및_20ssr_0',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md599',1,'']]]
 ];

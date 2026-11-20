@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['덮기_0',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md397',1,'']]]
+  ['기능_0',['LibTTAK 메모리 기능',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md435',1,'']]],
+  ['기본_1',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md468',1,'']]],
+  ['기본_20원칙_2',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md467',1,'']]]
 ];

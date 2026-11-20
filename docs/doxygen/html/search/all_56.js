@@ -1,5 +1,7 @@
 var searchData=
 [
-  ['양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md547',1,'']]],
-  ['양자내성_20하이브리드_20키_20교환_1',['7. PQC TLS (양자내성 하이브리드 키 교환)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md545',1,'']]]
+  ['소수_20거듭제곱_0',['2.1 유한체 (소수 거듭제곱)',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md442',1,'']]],
+  ['소수_20거듭제곱_20p_20e_20e_202_1',['2.2 홀수 소수 거듭제곱 p^e, e &gt;= 2',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md443',1,'']]],
+  ['소유권_2',['메시지와 결과 소유권',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md396',1,'']]],
+  ['소켓_20도우미_3',['소켓 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md375',1,'']]]
 ];

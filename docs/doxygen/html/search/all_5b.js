@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['예제_3a_20othello_20web_0',['예제: Othello Web',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md386',1,'']]]
+  ['쌍_0',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md446',1,'']]],
+  ['쌍_20덮기_1',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md447',1,'']]]
 ];

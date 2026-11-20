@@ -203,6 +203,7 @@ Method helpers</h2>
 Socket helpers</h2>
 <ul>
 <li><code>int <a class="el" href="../../dd/d56/http_8h.html#a89d1a241e43022d68253ad1590e85c93" title="Create an IPv4 socket and bind/listen.">cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog)</a></code></li>
+<li><code>int <a class="el" href="../../d9/dab/net_2http_2http_8h.html#abaae5ab3e0c1b5a2677410b03bc3347e" title="Create a dual-stack IPv6 socket and perform bind/listen.">cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uint16_t port, uint16_t backlog)</a></code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd))</code></li>
 <li><code><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> cwist_http_server_loop(int server_fd, <a class="el" href="../../d5/d6e/structcwist__server__config.html">cwist_server_config</a> *config, void (*handler)(int))</code></li>
 </ul>

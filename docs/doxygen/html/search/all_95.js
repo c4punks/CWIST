@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['액세스_20로그_20미들웨어_0',['액세스 로그 미들웨어',['../d5/d3e/md_docs_2ko_2api_2middleware.html#autotoc_md487',1,'']]]
+  ['핵심_20도우미_0',['핵심 도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md366',1,'']]]
 ];

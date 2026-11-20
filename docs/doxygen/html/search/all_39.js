@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['레퍼런스_0',['CWIST 라이브러리 레퍼런스',['../d3/d19/md_docs_2ko_2REFERENCE.html',1,'']]]
+  ['도우미_0',['도우미',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md363',1,'그 밖에 내보낸 inline 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md374',1,'메서드 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md375',1,'소켓 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md366',1,'핵심 도우미'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md373',1,'헤더 도우미']]]
 ];

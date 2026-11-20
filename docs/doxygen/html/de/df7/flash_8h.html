@@ -212,7 +212,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:abe3d3740a8857b0ff3df93f60478c7cc" id="r_abe3d3740a8857b0ff3df93f60478c7cc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/df7/flash_8h.html#abe3d3740a8857b0ff3df93f60478c7cc">cwist_flash_set</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, const char *key, const char *value)</td></tr>
-<tr class="memdesc:abe3d3740a8857b0ff3df93f60478c7cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a flash message on the request.  <br /></td></tr>
+<tr class="memdesc:abe3d3740a8857b0ff3df93f60478c7cc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a flash message on the request and its active session, if any. Session-backed messages survive a redirect and are consumed on the next read.  <br /></td></tr>
 <tr class="separator:abe3d3740a8857b0ff3df93f60478c7cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a91c592fe6997115126994e431c235ec9" id="r_a91c592fe6997115126994e431c235ec9"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../de/df7/flash_8h.html#a91c592fe6997115126994e431c235ec9">cwist_flash_get</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, const char *key)</td></tr>
 <tr class="memdesc:a91c592fe6997115126994e431c235ec9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a flash message and consume it (one-time read).  <br /></td></tr>
@@ -256,7 +256,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Get a flash message and consume it (one-time read). </p>
-<dl class="section return"><dt>Returns</dt><dd>The message value, or NULL if not found.</dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Newly owned message value that the caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>, or NULL if not found.</dd></dl>
 <p>Get a flash message and consume it (one-time read).</p>
 <p>Destructive lookup: on success the entry's bucket is unlinked and freed, and ownership of the value string is transferred to the caller, who must release it with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -268,9 +268,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly owned copy pointer to the value (caller frees), or NULL if req/key are NULL, the flash map is empty, or the key is missing. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00055">55</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00101">101</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">cwist_query_map::buckets</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00023">cwist_query_map::count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00186">cwist_http_request::flash</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00013">cwist_query_bucket::key</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00015">cwist_query_bucket::next</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00021">cwist_query_map::seed</a>, <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00052">siphash24()</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">cwist_query_map::size</a>, and <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00014">cwist_query_bucket::value</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">cwist_query_map::buckets</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00023">cwist_query_map::count</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00187">cwist_http_request::flash</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00013">cwist_query_bucket::key</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00015">cwist_query_bucket::next</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00021">cwist_query_map::seed</a>, <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00052">siphash24()</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">cwist_query_map::size</a>, and <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00014">cwist_query_bucket::value</a>.</p>
 
 </div>
 </div>
@@ -313,9 +313,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to the stored value, or NULL if req/key are NULL or the key is not present. The pointer stays owned by the flash map. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00039">39</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00083">83</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00186">cwist_http_request::flash</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00187">cwist_http_request::flash</a>.</p>
 
 </div>
 </div>
@@ -347,9 +347,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated NUL-terminated JSON string the caller must free with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>, or NULL if there are no entries or if a buffer allocation fails (in which case the flash map is left unchanged). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00088">88</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00136">136</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">cwist_query_map::buckets</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00023">cwist_query_map::count</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00093">cwist_query_map_clear()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00186">cwist_http_request::flash</a>, and <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">cwist_query_map::size</a>.</p>
+<p class="reference">References <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00019">cwist_query_map::buckets</a>, <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00023">cwist_query_map::count</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00093">cwist_query_map_clear()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00187">cwist_http_request::flash</a>, and <a class="el" href="../../d1/d7a/net_2http_2query_8h_source.html#l00020">cwist_query_map::size</a>.</p>
 
 </div>
 </div>
@@ -385,8 +385,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Set a flash message on the request. </p>
-<p>Set a flash message on the request.</p>
+<p>Set a flash message on the request and its active session, if any. Session-backed messages survive a redirect and are consumed on the next read. </p>
+<p>Set a flash message on the request and its active session, if any. Session-backed messages survive a redirect and are consumed on the next read.</p>
 <p>Creates the request's flash query map on first use. A NULL value is stored as an empty string.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -397,9 +397,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00020">20</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d1/d4d/flash_8c_source.html#l00063">63</a> of file <a class="el" href="../../d1/d4d/flash_8c_source.html">flash.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00054">cwist_query_map_create()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00186">cwist_http_request::flash</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00054">cwist_query_map_create()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00187">cwist_http_request::flash</a>.</p>
 
 </div>
 </div>

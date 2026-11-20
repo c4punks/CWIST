@@ -25,6 +25,7 @@ var structcwist__http__request =
     [ "session", "dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e", null ],
     [ "stream_id", "dd/d68/structcwist__http__request.html#a7ae8498045aa64de63dc00cee14b074d", null ],
     [ "te_chunked_seen", "dd/d68/structcwist__http__request.html#a10266ac748fd6062f8f9c4f07d785b92", null ],
+    [ "trailers", "dd/d68/structcwist__http__request.html#a4cb850030c2090b4c055139a7ad8f1b0", null ],
     [ "upgraded", "dd/d68/structcwist__http__request.html#a93bc1facc9f75e9d2e243ea9f82b5669", null ],
     [ "version", "dd/d68/structcwist__http__request.html#a9d21d4ffb5eb56a1e555898e2dd3da38", null ],
     [ "ws_async_handoff", "dd/d68/structcwist__http__request.html#a7b1638bf9bf448d8e1b9834839df655c", null ]

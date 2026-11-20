@@ -324,7 +324,7 @@ Functions</h2></td></tr>
 <tr><td class="fieldname"><a id="a22009cad9633c4143994338668ad016aa9993147bc5be445ff948fde8e1ff340a" name="a22009cad9633c4143994338668ad016aa9993147bc5be445ff948fde8e1ff340a"></a>CWIST_LOG_JSON&#160;</td><td class="fielddoc"></td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db9/middleware_8h_source.html#l00016">16</a> of file <a class="el" href="../../d3/db9/middleware_8h_source.html">middleware.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db9/middleware_8h_source.html#l00018">18</a> of file <a class="el" href="../../d3/db9/middleware_8h_source.html">middleware.h</a>.</p>
 
 </div>
 </div>
@@ -355,9 +355,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for access logging. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00296">296</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00365">365</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db9/middleware_8h_source.html#l00016">CWIST_LOG_COMBINED</a>, <a class="el" href="../../d3/db9/middleware_8h_source.html#l00016">CWIST_LOG_COMMON</a>, and <a class="el" href="../../d3/db9/middleware_8h_source.html#l00016">CWIST_LOG_JSON</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db9/middleware_8h_source.html#l00018">CWIST_LOG_COMBINED</a>, <a class="el" href="../../d3/db9/middleware_8h_source.html#l00018">CWIST_LOG_COMMON</a>, and <a class="el" href="../../d3/db9/middleware_8h_source.html#l00018">CWIST_LOG_JSON</a>.</p>
 
 </div>
 </div>
@@ -379,18 +379,18 @@ Functions</h2></td></tr>
 
 <p>Fixed-window rate limiter middleware (per-IP). </p>
 <p>Fixed-window rate limiter middleware (per-IP).</p>
-<p>Reuses an existing wrapper when the same rate was already registered. If all CWIST_RATE_LIMIT_MAX_CFGS config slots are taken, logs a warning and falls back to the first registered wrapper.</p>
+<p>Every call allocates a distinct limiter configuration, including repeated calls with the same rate. Returns NULL when all configuration slots are used.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requests_per_minute</td><td>Allowed requests per minute (token bucket rate); values &lt;= 0 fall back to 60. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for per-IP rate limiting. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for per-IP rate limiting, or NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00467">467</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00570">570</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00416">CWIST_RATE_LIMIT_MAX_CFGS</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00520">CWIST_RATE_LIMIT_MAX_CFGS</a>.</p>
 
 </div>
 </div>
@@ -411,18 +411,25 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Request ID middleware factory. </p>
-<p>Request ID middleware factory.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">header_name</td><td>Currently unused custom header override. </td></tr>
+    <tr><td class="paramname">header_name</td><td>NULL or "X-Request-Id". </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for request ID injection. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware function, or NULL for an unsupported custom header name.</dd></dl>
+<p>Request ID middleware factory.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">header_name</td><td>NULL or "X-Request-Id"; other names are unsupported. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer, or NULL for an unsupported header name. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00079">79</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00090">90</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00055">cwist_mw_request_id_handler()</a>, and <a class="el" href="../../da/dec/core_2macros_8h_source.html#l00023">CWIST_UNUSED</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00066">cwist_mw_request_id_handler()</a>.</p>
 
 </div>
 </div>

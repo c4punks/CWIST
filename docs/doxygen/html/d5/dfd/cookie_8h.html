@@ -214,7 +214,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <area shape="poly" title=" " alt="" coords="209,53,110,96,108,91,207,48"/>
 <area shape="rect" href="../../de/d67/session_8c.html" title="Signed client&#45;side session cookie implementation." alt="" coords="184,93,344,119"/>
 <area shape="poly" title=" " alt="" coords="267,59,267,93,261,93,261,59"/>
-<area shape="rect" href="../../df/d33/csrf_8c.html" title="Double&#45;submit CSRF protection." alt="" coords="368,93,501,119"/>
+<area shape="rect" href="../../df/d33/csrf_8c.html" title="Signed double&#45;submit CSRF protection." alt="" coords="368,93,501,119"/>
 <area shape="poly" title=" " alt="" coords="318,49,411,91,408,96,316,53"/>
 </map>
 </div>
@@ -250,6 +250,9 @@ Functions</h2></td></tr>
 <tr class="memitem:af0cbca640a3104b61278dd2d9a6b91d0" id="r_af0cbca640a3104b61278dd2d9a6b91d0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dfd/cookie_8h.html#af0cbca640a3104b61278dd2d9a6b91d0">cwist_cookie_delete</a> (<a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, const char *name)</td></tr>
 <tr class="memdesc:af0cbca640a3104b61278dd2d9a6b91d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add a Set-Cookie header that deletes a cookie.  <br /></td></tr>
 <tr class="separator:af0cbca640a3104b61278dd2d9a6b91d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd8160f24191b2ab6349a3948fc8f4dd" id="r_acd8160f24191b2ab6349a3948fc8f4dd"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dfd/cookie_8h.html#acd8160f24191b2ab6349a3948fc8f4dd">cwist_cookie_delete_ex</a> (<a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, const char *name, const <a class="el" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> *opts)</td></tr>
+<tr class="memdesc:acd8160f24191b2ab6349a3948fc8f4dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a cookie using its original path, domain, and security attributes.  <br /></td></tr>
+<tr class="separator:acd8160f24191b2ab6349a3948fc8f4dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9305cd705685dd014d6d8d1a9277fd11" id="r_a9305cd705685dd014d6d8d1a9277fd11"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/dfd/cookie_8h.html#a9305cd705685dd014d6d8d1a9277fd11">cwist_cookie_get</a> (<a class="el" href="../../dd/d72/structcwist__query__map.html">cwist_query_map</a> *map, const char *name)</td></tr>
 <tr class="memdesc:a9305cd705685dd014d6d8d1a9277fd11"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a cookie value by name from a parsed map.  <br /></td></tr>
 <tr class="separator:a9305cd705685dd014d6d8d1a9277fd11"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -321,7 +324,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00056">56</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00084">cwist_cookie_parse()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00082">cwist_cookie_parse()</a>.</p>
 
 </div>
 </div>
@@ -353,11 +356,62 @@ Functions</h2></td></tr>
 
 <p>Add a Set-Cookie header that deletes a cookie. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00219">219</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00248">248</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
+<p class="reference">References <a class="el" href="../../de/d49/cookie_8c_source.html#l00227">cwist_cookie_delete_ex()</a>, and <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00047">cwist_cookie_options::path</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00640">cwist_session_commit()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00642">cwist_session_commit()</a>.</p>
+
+</div>
+</div>
+<a id="acd8160f24191b2ab6349a3948fc8f4dd" name="acd8160f24191b2ab6349a3948fc8f4dd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acd8160f24191b2ab6349a3948fc8f4dd">&#9670;&#160;</a></span>cwist_cookie_delete_ex()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int cwist_cookie_delete_ex </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *&#160;</td>
+          <td class="paramname"><em>res</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> *&#160;</td>
+          <td class="paramname"><em>opts</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Delete a cookie using its original path, domain, and security attributes. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">res</td><td>Response to modify. </td></tr>
+    <tr><td class="paramname">name</td><td>Cookie name. </td></tr>
+    <tr><td class="paramname">opts</td><td>Attributes used to identify the cookie; may be NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00227">227</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00048">cwist_cookie_options::domain</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00050">cwist_cookie_options::http_only</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00047">cwist_cookie_options::path</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00052">cwist_cookie_options::same_site</a>, and <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00051">cwist_cookie_options::secure</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00248">cwist_cookie_delete()</a>.</p>
 
 </div>
 </div>
@@ -384,7 +438,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00183">cwist_cookie_set()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d49/cookie_8c_source.html#l00191">cwist_cookie_set()</a>.</p>
 
 </div>
 </div>
@@ -417,11 +471,11 @@ Functions</h2></td></tr>
 <p>Get a cookie value by name from a parsed map. </p>
 <dl class="section return"><dt>Returns</dt><dd>Pointer to value, or NULL if not found. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00121">121</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00124">124</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00485">cwist_session_start()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00487">cwist_session_start()</a>.</p>
 
 </div>
 </div>
@@ -452,7 +506,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Parse a Cookie header value into a query-style map. </p>
-<p>Handles "name1=value1; name2=value2" format. Values are URL-decoded.</p>
+<p>Handles "name1=value1; name2=value2" format. Percent escapes are decoded, literal '+' bytes are preserved, and the first occurrence of a name wins.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">map</td><td>Map to populate. Must be created by <a class="el" href="../../d1/d7a/net_2http_2query_8h.html#a93eddf49027cbbc8fc6a0a3270a0985a" title="Create a new query map.">cwist_query_map_create()</a>. </td></tr>
@@ -461,11 +515,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00084">84</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00082">82</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../de/d49/cookie_8c_source.html#l00056">cwist_cookie_decode()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../de/d49/cookie_8c_source.html#l00056">cwist_cookie_decode()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00485">cwist_session_start()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00487">cwist_session_start()</a>.</p>
 
 </div>
 </div>
@@ -519,11 +573,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00183">183</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d49/cookie_8c_source.html#l00191">191</a> of file <a class="el" href="../../de/d49/cookie_8c_source.html">cookie.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../de/d49/cookie_8c_source.html#l00035">cwist_cookie_encode()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00047">cwist_cookie_options::domain</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00049">cwist_cookie_options::http_only</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00048">cwist_cookie_options::max_age_seconds</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00046">cwist_cookie_options::path</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00051">cwist_cookie_options::same_site</a>, and <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00050">cwist_cookie_options::secure</a>.</p>
+<p class="reference">References <a class="el" href="../../de/d49/cookie_8c_source.html#l00035">cwist_cookie_encode()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00048">cwist_cookie_options::domain</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00050">cwist_cookie_options::http_only</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00049">cwist_cookie_options::max_age_seconds</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00047">cwist_cookie_options::path</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00052">cwist_cookie_options::same_site</a>, and <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00051">cwist_cookie_options::secure</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00640">cwist_session_commit()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00642">cwist_session_commit()</a>.</p>
 
 </div>
 </div>

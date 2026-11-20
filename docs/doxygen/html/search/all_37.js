@@ -1,7 +1,4 @@
 var searchData=
 [
-  ['라우팅과_20핸들러_20mux_20router_0',['2. 라우팅과 핸들러 (Mux Router)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md540',1,'']]],
-  ['라이브러리_20레퍼런스_1',['CWIST 라이브러리 레퍼런스',['../d3/d19/md_docs_2ko_2REFERENCE.html',1,'']]],
-  ['라이브_20메시지_20런타임_20실험적_2',['라이브 메시지 런타임(실험적)',['../d2/daa/md_docs_2ko_2api_2livemsg.html',1,'']]],
-  ['라틴방진_20참고_20문헌_3',['라틴방진 참고 문헌',['../da/d05/md_docs_2ko_2references_2latin__square__references.html',1,'']]]
+  ['덮기_0',['4. CWIST에서의 사용: 테스트에서 런타임 knob 쌍 덮기',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md447',1,'']]]
 ];

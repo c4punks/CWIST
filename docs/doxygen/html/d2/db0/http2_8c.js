@@ -42,6 +42,7 @@ var http2_8c =
     [ "H2_ERR_ENHANCE_YOUR_CALM", "d2/db0/http2_8c.html#acb37a714e7d3b6d5f3206d06663ea0f9", null ],
     [ "H2_ERR_FLOW_CONTROL_ERROR", "d2/db0/http2_8c.html#af209febd9b3c5371199d89ba93fd57c2", null ],
     [ "H2_ERR_FRAME_SIZE_ERROR", "d2/db0/http2_8c.html#a1663591694477f207e5b0fe4faf30018", null ],
+    [ "H2_ERR_INTERNAL_ERROR", "d2/db0/http2_8c.html#ae86a4b0a36a9976dd5e3060ea32d8023", null ],
     [ "H2_ERR_NO_ERROR", "d2/db0/http2_8c.html#a22a017fc7875f9f468b7416d8ab8ebf0", null ],
     [ "H2_ERR_PROTOCOL_ERROR", "d2/db0/http2_8c.html#adf70da742697f4cb45d64a3fa287c303", null ],
     [ "H2_ERR_REFUSED_STREAM", "d2/db0/http2_8c.html#aedb3090ec799862a3fb21efc6cb27e3a", null ],

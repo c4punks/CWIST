@@ -13,5 +13,7 @@ var websocket_8c =
     [ "cwist_websocket_send_fragments", "d4/de6/websocket_8c.html#a58f86294769dd8985f88bcd25b51cf6b", null ],
     [ "cwist_websocket_send_sequenced", "d4/de6/websocket_8c.html#a4d6e2a770ce633eff74dafbf509fb4d6", null ],
     [ "cwist_websocket_upgrade", "d4/de6/websocket_8c.html#a25531b0d899d92a6618a28ed0b5482d0", null ],
-    [ "cwist_websocket_upgrade_response", "d4/de6/websocket_8c.html#a972fc2f9a831e71fa91f87b96339fb1f", null ]
+    [ "cwist_websocket_upgrade_ex", "d4/de6/websocket_8c.html#a10d5c571ed0b7e6ad6b9ad6527353ff6", null ],
+    [ "cwist_websocket_upgrade_response", "d4/de6/websocket_8c.html#a972fc2f9a831e71fa91f87b96339fb1f", null ],
+    [ "cwist_websocket_upgrade_response_ex", "d4/de6/websocket_8c.html#a8239320b8475074c8155fb0a237a32c2", null ]
 ];

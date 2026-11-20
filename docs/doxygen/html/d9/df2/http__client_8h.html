@@ -237,6 +237,9 @@ Functions</h2></td></tr>
 <tr class="memitem:af2144e2d3d301d214f946faa9ca9ce8e" id="r_af2144e2d3d301d214f946faa9ca9ce8e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/df2/http__client_8h.html#af2144e2d3d301d214f946faa9ca9ce8e">cwist_http_client_set_timeout_ms</a> (cwist_http_client *client, int timeout_ms)</td></tr>
 <tr class="memdesc:af2144e2d3d301d214f946faa9ca9ce8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set request timeout in milliseconds.  <br /></td></tr>
 <tr class="separator:af2144e2d3d301d214f946faa9ca9ce8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa6216fca7eaa260898ee3fc80c449f38" id="r_aa6216fca7eaa260898ee3fc80c449f38"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/df2/http__client_8h.html#aa6216fca7eaa260898ee3fc80c449f38">cwist_http_client_set_file_root</a> (cwist_http_client *client, const char *root_dir)</td></tr>
+<tr class="memdesc:aa6216fca7eaa260898ee3fc80c449f38"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allow <a href="file://">file://</a> requests only below a configured directory.  <br /></td></tr>
+<tr class="separator:aa6216fca7eaa260898ee3fc80c449f38"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa5e60d8ba60874b799e0341889dcff6b" id="r_aa5e60d8ba60874b799e0341889dcff6b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d9/df2/http__client_8h.html#aa5e60d8ba60874b799e0341889dcff6b">cwist_http_client_set_ca_bundle</a> (cwist_http_client *client, const char *path)</td></tr>
 <tr class="memdesc:aa5e60d8ba60874b799e0341889dcff6b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set path to CA bundle for TLS verification.  <br /></td></tr>
 <tr class="separator:aa5e60d8ba60874b799e0341889dcff6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -299,7 +302,7 @@ Functions</h2></td></tr>
 <p>Acquires the shared curl global state, then initializes an easy handle with defaults: redirect following (max 10 hops), 30 s timeout, TCP keepalive, automatic content decoding, and a CWIST user agent.</p>
 <dl class="section return"><dt>Returns</dt><dd>new client handle, or NULL on allocation/curl init failure (the curl global reference is released in that case). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00189">189</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00195">195</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00019">cwist_curl_global_acquire()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -323,7 +326,7 @@ Functions</h2></td></tr>
 
 <p>Destroy an HTTP client and release all associated resources. </p>
 <p>Destroy an HTTP client and release all associated resources.</p>
-<p>Cleans up the curl easy handle, frees the CA bundle and alt-svc paths, frees the handle, and releases the shared curl global reference. Safe to call with NULL.</p>
+<p>Cleans up the curl easy handle, frees configuration paths, frees the handle, and releases the shared curl global reference. Safe to call with NULL.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">client</td><td>client handle to destroy, or NULL. </td></tr>
@@ -331,7 +334,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00230">230</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00237">237</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -382,7 +385,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00293">293</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00323">323</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -473,9 +476,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> with err_i16 set to 0 on success, -1 on failure (invalid arguments, curl transfer error, or allocation failure). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00344">344</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00374">374</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../d2/dcb/http__client__file_8c_source.html#l00198">cwist_http_client_file_request()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00029">CWIST_HTTP_CREATED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00033">CWIST_HTTP_FORBIDDEN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02240">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01777">cwist_http_method_to_string()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00030">CWIST_HTTP_NO_CONTENT</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00034">CWIST_HTTP_NOT_FOUND</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00036">CWIST_HTTP_NOT_IMPLEMENTED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02525">cwist_http_response_create()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00111">CWIST_HTTP_SERVICE_UNAVAILABLE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00032">CWIST_HTTP_UNAUTHORIZED</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00090">cwist_sstring_assign_len()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00060">cwist_http_header_node::key</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00062">cwist_http_header_node::next</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00061">cwist_http_header_node::value</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../d2/dcb/http__client__file_8c_source.html#l00221">cwist_http_client_file_request()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00029">CWIST_HTTP_CREATED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00033">CWIST_HTTP_FORBIDDEN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02255">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01791">cwist_http_method_to_string()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00030">CWIST_HTTP_NO_CONTENT</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00034">CWIST_HTTP_NOT_FOUND</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00036">CWIST_HTTP_NOT_IMPLEMENTED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02554">cwist_http_response_create()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00112">CWIST_HTTP_SERVICE_UNAVAILABLE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00032">CWIST_HTTP_UNAUTHORIZED</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00090">cwist_sstring_assign_len()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00060">cwist_http_header_node::key</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00062">cwist_http_header_node::next</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00061">cwist_http_header_node::value</a>.</p>
 
 </div>
 </div>
@@ -524,7 +527,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00308">308</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00338">338</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
 
@@ -574,9 +577,44 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00274">274</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00304">304</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
+
+</div>
+</div>
+<a id="aa6216fca7eaa260898ee3fc80c449f38" name="aa6216fca7eaa260898ee3fc80c449f38"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa6216fca7eaa260898ee3fc80c449f38">&#9670;&#160;</a></span>cwist_http_client_set_file_root()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int cwist_http_client_set_file_root </td>
+          <td>(</td>
+          <td class="paramtype">cwist_http_client *&#160;</td>
+          <td class="paramname"><em>client</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>root_dir</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Allow <a href="file://">file://</a> requests only below a configured directory. </p>
+<p>File URLs are rejected by default. The root is canonicalized when set, and each requested file must resolve inside it. Pass NULL to disable file URLs. </p><dl class="section return"><dt>Returns</dt><dd>0 on success, -1 for an invalid client, root, or unsupported host. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00273">273</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, and <a class="el" href="../../d6/d32/http__client_8c_source.html#l00023">PATH_MAX</a>.</p>
 
 </div>
 </div>
@@ -623,7 +661,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00247">247</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00255">255</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -670,7 +708,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00259">259</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00267">267</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>

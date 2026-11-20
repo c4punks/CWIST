@@ -1,13 +1,17 @@
 var async_8c =
 [
     [ "_POSIX_C_SOURCE", "db/d84/async_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
+    [ "cwist_async_completion_hook", "db/d84/async_8c.html#ad4d0310902a07cce3e306a7010d4dfaf", null ],
     [ "cwist_async_abort", "db/d84/async_8c.html#a87757fc539bf8f235361387a873c517a", null ],
+    [ "cwist_async_add_completion_hook", "db/d84/async_8c.html#aaf7173d1b3172f53203758f40d39fbd7", null ],
     [ "cwist_async_can_stream", "db/d84/async_8c.html#a9c4fc5e2d36731eaaec4721787cb2821", null ],
     [ "cwist_async_defer", "db/d84/async_8c.html#aa7497b55c03864f9357f57a4d8a3a4a9", null ],
     [ "cwist_async_dispatch_ack", "db/d84/async_8c.html#a05ff15225c324776acc3990374458c1b", null ],
+    [ "cwist_async_final_response", "db/d84/async_8c.html#acf1eea5a89dceeb6c9d19f373eed67a7", null ],
     [ "cwist_async_https_take_deferred", "db/d84/async_8c.html#a399c36abe1fca2dbdeb931c66fdcdabf", null ],
     [ "cwist_async_is_streamed", "db/d84/async_8c.html#a17552b8109a260024c6673c49510e00d", null ],
     [ "cwist_async_release", "db/d84/async_8c.html#ad75d2be28c09c9b29e945e99d38f534b", null ],
+    [ "cwist_async_request", "db/d84/async_8c.html#aef1150eb6431bb47eeb147aca0a495c2", null ],
     [ "cwist_async_respond", "db/d84/async_8c.html#a5579bd72e5661235924a5adf8c4f2d0d", null ],
     [ "cwist_async_respond_with", "db/d84/async_8c.html#a06d2294a5d48650ba613d6a608858b14", null ],
     [ "cwist_async_retain", "db/d84/async_8c.html#a1ca4ddf51cd2ebb5df71fb044776c837", null ],

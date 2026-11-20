@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['크기_0',['메모리 크기',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md369',1,'']]]
+  ['입력_20빌드_0',['펌웨어 입력 빌드',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md416',1,'']]]
 ];

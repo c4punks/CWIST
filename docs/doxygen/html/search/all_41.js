@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['및_20db_20암호화_0',['6. 인증 (JWT 및 DB 암호화)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md544',1,'']]],
-  ['및_20ssr_1',['10. 동적 CSS 합성기 (WASM 및 SSR)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md549',1,'']]]
+  ['매니저_0',['매니저',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md379',1,'매니저'],['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md376',1,'세션 매니저']]]
 ];

@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['앱_0',['실행 가능한 예제: Service Worker 앱',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md563',1,'']]],
-  ['앱_20api_1',['프레임워크와 앱 API',['../da/dc3/md_docs_2ko_2api_2app.html',1,'']]]
+  ['핸들러_20설정하기_0',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md462',1,'']]],
+  ['핸들러_20mux_20router_1',['2. 라우팅과 핸들러 (Mux Router)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md590',1,'']]]
 ];

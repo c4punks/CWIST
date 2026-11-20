@@ -264,11 +264,17 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a8239320b8475074c8155fb0a237a32c2" id="r_a8239320b8475074c8155fb0a237a32c2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a8239320b8475074c8155fb0a237a32c2">cwist_websocket_upgrade_response_ex</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, const char *const *allowed_origins, size_t origin_count)</td></tr>
+<tr class="memdesc:a8239320b8475074c8155fb0a237a32c2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate an upgrade with an exact Origin allowlist.  <br /></td></tr>
+<tr class="separator:a8239320b8475074c8155fb0a237a32c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a972fc2f9a831e71fa91f87b96339fb1f" id="r_a972fc2f9a831e71fa91f87b96339fb1f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a972fc2f9a831e71fa91f87b96339fb1f">cwist_websocket_upgrade_response</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res)</td></tr>
 <tr class="memdesc:a972fc2f9a831e71fa91f87b96339fb1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Validate the upgrade request and fill a 101 Switching Protocols response.  <br /></td></tr>
 <tr class="separator:a972fc2f9a831e71fa91f87b96339fb1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a10d5c571ed0b7e6ad6b9ad6527353ff6" id="r_a10d5c571ed0b7e6ad6b9ad6527353ff6"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a10d5c571ed0b7e6ad6b9ad6527353ff6">cwist_websocket_upgrade_ex</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, int client_fd, const char *const *allowed_origins, size_t origin_count)</td></tr>
+<tr class="memdesc:a10d5c571ed0b7e6ad6b9ad6527353ff6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Upgrade with an exact Origin allowlist and send 403/426 failures when applicable.  <br /></td></tr>
+<tr class="separator:a10d5c571ed0b7e6ad6b9ad6527353ff6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a25531b0d899d92a6618a28ed0b5482d0" id="r_a25531b0d899d92a6618a28ed0b5482d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a25531b0d899d92a6618a28ed0b5482d0">cwist_websocket_upgrade</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, int client_fd)</td></tr>
-<tr class="memdesc:a25531b0d899d92a6618a28ed0b5482d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Upgrade an HTTP request to a WebSocket connection.  <br /></td></tr>
+<tr class="memdesc:a25531b0d899d92a6618a28ed0b5482d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Upgrade a standard HTTP request to a WebSocket connection.  <br /></td></tr>
 <tr class="separator:a25531b0d899d92a6618a28ed0b5482d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7c4cc8a5486ce33aab2199a8f5ec82d0" id="r_a7c4cc8a5486ce33aab2199a8f5ec82d0"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../db/d40/structcwist__ws__frame.html">cwist_ws_frame</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/de6/websocket_8c.html#a7c4cc8a5486ce33aab2199a8f5ec82d0">cwist_websocket_receive</a> (<a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> *ws)</td></tr>
 <tr class="memdesc:a7c4cc8a5486ce33aab2199a8f5ec82d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Receive the next complete WebSocket message from a connected client.  <br /></td></tr>
@@ -390,9 +396,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00605">605</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00618">618</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d4/de6/websocket_8c_source.html#l00493">cwist_websocket_send()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">CWIST_WS_FRAME_CLOSE</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/de6/websocket_8c_source.html#l00506">cwist_websocket_send()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">CWIST_WS_FRAME_CLOSE</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>.</p>
 
 </div>
 </div>
@@ -421,7 +427,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00616">616</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00629">629</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00028">cwist_websocket::frag_buf</a>.</p>
 
@@ -452,11 +458,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00529">529</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00542">542</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00037">cwist_ws_frame::payload</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00561">cwist_websocket_receive_sequenced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00574">cwist_websocket_receive_sequenced()</a>.</p>
 
 </div>
 </div>
@@ -489,11 +495,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated frame, or NULL when the connection is closed or invalid. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00247">247</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00260">260</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00493">cwist_websocket_send()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">CWIST_WS_FRAME_CLOSE</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00018">CWIST_WS_FRAME_PING</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00019">CWIST_WS_FRAME_PONG</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00015">CWIST_WS_FRAME_TEXT</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00031">CWIST_WS_MAX_PAYLOAD_BYTES</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00023">cwist_websocket::fd</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00035">cwist_ws_frame::fin</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00028">cwist_websocket::frag_buf</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00030">cwist_websocket::frag_cap</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00029">cwist_websocket::frag_len</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00031">cwist_websocket::frag_opcode</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00058">head</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00036">cwist_ws_frame::opcode</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00037">cwist_ws_frame::payload</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00038">cwist_ws_frame::payload_len</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00506">cwist_websocket_send()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">CWIST_WS_FRAME_CLOSE</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00018">CWIST_WS_FRAME_PING</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00019">CWIST_WS_FRAME_PONG</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00015">CWIST_WS_FRAME_TEXT</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00031">CWIST_WS_MAX_PAYLOAD_BYTES</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00023">cwist_websocket::fd</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00035">cwist_ws_frame::fin</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00028">cwist_websocket::frag_buf</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00030">cwist_websocket::frag_cap</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00029">cwist_websocket::frag_len</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00031">cwist_websocket::frag_opcode</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00060">head</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00036">cwist_ws_frame::opcode</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00037">cwist_ws_frame::payload</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00038">cwist_ws_frame::payload_len</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00561">cwist_websocket_receive_sequenced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00574">cwist_websocket_receive_sequenced()</a>.</p>
 
 </div>
 </div>
@@ -534,9 +540,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated payload buffer, or NULL on error/incomplete message. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00561">561</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00574">574</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00196">cwist_seq_assembler_create()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00223">cwist_seq_assembler_destroy()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00268">cwist_seq_assembler_feed()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00389">cwist_seq_assembler_get_data()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00342">cwist_seq_assembler_is_complete()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00529">cwist_websocket_frame_destroy()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00247">cwist_websocket_receive()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">CWIST_WS_FRAME_CLOSE</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00036">cwist_ws_frame::opcode</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00037">cwist_ws_frame::payload</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00038">cwist_ws_frame::payload_len</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00196">cwist_seq_assembler_create()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00223">cwist_seq_assembler_destroy()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00268">cwist_seq_assembler_feed()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00389">cwist_seq_assembler_get_data()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00342">cwist_seq_assembler_is_complete()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00063">cwist_seq_chunk_parse()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00542">cwist_websocket_frame_destroy()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00260">cwist_websocket_receive()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00017">CWIST_WS_FRAME_CLOSE</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00036">cwist_ws_frame::opcode</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00037">cwist_ws_frame::payload</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00038">cwist_ws_frame::payload_len</a>.</p>
 
 </div>
 </div>
@@ -592,11 +598,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, or -1 when the socket write fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00493">493</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00506">506</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00605">cwist_websocket_close()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00247">cwist_websocket_receive()</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00539">cwist_websocket_send_sequenced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00618">cwist_websocket_close()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00260">cwist_websocket_receive()</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00552">cwist_websocket_send_sequenced()</a>.</p>
 
 </div>
 </div>
@@ -641,9 +647,9 @@ Functions</h2></td></tr>
 <p>Send one message as RFC 6455 fragments chosen by the application. </p>
 <p>Send one TEXT or BINARY message as RFC 6455 fragments. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00505">505</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00518">518</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">count</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00015">CWIST_WS_FRAME_TEXT</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00061">count</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00015">CWIST_WS_FRAME_TEXT</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>.</p>
 
 </div>
 </div>
@@ -698,9 +704,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00539">539</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00552">552</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00062">cwist_seq_message::chunk_lens</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00061">cwist_seq_message::chunks</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00063">cwist_seq_message::count</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00178">cwist_seq_message_free()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00125">cwist_seq_split()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00493">cwist_websocket_send()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d3c/seq_8h_source.html#l00062">cwist_seq_message::chunk_lens</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00061">cwist_seq_message::chunks</a>, <a class="el" href="../../d6/d3c/seq_8h_source.html#l00063">cwist_seq_message::count</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00178">cwist_seq_message_free()</a>, <a class="el" href="../../d2/d8b/seq_8c_source.html#l00125">cwist_seq_split()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00506">cwist_websocket_send()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00016">CWIST_WS_FRAME_BINARY</a>, and <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>.</p>
 
 </div>
 </div>
@@ -730,22 +736,61 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Upgrade an HTTP request to a WebSocket connection. </p>
+<p>Upgrade a standard HTTP request to a WebSocket connection. </p>
 <p>Upgrade an HTTP request to WebSocket.</p>
-<p>Upgrade a standard HTTP request to a WebSocket connection.</p>
-<p>The function validates the required upgrade headers, computes the Sec-WebSocket-Accept response, emits the 101 Switching Protocols reply, and returns a lightweight wrapper around the already-open client socket.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">req</td><td>Parsed HTTP request that requested the upgrade. </td></tr>
-    <tr><td class="paramname">client_fd</td><td>Accepted client socket descriptor. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>WebSocket wrapper on success, or NULL when the handshake fails. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>NULL</code> if the handshake fails or the request is invalid, otherwise the upgraded context. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00149">149</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00188">188</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02525">cwist_http_response_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02549">cwist_http_response_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03114">cwist_http_send_response()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00100">cwist_websocket_upgrade_response()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00023">cwist_websocket::fd</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00028">cwist_websocket::frag_buf</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00030">cwist_websocket::frag_cap</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00029">cwist_websocket::frag_len</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00031">cwist_websocket::frag_opcode</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00076">cwist_http_request::upgraded</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/de6/websocket_8c_source.html#l00153">cwist_websocket_upgrade_ex()</a>.</p>
+
+</div>
+</div>
+<a id="a10d5c571ed0b7e6ad6b9ad6527353ff6" name="a10d5c571ed0b7e6ad6b9ad6527353ff6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10d5c571ed0b7e6ad6b9ad6527353ff6">&#9670;&#160;</a></span>cwist_websocket_upgrade_ex()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="../../d9/d2c/structcwist__websocket.html">cwist_websocket</a> * cwist_websocket_upgrade_ex </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *&#160;</td>
+          <td class="paramname"><em>req</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>client_fd</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *const *&#160;</td>
+          <td class="paramname"><em>allowed_origins</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>origin_count</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Upgrade with an exact Origin allowlist and send 403/426 failures when applicable. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00153">153</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00033">CWIST_HTTP_FORBIDDEN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02554">cwist_http_response_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02578">cwist_http_response_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03152">cwist_http_send_response()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00102">CWIST_HTTP_UPGRADE_REQUIRED</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00108">cwist_websocket_upgrade_response_ex()</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00014">CWIST_WS_FRAME_CONTINUATION</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00023">cwist_websocket::fd</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00028">cwist_websocket::frag_buf</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00030">cwist_websocket::frag_cap</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00029">cwist_websocket::frag_len</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00031">cwist_websocket::frag_opcode</a>, <a class="el" href="../../dd/dec/net_2websocket_2websocket_8h_source.html#l00024">cwist_websocket::is_closed</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00076">cwist_http_request::upgraded</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00188">cwist_websocket_upgrade()</a>.</p>
 
 </div>
 </div>
@@ -776,7 +821,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Validate the upgrade request and fill a 101 Switching Protocols response. </p>
-<p>Computes the Sec-WebSocket-Accept key (sha1 + base64), sets status 101 and the Upgrade/Connection/Sec-WebSocket-Accept headers on <code>res</code>, but does NOT send anything. Shared by the blocking <a class="el" href="../../d4/de6/websocket_8c.html#a25531b0d899d92a6618a28ed0b5482d0" title="Upgrade an HTTP request to a WebSocket connection.">cwist_websocket_upgrade()</a> and the C1M reactor path, which sends the 101 through the coalesced HTTP writer.</p>
+<p>Computes the Sec-WebSocket-Accept key (sha1 + base64), sets status 101 and the Upgrade/Connection/Sec-WebSocket-Accept headers on <code>res</code>, but does NOT send anything. A version mismatch fills a 426 response instead.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">req</td><td>Parsed upgrade request to validate. </td></tr>
@@ -786,11 +831,66 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when the handshake is valid and <code>res</code> carries the 101 reply. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00100">100</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00149">149</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00258">base64_encode()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02085">cwist_http_header_add()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02114">cwist_http_header_get()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00235">sha1()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00024">WS_GUID</a>.</p>
+<p class="reference">References <a class="el" href="../../d4/de6/websocket_8c_source.html#l00108">cwist_websocket_upgrade_response_ex()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00149">cwist_websocket_upgrade()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00067">cwist_graphql_ws_upgrade_response()</a>.</p>
+
+</div>
+</div>
+<a id="a8239320b8475074c8155fb0a237a32c2" name="a8239320b8475074c8155fb0a237a32c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8239320b8475074c8155fb0a237a32c2">&#9670;&#160;</a></span>cwist_websocket_upgrade_response_ex()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_websocket_upgrade_response_ex </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *&#160;</td>
+          <td class="paramname"><em>req</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *&#160;</td>
+          <td class="paramname"><em>res</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *const *&#160;</td>
+          <td class="paramname"><em>allowed_origins</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>origin_count</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Validate an upgrade with an exact Origin allowlist. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">allowed_origins</td><td>Allowed scheme/host/port origins, or NULL to disable Origin checks. </td></tr>
+    <tr><td class="paramname">origin_count</td><td>Number of entries. A non-NULL empty list rejects every Origin. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00108">108</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00258">base64_encode()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00033">CWIST_HTTP_FORBIDDEN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02099">cwist_http_header_add()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02128">cwist_http_header_get()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00102">CWIST_HTTP_UPGRADE_REQUIRED</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../df/db2/ws__utils_8c_source.html#l00235">sha1()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00024">WS_GUID</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00153">cwist_websocket_upgrade_ex()</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00149">cwist_websocket_upgrade_response()</a>.</p>
 
 </div>
 </div>

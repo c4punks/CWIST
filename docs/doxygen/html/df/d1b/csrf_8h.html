@@ -275,7 +275,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="center"><img src="../../d7/d76/csrf_8h__dep__incl.png" border="0" usemap="#ainclude_2cwist_2sys_2app_2csrf_8hdep" alt=""/></div>
 <map name="ainclude_2cwist_2sys_2app_2csrf_8hdep" id="ainclude_2cwist_2sys_2app_2csrf_8hdep">
 <area shape="rect" title="CSRF protection via double&#45;submit cookie pattern." alt="" coords="5,5,167,45"/>
-<area shape="rect" href="../../df/d33/csrf_8c.html" title="Double&#45;submit CSRF protection." alt="" coords="19,93,153,119"/>
+<area shape="rect" href="../../df/d33/csrf_8c.html" title="Signed double&#45;submit CSRF protection." alt="" coords="19,93,153,119"/>
 <area shape="poly" title=" " alt="" coords="89,59,89,93,83,93,83,59"/>
 </map>
 </div>
@@ -330,9 +330,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The request's CSRF token, or NULL if <code>req</code> is NULL or no token has been set. The returned pointer is owned by the request. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d33/csrf_8c_source.html#l00240">240</a> of file <a class="el" href="../../df/d33/csrf_8c_source.html">csrf.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d33/csrf_8c_source.html#l00324">324</a> of file <a class="el" href="../../df/d33/csrf_8c_source.html">csrf.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00188">cwist_http_request::csrf_token</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00189">cwist_http_request::csrf_token</a>.</p>
 
 </div>
 </div>
@@ -364,13 +364,13 @@ Functions</h2></td></tr>
 <p>CSRF middleware factory.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">app</td><td>Application instance; unused. </td></tr>
+    <tr><td class="paramname">app</td><td>Application instance; the request uses its session secret and TLS mode. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The CSRF middleware handler function. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d33/csrf_8c_source.html#l00230">230</a> of file <a class="el" href="../../df/d33/csrf_8c_source.html">csrf.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d33/csrf_8c_source.html#l00314">314</a> of file <a class="el" href="../../df/d33/csrf_8c_source.html">csrf.c</a>.</p>
 
 </div>
 </div>

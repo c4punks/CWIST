@@ -1,8 +1,5 @@
 var searchData=
 [
-  ['아니라_20표현을_20캐시하기_0',['2. 와이어 응답이 아니라 표현을 캐시하기',['../d6/dda/md_docs_2ko_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md607',1,'']]],
-  ['아닌_20것과_20참고_20사항_1',['목표가 아닌 것과 참고 사항',['../d1/dde/md_docs_2ko_2GC.html#autotoc_md662',1,'']]],
-  ['아닌_20것_2',['목표가 아닌 것',['../dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md553',1,'']]],
-  ['아레나_3',['아레나',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md372',1,'']]],
-  ['아직_20다루지_20않는_20것_4',['(아직) 다루지 않는 것',['../d2/d56/md_docs_2ko_2api_2wasm.html#autotoc_md564',1,'']]]
+  ['표기_0',['4. 표기',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md470',1,'']]],
+  ['표_3a_20gusuryak_209차_20쌍_1',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md446',1,'']]]
 ];

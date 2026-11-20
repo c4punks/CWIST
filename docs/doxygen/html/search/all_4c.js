@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['세션_20프로토콜_20설계하기_0',['2. 세션 프로토콜 설계하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md413',1,'']]],
-  ['세션_20핸들러_20설정하기_1',['1. HTTP/3과 세션 핸들러 설정하기',['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md412',1,'']]]
+  ['범위_0',['지원 대상과 검증 범위',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md415',1,'']]]
 ];

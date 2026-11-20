@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['쿼리_20파싱_0',['4. 쿼리 파싱',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md380',1,'']]]
+  ['임베딩_0',['외부 시그널링과 임베딩',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md398',1,'']]]
 ];

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['진단_0',['진단',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md409',1,'']]]
+  ['원칙_0',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md467',1,'']]]
 ];

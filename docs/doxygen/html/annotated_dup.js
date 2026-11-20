@@ -93,6 +93,7 @@ var annotated_dup =
     [ "cwist_schema_field", "d6/d03/structcwist__schema__field.html", "d6/d03/structcwist__schema__field" ],
     [ "cwist_scratch_t", "d2/d50/structcwist__scratch__t.html", "d2/d50/structcwist__scratch__t" ],
     [ "cwist_sdp_info", "d2/db9/structcwist__sdp__info.html", "d2/db9/structcwist__sdp__info" ],
+    [ "cwist_sdp_section", "d8/df9/structcwist__sdp__section.html", "d8/df9/structcwist__sdp__section" ],
     [ "cwist_seq_auth_metadata", "d2/d2f/structcwist__seq__auth__metadata.html", "d2/d2f/structcwist__seq__auth__metadata" ],
     [ "cwist_seq_chunk", "de/d97/structcwist__seq__chunk.html", "de/d97/structcwist__seq__chunk" ],
     [ "cwist_seq_message", "d1/d74/structcwist__seq__message.html", "d1/d74/structcwist__seq__message" ],

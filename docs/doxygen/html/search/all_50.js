@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['실시간_20양방향_20통신_0',['8. 웹소켓 연동 (실시간 양방향 통신)',['../df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md547',1,'']]],
-  ['실험적_1',['라이브 메시지 런타임(실험적)',['../d2/daa/md_docs_2ko_2api_2livemsg.html',1,'']]]
+  ['빌드_0',['빌드',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md438',1,'빌드'],['../df/d10/md_docs_2ko_2tutorials_2webtransport-server.html#autotoc_md461',1,'빌드'],['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md416',1,'펌웨어 입력 빌드']]]
 ];

@@ -1,0 +1,15 @@
+<map id="src/net/http/path_decode.h" name="src/net/http/path_decode.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="277,5,472,31"/>
+<area shape="rect" id="Node000002" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="200,79,373,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="362,33,313,72,310,68,359,29"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="349,225,424,251"/>
+<area shape="poly" id="edge7_Node000001_Node000003" title=" " alt="" coords="380,31,388,78,391,151,390,212,385,211,386,151,383,79,375,32"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="309,102,337,122,364,150,378,181,386,211,381,213,373,183,359,154,334,126,306,106"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,152,147,177"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="254,107,124,150,122,145,252,101"/>
+<area shape="rect" id="Node000005" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="171,152,349,177"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="285,105,272,140,267,138,280,103"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="282,175,355,216,353,221,279,180"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="219,225,301,251"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="263,178,263,212,257,212,257,178"/>
+</map>

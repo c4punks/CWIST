@@ -1,0 +1,20 @@
+<map id="src/net/grpc/grpc_status_message.h" name="src/net/grpc/grpc_status_message.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="197,5,374,45"/>
+<area shape="rect" id="Node000002" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="5,93,179,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="240,48,134,91,132,86,238,43"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="203,93,274,119"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="276,47,255,83,250,80,272,44"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="298,93,369,119"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="299,44,321,80,317,83,295,47"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="393,93,463,119"/>
+<area shape="poly" id="edge9_Node000001_Node000009" title=" " alt="" coords="321,43,397,84,394,89,318,48"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="41,240,116,265"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="66,121,36,140,22,153,12,168,9,185,16,202,30,217,48,231,44,235,27,221,12,205,4,186,7,166,18,149,32,136,63,116"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="21,167,163,192"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="95,119,95,153,89,153,89,119"/>
+<area shape="rect" id="Node000005" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="187,167,365,192"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="123,116,234,159,232,164,121,121"/>
+<area shape="poly" id="edge6_Node000005_Node000003" title=" " alt="" coords="245,195,125,238,123,233,243,190"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="235,240,317,265"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="279,192,279,226,273,226,273,192"/>
+</map>

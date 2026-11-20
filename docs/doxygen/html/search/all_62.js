@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['응답_0',['연결과 응답',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md371',1,'']]],
-  ['응답_20푸시_20백프레셔_1',['응답, 푸시, 백프레셔',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md361',1,'']]]
+  ['에러_20처리_0',['에러 처리',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md360',1,'에러 처리'],['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md433',1,'7. 에러 처리']]]
 ];

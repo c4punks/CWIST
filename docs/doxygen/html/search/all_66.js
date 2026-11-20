@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['입력_20빌드_0',['펌웨어 입력 빌드',['../d4/dc9/md_docs_2ko_2embedded_2stm32.html#autotoc_md366',1,'']]]
+  ['예제_0',['예제',['../db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md392',1,'']]],
+  ['예제_3a_20othello_20web_1',['예제: Othello Web',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md436',1,'']]]
 ];

@@ -7,6 +7,7 @@ var nuke__db_8h =
     [ "cwist_nuke_db_t", "dc/dfe/nuke__db_8h.html#a5d7896139d7b5e0b56e79c4370e4f27c", null ],
     [ "cwist_nuke_close", "dc/dfe/nuke__db_8h.html#a82add313e1aabb27f1cc9c64579debb4", null ],
     [ "cwist_nuke_deserialize", "dc/dfe/nuke__db_8h.html#a0d51fe7c2f1edae3b320ba9fd8601602", null ],
+    [ "cwist_nuke_force_disk_mode", "dc/dfe/nuke__db_8h.html#aac40c64453ec3dc134626772b228c321", null ],
     [ "cwist_nuke_get_db", "dc/dfe/nuke__db_8h.html#a81bc1cdef22667aa031f8e070a8e013c", null ],
     [ "cwist_nuke_init", "dc/dfe/nuke__db_8h.html#a982b6bdce12a61137756a8620f5592df", null ],
     [ "cwist_nuke_serialize", "dc/dfe/nuke__db_8h.html#aed0d347c76753b520373e20ad3905ac1", null ],

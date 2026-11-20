@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['풀_0',['Classic 스레드 풀',['../d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md401',1,'']]]
+  ['최소_20서버_0',['최소 서버',['../d2/daa/md_docs_2ko_2api_2livemsg.html#autotoc_md394',1,'']]]
 ];

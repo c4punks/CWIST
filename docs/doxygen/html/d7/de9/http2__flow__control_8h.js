@@ -4,6 +4,7 @@ var http2__flow__control_8h =
     [ "cwist_http2_stream_flow_control", "d0/d2d/structcwist__http2__stream__flow__control.html", "d0/d2d/structcwist__http2__stream__flow__control" ],
     [ "CWIST_HTTP2_INITIAL_CONNECTION_WINDOW", "d7/de9/http2__flow__control_8h.html#a8c64b543d8f47feca78820a200c53506", null ],
     [ "CWIST_HTTP2_INITIAL_STREAM_WINDOW", "d7/de9/http2__flow__control_8h.html#a16040d49a6bc482e0f37551a45512aa2", null ],
+    [ "CWIST_HTTP2_MAX_RECEIVE_WINDOW", "d7/de9/http2__flow__control_8h.html#a170e1fe86fab4a355ca9a6370d6cb9a7", null ],
     [ "CWIST_HTTP2_MAX_WINDOW", "d7/de9/http2__flow__control_8h.html#a49890c40ec1693b92c29616c7bd3c183", null ],
     [ "cwist_http2_flow_control", "d7/de9/http2__flow__control_8h.html#a6850c9a68fac55f99111b2db66b232c3", null ],
     [ "cwist_http2_network_quality", "d7/de9/http2__flow__control_8h.html#a63e5b68cffce67e803c51f0e93eab8a7", null ],
