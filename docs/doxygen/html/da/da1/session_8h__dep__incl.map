@@ -1,11 +1,13 @@
 <map id="include/cwist/net/http/session.h" name="include/cwist/net/http/session.h">
-<area shape="rect" id="Node000001" title="Signed client&#45;side session cookie API." alt="" coords="355,5,517,45"/>
+<area shape="rect" id="Node000001" title="Signed client&#45;side session cookie API." alt="" coords="408,5,571,45"/>
 <area shape="rect" id="Node000002" href="$df/dcd/async__gc_8h.html" title=" " alt="" coords="210,93,382,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="392,54,318,95,315,91,389,50"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="431,53,326,96,324,91,429,48"/>
 <area shape="rect" id="Node000005" href="$de/d67/session_8c.html" title="Signed client&#45;side session cookie implementation." alt="" coords="373,174,533,199"/>
-<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="442,59,455,173,449,174,437,59"/>
+<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="477,59,465,94,458,138,456,174,451,174,453,137,460,93,472,57"/>
 <area shape="rect" id="Node000006" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="474,93,611,119"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="474,51,528,91,525,95,471,56"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="512,55,537,91,532,94,508,58"/>
+<area shape="rect" id="Node000007" href="$d1/d4d/flash_8c.html" title="flash.c interface." alt="" coords="635,93,802,119"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="558,47,686,91,684,96,556,52"/>
 <area shape="rect" id="Node000003" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="5,174,155,199"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="253,126,112,176,111,171,251,121"/>
 <area shape="rect" id="Node000004" href="$d2/dcb/http__client__file_8c.html" title=" " alt="" coords="179,167,349,207"/>
