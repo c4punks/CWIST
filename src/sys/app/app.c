@@ -37,6 +37,7 @@
 /* Network headers (internal) */
 #include "../../net/http/async_internal.h"
 #include "../../net/http/http_live.h"
+#include "../../net/http/path_decode.h"
 #include "../../net/http/sockopts.h"
 #include "../../net/http/simd_parser.h"
 #include "../../net/websocket/ws_async_internal.h"
@@ -452,7 +453,8 @@ static bool cwist_route_table_insert(cwist_route_table *table, const char *path,
 static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
                                                    cwist_http_method_t method, const char *path);
 static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
-                                                         cwist_http_request *req);
+                                                         cwist_http_request *req,
+                                                         cwist_http_method_t method);
 static bool match_path(const char *pattern, const char *actual, cwist_query_map *params);
 static void execute_chain(cwist_app *app, cwist_http_request *req, cwist_http_response *res,
                           cwist_handler_func final_handler, void *handler_data);
@@ -674,11 +676,12 @@ static cwist_route_entry *cwist_route_table_lookup(cwist_route_table *table,
 }
 
 static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *table,
-                                                         cwist_http_request *req) {
+                                                         cwist_http_request *req,
+                                                         cwist_http_method_t method) {
     if (!table || !req || !req->path || !req->path->data) return NULL;
     cwist_route_entry *curr = table->param_routes;
     while (curr) {
-        if (curr->method == req->method) {
+        if (curr->method == method) {
             if (!req->path_params) {
                 /* Probe without capturing: no heap alloc, no map clearing per
                  * candidate. Only a confirmed match pays for the params map. */
@@ -695,6 +698,15 @@ static cwist_route_entry *cwist_route_table_match_params(cwist_route_table *tabl
         curr = curr->next;
     }
     return NULL;
+}
+
+static bool cwist_route_table_path_allows(cwist_route_table *table, const char *path,
+                                          cwist_http_method_t method) {
+    if (cwist_route_table_lookup(table, method, path)) return true;
+    for (cwist_route_entry *route = table->param_routes; route; route = route->next) {
+        if (route->method == method && match_path(route->path, path, NULL)) return true;
+    }
+    return false;
 }
 
 /**
@@ -2494,15 +2506,15 @@ static bool match_path(const char *pattern, const char *actual, cwist_query_map 
         const size_t a_len = a_slash ? (size_t)(a_slash - a) : strlen(a);
 
         if (p[0] == ':') {
+            char *val = NULL;
+            if (cwist_http_path_segment_decode(a, a_len, params ? &val : NULL) != 0) return false;
             if (params) {
-                char key[256], val[256];
+                char key[256];
                 const size_t klen = (p_len - 1 < 255) ? p_len - 1 : 255;
-                const size_t vlen = (a_len < 255) ? a_len : 255;
                 memcpy(key, p + 1, klen);
                 key[klen] = '\0';
-                memcpy(val, a, vlen);
-                val[vlen] = '\0';
                 cwist_query_map_set(params, key, val);
+                cwist_free(val);
             }
         } else if (p_len != a_len || memcmp(p, a, p_len) != 0) {
             return false;
@@ -2850,6 +2862,15 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
 
     const char *path = (req->path && req->path->data) ? req->path->data : "/";
     cwist_route_entry *found_route = cwist_route_table_lookup(app->router, req->method, path);
+    if (!found_route) {
+        found_route = cwist_route_table_match_params(app->router, req, req->method);
+    }
+    if (!found_route && req->method == CWIST_HTTP_HEAD) {
+        found_route = cwist_route_table_lookup(app->router, CWIST_HTTP_GET, path);
+        if (!found_route) {
+            found_route = cwist_route_table_match_params(app->router, req, CWIST_HTTP_GET);
+        }
+    }
 
     if (found_route) {
         req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
@@ -2926,17 +2947,6 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
         return;
     }
 
-    if (!found_route) {
-        found_route = cwist_route_table_match_params(app->router, req);
-    }
-
-    if (found_route) {
-        req->endpoint_opts = found_route->opts ? found_route->opts : CWIST_ENDPOINT_DEFAULT;
-        if (res) res->endpoint_opts = req->endpoint_opts;
-        execute_route(app, req, res, found_route);
-        return;
-    }
-
     cwist_app_fallback_match_fn fb_match = __atomic_load_n(&g_app_fallback_match, __ATOMIC_ACQUIRE);
     if (fb_match && fb_match(app, req)) {
         cwist_handler_func fb = __atomic_load_n(&g_app_fallback_handler, __ATOMIC_ACQUIRE);
@@ -2969,6 +2979,43 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
          * the native-only handler reference stays out of the WASM link. */
         return;
 #endif
+    }
+
+    bool allowed[CWIST_HTTP_UNKNOWN] = {0};
+    for (int method = 0; method < CWIST_HTTP_UNKNOWN; method++) {
+        allowed[method] = cwist_route_table_path_allows(
+            app->router, path, (cwist_http_method_t)method);
+    }
+    if (allowed[CWIST_HTTP_GET]) allowed[CWIST_HTTP_HEAD] = true;
+    char allow[128] = {0};
+    size_t allow_len = 0;
+    for (int method = 0; method < CWIST_HTTP_UNKNOWN; method++) {
+        if (!allowed[method]) continue;
+        const char *name = cwist_http_method_to_string((cwist_http_method_t)method);
+        size_t name_len = strlen(name);
+        if (allow_len + name_len + 2 >= sizeof(allow)) {
+            allow_len = 0;
+            break;
+        }
+        if (allow_len) {
+            memcpy(allow + allow_len, ", ", 2);
+            allow_len += 2;
+        }
+        memcpy(allow + allow_len, name, name_len);
+        allow_len += name_len;
+        allow[allow_len] = '\0';
+    }
+    if (allow_len) {
+        res->status_code = CWIST_HTTP_METHOD_NOT_ALLOWED;
+        cwist_http_header_add(&res->headers, "Allow", allow);
+        cwist_error_handler_func eh = cwist_app_find_error_handler(app, CWIST_HTTP_METHOD_NOT_ALLOWED);
+        if (eh) {
+            eh(req, res, CWIST_HTTP_METHOD_NOT_ALLOWED);
+        } else {
+            cwist_http_response_set_body_ptr(res, "405 Method Not Allowed",
+                                             sizeof("405 Method Not Allowed") - 1);
+        }
+        return;
     }
 
     cwist_error_handler_func eh = cwist_app_find_error_handler(app, CWIST_HTTP_NOT_FOUND);

@@ -58,13 +58,16 @@ int main() {
     bool handled2 = cwist_mux_serve(router, req2, res2);
     assert(handled2 == false);
 
-    // Mock Request 3: No Match (Method)
+    // Mock Request 3: Method Not Allowed
     cwist_http_request *req3 = cwist_http_request_create();
     req3->method = CWIST_HTTP_POST;
     cwist_sstring_assign(req3->path, "/test");
     cwist_http_response *res3 = cwist_http_response_create();
     bool handled3 = cwist_mux_serve(router, req3, res3);
-    assert(handled3 == false);
+    assert(handled3 == true);
+    assert(res3->status_code == CWIST_HTTP_METHOD_NOT_ALLOWED);
+    const char *allow = cwist_http_header_get(res3->headers, "Allow");
+    assert(allow && strcmp(allow, "GET, HEAD") == 0);
 
     cwist_mux_router_destroy(router);
     cwist_http_request_destroy(req1);
