@@ -1,5 +1,7 @@
 var NAVTREEINDEX11 =
 {
+"d8/d77/md_docs_2api_2wasm-component.html#autotoc_md228":[15,8],
+"d8/d77/md_docs_2api_2wasm-component.html#autotoc_md229":[15,9],
 "d8/d7c/grpc__status__message_8h.html":[66,0,2,2,2,3],
 "d8/d7c/grpc__status__message_8h_source.html":[66,0,2,2,2,3],
 "d8/d80/jwt_8c.html":[66,0,2,3,1,0],
@@ -247,7 +249,5 @@ var NAVTREEINDEX11 =
 "d9/daa/structcwist__webrtc__conn.html#aadd1bac32cfebf0e6f9ff3069c02c43c":[65,0,107,7],
 "d9/daa/structcwist__webrtc__conn.html#abbcb4c21c1a6fecb89f9d337ab8584e7":[65,0,107,22],
 "d9/daa/structcwist__webrtc__conn.html#abf5d0ea3ac64d00cad8ba5d1596ba047":[65,0,107,0],
-"d9/daa/structcwist__webrtc__conn.html#ac496d94499dc087d5ff5965fd7a51d79":[65,0,107,13],
-"d9/daa/structcwist__webrtc__conn.html#ac8f5ddac8741471c6bfb621701640e94":[65,0,107,24],
-"d9/daa/structcwist__webrtc__conn.html#acf29d22321870243e4650e81f7733967":[65,0,107,16]
+"d9/daa/structcwist__webrtc__conn.html#ac496d94499dc087d5ff5965fd7a51d79":[65,0,107,13]
 };

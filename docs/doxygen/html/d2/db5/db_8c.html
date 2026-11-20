@@ -124,59 +124,69 @@ $(document).ready(function(){initNavTree('d2/db5/db_8c.html','../../'); initResi
 <code>#include &lt;string.h&gt;</code><br />
 <code>#include &lt;ctype.h&gt;</code><br />
 <code>#include &lt;stdbool.h&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../de/d66/number__internal_8h_source.html">../utils/number_internal.h</a>&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for db.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d8/d64/db_8c__incl.png" border="0" usemap="#asrc_2core_2db_2db_8c" alt=""/></div>
 <map name="asrc_2core_2db_2db_8c" id="asrc_2core_2db_2db_8c">
-<area shape="rect" title="SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing." alt="" coords="588,5,712,31"/>
-<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="335,79,477,104"/>
-<area shape="poly" title=" " alt="" coords="612,33,459,77,458,72,610,28"/>
+<area shape="rect" title="SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing." alt="" coords="885,5,1009,31"/>
+<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="187,79,329,104"/>
+<area shape="poly" title=" " alt="" coords="885,28,343,84,343,79,885,23"/>
 <area shape="rect" title=" " alt="" coords="5,159,84,185"/>
-<area shape="poly" title=" " alt="" coords="588,27,441,45,355,61,269,81,166,118,81,156,79,151,164,113,268,76,354,56,441,40,588,22"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="108,152,251,192"/>
-<area shape="poly" title=" " alt="" coords="588,26,464,43,393,59,324,81,265,112,214,146,211,142,262,107,322,76,392,54,463,38,587,21"/>
-<area shape="rect" title=" " alt="" coords="513,328,595,353"/>
-<area shape="poly" title=" " alt="" coords="656,30,665,73,671,138,671,174,668,211,659,247,644,281,624,306,598,324,595,319,620,302,640,279,654,246,662,210,666,174,666,138,659,74,650,31"/>
-<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="479,240,629,280"/>
-<area shape="poly" title=" " alt="" coords="648,32,569,228,564,226,643,30"/>
-<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="327,159,485,185"/>
-<area shape="poly" title=" " alt="" coords="633,33,438,154,435,150,630,28"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="850,159,1023,185"/>
-<area shape="poly" title=" " alt="" coords="660,29,687,65,706,85,727,102,759,119,792,133,859,154,857,159,790,138,756,124,725,106,702,89,683,69,655,33"/>
-<area shape="rect" title=" " alt="" coords="738,79,805,104"/>
-<area shape="poly" title=" " alt="" coords="671,28,741,69,739,74,668,33"/>
-<area shape="rect" title=" " alt="" coords="829,79,900,104"/>
-<area shape="poly" title=" " alt="" coords="685,28,818,72,816,77,684,33"/>
-<area shape="rect" title=" " alt="" coords="924,79,995,104"/>
-<area shape="poly" title=" " alt="" coords="702,28,911,76,910,81,701,33"/>
-<area shape="rect" title=" " alt="" coords="1019,79,1089,104"/>
-<area shape="poly" title=" " alt="" coords="713,26,844,46,1005,76,1005,81,843,51,712,31"/>
-<area shape="poly" title=" " alt="" coords="335,106,222,125,96,155,87,157,85,152,95,149,221,120,334,100"/>
-<area shape="rect" title=" " alt="" coords="743,328,818,353"/>
-<area shape="poly" title=" " alt="" coords="435,102,480,123,530,150,597,193,661,240,758,317,755,321,658,244,594,198,527,154,478,128,432,107"/>
-<area shape="poly" title=" " alt="" coords="374,107,248,150,246,145,372,101"/>
-<area shape="rect" title=" " alt="" coords="284,328,395,353"/>
-<area shape="poly" title=" " alt="" coords="375,107,342,125,328,138,316,153,308,173,304,195,306,239,317,281,330,315,325,316,312,282,301,240,299,194,303,172,312,151,324,134,339,121,372,102"/>
-<area shape="poly" title=" " alt="" coords="432,102,466,122,500,150,526,188,545,226,540,228,522,190,496,154,463,126,429,106"/>
-<area shape="poly" title=" " alt="" coords="409,104,409,145,403,145,403,104"/>
-<area shape="rect" title=" " alt="" coords="180,247,251,273"/>
-<area shape="poly" title=" " alt="" coords="190,191,208,233,203,235,185,193"/>
-<area shape="poly" title=" " alt="" coords="223,190,517,320,515,325,221,194"/>
-<area shape="poly" title=" " alt="" coords="173,193,161,235,161,258,170,279,190,299,215,315,243,325,271,332,270,337,241,330,213,319,186,303,165,281,156,259,156,235,168,192"/>
-<area shape="poly" title=" " alt="" coords="609,277,735,321,734,326,607,283"/>
-<area shape="poly" title=" " alt="" coords="557,280,557,314,551,314,551,280"/>
-<area shape="poly" title=" " alt="" coords="503,283,384,326,383,321,502,278"/>
-<area shape="poly" title=" " alt="" coords="413,184,434,228,450,254,469,278,495,301,522,319,519,323,491,305,465,282,446,257,429,230,408,186"/>
-<area shape="poly" title=" " alt="" coords="404,186,352,316,347,314,399,184"/>
-<area shape="poly" title=" " alt="" coords="427,183,511,231,508,235,425,187"/>
-<area shape="poly" title=" " alt="" coords="992,182,1044,197,1092,218,1110,231,1121,246,1123,263,1113,282,1094,297,1066,309,990,326,906,336,832,341,832,335,906,331,989,321,1064,304,1091,292,1109,278,1118,262,1116,248,1106,235,1089,223,1042,202,991,187"/>
-<area shape="rect" title=" " alt="" coords="958,247,1099,273"/>
-<area shape="poly" title=" " alt="" coords="951,183,1007,235,1004,239,947,187"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="755,247,934,273"/>
-<area shape="poly" title=" " alt="" coords="926,187,869,239,866,235,922,183"/>
-<area shape="poly" title=" " alt="" coords="837,275,801,319,797,316,833,271"/>
-<area shape="poly" title=" " alt="" coords="803,275,609,327,608,322,802,270"/>
+<area shape="poly" title=" " alt="" coords="885,23,725,26,519,35,318,52,236,65,175,81,144,96,115,114,68,152,64,148,111,110,141,91,173,76,235,60,317,47,519,30,725,21,885,17"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="795,152,937,192"/>
+<area shape="poly" title=" " alt="" coords="944,32,885,141,880,139,939,29"/>
+<area shape="rect" title=" " alt="" coords="782,328,865,353"/>
+<area shape="poly" title=" " alt="" coords="955,30,972,74,989,139,993,176,992,213,984,248,968,281,950,301,928,316,879,334,877,329,925,312,947,297,964,279,979,247,987,212,988,176,984,140,967,76,950,32"/>
+<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="261,240,412,280"/>
+<area shape="poly" title=" " alt="" coords="915,33,770,84,583,154,391,237,389,232,581,150,768,79,913,28"/>
+<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="296,159,455,185"/>
+<area shape="poly" title=" " alt="" coords="885,22,809,26,716,35,616,53,518,81,484,96,453,115,401,152,398,148,450,110,482,92,516,76,614,47,715,30,809,20,885,17"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="594,159,767,185"/>
+<area shape="poly" title=" " alt="" coords="929,33,714,155,712,150,926,28"/>
+<area shape="rect" title=" " alt="" coords="1013,159,1079,185"/>
+<area shape="poly" title=" " alt="" coords="959,29,996,77,1036,145,1031,148,992,80,955,32"/>
+<area shape="rect" title=" " alt="" coords="1308,159,1379,185"/>
+<area shape="poly" title=" " alt="" coords="1010,23,1155,43,1223,58,1271,76,1291,91,1308,109,1333,145,1329,148,1304,113,1288,95,1269,81,1222,63,1154,48,1009,28"/>
+<area shape="rect" title=" " alt="" coords="1403,159,1473,185"/>
+<area shape="poly" title=" " alt="" coords="1010,19,1073,24,1147,35,1226,51,1303,76,1336,92,1367,111,1417,148,1413,153,1364,115,1333,97,1301,81,1225,57,1146,40,1072,30,1009,24"/>
+<area shape="rect" title=" " alt="" coords="1384,79,1455,104"/>
+<area shape="poly" title=" " alt="" coords="1010,24,1171,46,1365,76,1370,77,1369,82,1364,81,1170,51,1009,30"/>
+<area shape="rect" href="../../de/d66/number__internal_8h.html" title=" " alt="" coords="1072,79,1257,104"/>
+<area shape="poly" title=" " alt="" coords="983,28,1117,72,1116,77,981,33"/>
+<area shape="poly" title=" " alt="" coords="228,107,89,157,87,152,226,102"/>
+<area shape="rect" title=" " alt="" coords="466,328,541,353"/>
+<area shape="poly" title=" " alt="" coords="255,105,243,139,232,185,231,210,232,234,239,258,251,278,263,289,283,298,335,314,396,325,452,332,452,337,395,330,334,319,281,303,260,293,247,282,234,260,227,235,225,210,227,184,238,137,250,103"/>
+<area shape="poly" title=" " alt="" coords="330,96,533,116,780,149,781,150,780,155,779,155,532,121,329,101"/>
+<area shape="rect" title=" " alt="" coords="225,328,336,353"/>
+<area shape="poly" title=" " alt="" coords="220,106,184,125,169,138,156,153,140,187,135,216,140,246,156,278,181,304,213,321,211,326,178,308,152,282,135,248,129,216,135,185,152,151,165,134,181,120,217,102"/>
+<area shape="poly" title=" " alt="" coords="262,104,269,143,286,191,311,228,307,231,281,193,264,145,257,105"/>
+<area shape="poly" title=" " alt="" coords="277,102,348,149,345,154,274,106"/>
+<area shape="rect" title=" " alt="" coords="1059,247,1129,273"/>
+<area shape="poly" title=" " alt="" coords="917,190,1052,240,1050,245,915,195"/>
+<area shape="poly" title=" " alt="" coords="901,190,927,211,947,239,954,260,947,281,933,298,916,311,879,329,876,325,914,307,930,294,942,279,948,260,942,241,923,215,898,194"/>
+<area shape="poly" title=" " alt="" coords="795,192,577,243,439,286,325,326,323,321,437,281,576,237,794,186"/>
+<area shape="poly" title=" " alt="" coords="378,278,468,320,465,324,375,282"/>
+<area shape="poly" title=" " alt="" coords="413,271,769,328,768,333,412,276"/>
+<area shape="poly" title=" " alt="" coords="325,282,299,318,295,315,321,279"/>
+<area shape="poly" title=" " alt="" coords="395,183,473,228,524,254,578,277,678,308,769,328,768,333,677,313,576,283,522,259,470,233,392,187"/>
+<area shape="poly" title=" " alt="" coords="330,187,286,207,266,223,251,241,245,259,248,279,265,315,261,318,243,280,240,259,246,239,263,219,283,203,328,182"/>
+<area shape="poly" title=" " alt="" coords="373,186,353,228,348,226,368,184"/>
+<area shape="poly" title=" " alt="" coords="659,187,620,210,578,242,545,280,519,318,515,315,541,277,575,238,617,206,657,182"/>
+<area shape="rect" title=" " alt="" coords="791,247,933,273"/>
+<area shape="poly" title=" " alt="" coords="706,182,826,239,824,244,704,187"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="589,247,767,273"/>
+<area shape="poly" title=" " alt="" coords="683,185,681,233,676,233,678,185"/>
+<area shape="poly" title=" " alt="" coords="654,275,542,325,540,320,652,270"/>
+<area shape="poly" title=" " alt="" coords="701,270,791,319,789,324,698,275"/>
+<area shape="poly" title=" " alt="" coords="1162,105,1107,236,1102,233,1157,103"/>
+<area shape="poly" title=" " alt="" coords="1170,104,1176,138,1178,186,1169,237,1159,261,1144,282,1125,295,1098,306,1028,323,949,334,879,339,878,334,949,328,1027,318,1097,301,1123,291,1140,278,1155,258,1164,235,1172,185,1170,139,1165,105"/>
+<area shape="poly" title=" " alt="" coords="1149,106,1077,154,1074,149,1146,102"/>
+<area shape="poly" title=" " alt="" coords="1192,102,1306,151,1304,156,1190,106"/>
+<area shape="poly" title=" " alt="" coords="1216,101,1299,122,1392,149,1399,152,1397,157,1391,155,1298,127,1215,107"/>
+<area shape="rect" title=" " alt="" coords="1205,159,1284,185"/>
+<area shape="poly" title=" " alt="" coords="1178,102,1225,147,1221,151,1175,106"/>
 </map>
 </div>
 </div>
@@ -239,11 +249,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00295">295</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00296">296</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01518">cwist_app_destroy()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l01909">cwist_app_use_db()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l01948">cwist_app_use_nuke_db()</a>, <a class="el" href="../../d4/de5/pool_8c_source.html#l00095">cwist_db_pool_create()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00227">cwist_db_pool_destroy_timeout()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01531">cwist_app_destroy()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l01922">cwist_app_use_db()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l01961">cwist_app_use_nuke_db()</a>, <a class="el" href="../../d4/de5/pool_8c_source.html#l00095">cwist_db_pool_create()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00227">cwist_db_pool_destroy_timeout()</a>.</p>
 
 </div>
 </div>
@@ -284,11 +294,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00312">312</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00313">313</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db5/db_8c_source.html#l00515">cwist_db_insert_healed()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00270">cwist_db_pool_exec()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db5/db_8c_source.html#l00518">cwist_db_insert_healed()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00270">cwist_db_pool_exec()</a>.</p>
 
 </div>
 </div>
@@ -350,9 +360,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00515">515</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00518">518</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00312">cwist_db_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00570">cwist_heal_result_free()</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00495">cwist_json_heal()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00121">cwist_zod_parse()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00155">cwist_zod_print_errors()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00112">cwist_heal_result::json</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00099">cwist_heal_config::schema</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00098">cwist_heal_config::threshold</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00313">cwist_db_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00570">cwist_heal_result_free()</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00495">cwist_json_heal()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00121">cwist_zod_parse()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00155">cwist_zod_print_errors()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00112">cwist_heal_result::json</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00099">cwist_heal_config::schema</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00098">cwist_heal_config::threshold</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
 
 </div>
 </div>
@@ -393,11 +403,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00154">154</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00155">155</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01909">cwist_app_use_db()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00095">cwist_db_pool_create()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01922">cwist_app_use_db()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00095">cwist_db_pool_create()</a>.</p>
 
 </div>
 </div>
@@ -452,7 +462,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00198">198</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00199">199</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
@@ -502,11 +512,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00374">374</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00375">375</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de5/pool_8c_source.html#l00284">cwist_db_pool_query()</a>, and <a class="el" href="../../d2/db5/db_8c_source.html#l00585">cwist_db_query_strict()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de5/pool_8c_source.html#l00284">cwist_db_pool_query()</a>, and <a class="el" href="../../d2/db5/db_8c_source.html#l00588">cwist_db_query_strict()</a>.</p>
 
 </div>
 </div>
@@ -561,9 +571,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or validation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00585">585</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00588">588</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00374">cwist_db_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00037">CWIST_ERR_JSON</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00074">cwist_zod_validate()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00073">cwist_error_t::errtype</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00375">cwist_db_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00037">CWIST_ERR_JSON</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00074">cwist_zod_validate()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00073">cwist_error_t::errtype</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
 
 </div>
 </div>
@@ -610,7 +620,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00257">257</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00258">258</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 

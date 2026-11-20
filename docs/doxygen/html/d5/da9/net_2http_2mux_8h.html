@@ -691,6 +691,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Attach middleware to a specific route. </p>
+<p>Middleware runs in registration order (the first one attached runs first), the same order as <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a88046a9e7f5c0f069c94aefd233dd815" title="Append a middleware callback to the application&#39;s execution chain.">cwist_app_use()</a>.</p>
 <p>Attach middleware to a specific route.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -798,7 +799,7 @@ Functions</h2></td></tr>
 <p>Dispatches an HTTP request through the router.</p>
 <dl class="section return"><dt>Returns</dt><dd>True if a route was found and executed, false otherwise (404). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00537">537</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00541">541</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 </div>
 </div>

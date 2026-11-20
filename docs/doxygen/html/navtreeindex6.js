@@ -1,5 +1,6 @@
 var NAVTREEINDEX6 =
 {
+"d4/d57/websocket__async_8c.html#a25620353edaccff62b19c338b85c4311":[66,0,2,2,9,1,8],
 "d4/d57/websocket__async_8c.html#a3029917957e6cb47adc4d97dae14c7d7":[66,0,2,2,9,1,15],
 "d4/d57/websocket__async_8c.html#a369266c24eacffb87046522897a570d5":[66,0,2,2,9,1,0],
 "d4/d57/websocket__async_8c.html#a584c148e06670448d9198be0f413f1d1":[66,0,2,2,9,1,2],
@@ -248,6 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d11/md_docs_2api_2sql.html#autotoc_md182":[11,0,5],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md183":[11,0,6],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md184":[11,0,7],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md185":[11,0,8],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md186":[11,0,9]
+"d5/d11/md_docs_2api_2sql.html#autotoc_md185":[11,0,8]
 };
