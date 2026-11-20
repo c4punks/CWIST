@@ -28,6 +28,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          # The Makefile derives VERSION (and cwist.pc's Version) from the
+          # latest v* tag; a shallow, tagless checkout installs 0.0.0, which
+          # fails cwist-sys's minimum-version check on main.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Install build dependencies (Linux)
         if: runner.os == 'Linux'
