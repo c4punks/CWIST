@@ -17,6 +17,11 @@
 
 #include <curl/curl.h>
 #include <ctype.h>
+#include <limits.h>
+#include <sys/stat.h>
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 /* ------------------------------------------------------------------ */
 /* Response accumulator                                               */
@@ -174,6 +179,7 @@ struct cwist_http_client {
     char *ca_bundle;
     int altsvc_enabled;
     char *altsvc_db;
+    char *file_root;
 };
 
 /**
@@ -207,6 +213,7 @@ cwist_http_client *cwist_http_client_create(void) {
     client->ca_bundle = NULL;
     client->altsvc_enabled = 0;
     client->altsvc_db = NULL;
+    client->file_root = NULL;
 
     curl_easy_setopt(client->curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(client->curl, CURLOPT_MAXREDIRS, 10L);
@@ -221,8 +228,8 @@ cwist_http_client *cwist_http_client_create(void) {
 /**
  * @brief Destroy a client handle and release all associated resources.
  *
- * Cleans up the curl easy handle, frees the CA bundle and alt-svc paths,
- * frees the handle, and releases the shared curl global reference. Safe to
+ * Cleans up the curl easy handle, frees configuration paths, frees the
+ * handle, and releases the shared curl global reference. Safe to
  * call with NULL.
  *
  * @param client client handle to destroy, or NULL.
@@ -234,6 +241,7 @@ void cwist_http_client_destroy(cwist_http_client *client) {
     }
     cwist_free(client->ca_bundle);
     cwist_free(client->altsvc_db);
+    cwist_free(client->file_root);
     cwist_free(client);
     cwist_curl_global_release();
 }
@@ -260,6 +268,28 @@ void cwist_http_client_set_timeout_ms(cwist_http_client *client, int timeout_ms)
     if (!client) return;
     client->timeout_ms = timeout_ms;
     curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
+}
+
+int cwist_http_client_set_file_root(cwist_http_client *client, const char *root_dir) {
+    if (!client) return -1;
+    if (!root_dir) {
+        cwist_free(client->file_root);
+        client->file_root = NULL;
+        return 0;
+    }
+#ifdef CWIST_BAREMETAL
+    return -1;
+#else
+    char canonical[PATH_MAX];
+    struct stat st;
+    if (!realpath(root_dir, canonical) || stat(canonical, &st) != 0 || !S_ISDIR(st.st_mode))
+        return -1;
+    char *copy = cwist_strdup(canonical);
+    if (!copy) return -1;
+    cwist_free(client->file_root);
+    client->file_root = copy;
+    return 0;
+#endif
 }
 
 /**
@@ -354,8 +384,8 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
     *out_response = NULL;
 
     if (strncasecmp(url, "file://", 7) == 0) {
-        err.error.err_i16 =
-            cwist_http_client_file_request(url, method, client->timeout_ms, out_response);
+        err.error.err_i16 = cwist_http_client_file_request(url, method, client->timeout_ms,
+                                                            client->file_root, out_response);
         return err;
     }
 

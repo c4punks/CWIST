@@ -483,7 +483,13 @@ static void test_file_scheme(cwist_http_client *client) {
     assert(getcwd(cwd, sizeof(cwd)) != NULL);
     char url[1024];
     snprintf(url, sizeof(url), "file://%s/%s", cwd, path);
-    cwist_http_response *res = request(client, url, CWIST_HTTP_GET, NULL, 0);
+    cwist_http_response *res = NULL;
+    cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    CHECK(!cwist_error_is_ok(&err) && res == NULL, "file URL was enabled by default");
+    cwist_error_dispose(&err);
+    CHECK(cwist_http_client_set_file_root(client, cwd) == 0, "could not enable the file root");
+
+    res = request(client, url, CWIST_HTTP_GET, NULL, 0);
     if (res) {
         CHECK(res->status_code == CWIST_HTTP_OK, "file GET: status %d", (int)res->status_code);
         CHECK(body_equals(res, payload, sizeof(payload) - 1), "file GET: wrong body");
@@ -497,20 +503,28 @@ static void test_file_scheme(cwist_http_client *client) {
     }
 
     res = NULL;
-    cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_POST, NULL, "x", 1, &res);
+    err = cwist_http_client_request(client, url, CWIST_HTTP_POST, NULL, "x", 1, &res);
     CHECK(!cwist_error_is_ok(&err) && res == NULL, "file POST was not rejected");
     cwist_error_dispose(&err);
     err = cwist_http_client_request(client, "file://example.com/tmp/a", CWIST_HTTP_GET, NULL, NULL,
                                     0, &res);
     CHECK(!cwist_error_is_ok(&err) && res == NULL, "remote file authority was not rejected");
     cwist_error_dispose(&err);
+    err = cwist_http_client_request(client, "file:///etc/hostname", CWIST_HTTP_GET, NULL, NULL, 0,
+                                    &res);
+    CHECK(!cwist_error_is_ok(&err) && res == NULL, "file root escape was not rejected");
+    cwist_error_dispose(&err);
     err = cwist_http_client_request(client, "gopher://example.com/", CWIST_HTTP_GET, NULL, NULL, 0,
                                     &res);
     CHECK(!cwist_error_is_ok(&err) && res == NULL, "non-HTTP protocol was not rejected");
     cwist_error_dispose(&err);
+    CHECK(cwist_http_client_set_file_root(client, NULL) == 0, "could not disable the file root");
+    err = cwist_http_client_request(client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    CHECK(!cwist_error_is_ok(&err) && res == NULL, "disabled file root still allowed a request");
+    cwist_error_dispose(&err);
     if (res) cwist_http_response_destroy(res);
     unlink(path);
-    report(before, "file scheme uses the Unix file adapter");
+    report(before, "file scheme is opt-in and root-confined");
 }
 
 static void test_status_line_is_length_delimited(void) {
