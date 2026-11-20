@@ -104,6 +104,7 @@ cwist_nuke_sync
 cwist_reactor_add_out
 cwist_reactor_del
 cwist_reactor_mod
+cwist_realloc_shim
 cwist_redis_auth
 cwist_redis_command
 cwist_redis_expire
