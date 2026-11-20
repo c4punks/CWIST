@@ -454,7 +454,7 @@ bool cwist_assets_match(cwist_app *app, const cwist_http_request *req, cwist_ass
 }
 
 /** Whether an If-None-Match list names `etag` (weak or strong) or is "*". */
-static bool etag_matches(const char *if_none_match, const char *etag) {
+bool cwist_assets_etag_matches(const char *if_none_match, const char *etag) {
     size_t elen = strlen(etag);
     const char *p = if_none_match;
     while (*p) {
@@ -500,7 +500,7 @@ void cwist_assets_respond(cwist_http_request *req, cwist_http_response *res,
     const struct cwist_asset *asset = match->asset;
     const char *cache = match->immutable ? CWIST_ASSET_IMMUTABLE_CACHE : "no-cache";
     const char *inm = cwist_http_header_get(req->headers, "If-None-Match");
-    bool not_modified = inm && etag_matches(inm, asset->etag);
+    bool not_modified = inm && cwist_assets_etag_matches(inm, asset->etag);
 
     bool ok = assets_add_header(res, "ETag", asset->etag) &&
               assets_add_header(res, "Cache-Control", cache);
