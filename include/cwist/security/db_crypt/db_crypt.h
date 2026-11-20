@@ -8,12 +8,12 @@
  * Data Encryption Key (DEK).  The DEK is then wrapped (encrypted) with a
  * Key Encryption Key (KEK) that the caller manages.
  *
- * Version 2 wire format produced by cwist_db_crypt_seal()
+ * Version 3 wire format produced by cwist_db_crypt_seal()
  * =========================================================
  *  Offset  Length   Content
  *  ------  ------   -------
  *     0      4      Magic "CWDB" (0x43 0x57 0x44 0x42)
- *     4      1      Version byte (0x02)
+ *     4      1      Version byte (0x03)
  *     5     16      KEK IV used to encrypt the DEK blob
  *    21     64      AES-256-CBC encrypted DEK_IV(16) || DEK(32)
  *    85     16      DEK IV used to encrypt the SQLite bytes
@@ -21,9 +21,10 @@
  *   109      N      AES-256-CBC encrypted SQLite bytes
  * 109+N     32      HMAC-SHA256 over every preceding byte
  *
- * cwist_db_crypt_open() accepts only authenticated v2 blobs. Applications
- * migrating v1 data must explicitly use cwist_db_crypt_open_legacy() and
- * reseal it, which prevents silent downgrade to unauthenticated decryption.
+ * Version 3 derives independent wrapping and MAC keys from the caller's KEK
+ * with HKDF-SHA256. cwist_db_crypt_open() accepts authenticated v2 and v3 blobs.
+ * Applications migrating v1 data must explicitly use cwist_db_crypt_open_legacy()
+ * and reseal it, which prevents silent downgrade to unauthenticated decryption.
  */
 
 #ifndef __CWIST_DB_CRYPT_H__
