@@ -406,9 +406,15 @@ cwist_middleware_func cwist_mw_metrics(void) {
 /* --- Rate Limiter Middleware --- */
 
 #include <ttak/limit/limit.h>
+#include <ttak/timing/timing.h>
+#include <arpa/inet.h>
+
+#define IP_BUCKET_IDLE_MS 600000
 
 typedef struct {
     char ip[46];
+    int slot;
+    uint64_t last_used_ms;
     ttak_token_bucket_t bucket;
     bool active;
 } ip_bucket_t;
@@ -417,6 +423,15 @@ typedef struct {
 static ip_bucket_t ip_buckets[MAX_IP_BUCKETS];
 static int ip_bucket_count = 0;
 static pthread_mutex_t rate_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static void rate_limit_ip_key(const char *input, char output[46]) {
+    struct in6_addr addr;
+    if (input && inet_pton(AF_INET6, input, &addr) == 1) {
+        memset(addr.s6_addr + 8, 0, 8);
+        if (inet_ntop(AF_INET6, &addr, output, 46)) return;
+    }
+    snprintf(output, 46, "%s", input ? input : "");
+}
 
 /**
  * @brief Per-IP token-bucket rate-limit handler; rejects with 429 when the
@@ -429,10 +444,11 @@ static pthread_mutex_t rate_mutex = PTHREAD_MUTEX_INITIALIZER;
  * @param req Incoming HTTP request.
  * @param res Outgoing HTTP response.
  * @param next Next middleware or final handler in the chain.
+ * @param slot Limiter configuration instance.
  * @param rpm Allowed requests per minute (token bucket refill rate).
  */
 static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_response *res,
-                                           cwist_handler_func next, int rpm) {
+                                           cwist_handler_func next, int slot, int rpm) {
     if (rpm <= 0) rpm = 60;
 
     cwist_sstring *ip = cwist_get_client_ip_from_fd(req->client_fd);
@@ -440,33 +456,48 @@ static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_r
         next(req, res);
         return;
     }
+    char key[46];
+    rate_limit_ip_key(ip->data, key);
 
+    uint64_t now = ttak_get_tick_count();
     pthread_mutex_lock(&rate_mutex);
-    ip_bucket_t *found = NULL;
+    ip_bucket_t *found = NULL, *free_slot = NULL, *oldest = NULL;
     for (int i = 0; i < ip_bucket_count; i++) {
-        if (ip_buckets[i].active && strcmp(ip_buckets[i].ip, ip->data) == 0) {
-            found = &ip_buckets[i];
+        ip_bucket_t *entry = &ip_buckets[i];
+        if (!entry->active) {
+            if (!free_slot) free_slot = entry;
+            continue;
+        }
+        if (now - entry->last_used_ms > IP_BUCKET_IDLE_MS) {
+            entry->active = false;
+            if (!free_slot) free_slot = entry;
+            continue;
+        }
+        if (!oldest || entry->last_used_ms < oldest->last_used_ms) oldest = entry;
+        if (entry->slot == slot && strcmp(entry->ip, key) == 0) {
+            found = entry;
             break;
         }
     }
 
-    if (!found && ip_bucket_count < MAX_IP_BUCKETS) {
-        found = &ip_buckets[ip_bucket_count++];
-        strncpy(found->ip, ip->data, sizeof(found->ip) - 1);
-        found->ip[sizeof(found->ip) - 1] = '\0';
-        found->active = true;
-        double rate = rpm / 60.0;
-        ttak_token_bucket_init(&found->bucket, rate, (double)rpm);
+    if (!found) {
+        if (free_slot)
+            found = free_slot;
+        else if (ip_bucket_count < MAX_IP_BUCKETS)
+            found = &ip_buckets[ip_bucket_count++];
+        else
+            found = oldest;
+        if (found) {
+            snprintf(found->ip, sizeof(found->ip), "%s", key);
+            found->slot = slot;
+            found->active = true;
+            double rate = rpm / 60.0;
+            ttak_token_bucket_init(&found->bucket, rate, (double)rpm);
+        }
     }
+    if (found) found->last_used_ms = now;
 
-    /* Fail-open: if the IP table is full we cannot track this client, so
-     * allow the request rather than permanently blocking unknown IPs (which
-     * would let an attacker exhaust the 1024 slots with spoofed addresses
-     * and then deny service to all legitimate users). */
-    bool allowed = (found == NULL);
-    if (found) {
-        allowed = ttak_token_bucket_consume(&found->bucket, 1.0);
-    }
+    bool allowed = !found || ttak_token_bucket_consume(&found->bucket, 1.0);
     cwist_sstring_destroy(ip);
     pthread_mutex_unlock(&rate_mutex);
 
@@ -495,7 +526,7 @@ static pthread_mutex_t s_rate_cfg_mutex = PTHREAD_MUTEX_INITIALIZER;
 #define CWIST_RATE_LIMIT_DEFINE_WRAPPER(N)                                                      \
     static void cwist_mw_rate_limit_wrap_##N(cwist_http_request *req, cwist_http_response *res, \
                                              cwist_handler_func next) {                         \
-        cwist_mw_rate_limit_ip_handler(req, res, next, s_rate_cfgs[N].rpm);                     \
+        cwist_mw_rate_limit_ip_handler(req, res, next, N, s_rate_cfgs[N].rpm);                  \
     }
 
 CWIST_RATE_LIMIT_DEFINE_WRAPPER(0)
@@ -523,32 +554,23 @@ void cwist_mw_rate_limit_reset(void) {
 }
 
 /**
- * @brief Return the built-in per-IP rate-limiter middleware.
+ * @brief Return an independent per-IP rate-limiter middleware instance.
  *
- * Reuses an existing wrapper when the same rate was already registered.  If
- * all CWIST_RATE_LIMIT_MAX_CFGS config slots are taken, logs a warning and
- * falls back to the first registered wrapper.
+ * Every call allocates a distinct limiter configuration, including repeated
+ * calls with the same rate. Returns NULL when all configuration slots are used.
  *
  * @param requests_per_minute Allowed requests per minute (token bucket rate);
  *        values <= 0 fall back to 60.
- * @return Middleware function pointer for per-IP rate limiting.
+ * @return Middleware function pointer for per-IP rate limiting, or NULL.
  */
 cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute) {
     if (requests_per_minute <= 0) requests_per_minute = 60;
 
     pthread_mutex_lock(&s_rate_cfg_mutex);
-
-    for (int i = 0; i < s_rate_cfg_count; i++) {
-        if (s_rate_cfgs[i].rpm == requests_per_minute) {
-            pthread_mutex_unlock(&s_rate_cfg_mutex);
-            return s_rate_wrappers[i];
-        }
-    }
-
     if (s_rate_cfg_count >= CWIST_RATE_LIMIT_MAX_CFGS) {
         pthread_mutex_unlock(&s_rate_cfg_mutex);
         fprintf(stderr, "[CWIST] cwist_mw_rate_limit_ip: maximum config slots exceeded\n");
-        return s_rate_wrappers[0];
+        return NULL;
     }
 
     int slot = s_rate_cfg_count++;
