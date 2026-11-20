@@ -99,7 +99,12 @@ callback; `NULL` is ignored.
 > behavior when unused.
 
 `cwist/graphql_ws.h` implements the `graphql-transport-ws` subprotocol on top
-of the non-blocking WebSocket transport:
+of the non-blocking WebSocket transport. Use `cwist_graphql_ws_upgrade()` (or
+`cwist_graphql_ws_upgrade_response()`) to require and select that subprotocol
+during the HTTP upgrade. Once attached, the server closes connections that do
+not send `connection_init` within 5 seconds with code 4408;
+`cwist_graphql_ws_attach_ex()` accepts a custom timeout in milliseconds, or 0
+to disable it.
 
 - `connection_init` -> `connection_ack`; `subscribe` before init closes the
   socket with code `4429`.

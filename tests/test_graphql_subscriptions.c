@@ -2,7 +2,7 @@
  * graphql-transport-ws protocol over the non-blocking WebSocket transport
  * through socketpairs on a reactor thread, acting as a masked RFC 6455 client
  * from the main thread.  Covers the connection lifecycle (init/ack, ping/pong,
- * close codes 4400/4401/4409/4429), the topic broker (publish -> next fan-out,
+ * close codes 4400/4401/4408/4409/4429), the topic broker (publish -> next fan-out,
  * topic filtering, unsubscribe), operation-level errors, and teardown leaks
  * (ASan/LSAN gate).
  */
@@ -27,6 +27,7 @@
 #define CLOSE_UNAUTHORIZED 4401
 #define CLOSE_DUPLICATE_ID 4409
 #define CLOSE_TOO_MANY_INIT 4429
+#define CLOSE_INIT_TIMEOUT 4408
 
 static cwist_graphql_schema_t *g_schema;
 static cwist_graphql_ws_t *g_gws;
@@ -170,6 +171,18 @@ static void expect_eof(int fd) {
     assert(read(fd, &b, 1) == 0);
 }
 
+static void expect_eof_after_drain(int fd) {
+    for (int i = 0; i < 20; i++) {
+        struct pollfd pfd = {.fd = fd, .events = POLLIN};
+        assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+        uint8_t buf[256];
+        ssize_t n = read(fd, buf, sizeof(buf));
+        assert(n >= 0);
+        if (n == 0) return;
+    }
+    assert(false);
+}
+
 static void *reactor_thread(void *arg) {
     cwist_reactor_run((cwist_reactor_t *)arg);
     return NULL;
@@ -209,6 +222,77 @@ static void publish_and_expect_next(int fd, const char *topic, const char *op_id
     cJSON_Delete(msg);
 }
 
+static cwist_http_request *new_upgrade_request(bool offered) {
+    cwist_http_request *req = cwist_http_request_create();
+    assert(req);
+    cwist_http_header_add(&req->headers, "Connection", "keep-alive, Upgrade");
+    cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
+    if (offered)
+        cwist_http_header_add(&req->headers, "Sec-WebSocket-Protocol",
+                              "chat, graphql-transport-ws");
+    return req;
+}
+
+static void test_upgrade_negotiation(void) {
+    cwist_http_request *direct_req = new_upgrade_request(true);
+    cwist_http_response *direct_res = cwist_http_response_create();
+    assert(direct_res);
+    assert(cwist_graphql_ws_upgrade_response(direct_req, direct_res));
+    assert(strcmp(cwist_http_header_get(direct_res->headers, "Sec-WebSocket-Protocol"),
+                  "graphql-transport-ws") == 0);
+    cwist_http_response_destroy(direct_res);
+    cwist_http_request_destroy(direct_req);
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    cwist_http_request *req = new_upgrade_request(true);
+    assert(cwist_graphql_ws_upgrade(req, sv[0]));
+    char response[4096];
+    ssize_t len = read(sv[1], response, sizeof(response) - 1);
+    assert(len > 0);
+    response[len] = '\0';
+    assert(strstr(response, "101 Switching Protocols"));
+    assert(strstr(response, "Sec-WebSocket-Protocol: graphql-transport-ws"));
+    cwist_http_request_destroy(req);
+    close(sv[0]);
+    close(sv[1]);
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    req = new_upgrade_request(false);
+    assert(!cwist_graphql_ws_upgrade(req, sv[0]));
+    len = read(sv[1], response, sizeof(response) - 1);
+    assert(len > 0);
+    response[len] = '\0';
+    assert(strstr(response, "400 Bad Request"));
+    cwist_http_request_destroy(req);
+    close(sv[0]);
+    close(sv[1]);
+}
+
+static void test_init_timeout(void) {
+    cwist_graphql_ws_t *gws = cwist_graphql_ws_create(g_schema);
+    assert(gws);
+    cwist_reactor_t *reactor = cwist_reactor_create();
+    assert(reactor);
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    assert(cwist_graphql_ws_attach_ex(gws, sv[0], reactor, NULL, 0, 20));
+    pthread_t rt;
+    assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
+    expect_close_code(sv[1], CLOSE_INIT_TIMEOUT);
+    uint8_t close_payload[2] = {0x11, 0x38};
+    write_masked(sv[1], 0x88, close_payload, sizeof(close_payload));
+    expect_eof_after_drain(sv[1]);
+    close(sv[1]);
+    cwist_reactor_post_t stop = {.cb = stop_cb, .ctx = reactor};
+    assert(cwist_reactor_post(reactor, &stop));
+    assert(pthread_join(rt, NULL) == 0);
+    cwist_reactor_destroy(reactor);
+    cwist_graphql_ws_destroy(gws);
+}
+
 int main(void) {
     alarm(60);
     signal(SIGPIPE, SIG_IGN);
@@ -219,6 +303,7 @@ int main(void) {
     assert(g_gws);
     assert(cwist_graphql_ws_add_subscription(g_gws, "counter", counter_subscribe, NULL));
 
+    test_upgrade_negotiation();
     cwist_reactor_t *reactor = cwist_reactor_create();
     assert(reactor);
 
@@ -509,6 +594,7 @@ int main(void) {
     assert(pthread_join(rt, NULL) == 0);
     cwist_reactor_destroy(reactor);
 
+    test_init_timeout();
     cwist_graphql_ws_destroy(g_gws);
     cwist_graphql_schema_destroy(g_schema);
 

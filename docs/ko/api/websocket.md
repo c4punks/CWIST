@@ -95,7 +95,11 @@ void cwist_websocket_async_close(cwist_websocket_async *ws);
 > 바꾸지 않습니다.
 
 `cwist/graphql_ws.h`는 논블로킹 WebSocket 전송 위에서 `graphql-transport-ws` 서브 프로토콜을
-구현합니다.
+구현합니다. HTTP 업그레이드에는 `cwist_graphql_ws_upgrade()` 또는
+`cwist_graphql_ws_upgrade_response()`를 사용해 해당 서브 프로토콜을 요구하고 선택합니다.
+연결 후 5초 안에 `connection_init`이 오지 않으면 코드 4408로 닫습니다.
+`cwist_graphql_ws_attach_ex()`로 밀리초 단위의 다른 제한 시간을 지정하거나 0으로 끌 수
+있습니다.
 
 - `connection_init` -> `connection_ack`. init 전에 `subscribe`를 보내면 코드 `4429`로 소켓을
   닫습니다.
