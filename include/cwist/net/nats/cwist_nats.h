@@ -26,6 +26,9 @@ cwist_error_t cwist_nats_connect(cwist_nats_t **nats, const char *url);
 
 /**
  * @brief Subscribe to a subject.
+ *
+ * A handle supports one subscription. A second attempt returns an error and
+ * leaves the existing subscription and callback unchanged.
  */
 cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwist_nats_msg_cb cb,
                                    void *ctx);
