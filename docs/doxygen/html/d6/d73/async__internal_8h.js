@@ -20,6 +20,7 @@ var async__internal_8h =
     [ "cwist_async_stream_finish", "d6/d73/async__internal_8h.html#acbc4b4a89a3104c35bd7322ce4125414", null ],
     [ "cwist_async_stream_start", "d6/d73/async__internal_8h.html#a1edc5b15bd3729a7975027ebd1760eb2", null ],
     [ "cwist_async_stream_write", "d6/d73/async__internal_8h.html#a25695dd2cb24ac6c9d427db5e344297b", null ],
+    [ "cwist_get_cached_date_header", "d6/d73/async__internal_8h.html#a62b75f12c4fbe157faac87918d13b1e8", null ],
     [ "cwist_h3_async_queue_acquire", "d6/d73/async__internal_8h.html#a9a70142cb52b4a8515ce70731e0bcc23", null ],
     [ "cwist_h3_async_queue_enqueue", "d6/d73/async__internal_8h.html#af77b557d3d30761e31f93a719761abd8", null ],
     [ "cwist_h3_async_queue_release", "d6/d73/async__internal_8h.html#a37ad9e2e4eddb4a237f5ce481ed2ebab", null ],

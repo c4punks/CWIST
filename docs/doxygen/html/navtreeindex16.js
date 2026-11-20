@@ -1,5 +1,7 @@
 var NAVTREEINDEX16 =
 {
+"db/d5b/protobuf_8h.html#a37986127d9bf81df758ff84fe1554789":[98,0,1,0,2,2,3,22],
+"db/d5b/protobuf_8h.html#a3db91d6c62775029a7060054560b8cef":[98,0,1,0,2,2,3,4],
 "db/d5b/protobuf_8h.html#a43142d6ab3468b97ce62f91fc10dd9e3":[98,0,1,0,2,2,3,24],
 "db/d5b/protobuf_8h.html#a43bd4cf46a4c0859cb701bf0922f9b16":[98,0,1,0,2,2,3,18],
 "db/d5b/protobuf_8h.html#a4480a2200553122019550112d0b6dfff":[98,0,1,0,2,2,3,28],
@@ -247,7 +249,5 @@ var NAVTREEINDEX16 =
 "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md302":[26,0],
 "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md303":[26,1],
 "db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md304":[26,2],
-"db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md305":[26,3],
-"db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md306":[26,4],
-"db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md307":[26,5]
+"db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md305":[26,3]
 };

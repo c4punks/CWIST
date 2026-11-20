@@ -1,5 +1,7 @@
 var NAVTREEINDEX17 =
 {
+"db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md306":[26,4],
+"db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md307":[26,5],
 "db/de3/test__client_8h.html":[98,0,1,0,4,0,10],
 "db/de3/test__client_8h.html#a03d089f3c5e576dc223ebbc82f2e9c9a":[98,0,1,0,4,0,10,4],
 "db/de3/test__client_8h.html#a07792883be0706aed916aa473d771cde":[98,0,1,0,4,0,10,19],
@@ -247,7 +249,5 @@ var NAVTREEINDEX17 =
 "dc/da0/structcwist__app.html#a534eb66bc7f12204a0a8f435036c7e04":[97,0,3,26],
 "dc/da0/structcwist__app.html#a573d18871d76aa15723a9098e020a497":[97,0,3,30],
 "dc/da0/structcwist__app.html#a5f3830291c548387cb48c2394eedcc6f":[97,0,3,8],
-"dc/da0/structcwist__app.html#a70eed69c83ea4c036be65bc27fcd401f":[97,0,3,31],
-"dc/da0/structcwist__app.html#a7478192ae027eeb0783d4d254499ea05":[97,0,3,1],
-"dc/da0/structcwist__app.html#a8c33672187918ac728fda9040779ac8f":[97,0,3,22]
+"dc/da0/structcwist__app.html#a70eed69c83ea4c036be65bc27fcd401f":[97,0,3,31]
 };

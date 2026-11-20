@@ -28,6 +28,7 @@ var http_8c =
       [ "CWIST_FILE_BEGIN_HANDLED", "dd/d43/http_8c.html#a0b81a796f3b4a97e970b2c3ba54906f9a60c4ce3868ccf1eca83fd02c57fb5b2e", null ]
     ] ],
     [ "cwist_accept_socket", "dd/d43/http_8c.html#a57ace00508a3d048c7a638be78b3069e", null ],
+    [ "cwist_get_cached_date_header", "dd/d43/http_8c.html#a62b75f12c4fbe157faac87918d13b1e8", null ],
     [ "cwist_get_client_ip_from_fd", "dd/d43/http_8c.html#a6c611000179ed86d47890af32d35d3e8", null ],
     [ "cwist_http_async_close_orphan", "dd/d43/http_8c.html#ab5d519d4fe569356efe9a73671d8f38d", null ],
     [ "cwist_http_async_conn_fill", "dd/d43/http_8c.html#a1dd409ba636d610c94b01f96676e99a1", null ],
