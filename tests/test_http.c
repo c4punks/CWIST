@@ -22,6 +22,21 @@ void test_methods() {
     printf("Passed methods.\n");
 }
 
+void test_client_ip_validation() {
+    printf("Testing client IP validation...\n");
+    assert(cwist_get_client_ip_from_fd(-1) == NULL);
+    int fds[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
+    assert(cwist_get_client_ip_from_fd(fds[0]) == NULL);
+    close(fds[0]);
+    close(fds[1]);
+    cwist_http_request *req = cwist_http_request_create();
+    assert(req != NULL);
+    assert(cwist_http_request_client_ip(req) == NULL);
+    cwist_http_request_destroy(req);
+    printf("Passed client IP validation.\n");
+}
+
 void test_request_lifecycle() {
     printf("Testing Request Lifecycle...\n");
     cwist_http_request *req = cwist_http_request_create();
@@ -708,6 +723,7 @@ static void test_http10_streaming_and_date(void) {
 
 int main() {
     test_methods();
+    test_client_ip_validation();
     test_request_lifecycle();
     test_response_lifecycle();
     test_parse_request();
