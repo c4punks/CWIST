@@ -18,8 +18,39 @@
 
 static const unsigned char MAGIC[4] = {0x43, 0x57, 0x44, 0x42}; /* "CWDB" */
 static const unsigned char LEGACY_VERSION = 0x01;
-static const unsigned char VERSION = 0x02;
+static const unsigned char VERSION_2 = 0x02;
+static const unsigned char VERSION = 0x03;
 #define CWIST_DB_CRYPT_AUTH_TAG_LEN 32
+
+static int db_crypt_derive_keys(const cwist_db_crypt_ctx_t *ctx,
+                                unsigned char out[CWIST_DB_CRYPT_KEY_LEN * 2]) {
+    static const unsigned char info[] = "CWIST db_crypt v3";
+    unsigned char salt[CWIST_DB_CRYPT_KEY_LEN] = {0};
+    unsigned char prk[CWIST_DB_CRYPT_KEY_LEN];
+    unsigned char input[CWIST_DB_CRYPT_KEY_LEN + sizeof(info)];
+    unsigned int len = 0;
+    if (!HMAC(EVP_sha256(), salt, sizeof(salt), ctx->kek, CWIST_DB_CRYPT_KEY_LEN, prk, &len) ||
+        len != CWIST_DB_CRYPT_KEY_LEN)
+        return 0;
+
+    for (unsigned int i = 0; i < 2; i++) {
+        size_t prefix = i * CWIST_DB_CRYPT_KEY_LEN;
+        if (prefix) memcpy(input, out, prefix);
+        memcpy(input + prefix, info, sizeof(info) - 1);
+        input[prefix + sizeof(info) - 1] = (unsigned char)(i + 1);
+        len = 0;
+        if (!HMAC(EVP_sha256(), prk, sizeof(prk), input, prefix + sizeof(info),
+                  out + i * CWIST_DB_CRYPT_KEY_LEN, &len) ||
+            len != CWIST_DB_CRYPT_KEY_LEN) {
+            OPENSSL_cleanse(prk, sizeof(prk));
+            OPENSSL_cleanse(input, sizeof(input));
+            return 0;
+        }
+    }
+    OPENSSL_cleanse(prk, sizeof(prk));
+    OPENSSL_cleanse(input, sizeof(input));
+    return 1;
+}
 
 /**
  * AES-256-CBC encryption.
@@ -77,66 +108,36 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
     if (!ctx || !sqlite_bytes || !out_len || sqlite_len > INT_MAX || sqlite_len > SIZE_MAX - 17)
         return NULL;
 
-    /* 1. Generate random DEK and IVs. */
     unsigned char dek[CWIST_DB_CRYPT_KEY_LEN];
     unsigned char kek_iv[CWIST_DB_CRYPT_IV_LEN];
     unsigned char dek_iv[CWIST_DB_CRYPT_IV_LEN];
-
     if (RAND_bytes(dek, sizeof(dek)) != 1 || RAND_bytes(kek_iv, sizeof(kek_iv)) != 1 ||
-        RAND_bytes(dek_iv, sizeof(dek_iv)) != 1) {
+        RAND_bytes(dek_iv, sizeof(dek_iv)) != 1)
         return NULL;
-    }
 
-    /* 2. Wrap the DEK: encrypt ( dek_iv || dek ) with KEK.
-     *    Plaintext: 16 + 32 = 48 bytes → cipher: 48 bytes (no padding needed,
-     *    but EVP adds a full block when input is block-aligned, so we use 48
-     *    and disable padding via a temp context).
-     *    To keep it simple we just encrypt 48 bytes of dek_iv||dek normally;
-     *    EVP pads to 64. We'll store all 64 for safe round-trip. */
+    unsigned char keys[CWIST_DB_CRYPT_KEY_LEN * 2];
     unsigned char dek_plain[CWIST_DB_CRYPT_IV_LEN + CWIST_DB_CRYPT_KEY_LEN];
+    unsigned char *ct = NULL;
+    unsigned char *blob = NULL;
+    if (!db_crypt_derive_keys(ctx, keys)) goto out;
+
     memcpy(dek_plain, dek_iv, CWIST_DB_CRYPT_IV_LEN);
     memcpy(dek_plain + CWIST_DB_CRYPT_IV_LEN, dek, CWIST_DB_CRYPT_KEY_LEN);
-
-    /* Encrypted DEK blob: 48 plaintext bytes → 64 ciphertext bytes. */
     unsigned char enc_dek[CWIST_DB_CRYPT_IV_LEN + CWIST_DB_CRYPT_KEY_LEN + 16];
-    int enc_dek_len = aes256_encrypt(ctx->kek, kek_iv, dek_plain, sizeof(dek_plain), enc_dek);
-    if (enc_dek_len <= 0) {
-        OPENSSL_cleanse(dek, sizeof(dek));
-        OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
-        return NULL;
-    }
+    int enc_dek_len = aes256_encrypt(keys, kek_iv, dek_plain, sizeof(dek_plain), enc_dek);
+    if (enc_dek_len <= 0) goto out;
 
-    /* 3. Encrypt SQLite bytes with DEK. */
-    size_t ct_max = sqlite_len + 16 + 1; /* extra block for padding */
-    unsigned char *ct = (unsigned char *)cwist_alloc(ct_max);
-    if (!ct) {
-        OPENSSL_cleanse(dek, sizeof(dek));
-        OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
-        return NULL;
-    }
-
+    ct = (unsigned char *)cwist_alloc(sqlite_len + 17);
+    if (!ct) goto out;
     int ct_len = aes256_encrypt(dek, dek_iv, sqlite_bytes, sqlite_len, ct);
-    OPENSSL_cleanse(dek, sizeof(dek));
-    OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
-    if (ct_len <= 0) {
-        cwist_free(ct);
-        return NULL;
-    }
+    if (ct_len <= 0) goto out;
 
-    /* 4. Assemble the authenticated v2 blob. */
     size_t hdr_fixed =
         4 + 1 + CWIST_DB_CRYPT_IV_LEN + (size_t)enc_dek_len + CWIST_DB_CRYPT_IV_LEN + 8;
-    if ((size_t)ct_len > SIZE_MAX - hdr_fixed - CWIST_DB_CRYPT_AUTH_TAG_LEN) {
-        cwist_free(ct);
-        return NULL;
-    }
+    if ((size_t)ct_len > SIZE_MAX - hdr_fixed - CWIST_DB_CRYPT_AUTH_TAG_LEN) goto out;
     size_t total = hdr_fixed + (size_t)ct_len;
-
-    unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
-    if (!blob) {
-        cwist_free(ct);
-        return NULL;
-    }
+    blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
+    if (!blob) goto out;
 
     size_t off = 0;
     memcpy(blob + off, MAGIC, 4);
@@ -150,40 +151,40 @@ unsigned char *cwist_db_crypt_seal(const cwist_db_crypt_ctx_t *ctx,
     memcpy(blob + off, dek_iv, CWIST_DB_CRYPT_IV_LEN);
     off += CWIST_DB_CRYPT_IV_LEN;
 
-    /* plaintext length as little-endian uint64 */
     uint64_t ptlen_le = (uint64_t)sqlite_len;
     unsigned char ptlen_buf[8];
     for (int i = 0; i < 8; i++) ptlen_buf[i] = (unsigned char)(ptlen_le >> (8 * i));
     memcpy(blob + off, ptlen_buf, 8);
     off += 8;
-
     memcpy(blob + off, ct, (size_t)ct_len);
-    cwist_free(ct);
 
     unsigned int tag_len = 0;
-    if (!HMAC(EVP_sha256(), ctx->kek, CWIST_DB_CRYPT_KEY_LEN, blob, total, blob + total,
-              &tag_len) ||
+    if (!HMAC(EVP_sha256(), keys + CWIST_DB_CRYPT_KEY_LEN, CWIST_DB_CRYPT_KEY_LEN, blob, total,
+              blob + total, &tag_len) ||
         tag_len != CWIST_DB_CRYPT_AUTH_TAG_LEN) {
         free(blob);
-        return NULL;
+        blob = NULL;
+        goto out;
     }
-
     *out_len = total + CWIST_DB_CRYPT_AUTH_TAG_LEN;
+
+out:
+    cwist_free(ct);
+    OPENSSL_cleanse(keys, sizeof(keys));
+    OPENSSL_cleanse(dek, sizeof(dek));
+    OPENSSL_cleanse(dek_plain, sizeof(dek_plain));
     return blob;
 }
 
-static unsigned char *db_crypt_open_decrypted(const cwist_db_crypt_ctx_t *ctx,
+static unsigned char *db_crypt_open_decrypted(const unsigned char *wrap_key,
                                               const unsigned char *blob, size_t blob_len,
                                               size_t *out_len) {
-    if (!ctx || !blob || !out_len) return NULL;
-
-    /* Minimum header: 4+1+16+64+16+8 = 109 bytes. */
-    if (blob_len < CWIST_DB_CRYPT_HDR_LEN) return NULL;
+    if (!wrap_key || !blob || !out_len || blob_len < CWIST_DB_CRYPT_HDR_LEN) return NULL;
 
     size_t off = 0;
     if (memcmp(blob + off, MAGIC, 4) != 0) return NULL;
     off += 4;
-    if (blob[off] != LEGACY_VERSION && blob[off] != VERSION) return NULL;
+    if (blob[off] != LEGACY_VERSION && blob[off] != VERSION_2 && blob[off] != VERSION) return NULL;
     off += 1;
 
     const unsigned char *kek_iv = blob + off;
@@ -193,7 +194,7 @@ static unsigned char *db_crypt_open_decrypted(const cwist_db_crypt_ctx_t *ctx,
     if (blob_len < off + enc_dek_len + CWIST_DB_CRYPT_IV_LEN + 8) return NULL;
 
     unsigned char dek_plain[CWIST_DB_CRYPT_IV_LEN + CWIST_DB_CRYPT_KEY_LEN + 16];
-    int dek_plain_len = aes256_decrypt(ctx->kek, kek_iv, blob + off, enc_dek_len, dek_plain);
+    int dek_plain_len = aes256_decrypt(wrap_key, kek_iv, blob + off, enc_dek_len, dek_plain);
     if (dek_plain_len < (int)(CWIST_DB_CRYPT_IV_LEN + CWIST_DB_CRYPT_KEY_LEN)) return NULL;
     off += enc_dek_len;
 
@@ -231,23 +232,38 @@ unsigned char *cwist_db_crypt_open_legacy(const cwist_db_crypt_ctx_t *ctx,
                                           size_t *out_len) {
     if (!ctx || !blob || !out_len || blob_len < CWIST_DB_CRYPT_HDR_LEN || blob[4] != LEGACY_VERSION)
         return NULL;
-    return db_crypt_open_decrypted(ctx, blob, blob_len, out_len);
+    return db_crypt_open_decrypted(ctx->kek, blob, blob_len, out_len);
 }
 
 unsigned char *cwist_db_crypt_open(const cwist_db_crypt_ctx_t *ctx, const unsigned char *blob,
                                    size_t blob_len, size_t *out_len) {
     if (!ctx || !blob || !out_len ||
-        blob_len < CWIST_DB_CRYPT_HDR_LEN + CWIST_DB_CRYPT_AUTH_TAG_LEN || blob[4] != VERSION)
+        blob_len < CWIST_DB_CRYPT_HDR_LEN + CWIST_DB_CRYPT_AUTH_TAG_LEN ||
+        (blob[4] != VERSION_2 && blob[4] != VERSION))
         return NULL;
+
+    unsigned char keys[CWIST_DB_CRYPT_KEY_LEN * 2];
+    const unsigned char *wrap_key = ctx->kek;
+    const unsigned char *mac_key = ctx->kek;
+    unsigned char *result = NULL;
+    if (blob[4] == VERSION) {
+        if (!db_crypt_derive_keys(ctx, keys)) goto out;
+        wrap_key = keys;
+        mac_key = keys + CWIST_DB_CRYPT_KEY_LEN;
+    }
 
     size_t authenticated_len = blob_len - CWIST_DB_CRYPT_AUTH_TAG_LEN;
     unsigned char expected[CWIST_DB_CRYPT_AUTH_TAG_LEN];
     unsigned int expected_len = 0;
-    if (!HMAC(EVP_sha256(), ctx->kek, CWIST_DB_CRYPT_KEY_LEN, blob, authenticated_len, expected,
+    if (!HMAC(EVP_sha256(), mac_key, CWIST_DB_CRYPT_KEY_LEN, blob, authenticated_len, expected,
               &expected_len) ||
         expected_len != CWIST_DB_CRYPT_AUTH_TAG_LEN ||
         CRYPTO_memcmp(expected, blob + authenticated_len, CWIST_DB_CRYPT_AUTH_TAG_LEN) != 0)
-        return NULL;
+        goto out;
 
-    return db_crypt_open_decrypted(ctx, blob, authenticated_len, out_len);
+    result = db_crypt_open_decrypted(wrap_key, blob, authenticated_len, out_len);
+
+out:
+    OPENSSL_cleanse(keys, sizeof(keys));
+    return result;
 }
