@@ -13,6 +13,21 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
 - Automatically handles the handshake and sends the `101 Switching Protocols` response.
 - **Ownership:** The returned pointer is owned by the caller and must be destroyed with `cwist_websocket_destroy`.
 
+### `cwist_websocket_upgrade_ex`
+```c
+cwist_websocket *cwist_websocket_upgrade_ex(cwist_http_request *req, int client_fd,
+                                            const char *const *allowed_origins,
+                                            size_t origin_count);
+```
+Applies an exact Origin allowlist during the upgrade. Pass `NULL` for
+`allowed_origins` to disable Origin checks. A missing or mismatched Origin is
+rejected with 403. Every upgrade rejects an unsupported WebSocket version with
+426 and `Sec-WebSocket-Version: 13`. `Upgrade` and `Connection` accept
+comma-separated, case-insensitive token lists.
+
+`cwist_websocket_upgrade_response_ex()` provides the same validation when the
+caller constructs the response directly.
+
 ### `cwist_websocket_receive`
 Receives a single WebSocket frame.
 ```c
