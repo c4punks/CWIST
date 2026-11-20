@@ -109,7 +109,7 @@ static void assert_rendered(cwist_sstring *rendered, const char *expected) {
     cwist_sstring_destroy(rendered);
 }
 
-static void test_autoescape_filters(const cJSON *context) {
+static void test_autoescape_filters(cJSON *context) {
     assert(cJSON_AddStringToObject(context, "html", "<script>alert(1)</script>") != NULL);
     assert_rendered(cwist_template_render("{{ html }}", context),
                     "&lt;script&gt;alert(1)&lt;/script&gt;");
