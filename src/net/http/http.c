@@ -6170,6 +6170,44 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
     return server_fd;
 }
 
+/**
+ * @brief Check that the IPv4 wildcard address is free on @p port.
+ *
+ * On Linux, binding [::] with IPV6_V6ONLY off conflicts with a listener on
+ * 0.0.0.0 of the same port, so the dual-stack bind itself fails. On macOS and
+ * the BSDs, [::] and 0.0.0.0 count as different addresses when both sockets
+ * set SO_REUSEADDR, so the dual-stack bind succeeds while IPv4 clients keep
+ * reaching the other listener. Binding a throwaway IPv4 socket with the same
+ * options detects that case there.
+ *
+ * @param port Port in host byte order.
+ * @return false when 0.0.0.0:port is in use, true otherwise (including when
+ *         no IPv4 socket can be created, as on an IPv6-only host).
+ */
+static bool cwist_ipv4_wildcard_port_free(uint16_t port) {
+#if defined(__linux__)
+    (void)port;
+    return true;
+#else
+    if (port == 0) return true;
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return true;
+    int opt = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#if defined(SO_REUSEPORT)
+    if (cwist_reuseport_enabled()) setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+    struct sockaddr_in sin;
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = htonl(INADDR_ANY);
+    sin.sin_port = htons(port);
+    bool free_port = bind(fd, (struct sockaddr *)&sin, sizeof(sin)) == 0 || errno != EADDRINUSE;
+    close(fd);
+    return free_port;
+#endif
+}
+
 int cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uint16_t port,
                            uint16_t backlog) {
     if (!sockv6 || !address) return CWIST_HTTP_UNAVAILABLE_ADDRESS;
@@ -6201,6 +6239,10 @@ int cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uin
 #endif
 #endif
 
+    if (IN6_IS_ADDR_UNSPECIFIED(&sockv6->sin6_addr) && !cwist_ipv4_wildcard_port_free(port)) {
+        close(server_fd);
+        return CWIST_HTTP_BIND_FAILED;
+    }
     if (bind(server_fd, (struct sockaddr *)sockv6, sizeof(*sockv6)) != 0) {
         close(server_fd);
         return CWIST_HTTP_BIND_FAILED;
