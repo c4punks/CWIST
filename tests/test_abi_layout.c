@@ -34,7 +34,7 @@ int main(void) {
     PRINT_LAYOUT(cwist_error_t, error);
     PRINT_LAYOUT(cwist_sstring, append);
     PRINT_LAYOUT(cwist_http_header_node, arena_owned);
-    PRINT_LAYOUT(cwist_http_request, h2_queue);
+    PRINT_LAYOUT(cwist_http_request, trailers);
     PRINT_LAYOUT(cwist_http_response, async);
 
     abi_layout_report canonical, legacy;

@@ -173,7 +173,8 @@
     ABI_NEXT(cwist_http_request, async_conn, ws_async_handoff, bool);                  \
     ABI_NEXT(cwist_http_request, ws_async_handoff, https_conn, void *);                \
     ABI_NEXT(cwist_http_request, https_conn, h2_queue, void *);                        \
-    ABI_END(cwist_http_request, h2_queue, ABI_MAX(_Alignof(void *), _Alignof(size_t)))
+    ABI_NEXT(cwist_http_request, h2_queue, trailers, cwist_http_header_node *);        \
+    ABI_END(cwist_http_request, trailers, ABI_MAX(_Alignof(void *), _Alignof(size_t)))
 
 /* --- cwist_http_response -------------------------------------------------------
  * The handler's output. file_stream_offset is off_t, which is 64-bit on the
