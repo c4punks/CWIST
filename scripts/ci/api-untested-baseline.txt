@@ -88,14 +88,12 @@ cwist_job_id
 cwist_json_schema_align
 cwist_log_init
 cwist_log_write
-cwist_make_socket_ipv4
 cwist_malloc_shim
 cwist_metric_observe
 cwist_mux_group_create
 cwist_mux_group_destroy
 cwist_mux_group_handle
 cwist_mux_route_use
-cwist_mw_session
 cwist_nats_dispatch
 cwist_nats_native
 cwist_nats_publish_string

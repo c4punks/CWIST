@@ -4485,17 +4485,20 @@ static cwist_error_t cwist_multiport_h3_context_create(cwist_app *app, cwist_htt
  * @return UDP socket fd on success, or -1 on failure.
  */
 static int cwist_multiport_bind_udp(unsigned short port) {
-    int udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    int udp_fd = socket(AF_INET6, SOCK_DGRAM, 0);
     if (udp_fd < 0) return -1;
 
-    struct sockaddr_in udp_addr;
+    struct sockaddr_in6 udp_addr;
     memset(&udp_addr, 0, sizeof(udp_addr));
-    udp_addr.sin_family = AF_INET;
-    udp_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
-    udp_addr.sin_port = htons(port);
+    udp_addr.sin6_family = AF_INET6;
+    udp_addr.sin6_addr = in6addr_any;
+    udp_addr.sin6_port = htons(port);
 
     int opt = 1;
     setsockopt(udp_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    opt = 0;
+    setsockopt(udp_fd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt));
+    opt = 1;
 #ifdef SO_REUSEPORT
     if (cwist_reuseport_enabled()) {
         setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
@@ -4743,8 +4746,8 @@ int cwist_app_multiport(cwist_app **app_ref, unsigned short public_port, cwist_m
     }
 
     for (size_t i = 0; i < port_count; i++) {
-        struct sockaddr_in addr;
-        int fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", bind_ports[i], 32768);
+        struct sockaddr_in6 addr;
+        int fd = cwist_make_socket_dual(&addr, "0.0.0.0", bind_ports[i], 32768);
         if (fd < 0) {
             perror("Failed to bind multiport listener");
             cwist_multiport_close_all(pfds, i);
@@ -4976,8 +4979,8 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
      * kernel load-balances incoming connections.  Creating it here avoids the
      * previous anti-pattern where workers forked before binding and inherited
      * threads that do not exist in the child. */
-    struct sockaddr_in addr;
-    int server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 32768);
+    struct sockaddr_in6 addr;
+    int server_fd = cwist_make_socket_dual(&addr, "0.0.0.0", port, 32768);
     if (server_fd < 0) {
         perror("Failed to bind port");
         return -1;
@@ -4989,32 +4992,8 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
     int udp_fd = -1;
 #ifndef CWIST_PLATFORM_NO_PROC
     if (app->h3_ctx && (app->use_http3 || app->use_https3)) {
-        udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
-        if (udp_fd >= 0) {
-            struct sockaddr_in udp_addr;
-            memset(&udp_addr, 0, sizeof(udp_addr));
-            udp_addr.sin_family = AF_INET;
-            udp_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
-            udp_addr.sin_port = htons(port);
-
-            int opt = 1;
-            setsockopt(udp_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-#ifdef SO_REUSEPORT
-            if (cwist_reuseport_enabled()) {
-                setsockopt(udp_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
-            }
-#endif
-            int rcvbuf = 2 * 1024 * 1024;
-            int sndbuf = 2 * 1024 * 1024;
-            setsockopt(udp_fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
-            setsockopt(udp_fd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
-
-            if (bind(udp_fd, (struct sockaddr *)&udp_addr, sizeof(udp_addr)) != 0) {
-                perror("Failed to bind UDP port for HTTP/3");
-                close(udp_fd);
-                udp_fd = -1;
-            }
-        }
+        udp_fd = cwist_multiport_bind_udp(port);
+        if (udp_fd < 0) perror("Failed to bind UDP port for HTTP/3");
     }
 #endif /* __wasi__ (no UDP/threads) */
 
@@ -5123,7 +5102,7 @@ static int app_listen_serve(cwist_app *app, int port, int workers_override, int 
 
     if (is_worker_child) {
         close(server_fd);
-        server_fd = cwist_make_socket_ipv4(&addr, "0.0.0.0", port, 32768);
+        server_fd = cwist_make_socket_dual(&addr, "0.0.0.0", port, 32768);
         if (server_fd >= 0) {
             __atomic_store_n(&g_cwist_listen_fd, server_fd, __ATOMIC_SEQ_CST);
         }

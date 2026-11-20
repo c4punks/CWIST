@@ -6101,7 +6101,7 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
         perror(cjson_error_log);
         cwist_free(cjson_error_log);
         cJSON_Delete(err_json);
-
+        close(server_fd);
         return CWIST_HTTP_SETSOCKOPT_FAILED;
     }
 
@@ -6128,7 +6128,7 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
         perror(cjson_error_log);
         cwist_free(cjson_error_log);
         cJSON_Delete(err_json);
-
+        close(server_fd);
         return CWIST_HTTP_BIND_FAILED;
     }
 
@@ -6143,10 +6143,52 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
         perror(cjson_error_log);
         cwist_free(cjson_error_log);
         cJSON_Delete(err_json);
-
+        close(server_fd);
         return CWIST_HTTP_LISTEN_FAILED;
     }
 
+    return server_fd;
+}
+
+int cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uint16_t port,
+                           uint16_t backlog) {
+    if (!sockv6 || !address) return CWIST_HTTP_UNAVAILABLE_ADDRESS;
+    memset(sockv6, 0, sizeof(*sockv6));
+    sockv6->sin6_family = AF_INET6;
+    sockv6->sin6_port = htons(port);
+    if (strcmp(address, "0.0.0.0") == 0) {
+        sockv6->sin6_addr = in6addr_any;
+    } else if (inet_pton(AF_INET6, address, &sockv6->sin6_addr) != 1) {
+        return CWIST_HTTP_UNAVAILABLE_ADDRESS;
+    }
+
+    int server_fd = socket(AF_INET6, SOCK_STREAM, 0);
+    if (server_fd < 0) return CWIST_CREATE_SOCKET_FAILED;
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) {
+        close(server_fd);
+        return CWIST_HTTP_SETSOCKOPT_FAILED;
+    }
+    opt = 0;
+    setsockopt(server_fd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt));
+    opt = 1;
+#if defined(SO_REUSEPORT)
+    if (cwist_reuseport_enabled()) setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#ifdef SO_NOSIGPIPE
+    setsockopt(server_fd, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt));
+#endif
+#endif
+
+    if (bind(server_fd, (struct sockaddr *)sockv6, sizeof(*sockv6)) != 0) {
+        close(server_fd);
+        return CWIST_HTTP_BIND_FAILED;
+    }
+    if (listen(server_fd, backlog) != 0) {
+        close(server_fd);
+        return CWIST_HTTP_LISTEN_FAILED;
+    }
     return server_fd;
 }
 

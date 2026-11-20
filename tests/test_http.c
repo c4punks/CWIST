@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -20,6 +22,75 @@ void test_methods() {
     assert(strcmp(cwist_http_status_reason(404), "Not Found") == 0);
     assert(strcmp(cwist_http_status_reason(500), "Internal Server Error") == 0);
     printf("Passed methods.\n");
+}
+
+static int open_fd_count(void) {
+#ifdef __linux__
+    DIR *dir = opendir("/proc/self/fd");
+    if (!dir) return -1;
+    int count = 0;
+    while (readdir(dir)) count++;
+    closedir(dir);
+    return count;
+#else
+    return -1;
+#endif
+}
+
+static void connect_to_listener(int listener, uint16_t port, int family) {
+    int fd = socket(family, SOCK_STREAM, 0);
+    assert(fd >= 0);
+    struct sockaddr_storage addr = {0};
+    socklen_t len;
+    if (family == AF_INET) {
+        struct sockaddr_in *v4 = (struct sockaddr_in *)&addr;
+        v4->sin_family = AF_INET;
+        v4->sin_port = htons(port);
+        v4->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        len = sizeof(*v4);
+    } else {
+        struct sockaddr_in6 *v6 = (struct sockaddr_in6 *)&addr;
+        v6->sin6_family = AF_INET6;
+        v6->sin6_port = htons(port);
+        v6->sin6_addr = in6addr_loopback;
+        len = sizeof(*v6);
+    }
+    if (connect(fd, (struct sockaddr *)&addr, len) == 0) {
+        int accepted = accept(listener, NULL, NULL);
+        assert(accepted >= 0);
+        close(accepted);
+    } else {
+        assert(family == AF_INET6);
+    }
+    close(fd);
+}
+
+void test_dual_stack_listener(void) {
+    printf("Testing dual-stack listener...\n");
+    struct sockaddr_in6 addr;
+    int listener = cwist_make_socket_dual(&addr, "::", 0, 16);
+    assert(listener >= 0);
+    socklen_t len = sizeof(addr);
+    assert(getsockname(listener, (struct sockaddr *)&addr, &len) == 0);
+    uint16_t port = ntohs(addr.sin6_port);
+    assert(port != 0);
+
+    connect_to_listener(listener, port, AF_INET);
+    connect_to_listener(listener, port, AF_INET6);
+
+    setenv("CWIST_REUSEPORT", "0", 1);
+    int before = open_fd_count();
+    struct sockaddr_in6 duplicate;
+    assert(cwist_make_socket_dual(&duplicate, "::", port, 16) < 0);
+    int after = open_fd_count();
+    if (before >= 0) assert(after == before);
+    struct sockaddr_in ipv4 = {0};
+    assert(cwist_make_socket_ipv4(&ipv4, "0.0.0.0", port, 16) < 0);
+    after = open_fd_count();
+    if (before >= 0) assert(after == before);
+    unsetenv("CWIST_REUSEPORT");
+    close(listener);
+    printf("Passed dual-stack listener.\n");
 }
 
 void test_request_lifecycle() {
@@ -708,6 +779,7 @@ static void test_http10_streaming_and_date(void) {
 
 int main() {
     test_methods();
+    test_dual_stack_listener();
     test_request_lifecycle();
     test_response_lifecycle();
     test_parse_request();
