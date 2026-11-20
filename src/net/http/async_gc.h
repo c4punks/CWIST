@@ -54,6 +54,7 @@ static inline void cwist_http_async_disown_request(cwist_http_request *req) {
     cwist_http_async_disown_session(req->session);
     cwist_gc_scope_disown(req->csrf_token);
     cwist_http_async_disown_headers(req->headers);
+    cwist_http_async_disown_headers(req->trailers);
     if (!req->arena || !cwist_arena_owns(req->arena, req)) cwist_gc_scope_disown(req);
     /* app/db/protocol/middleware state are borrowed, not request-owned. */
 }
