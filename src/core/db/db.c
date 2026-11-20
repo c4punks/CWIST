@@ -9,6 +9,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include "../utils/number_internal.h"
 
 /**
  * @file db.c
@@ -467,7 +468,9 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
         if (cJSON_IsString(child)) {
             val_frag = sqlite3_mprintf(first ? "%Q" : ",%Q", child->valuestring);
         } else if (cJSON_IsNumber(child)) {
-            val_frag = sqlite3_mprintf(first ? "%g" : ",%g", child->valuedouble);
+            char num[64];
+            cwist_number_format_double(num, sizeof(num), child->valuedouble);
+            val_frag = sqlite3_mprintf(first ? "%s" : ",%s", num);
         } else if (cJSON_IsTrue(child)) {
             val_frag = sqlite3_mprintf(first ? "1" : ",1");
         } else if (cJSON_IsFalse(child)) {

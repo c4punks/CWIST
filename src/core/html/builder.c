@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "../utils/number_internal.h"
 
 /**
  * @file builder.c
@@ -200,7 +201,7 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
                 cwist_sstring_append(out, attr->string);
             } else if (cJSON_IsNumber(attr)) {
                 char num_buf[64];
-                snprintf(num_buf, sizeof(num_buf), "%g", attr->valuedouble);
+                cwist_number_format_double(num_buf, sizeof(num_buf), attr->valuedouble);
                 cwist_sstring_append(out, " ");
                 cwist_sstring_append(out, attr->string);
                 cwist_sstring_append(out, "=\"");
