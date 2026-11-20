@@ -1,5 +1,7 @@
 var NAVTREEINDEX15 =
 {
+"da/dbc/md_docs_2api_2middleware.html":[9],
+"da/dbc/md_docs_2api_2middleware.html#autotoc_md159":[9,0],
 "da/dbc/md_docs_2api_2middleware.html#autotoc_md160":[9,0,0],
 "da/dbc/md_docs_2api_2middleware.html#autotoc_md161":[9,1],
 "da/dbc/md_docs_2api_2middleware.html#autotoc_md162":[9,1,0],
@@ -247,7 +249,5 @@ var NAVTREEINDEX15 =
 "db/d2e/backend__mbedtls_8c.html#abdaa606538cacce331331323225d5ced":[98,0,2,3,2,1,31],
 "db/d2e/backend__mbedtls_8c.html#ac34da40225447ce4ac9e882606344406":[98,0,2,3,2,1,33],
 "db/d2e/backend__mbedtls_8c.html#ac375381532622a4d59ad09c65daa9d4a":[98,0,2,3,2,1,41],
-"db/d2e/backend__mbedtls_8c.html#ac378e2c27fe7b3508876a464fb7b1c05":[98,0,2,3,2,1,43],
-"db/d2e/backend__mbedtls_8c.html#acfee2d76f23b2ee8daca9ac15ae059f2":[98,0,2,3,2,1,19],
-"db/d2e/backend__mbedtls_8c.html#ad80cff99ceea0824dc02fe65f8797e05":[98,0,2,3,2,1,60]
+"db/d2e/backend__mbedtls_8c.html#ac378e2c27fe7b3508876a464fb7b1c05":[98,0,2,3,2,1,43]
 };

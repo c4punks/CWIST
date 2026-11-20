@@ -1,45 +1,54 @@
 <map id="src/core/template/template.c" name="src/core/template/template.c">
-<area shape="rect" id="Node000001" title="Minimal template renderer supporting variable substitution and simple control flow." alt="" coords="751,5,962,31"/>
-<area shape="rect" id="Node000002" href="$de/db8/template_8h.html" title="Simple template engine." alt="" coords="155,79,305,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="751,31,553,51,325,81,319,82,318,77,324,76,552,46,751,26"/>
-<area shape="rect" id="Node000004" title=" " alt="" coords="5,262,76,287"/>
-<area shape="poly" id="edge22_Node000001_Node000004" title=" " alt="" coords="751,25,584,32,395,43,232,60,175,70,143,81,123,98,105,118,77,164,59,210,48,249,43,248,54,208,73,161,101,114,119,94,141,76,174,64,231,54,395,38,584,27,751,20"/>
-<area shape="rect" id="Node000005" title=" " alt="" coords="371,262,441,287"/>
-<area shape="poly" id="edge21_Node000001_Node000005" title=" " alt="" coords="751,28,653,46,602,61,554,81,523,99,501,117,460,168,435,210,417,250,412,248,430,208,456,165,497,113,520,95,551,76,600,56,652,40,751,23"/>
-<area shape="rect" id="Node000006" title=" " alt="" coords="414,343,497,368"/>
-<area shape="poly" id="edge25_Node000001_Node000006" title=" " alt="" coords="862,31,867,64,869,111,862,162,853,186,840,208,806,244,767,274,723,298,677,317,587,341,511,353,510,348,586,336,676,312,721,293,764,269,803,240,836,205,849,184,857,160,864,110,862,64,857,31"/>
-<area shape="rect" id="Node000011" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="565,86,738,111"/>
-<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="828,33,695,84,693,79,826,28"/>
-<area shape="rect" id="Node000014" href="$de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="894,86,1049,111"/>
-<area shape="poly" id="edge18_Node000001_Node000014" title=" " alt="" coords="875,29,945,76,942,80,872,33"/>
-<area shape="rect" id="Node000016" title=" " alt="" coords="1073,86,1139,111"/>
-<area shape="poly" id="edge20_Node000001_Node000016" title=" " alt="" coords="902,28,1062,76,1068,79,1066,84,1060,81,900,33"/>
-<area shape="rect" id="Node000017" title=" " alt="" coords="1164,86,1235,111"/>
-<area shape="poly" id="edge23_Node000001_Node000017" title=" " alt="" coords="932,28,1037,48,1152,76,1160,79,1158,84,1151,81,1036,53,931,33"/>
-<area shape="rect" id="Node000018" title=" " alt="" coords="1259,86,1329,111"/>
-<area shape="poly" id="edge24_Node000001_Node000018" title=" " alt="" coords="962,26,1099,45,1174,59,1248,76,1257,79,1255,84,1247,81,1173,64,1098,50,962,31"/>
-<area shape="rect" id="Node000003" href="$d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="162,167,298,207"/>
-<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="233,119,233,153,227,153,227,119"/>
-<area shape="rect" id="Node000009" title=" " alt="" coords="59,343,169,368"/>
-<area shape="poly" id="edge10_Node000002_Node000009" title=" " alt="" coords="200,121,174,142,152,168,134,209,123,254,116,329,111,329,118,253,129,208,148,165,170,138,196,117"/>
-<area shape="rect" id="Node000010" title=" " alt="" coords="466,262,541,287"/>
-<area shape="poly" id="edge11_Node000002_Node000010" title=" " alt="" coords="261,117,475,252,472,257,258,121"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="190,209,79,259,77,254,187,204"/>
-<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="270,204,372,254,369,258,267,209"/>
-<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="252,205,300,246,360,292,424,334,421,338,356,297,297,250,249,209"/>
-<area shape="rect" id="Node000007" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="152,255,295,295"/>
-<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="231,207,229,241,223,241,226,207"/>
-<area shape="poly" id="edge8_Node000007_Node000006" title=" " alt="" coords="280,292,409,336,408,341,278,297"/>
-<area shape="rect" id="Node000008" title=" " alt="" coords="193,343,264,368"/>
-<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="227,295,230,329,224,329,222,295"/>
-<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="198,297,143,337,140,332,195,293"/>
-<area shape="poly" id="edge13_Node000011_Node000010" title=" " alt="" coords="566,113,513,133,491,148,472,168,465,188,468,209,476,230,488,249,483,252,471,232,463,210,460,187,468,165,487,144,511,128,564,108"/>
-<area shape="rect" id="Node000012" title=" " alt="" coords="685,174,826,199"/>
-<area shape="poly" id="edge14_Node000011_Node000012" title=" " alt="" coords="667,109,732,163,729,167,664,114"/>
-<area shape="rect" id="Node000013" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="482,174,661,199"/>
-<area shape="poly" id="edge15_Node000011_Node000013" title=" " alt="" coords="642,113,594,165,590,162,639,110"/>
-<area shape="poly" id="edge16_Node000013_Node000006" title=" " alt="" coords="575,200,573,244,567,271,555,296,530,321,501,339,498,335,527,317,550,293,562,269,568,243,570,199"/>
-<area shape="poly" id="edge17_Node000013_Node000010" title=" " alt="" coords="564,201,524,252,519,249,560,198"/>
-<area shape="rect" id="Node000015" href="$d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="907,174,1035,199"/>
-<area shape="poly" id="edge19_Node000014_Node000015" title=" " alt="" coords="974,112,974,160,969,160,969,112"/>
+<area shape="rect" id="Node000001" title="Minimal template renderer supporting variable substitution and simple control flow." alt="" coords="572,5,783,31"/>
+<area shape="rect" id="Node000002" href="$de/db8/template_8h.html" title="Simple template engine." alt="" coords="546,79,697,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="671,32,645,69,641,66,667,29"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="302,262,373,287"/>
+<area shape="poly" id="edge22_Node000001_Node000004" title=" " alt="" coords="614,33,554,51,524,65,496,81,449,121,408,168,375,214,353,251,348,248,371,211,404,165,445,117,493,76,522,60,552,46,612,28"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="397,262,467,287"/>
+<area shape="poly" id="edge21_Node000001_Node000005" title=" " alt="" coords="631,33,582,52,558,65,536,81,501,121,473,167,454,212,441,250,436,248,449,211,469,165,496,118,533,77,555,60,580,47,629,28"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="681,343,764,368"/>
+<area shape="poly" id="edge25_Node000001_Node000006" title=" " alt="" coords="688,30,701,51,712,78,725,148,731,218,728,328,722,328,725,218,720,149,707,79,696,54,683,32"/>
+<area shape="rect" id="Node000011" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="772,86,945,111"/>
+<area shape="poly" id="edge12_Node000001_Node000011" title=" " alt="" coords="705,28,821,78,819,83,703,33"/>
+<area shape="rect" id="Node000014" href="$de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="969,86,1124,111"/>
+<area shape="poly" id="edge18_Node000001_Node000014" title=" " alt="" coords="732,28,980,81,979,86,730,33"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="5,262,72,287"/>
+<area shape="poly" id="edge20_Node000001_Node000016" title=" " alt="" coords="572,30,450,48,384,62,321,81,273,99,237,117,160,169,106,213,62,254,58,250,102,208,157,165,234,113,271,95,319,76,383,57,449,43,571,25"/>
+<area shape="rect" id="Node000017" title=" " alt="" coords="1149,86,1219,111"/>
+<area shape="poly" id="edge23_Node000001_Node000017" title=" " alt="" coords="783,23,950,41,1044,56,1137,76,1146,79,1145,84,1135,81,1043,61,950,46,783,28"/>
+<area shape="rect" id="Node000018" title=" " alt="" coords="1243,86,1314,111"/>
+<area shape="poly" id="edge24_Node000001_Node000018" title=" " alt="" coords="783,19,879,25,993,35,1114,52,1233,76,1242,79,1241,84,1231,81,1113,57,992,41,879,30,783,25"/>
+<area shape="rect" id="Node000019" href="$de/d66/number__internal_8h.html" title=" " alt="" coords="171,174,357,199"/>
+<area shape="poly" id="edge26_Node000001_Node000019" title=" " alt="" coords="572,29,477,47,429,61,383,81,353,99,326,122,284,165,280,161,322,118,350,95,380,76,427,56,476,42,571,24"/>
+<area shape="rect" id="Node000003" href="$d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="495,167,631,207"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="611,120,585,157,581,154,606,117"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="526,343,637,368"/>
+<area shape="poly" id="edge10_Node000002_Node000009" title=" " alt="" coords="633,118,646,153,657,198,660,247,657,272,649,296,634,318,614,336,611,332,630,315,644,294,652,271,655,247,652,198,640,154,628,120"/>
+<area shape="rect" id="Node000010" title=" " alt="" coords="811,262,885,287"/>
+<area shape="poly" id="edge11_Node000002_Node000010" title=" " alt="" coords="648,117,824,251,820,256,644,121"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="513,209,386,257,381,259,379,254,384,252,512,204"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="535,209,463,256,460,252,532,205"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="592,205,649,253,682,292,709,329,705,332,678,295,645,257,588,209"/>
+<area shape="rect" id="Node000007" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="491,255,634,295"/>
+<area shape="poly" id="edge6_Node000003_Node000007" title=" " alt="" coords="565,207,565,241,560,241,560,207"/>
+<area shape="poly" id="edge8_Node000007_Node000006" title=" " alt="" coords="602,292,688,334,686,339,600,297"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="314,343,385,368"/>
+<area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="512,297,395,340,393,335,511,292"/>
+<area shape="poly" id="edge9_Node000007_Node000009" title=" " alt="" coords="570,294,578,328,573,330,565,296"/>
+<area shape="poly" id="edge13_Node000011_Node000010" title=" " alt="" coords="861,112,852,248,847,248,855,111"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="1076,174,1217,199"/>
+<area shape="poly" id="edge14_Node000011_Node000012" title=" " alt="" coords="898,109,1096,167,1094,173,897,114"/>
+<area shape="rect" id="Node000013" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="873,174,1052,199"/>
+<area shape="poly" id="edge15_Node000011_Node000013" title=" " alt="" coords="874,109,940,163,936,167,871,114"/>
+<area shape="poly" id="edge16_Node000013_Node000006" title=" " alt="" coords="961,201,939,247,922,274,899,297,870,315,839,330,778,348,777,343,837,325,868,311,896,293,917,270,935,244,956,199"/>
+<area shape="poly" id="edge17_Node000013_Node000010" title=" " alt="" coords="949,202,876,256,873,252,946,197"/>
+<area shape="rect" id="Node000015" href="$d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="1241,174,1369,199"/>
+<area shape="poly" id="edge19_Node000014_Node000015" title=" " alt="" coords="1082,109,1258,167,1257,172,1081,114"/>
+<area shape="poly" id="edge31_Node000019_Node000004" title=" " alt="" coords="276,198,320,249,316,253,272,201"/>
+<area shape="poly" id="edge30_Node000019_Node000005" title=" " alt="" coords="288,197,398,253,396,258,285,202"/>
+<area shape="poly" id="edge27_Node000019_Node000006" title=" " alt="" coords="266,199,268,246,276,271,291,293,320,309,360,321,409,328,462,332,568,335,650,340,668,343,667,348,649,345,568,341,462,337,408,333,359,326,318,314,288,297,271,274,263,246,260,200"/>
+<area shape="poly" id="edge28_Node000019_Node000008" title=" " alt="" coords="260,200,243,244,241,269,248,293,271,319,302,337,300,341,268,323,243,296,235,270,238,243,255,198"/>
+<area shape="poly" id="edge29_Node000019_Node000016" title=" " alt="" coords="233,202,85,257,79,259,77,254,83,252,231,197"/>
+<area shape="rect" id="Node000020" title=" " alt="" coords="97,262,175,287"/>
+<area shape="poly" id="edge32_Node000019_Node000020" title=" " alt="" coords="248,202,166,256,163,252,245,197"/>
 </map>

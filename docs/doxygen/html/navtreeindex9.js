@@ -1,5 +1,6 @@
 var NAVTREEINDEX9 =
 {
+"d6/d42/md_docs_2webserver-benchmark.html#autotoc_md936":[95,8],
 "d6/d48/structcwist__http2__stream__hooks.html":[97,0,43],
 "d6/d48/structcwist__http2__stream__hooks.html#a167ed5a114f403170755827261986e27":[97,0,43,7],
 "d6/d48/structcwist__http2__stream__hooks.html#a3e7f4126144d8f56706a874499d9d993":[97,0,43,5],
@@ -248,6 +249,5 @@ var NAVTREEINDEX9 =
 "d6/de0/structcwist__file__t.html#aa3ac45f2b9ac20d97ee20cb0e71537e7":[97,0,25,6],
 "d6/de0/structcwist__file__t.html#ad3e53262315cab08ea1c7d0998488a5a":[97,0,25,4],
 "d6/de8/md_docs_2ko_2versioning.html":[75],
-"d6/de8/md_docs_2ko_2versioning.html#autotoc_md755":[75,0],
-"d6/de8/md_docs_2ko_2versioning.html#autotoc_md756":[75,1]
+"d6/de8/md_docs_2ko_2versioning.html#autotoc_md755":[75,0]
 };

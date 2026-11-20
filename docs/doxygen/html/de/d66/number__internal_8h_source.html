@@ -119,24 +119,37 @@ $(document).ready(function(){initNavTree('de/d66/number__internal_8h_source.html
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="preprocessor">#include &lt;stdbool.h&gt;</span></div>
 <div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="preprocessor">#include &lt;stdint.h&gt;</span></div>
 <div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="preprocessor">#include &lt;stdio.h&gt;</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;string.h&gt;</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;strings.h&gt;</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span> </div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_number_double_is_finite(<span class="keywordtype">double</span> value) {</div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span>    uint64_t bits;</div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    memcpy(&amp;bits, &amp;value, <span class="keyword">sizeof</span>(bits));</div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    <span class="keywordflow">return</span> (bits &amp; UINT64_C(0x7ff0000000000000)) != UINT64_C(0x7ff0000000000000);</div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>}</div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_number_long_double_is_finite(<span class="keywordtype">long</span> <span class="keywordtype">double</span> value) {</div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span>    <span class="keywordtype">char</span> text[64];</div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    snprintf(text, <span class="keyword">sizeof</span>(text), <span class="stringliteral">&quot;%Lf&quot;</span>, value);</div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    <span class="keywordflow">return</span> strcasecmp(text, <span class="stringliteral">&quot;nan&quot;</span>) != 0 &amp;&amp; strcasecmp(text, <span class="stringliteral">&quot;inf&quot;</span>) != 0 &amp;&amp;</div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>           strcasecmp(text, <span class="stringliteral">&quot;-inf&quot;</span>) != 0 &amp;&amp; strcasecmp(text, <span class="stringliteral">&quot;infinity&quot;</span>) != 0 &amp;&amp;</div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>           strcasecmp(text, <span class="stringliteral">&quot;-infinity&quot;</span>) != 0;</div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>}</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="preprocessor">#include &lt;stdlib.h&gt;</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="preprocessor">#include &lt;string.h&gt;</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="preprocessor">#include &lt;strings.h&gt;</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span> </div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_number_double_is_finite(<span class="keywordtype">double</span> value) {</div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span>    uint64_t bits;</div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span>    memcpy(&amp;bits, &amp;value, <span class="keyword">sizeof</span>(bits));</div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span>    <span class="keywordflow">return</span> (bits &amp; UINT64_C(0x7ff0000000000000)) != UINT64_C(0x7ff0000000000000);</div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span>}</div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span> </div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_number_long_double_is_finite(<span class="keywordtype">long</span> <span class="keywordtype">double</span> value) {</div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span>    <span class="keywordtype">char</span> text[64];</div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span>    snprintf(text, <span class="keyword">sizeof</span>(text), <span class="stringliteral">&quot;%Lf&quot;</span>, value);</div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span>    <span class="keywordflow">return</span> strcasecmp(text, <span class="stringliteral">&quot;nan&quot;</span>) != 0 &amp;&amp; strcasecmp(text, <span class="stringliteral">&quot;inf&quot;</span>) != 0 &amp;&amp;</div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span>           strcasecmp(text, <span class="stringliteral">&quot;-inf&quot;</span>) != 0 &amp;&amp; strcasecmp(text, <span class="stringliteral">&quot;infinity&quot;</span>) != 0 &amp;&amp;</div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>           strcasecmp(text, <span class="stringliteral">&quot;-infinity&quot;</span>) != 0;</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>}</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_number_format_double(<span class="keywordtype">char</span> *buf, <span class="keywordtype">size_t</span> len, <span class="keywordtype">double</span> value) {</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span>    <span class="keywordflow">if</span> (value &gt;= -9007199254740992.0 &amp;&amp; value &lt;= 9007199254740992.0 &amp;&amp;</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>        (<span class="keywordtype">double</span>)(<span class="keywordtype">long</span> <span class="keywordtype">long</span>)value == value) {</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>        snprintf(buf, len, <span class="stringliteral">&quot;%lld&quot;</span>, (<span class="keywordtype">long</span> <span class="keywordtype">long</span>)value);</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    }</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keywordflow">for</span> (<span class="keywordtype">int</span> prec = 15; prec &lt;= 17; prec++) {</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>        snprintf(buf, len, <span class="stringliteral">&quot;%.*g&quot;</span>, prec, value);</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>        <span class="keywordflow">if</span> (prec == 17 || strtod(buf, NULL) == value) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    }</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>}</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span> </div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span><span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

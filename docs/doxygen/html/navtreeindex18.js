@@ -1,5 +1,7 @@
 var NAVTREEINDEX18 =
 {
+"dc/da0/proxy_8c.html#a310e7054162dc51328b0b2382d016ac2":[98,0,2,2,6,0,7],
+"dc/da0/proxy_8c.html#a3969a26182791370029f662caa10935f":[98,0,2,2,6,0,0],
 "dc/da0/proxy_8c.html#a3e1bcbabbfb63dde10014452e85e6d1c":[98,0,2,2,6,0,30],
 "dc/da0/proxy_8c.html#a3ff423be2182a6feaeb6a38e32458045":[98,0,2,2,6,0,24],
 "dc/da0/proxy_8c.html#a47554a0d0a9145d8424eef3ddb0eaf25":[98,0,2,2,6,0,12],
@@ -247,7 +249,5 @@ var NAVTREEINDEX18 =
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md551":[49,1],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md552":[49,2],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md553":[49,3],
-"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md554":[49,4],
-"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md555":[49,5],
-"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md556":[49,6]
+"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md554":[49,4]
 };

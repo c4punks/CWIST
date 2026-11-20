@@ -1432,11 +1432,11 @@ Variables</h2></td></tr>
 <p>Drain the socket into the connection stash. Stops at EAGAIN, and also after a short read: poll is level-triggered, so if bytes remain after a short recv the one-shot re-arm fires again immediately. This skips the guaranteed-EAGAIN second recv that otherwise costs one wasted syscall per request on non-pipelined keep-alive traffic. </p>
 <dl class="section return"><dt>Returns</dt><dd>0 on data, EAGAIN, or EOF (recorded in peer_eof); -1 on fatal error. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05649">5649</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05652">5652</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00495">cwist_http_async_conn::cap</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00492">cwist_http_async_conn::fd</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00552">cwist_http_async_conn::https_conn</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00496">cwist_http_async_conn::len</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00506">cwist_http_async_conn::peer_eof</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00494">cwist_http_async_conn::rbuf</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00515">cwist_http_async_conn::rx_data_ready</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00514">cwist_http_async_conn::rx_recv_inflight</a>, <a class="el" href="../../d7/d95/https_8h_source.html#l00023">cwist_https_connection::ssl</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00054">SSL_ERROR_WANT_READ</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00055">SSL_ERROR_WANT_WRITE</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00057">SSL_ERROR_ZERO_RETURN</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00175">SSL_get_error</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00171">SSL_read</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00553">cwist_http_async_conn::tls_wait</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00500">cwist_http_async_conn::virgin</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03622">cwist_app_http_handler_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03668">cwist_app_http_handler_async()</a>.</p>
 
 </div>
 </div>
@@ -1479,7 +1479,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d5/d23/writer__fast_8c_source.html#l00200">cwist_fast_monotonic_sec()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../df/d34/metrics_8h_source.html#l00062">CWIST_METRIC_HTTP_CONTINUATION_SHED</a>, <a class="el" href="../../db/d59/metrics_8c_source.html#l00186">cwist_metric_inc()</a>, <a class="el" href="../../db/d59/metrics_8c_source.html#l00130">cwist_metrics_registry()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00505">cwist_http_async_conn::handler</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00552">cwist_http_async_conn::https_conn</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00502">cwist_http_async_conn::last_active_sec</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00496">cwist_http_async_conn::len</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00506">cwist_http_async_conn::peer_eof</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00493">cwist_http_async_conn::user_ctx</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03622">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03312">cwist_http_async_finish_stream()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l03883">cwist_http_async_send_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03668">cwist_app_http_handler_async()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03312">cwist_http_async_finish_stream()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l03883">cwist_http_async_send_response()</a>.</p>
 
 </div>
 </div>
@@ -1659,7 +1659,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00601">CWIST_COALESCE_FLUSH_DONE</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00603">CWIST_COALESCE_FLUSH_ERROR</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00602">CWIST_COALESCE_FLUSH_PARKED</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d2/d7d/writer__fast_8h_source.html#l00025">CWIST_WRITE_DONE</a>, <a class="el" href="../../d2/d7d/writer__fast_8h_source.html#l00027">CWIST_WRITE_PENDING</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_running</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00496">cwist_http_async_conn::len</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00089">MSG_DONTWAIT</a>, <a class="el" href="../../d8/d03/orm_8c_source.html#l00028">MSG_NOSIGNAL</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00497">cwist_http_async_conn::obuf</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00499">cwist_http_async_conn::olen</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00504">cwist_http_async_conn::reactor</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03622">cwist_app_http_handler_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03668">cwist_app_http_handler_async()</a>.</p>
 
 </div>
 </div>
@@ -1696,7 +1696,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00497">cwist_http_async_conn::obuf</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00499">cwist_http_async_conn::olen</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05759">cwist_http_receive_request_nb()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04251">cwist_http_send_response_coalesced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05762">cwist_http_receive_request_nb()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l04251">cwist_http_send_response_coalesced()</a>.</p>
 
 </div>
 </div>
@@ -1825,7 +1825,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l02099">2099</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05956">cwist_http_response_send_file()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05959">cwist_http_response_send_file()</a>.</p>
 
 </div>
 </div>
@@ -1901,7 +1901,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l02128">2128</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02242">cwist_http_response_add_hsts()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02183">cwist_http_response_add_security_headers()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05956">cwist_http_response_send_file()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l02242">cwist_http_response_add_hsts()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02183">cwist_http_response_add_security_headers()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05959">cwist_http_response_send_file()</a>.</p>
 
 </div>
 </div>
@@ -2052,7 +2052,7 @@ Variables</h2></td></tr>
 <p>Parse a raw HTTP request string.</p>
 <dl class="section return"><dt>Returns</dt><dd>Parsed request, or NULL when no header terminator exists. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05037">5037</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05040">5040</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 </div>
 </div>
@@ -2086,9 +2086,9 @@ Variables</h2></td></tr>
 <p>Parse an HTTP/1.x request held in a memory buffer (length-based; the buffer may contain a binary body and need not be NUL-terminated).</p>
 <dl class="section return"><dt>Returns</dt><dd>Parsed request, or NULL when no header terminator exists. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05049">5049</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05052">5052</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02601">cwist_app_dispatch_memory()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02746">cwist_app_dispatch_stream()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02647">cwist_app_dispatch_memory()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l02792">cwist_app_dispatch_stream()</a>.</p>
 
 </div>
 </div>
@@ -2115,7 +2115,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01117">cwist_reactor_destroy()</a>, and <a class="el" href="../../d3/d99/reactor_8c_source.html#l01910">cwist_reactor_stop()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00214">cwist_async_server_loop()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06365">cwist_http_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00214">cwist_async_server_loop()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06368">cwist_http_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -2175,7 +2175,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l01007">cwist_reactor_create()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l00938">cwist_reactor_timer_arm()</a>, <a class="el" href="../../d3/d99/reactor_8c_source.html#l00930">cwist_reactor_timer_init()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l00166">get_optimal_thread_count()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00214">cwist_async_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00703">cwist_http_pool_init()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06365">cwist_http_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d3d/async__server_8c_source.html#l00214">cwist_async_server_loop()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l00703">cwist_http_pool_init()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06368">cwist_http_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -2287,7 +2287,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00089">MSG_DONTWAIT</a>, and <a class="el" href="../../d8/d03/orm_8c_source.html#l00028">MSG_NOSIGNAL</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l00854">cwist_http_pool_rearm_current()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06365">cwist_http_server_loop()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l00854">cwist_http_pool_rearm_current()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06368">cwist_http_server_loop()</a>.</p>
 
 </div>
 </div>
@@ -2375,7 +2375,7 @@ Variables</h2></td></tr>
 <p>Receive and parse an HTTP request from a socket.</p>
 <p>Bounds the header read by CWIST_HTTP_HEADERS_TIMEOUT_MS, answers a validated Expect: 100-continue, then completes the body per Content-Length or chunked framing. Leftover pipelined bytes are compacted into read_buf and *buf_len is updated. </p><dl class="section return"><dt>Returns</dt><dd>Parsed request, or NULL with *err_out set (defaults to CWIST_HTTP_PARSE_EOF). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05410">5410</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05413">5413</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 </div>
 </div>
@@ -2413,11 +2413,11 @@ Variables</h2></td></tr>
 
 <p>Try to assemble one complete request from the stash without any blocking IO. On CWIST_RECV_OK the consumed bytes are removed from the stash and *out holds a fully parsed request. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05759">5759</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05762">5762</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00073">cwist_http_request::body</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00495">cwist_http_async_conn::cap</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00075">cwist_http_request::client_fd</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00079">cwist_http_request::content_length</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d5/d23/writer__fast_8c_source.html#l00200">cwist_fast_monotonic_sec()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05605">CWIST_HTTP_BODY_ZC_MIN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04217">cwist_http_coalesce_flush_blocking()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00041">CWIST_HTTP_MAX_BODY_SIZE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00051">CWIST_HTTP_PARSE_BODY_TOO_LARGE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00048">CWIST_HTTP_PARSE_EOF</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00050">CWIST_HTTP_PARSE_HEADER_OVERFLOW</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00049">CWIST_HTTP_PARSE_MALFORMED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00047">CWIST_HTTP_PARSE_OK</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00042">CWIST_HTTP_READ_BUFFER_SIZE</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02442">cwist_http_request_destroy()</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00056">CWIST_LOG_WARN</a>, <a class="el" href="../../df/d34/metrics_8h_source.html#l00060">CWIST_METRIC_HTTP_HEADER_OVERFLOW</a>, <a class="el" href="../../db/d59/metrics_8c_source.html#l00186">cwist_metric_inc()</a>, <a class="el" href="../../db/d59/metrics_8c_source.html#l00130">cwist_metrics_registry()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00619">CWIST_RECV_FATAL</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00618">CWIST_RECV_NEED_MORE</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00617">CWIST_RECV_OK</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00168">cwist_sstring_adopt_len()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00200">cwist_sstring_adopt_region()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00177">cwist_http_request::expect_100_seen</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00501">cwist_http_async_conn::expect_continue_sent</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00492">cwist_http_async_conn::fd</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00552">cwist_http_async_conn::https_conn</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00496">cwist_http_async_conn::len</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00494">cwist_http_async_conn::rbuf</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00537">cwist_http_async_conn::stash_grown_sec</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00176">cwist_http_request::te_chunked_seen</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00073">cwist_http_request::body</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00495">cwist_http_async_conn::cap</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00075">cwist_http_request::client_fd</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00079">cwist_http_request::content_length</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d5/d23/writer__fast_8c_source.html#l00200">cwist_fast_monotonic_sec()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05608">CWIST_HTTP_BODY_ZC_MIN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04217">cwist_http_coalesce_flush_blocking()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00041">CWIST_HTTP_MAX_BODY_SIZE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00051">CWIST_HTTP_PARSE_BODY_TOO_LARGE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00048">CWIST_HTTP_PARSE_EOF</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00050">CWIST_HTTP_PARSE_HEADER_OVERFLOW</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00049">CWIST_HTTP_PARSE_MALFORMED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00047">CWIST_HTTP_PARSE_OK</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00042">CWIST_HTTP_READ_BUFFER_SIZE</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02442">cwist_http_request_destroy()</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00056">CWIST_LOG_WARN</a>, <a class="el" href="../../df/d34/metrics_8h_source.html#l00060">CWIST_METRIC_HTTP_HEADER_OVERFLOW</a>, <a class="el" href="../../db/d59/metrics_8c_source.html#l00186">cwist_metric_inc()</a>, <a class="el" href="../../db/d59/metrics_8c_source.html#l00130">cwist_metrics_registry()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00619">CWIST_RECV_FATAL</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00618">CWIST_RECV_NEED_MORE</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00617">CWIST_RECV_OK</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00168">cwist_sstring_adopt_len()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00200">cwist_sstring_adopt_region()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00177">cwist_http_request::expect_100_seen</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00501">cwist_http_async_conn::expect_continue_sent</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00492">cwist_http_async_conn::fd</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00552">cwist_http_async_conn::https_conn</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00496">cwist_http_async_conn::len</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00494">cwist_http_async_conn::rbuf</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00537">cwist_http_async_conn::stash_grown_sec</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00176">cwist_http_request::te_chunked_seen</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03622">cwist_app_http_handler_async()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l03668">cwist_app_http_handler_async()</a>.</p>
 
 </div>
 </div>
@@ -2497,7 +2497,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l02442">2442</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05410">cwist_http_receive_request()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05759">cwist_http_receive_request_nb()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l05413">cwist_http_receive_request()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05762">cwist_http_receive_request_nb()</a>.</p>
 
 </div>
 </div>
@@ -2744,7 +2744,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05956">5956</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05959">5959</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../de/d66/endpoint__opts_8h_source.html#l00034">CWIST_ENDPOINT_FILE</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02099">cwist_http_header_add()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02128">cwist_http_header_get()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00041">CWIST_HTTP_MAX_BODY_SIZE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00168">cwist_sstring_adopt_len()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00139">cwist_sstring_borrow()</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01205">EINVAL</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00210">cwist_http_response::endpoint_opts</a>, <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01211">ENOMEM</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00224">cwist_http_response::file_stream_auto_close</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00221">cwist_http_response::file_stream_fd</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00222">cwist_http_response::file_stream_len</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00223">cwist_http_response::file_stream_offset</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00220">cwist_http_response::use_file_stream</a>.</p>
 
@@ -2787,11 +2787,11 @@ Variables</h2></td></tr>
 <p>Serialize a response into a freshly allocated HTTP/1.x buffer (status line + headers + body). Caller frees <code>out</code> with <a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a>. File-streaming bodies require a socket unless the status forbids content; no-content statuses serialize only their headers.</p>
 <p>Streaming responses are auto-finalized so the chunked terminator is present even when the handler skipped <a class="el" href="../../d9/dab/net_2http_2http_8h.html#a59b86090d5f7e4003b4c45de783158c8" title="Terminate a streaming response and flush.">cwist_http_response_stream_end()</a>. </p><dl class="section return"><dt>Returns</dt><dd>0 with <code>out</code> and <code>out_len</code> set, or -1 (invalid input, a file-stream body whose status permits content, or allocation failure). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05064">5064</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05067">5067</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00040">CWIST_HTTP_MAX_HEADER_SIZE</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05189">cwist_http_response_stream_end()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00145">CWIST_HTTP_STATUS_FORBIDS_BODY</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00213">cwist_http_response::is_ptr_body</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00214">cwist_http_response::ptr_body</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00215">cwist_http_response::ptr_body_len</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00232">cwist_http_response::stream_buf</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00230">cwist_http_response::stream_ended</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00229">cwist_http_response::stream_mode</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00220">cwist_http_response::use_file_stream</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00040">CWIST_HTTP_MAX_HEADER_SIZE</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l05192">cwist_http_response_stream_end()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00145">CWIST_HTTP_STATUS_FORBIDS_BODY</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00213">cwist_http_response::is_ptr_body</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00214">cwist_http_response::ptr_body</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00215">cwist_http_response::ptr_body_len</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00232">cwist_http_response::stream_buf</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00230">cwist_http_response::stream_ended</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00229">cwist_http_response::stream_mode</a>, and <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00220">cwist_http_response::use_file_stream</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02601">cwist_app_dispatch_memory()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02647">cwist_app_dispatch_memory()</a>.</p>
 
 </div>
 </div>
@@ -2883,7 +2883,7 @@ Variables</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../dd/d43/http_8c_source.html#l02621">cwist_http_response_set_body_ptr_managed()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d05/assets_8c_source.html#l00493">cwist_assets_respond()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d05/assets_8c_source.html#l00497">cwist_assets_respond()</a>.</p>
 
 </div>
 </div>
@@ -2970,7 +2970,7 @@ Variables</h2></td></tr>
 <p>Switch a response to streaming mode. </p>
 <p>HTTP/1.1 uses chunked framing. HTTP/1.0 writes raw bytes and closes the connection to delimit the body. Incompatible with pointer or file bodies. </p><dl class="section return"><dt>Returns</dt><dd>0 on success, -1 otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05132">5132</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05135">5135</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00213">cwist_http_response::is_ptr_body</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00088">cwist_http_response::keep_alive</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00229">cwist_http_response::stream_mode</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00220">cwist_http_response::use_file_stream</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00083">cwist_http_response::version</a>.</p>
 
@@ -2995,11 +2995,11 @@ Variables</h2></td></tr>
 <p>Terminate a streaming response and flush. </p>
 <p>HTTP/1.1 writes the final zero-length chunk. HTTP/1.0 needs no trailer. </p><dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on error. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05189">5189</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05192">5192</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00243">cwist_http_response::arena</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00145">CWIST_HTTP_STATUS_FORBIDS_BODY</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00229">cwist_sstring_append_len()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00232">cwist_http_response::stream_buf</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00230">cwist_http_response::stream_ended</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00231">cwist_http_response::stream_failed</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00229">cwist_http_response::stream_mode</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00083">cwist_http_response::version</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02601">cwist_app_dispatch_memory()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l02746">cwist_app_dispatch_stream()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05064">cwist_http_response_serialize()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02647">cwist_app_dispatch_memory()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l02792">cwist_app_dispatch_stream()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l05067">cwist_http_response_serialize()</a>.</p>
 
 </div>
 </div>
@@ -3038,7 +3038,7 @@ Variables</h2></td></tr>
 <p>Append one data chunk to a streaming response. </p>
 <p>Frames the chunk (hex length prefix / CRLF suffix) and flushes through the sink. A sink failure marks the stream failed. </p><dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on error. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05151">5151</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l05154">5154</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00243">cwist_http_response::arena</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00145">CWIST_HTTP_STATUS_FORBIDS_BODY</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00229">cwist_sstring_append_len()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00020">cwist_sstring::size</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00232">cwist_http_response::stream_buf</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00230">cwist_http_response::stream_ended</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00231">cwist_http_response::stream_failed</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00229">cwist_http_response::stream_mode</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00083">cwist_http_response::version</a>.</p>
 
@@ -3380,7 +3380,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l06365">6365</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l06368">6368</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 </div>
 </div>
@@ -3550,9 +3550,9 @@ Variables</h2></td></tr>
 
 <p>Create a dual-stack IPv6 socket and perform bind/listen. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l06170">6170</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l06173">6173</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d43/http_8c_source.html#l01778">CWIST_CREATE_SOCKET_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01780">CWIST_HTTP_BIND_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01782">CWIST_HTTP_LISTEN_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01781">CWIST_HTTP_SETSOCKOPT_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01779">CWIST_HTTP_UNAVAILABLE_ADDRESS</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06080">cwist_reuseport_enabled()</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d43/http_8c_source.html#l01778">CWIST_CREATE_SOCKET_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01780">CWIST_HTTP_BIND_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01782">CWIST_HTTP_LISTEN_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01781">CWIST_HTTP_SETSOCKOPT_FAILED</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01779">CWIST_HTTP_UNAVAILABLE_ADDRESS</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06083">cwist_reuseport_enabled()</a>.</p>
 
 </div>
 </div>
@@ -3608,7 +3608,7 @@ Variables</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Listening socket fd on success, or a negative CWIST socket error code. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l06094">6094</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l06097">6097</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
 </div>
 </div>
@@ -3744,7 +3744,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l01778">1778</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06170">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06094">cwist_make_socket_ipv4()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06173">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06097">cwist_make_socket_ipv4()</a>.</p>
 
 </div>
 </div>
@@ -3770,7 +3770,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l01780">1780</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06170">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06094">cwist_make_socket_ipv4()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06173">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06097">cwist_make_socket_ipv4()</a>.</p>
 
 </div>
 </div>
@@ -3796,7 +3796,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l01782">1782</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06170">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06094">cwist_make_socket_ipv4()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06173">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06097">cwist_make_socket_ipv4()</a>.</p>
 
 </div>
 </div>
@@ -3822,7 +3822,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l01781">1781</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06170">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06094">cwist_make_socket_ipv4()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06173">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06097">cwist_make_socket_ipv4()</a>.</p>
 
 </div>
 </div>
@@ -3848,7 +3848,7 @@ Variables</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../dd/d43/http_8c_source.html#l01779">1779</a> of file <a class="el" href="../../dd/d43/http_8c_source.html">http.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06170">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06094">cwist_make_socket_ipv4()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../dd/d43/http_8c_source.html#l06173">cwist_make_socket_dual()</a>, and <a class="el" href="../../dd/d43/http_8c_source.html#l06097">cwist_make_socket_ipv4()</a>.</p>
 
 </div>
 </div>

@@ -317,6 +317,8 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:ac084f708ac098df4b12391b19bbd53f2" id="r_ac084f708ac098df4b12391b19bbd53f2"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d05/assets_8c.html#ac084f708ac098df4b12391b19bbd53f2">cwist_assets_content_type</a> (const char *name)</td></tr>
+<tr class="separator:ac084f708ac098df4b12391b19bbd53f2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abd19c1a269d0776eaa5f4c8dd3f2702c" id="r_abd19c1a269d0776eaa5f4c8dd3f2702c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d05/assets_8c.html#abd19c1a269d0776eaa5f4c8dd3f2702c">cwist_app_asset_prefix</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, const char *url_prefix)</td></tr>
 <tr class="memdesc:abd19c1a269d0776eaa5f4c8dd3f2702c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the URL prefix under which assets are served.  <br /></td></tr>
 <tr class="separator:abd19c1a269d0776eaa5f4c8dd3f2702c"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -439,7 +441,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error result with code 0 on success, -1 on invalid arguments or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00326">326</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00330">330</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>.</p>
 
@@ -496,7 +498,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error result with code 0 on success, -1 on invalid arguments, an unreadable file, or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00353">353</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00357">357</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00027">cwist_realloc()</a>.</p>
 
@@ -539,7 +541,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error result with code 0 on success, -1 on failure (NULL app, invalid prefix, or assets already registered). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00208">208</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00212">212</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -582,7 +584,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Asset URL, or NULL if no such asset exists. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00403">403</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00407">407</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
 </div>
 </div>
@@ -622,9 +624,30 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00533">533</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00537">537</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d05/assets_8c_source.html#l00020">ASSET_HASH_HEX</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d05/assets_8c_source.html#l00596">cwist_assets_destroy()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, and <a class="el" href="../../d3/db2/otel_8c_source.html#l00060">head</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d05/assets_8c_source.html#l00020">ASSET_HASH_HEX</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d05/assets_8c_source.html#l00600">cwist_assets_destroy()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, and <a class="el" href="../../d3/db2/otel_8c_source.html#l00060">head</a>.</p>
+
+</div>
+</div>
+<a id="ac084f708ac098df4b12391b19bbd53f2" name="ac084f708ac098df4b12391b19bbd53f2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac084f708ac098df4b12391b19bbd53f2">&#9670;&#160;</a></span>cwist_assets_content_type()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char * cwist_assets_content_type </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Content-Type for a file name by extension (shared with static directories). </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00144">144</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
 </div>
 </div>
@@ -645,11 +668,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Free a registry and every asset in it. No-op for NULL. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00596">596</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00600">600</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01518">cwist_app_destroy()</a>, and <a class="el" href="../../d3/d05/assets_8c_source.html#l00533">cwist_assets_clone()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01531">cwist_app_destroy()</a>, and <a class="el" href="../../d3/d05/assets_8c_source.html#l00537">cwist_assets_clone()</a>.</p>
 
 </div>
 </div>
@@ -680,9 +703,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Whether an If-None-Match list names <code>etag</code> (weak or strong) or is "*". </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00457">457</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00461">461</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d05/assets_8c_source.html#l00493">cwist_assets_respond()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d05/assets_8c_source.html#l00497">cwist_assets_respond()</a>.</p>
 
 </div>
 </div>
@@ -729,7 +752,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true on a match, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00427">427</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00431">431</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00016">cwist_asset_match::asset</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00017">CWIST_HTTP_GET</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00022">CWIST_HTTP_HEAD</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00017">cwist_asset_match::immutable</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00066">cwist_http_request::method</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00067">cwist_http_request::path</a>.</p>
 
@@ -777,9 +800,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00493">493</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00497">497</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00016">cwist_asset_match::asset</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dc/d7a/assets_8h_source.html#l00036">CWIST_ASSET_IMMUTABLE_CACHE</a>, <a class="el" href="../../d3/d05/assets_8c_source.html#l00457">cwist_assets_etag_matches()</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00043">cwist_error_dispose()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02128">cwist_http_header_get()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00072">CWIST_HTTP_NOT_MODIFIED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02609">cwist_http_response_set_body_ptr()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00017">cwist_asset_match::immutable</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00016">cwist_asset_match::asset</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dc/d7a/assets_8h_source.html#l00036">CWIST_ASSET_IMMUTABLE_CACHE</a>, <a class="el" href="../../d3/d05/assets_8c_source.html#l00461">cwist_assets_etag_matches()</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00043">cwist_error_dispose()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02128">cwist_http_header_get()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00072">CWIST_HTTP_NOT_MODIFIED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02609">cwist_http_response_set_body_ptr()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00017">cwist_asset_match::immutable</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>.</p>
 
 </div>
 </div>

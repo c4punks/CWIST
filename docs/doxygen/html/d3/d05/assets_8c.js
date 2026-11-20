@@ -7,6 +7,7 @@ var assets_8c =
     [ "cwist_app_asset_prefix", "d3/d05/assets_8c.html#abd19c1a269d0776eaa5f4c8dd3f2702c", null ],
     [ "cwist_app_asset_url", "d3/d05/assets_8c.html#a695d209564a5770782a6a5373f5f69a2", null ],
     [ "cwist_assets_clone", "d3/d05/assets_8c.html#ae99d45424ad0d998f1a50fc60e9124ce", null ],
+    [ "cwist_assets_content_type", "d3/d05/assets_8c.html#ac084f708ac098df4b12391b19bbd53f2", null ],
     [ "cwist_assets_destroy", "d3/d05/assets_8c.html#a3fd9c70a1d9fdb6e780a3d35be9b805a", null ],
     [ "cwist_assets_etag_matches", "d3/d05/assets_8c.html#a318ce3acf3db12b8f481a3557e61d22c", null ],
     [ "cwist_assets_match", "d3/d05/assets_8c.html#aef4959a5b4ebb92e76bac62a2a65e5e7", null ],

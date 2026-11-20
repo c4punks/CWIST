@@ -1,5 +1,6 @@
 var NAVTREEINDEX8 =
 {
+"d5/d75/md_docs_2ko_2api_2sql.html#autotoc_md516":[45,0,9],
 "d5/d78/builder_8h.html":[98,0,1,0,0,2,0],
 "d5/d78/builder_8h.html#a311b88491b6b06bc046a1e1639c4e53b":[98,0,1,0,0,2,0,3],
 "d5/d78/builder_8h.html#a5477230fd23fb3ded7efe0fa1f4c255b":[98,0,1,0,0,2,0,2],
@@ -248,6 +249,5 @@ var NAVTREEINDEX8 =
 "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md932":[95,4],
 "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md933":[95,5],
 "d6/d42/md_docs_2webserver-benchmark.html#autotoc_md934":[95,6],
-"d6/d42/md_docs_2webserver-benchmark.html#autotoc_md935":[95,7],
-"d6/d42/md_docs_2webserver-benchmark.html#autotoc_md936":[95,8]
+"d6/d42/md_docs_2webserver-benchmark.html#autotoc_md935":[95,7]
 };

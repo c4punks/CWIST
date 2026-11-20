@@ -1,5 +1,7 @@
 var NAVTREEINDEX19 =
 {
+"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md555":[49,5],
+"dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md556":[49,6],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md557":[49,7],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md558":[49,8],
 "dd/d41/md_docs_2ko_2api_2wasm-component.html#autotoc_md559":[49,9],
@@ -247,7 +249,5 @@ var NAVTREEINDEX19 =
 "dd/d68/structcwist__http__request.html#af27c8211e63dc55d48b084e9c819a59b":[97,0,49,7],
 "dd/d68/structcwist__http__request.html#afa70fc531f9a23cfef539b091f2d7559":[97,0,49,15],
 "dd/d6c/scheduler_8c.html":[98,0,2,4,4,1],
-"dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad":[98,0,2,4,4,1,4],
-"dd/d6c/scheduler_8c.html#a3024ccd4a9af5109d24e6c57565d74a1":[98,0,2,4,4,1,0],
-"dd/d6c/scheduler_8c.html#a3f5b6e8f86cb918356d278714b809683":[98,0,2,4,4,1,7]
+"dd/d6c/scheduler_8c.html#a16ac83e9ad8cc4a59205bb3ce7b1c8ad":[98,0,2,4,4,1,4]
 };
