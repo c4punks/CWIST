@@ -36,15 +36,17 @@
  * multi-fragment OOM attacks while accommodating large real-world messages. */
 #define CWIST_WS_MAX_MESSAGE_BYTES ((size_t)(64u * 1024u * 1024u))
 
-static bool ws_connection_has_upgrade(const char *connection) {
-    const char *p = connection;
+static bool ws_header_has_token(const char *value, const char *wanted) {
+    size_t wanted_len = strlen(wanted);
+    const char *p = value;
     while (*p) {
         while (*p == ' ' || *p == '\t' || *p == ',') p++;
         const char *start = p;
         while (*p && *p != ',') p++;
         const char *end = p;
         while (end > start && (end[-1] == ' ' || end[-1] == '\t')) end--;
-        if ((size_t)(end - start) == 7 && strncasecmp(start, "Upgrade", 7) == 0) return true;
+        if ((size_t)(end - start) == wanted_len && strncasecmp(start, wanted, wanted_len) == 0)
+            return true;
         if (*p) p++;
     }
     return false;
@@ -85,36 +87,45 @@ static bool ws_valid_handshake_key(const char *key) {
     return used == sizeof(decoded) && (ws_b64_value((unsigned char)key[21]) & 0x0f) == 0;
 }
 
-/**
- * @brief Validate the upgrade request and fill a 101 Switching Protocols response.
- *
- * Computes the Sec-WebSocket-Accept key (sha1 + base64), sets status 101 and
- * the Upgrade/Connection/Sec-WebSocket-Accept headers on @p res, but does NOT
- * send anything.  Shared by the blocking cwist_websocket_upgrade() and the
- * C1M reactor path, which sends the 101 through the coalesced HTTP writer.
- *
- * @param req Parsed upgrade request to validate.
- * @param res Response object to fill (must be empty).
- * @return true when the handshake is valid and @p res carries the 101 reply.
- */
-bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_response *res) {
+static bool ws_reject(cwist_http_response *res, int status, const char *body) {
+    res->status_code = status;
+    cwist_sstring_assign(res->status_text, (char *)cwist_http_status_reason(status));
+    cwist_sstring_assign(res->body, body);
+    return false;
+}
+
+static bool ws_origin_allowed(const cwist_http_request *req, const char *const *allowed_origins,
+                              size_t origin_count) {
+    if (!allowed_origins) return true;
+    const char *origin = cwist_http_header_get(req->headers, "Origin");
+    if (!origin) return false;
+    for (size_t i = 0; i < origin_count; i++) {
+        if (allowed_origins[i] && strcmp(origin, allowed_origins[i]) == 0) return true;
+    }
+    return false;
+}
+
+bool cwist_websocket_upgrade_response_ex(cwist_http_request *req, cwist_http_response *res,
+                                         const char *const *allowed_origins, size_t origin_count) {
     if (!req || !res) return false;
 
-    // Validate Headers
     char *connection = cwist_http_header_get(req->headers, "Connection");
     char *upgrade = cwist_http_header_get(req->headers, "Upgrade");
     char *key = cwist_http_header_get(req->headers, "Sec-WebSocket-Key");
 
     if (!connection || !upgrade || !key) return false;
-    if (!ws_connection_has_upgrade(connection)) return false;
-    if (strcasecmp(upgrade, "websocket") != 0) return false;
+    if (!ws_header_has_token(connection, "Upgrade")) return false;
+    if (!ws_header_has_token(upgrade, "websocket")) return false;
     if (!ws_valid_handshake_key(key)) return false;
 
-    /* RFC 6455 section 4.2.1: the client MUST include Sec-WebSocket-Version: 13. */
     char *ws_version = cwist_http_header_get(req->headers, "Sec-WebSocket-Version");
-    if (!ws_version || strcmp(ws_version, "13") != 0) return false;
+    if (!ws_version || strcmp(ws_version, "13") != 0) {
+        cwist_http_header_add(&res->headers, "Sec-WebSocket-Version", "13");
+        return ws_reject(res, CWIST_HTTP_UPGRADE_REQUIRED, "WebSocket Upgrade Required");
+    }
+    if (!ws_origin_allowed(req, allowed_origins, origin_count))
+        return ws_reject(res, CWIST_HTTP_FORBIDDEN, "WebSocket Origin Forbidden");
 
-    // Handshake Key Generation
     char combined_key[512];
     snprintf(combined_key, sizeof(combined_key), "%s%s", key, WS_GUID);
 
@@ -135,24 +146,22 @@ bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_respon
     return true;
 }
 
-/**
- * @brief Upgrade an HTTP request to a WebSocket connection.
- *
- * The function validates the required upgrade headers, computes the
- * Sec-WebSocket-Accept response, emits the 101 Switching Protocols reply, and
- * returns a lightweight wrapper around the already-open client socket.
- *
- * @param req Parsed HTTP request that requested the upgrade.
- * @param client_fd Accepted client socket descriptor.
- * @return WebSocket wrapper on success, or NULL when the handshake fails.
- */
-cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd) {
+bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_response *res) {
+    return cwist_websocket_upgrade_response_ex(req, res, NULL, 0);
+}
+
+cwist_websocket *cwist_websocket_upgrade_ex(cwist_http_request *req, int client_fd,
+                                            const char *const *allowed_origins,
+                                            size_t origin_count) {
     if (!req || client_fd < 0) return NULL;
 
     cwist_http_response *res = cwist_http_response_create();
     if (!res) return NULL;
 
-    if (!cwist_websocket_upgrade_response(req, res)) {
+    if (!cwist_websocket_upgrade_response_ex(req, res, allowed_origins, origin_count)) {
+        if (res->status_code == CWIST_HTTP_UPGRADE_REQUIRED ||
+            res->status_code == CWIST_HTTP_FORBIDDEN)
+            cwist_http_send_response(client_fd, res);
         cwist_http_response_destroy(res);
         return NULL;
     }
@@ -174,6 +183,10 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
     ws->frag_cap = 0;
     ws->frag_opcode = CWIST_WS_FRAME_CONTINUATION;
     return ws;
+}
+
+cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd) {
+    return cwist_websocket_upgrade_ex(req, client_fd, NULL, 0);
 }
 
 /**
