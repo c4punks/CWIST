@@ -11,7 +11,7 @@ var searchData=
   ['session_2ec_8',['session.c',['../de/d67/session_8c.html',1,'']]],
   ['session_2eh_9',['session.h',['../da/d46/session_8h.html',1,'']]],
   ['session_5fmanager_2ec_10',['session_manager.c',['../d4/db3/session__manager_8c.html',1,'']]],
-  ['session_5fmanager_2eh_11',['session_manager.h',['../d5/d63/sys_2session_2session__manager_8h.html',1,'(Global Namespace)'],['../d7/d95/session__manager_8h.html',1,'(Global Namespace)']]],
+  ['session_5fmanager_2eh_11',['session_manager.h',['../d7/d95/session__manager_8h.html',1,'(Global Namespace)'],['../d5/d63/sys_2session_2session__manager_8h.html',1,'(Global Namespace)']]],
   ['sha256_2eh_12',['sha256.h',['../d5/de3/sha256_8h.html',1,'']]],
   ['shutdown_2ec_13',['shutdown.c',['../d3/db2/shutdown_8c.html',1,'']]],
   ['shutdown_2eh_14',['shutdown.h',['../da/d39/shutdown_8h.html',1,'']]],
