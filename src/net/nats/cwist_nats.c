@@ -78,27 +78,23 @@ cwist_error_t cwist_nats_connect(cwist_nats_t **nats, const char *url) {
 
 /** @brief Subscribe to a NATS subject and register a message callback.
  *
- * Replaces any existing subscription on the handle: the previous subscription
- * is destroyed before the new one is created. The callback is invoked from
- * the NATS delivery thread via cwist_nats_adapter.
+ * Each handle supports one subscription. A second subscribe attempt is
+ * rejected without changing the existing subscription or callback pair. The
+ * callback is invoked from the NATS delivery thread via cwist_nats_adapter.
  *
  * @param nats Handle with an active connection; must not be NULL.
  * @param subject Subject to subscribe to; must not be NULL.
  * @param cb Callback invoked for each incoming message; may be NULL.
  * @param ctx Opaque pointer passed back to @p cb.
  * @return cwist_error_t with err_i16 set to 0 on success, CWIST_ERROR_INVALID_PARAM
- *         on NULL arguments, or the natsStatus code on failure.
+ *         on NULL arguments or an existing subscription, or the natsStatus code on failure.
  */
 cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwist_nats_msg_cb cb,
                                    void *ctx) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    if (!nats || !nats->conn || !subject) {
+    if (!nats || !nats->conn || !subject || nats->sub) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;
-    }
-    if (nats->sub) {
-        natsSubscription_Destroy(nats->sub);
-        nats->sub = NULL;
     }
     nats->user_cb = cb;
     nats->user_ctx = ctx;
