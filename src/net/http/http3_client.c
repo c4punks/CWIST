@@ -1308,21 +1308,10 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 
     *out_response = NULL;
 
-    /* Create UDP socket if needed */
-    if (client->udp_fd < 0) {
-        client->udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
-        if (client->udp_fd < 0) {
-            err.error.err_i16 = -1;
-            return err;
-        }
-        int flags = fcntl(client->udp_fd, F_GETFL, 0);
-        if (flags >= 0) fcntl(client->udp_fd, F_SETFL, flags | O_NONBLOCK);
-    }
-
     /* Resolve host if not already done */
     if (client->peer_addr_len == 0) {
         struct addrinfo hints = {0}, *res = NULL;
-        hints.ai_family = AF_INET;
+        hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_DGRAM;
         char port_str[8];
         snprintf(port_str, sizeof(port_str), "%u", client->port);
@@ -1333,6 +1322,17 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         memcpy(&client->peer_addr, res->ai_addr, res->ai_addrlen);
         client->peer_addr_len = res->ai_addrlen;
         freeaddrinfo(res);
+    }
+
+    /* Create the UDP socket with the resolved address family. */
+    if (client->udp_fd < 0) {
+        client->udp_fd = socket(client->peer_addr.ss_family, SOCK_DGRAM, 0);
+        if (client->udp_fd < 0) {
+            err.error.err_i16 = -1;
+            return err;
+        }
+        int flags = fcntl(client->udp_fd, F_GETFL, 0);
+        if (flags >= 0) fcntl(client->udp_fd, F_SETFL, flags | O_NONBLOCK);
     }
 
     /* lsquic dereferences the local address in client mode

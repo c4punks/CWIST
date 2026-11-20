@@ -21,6 +21,7 @@
 #else
 struct sockaddr;
 struct sockaddr_in;
+struct sockaddr_in6;
 #endif
 #include <sys/types.h>
 #include <stdio.h>
@@ -191,6 +192,7 @@ typedef struct cwist_http_request {
     bool ws_async_handoff;  ///< WebSocket async path took fd ownership; C1M layer must detach.
     void *https_conn;       ///< HTTPS connection wrapper when on TLS path (internal).
     void *h2_queue;         ///< HTTP/2 async queue when on H2 path (internal).
+    cwist_http_header_node *trailers; ///< Trailer fields kept separate from initial headers.
 } cwist_http_request;
 
 typedef void (*cwist_http_body_cleanup_fn)(const void *ptr, size_t len, void *ctx);
@@ -298,6 +300,13 @@ void cwist_http_send_error_response(int fd, int status, const char *msg);
 /** @name Request Data Processing */
 /** @{ */
 cwist_sstring *cwist_get_client_ip_from_fd(int fd);
+
+/**
+ * @brief Resolve the request peer address for HTTP/1, HTTP/2, or HTTP/3.
+ * @return Newly allocated textual IP, or NULL when the peer is unknown.
+ *         IPv4-mapped IPv6 addresses are normalized to IPv4.
+ */
+cwist_sstring *cwist_http_request_client_ip(const cwist_http_request *req);
 
 /**
  * @brief Format a time_t as an HTTP-date (RFC 7231).
@@ -428,6 +437,9 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
 /** @{ */
 /** @brief Create an IPv4 socket and perform bind/listen. */
 int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port,
+                           uint16_t backlog);
+/** @brief Create a dual-stack IPv6 socket and perform bind/listen. */
+int cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uint16_t port,
                            uint16_t backlog);
 /** @brief Accept sockets and invoke a handler callback. */
 cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4,

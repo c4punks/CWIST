@@ -72,6 +72,7 @@
 
 ### 소켓 도우미
 - `int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port, uint16_t backlog)`
+- `int cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uint16_t port, uint16_t backlog)`
 - `cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4, void (*handler_func)(int client_fd))`
 - `cwist_error_t cwist_http_server_loop(int server_fd, cwist_server_config *config, void (*handler)(int))`
 

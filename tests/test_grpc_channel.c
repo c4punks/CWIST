@@ -213,14 +213,14 @@ static uint16_t closed_port(void) {
     return port;
 }
 
-/* --- raw GOAWAY fake: speaks just enough HTTP/2 to accept the handshake,
- * then answers the first call with GOAWAY(last_stream_id=0) — gRFC A6
- * transparent-retry case 3.  Accepts exactly one connection. --- */
+/* --- raw GOAWAY fakes: one refuses stream 1 for gRFC A6 transparent retry;
+ * the other accepts stream 1 and completes it after a graceful GOAWAY. --- */
 
 typedef struct {
     int listen_fd;
     pthread_t tid;
     atomic_int served;
+    int graceful;
 } goaway_fake;
 
 static int fake_read_all(int fd, void *buf, size_t len) {
@@ -289,12 +289,16 @@ static void *goaway_fake_thread(void *arg) {
             saw_end_stream = 1;
         }
         if (saw_headers && saw_end_stream) {
-            /* GOAWAY with last_stream_id 0: stream 1 was never seen by any
-             * server application logic. */
-            uint8_t goaway[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+            uint8_t goaway[8] = {0};
+            if (fake->graceful) goaway[3] = 1;
             fake_send_frame(fd, 0x07, 0, 0, goaway, sizeof(goaway));
+            if (fake->graceful) {
+                static const uint8_t trailers[] = {0x88, 0x00, 0x0b, 'g', 'r', 'p', 'c', '-', 's',
+                                                   't',  'a',  't',  'u', 's', 0x01, '0'};
+                fake_send_frame(fd, 0x01, 0x05, 1, trailers, sizeof(trailers));
+            }
             struct timespec ts = {0, 100000000L};
-            nanosleep(&ts, NULL); /* let the client read GOAWAY before FIN */
+            nanosleep(&ts, NULL);
             goto out;
         }
     }
@@ -303,8 +307,9 @@ out:
     return NULL;
 }
 
-static uint16_t start_goaway_fake(goaway_fake *fake) {
+static uint16_t start_goaway_fake_ex(goaway_fake *fake, int graceful) {
     memset(fake, 0, sizeof(*fake));
+    fake->graceful = graceful;
     fake->listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(fake->listen_fd >= 0);
     int one = 1;
@@ -320,6 +325,10 @@ static uint16_t start_goaway_fake(goaway_fake *fake) {
     assert(getsockname(fake->listen_fd, (struct sockaddr *)&addr, &alen) == 0);
     assert(pthread_create(&fake->tid, NULL, goaway_fake_thread, fake) == 0);
     return ntohs(addr.sin_port);
+}
+
+static uint16_t start_goaway_fake(goaway_fake *fake) {
+    return start_goaway_fake_ex(fake, 0);
 }
 
 static void stop_goaway_fake(goaway_fake *fake) {
@@ -695,6 +704,28 @@ static void test_transparent_retry_goaway(uint16_t port_b) {
     cwist_grpc_channel_close(ch);
 }
 
+static void test_graceful_goaway(void) {
+    printf("  retry: graceful GOAWAY keeps an accepted in-flight call...\n");
+    goaway_fake fake;
+    uint16_t fake_port = start_goaway_fake_ex(&fake, 1);
+
+    char target[96];
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)fake_port);
+    cwist_grpc_channel_options opts = {0};
+    opts.retry_policy = &RETRY_UNAVAIL;
+    cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, &opts);
+    assert(ch != NULL);
+
+    char buf[64];
+    uint32_t attempts = 0;
+    assert(channel_who(ch, "/cwist.test.Bk/Who", buf, sizeof(buf), &attempts) == CWIST_GRPC_OK);
+    assert(atomic_load(&fake.served) == 1);
+    assert(attempts == 1);
+
+    stop_goaway_fake(&fake);
+    cwist_grpc_channel_close(ch);
+}
+
 static void test_target_schemes(uint16_t port_a) {
     printf("  resolver: dns/ipv4/default-port and unsupported schemes...\n");
     char target[128];
@@ -740,6 +771,7 @@ int main(void) {
     test_deadline_across_attempts(port_a);
     test_json_service_config(&a, &b, port_a, port_b);
     test_transparent_retry_goaway(port_b);
+    test_graceful_goaway();
     test_target_schemes(port_a);
 
     stop_backend(&a);

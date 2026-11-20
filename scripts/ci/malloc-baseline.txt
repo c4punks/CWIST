@@ -33,9 +33,10 @@
 1	src/core/orm/orm.c:char *new_col = (char *)realloc(columns, need_col);
 1	src/core/orm/orm.c:char *new_set = (char *)realloc(set_clause, need);
 1	src/core/orm/orm.c:char *new_val = (char *)realloc(values, need_val);
+1	src/core/orm/orm.c:char *out = (char *)malloc(len * 2 + 4);
+1	src/core/orm/orm.c:char *out = (char *)malloc(len + 3);
 1	src/core/orm/orm.c:char *out = (char *)malloc(len + extra + 3);
 1	src/core/orm/orm.c:char *payload = (char *)malloc(payload_len + 1);
-2	src/core/orm/orm.c:char *quoted = (char *)malloc(elen + 3);
 1	src/core/orm/orm.c:char *set_clause = (char *)malloc(1);
 5	src/core/orm/orm.c:char *sql = (char *)malloc(sql_len);
 1	src/core/orm/orm.c:char *sql = need >= 0 ? (char *)malloc((size_t)need + 1) : NULL;
@@ -47,7 +48,7 @@
 7	src/core/orm/orm.c:free(columns);
 1	src/core/orm/orm.c:free(commit_payload);
 1	src/core/orm/orm.c:free(dummy);
-4	src/core/orm/orm.c:free(escaped);
+2	src/core/orm/orm.c:free(escaped);
 1	src/core/orm/orm.c:free(final);
 7	src/core/orm/orm.c:free(literal);
 1	src/core/orm/orm.c:free(orm);
@@ -170,9 +171,9 @@
 1	src/net/http/tls_chain.c:free(out->data);
 2	src/net/http/tls_chain.c:free(url);
 1	src/net/http/tls_chain.c:uint8_t *tmp = (uint8_t *)realloc(buf->data, new_cap);
+1	src/security/db_crypt/db_crypt.c:blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
 1	src/security/db_crypt/db_crypt.c:free(blob);
 1	src/security/db_crypt/db_crypt.c:free(pt);
-1	src/security/db_crypt/db_crypt.c:unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
 1	src/security/db_crypt/db_crypt.c:unsigned char *pt = (unsigned char *)malloc(ct_len + 1);
 1	src/sys/app/app.c:char *buf = (char *)malloc((size_t)sz + 1);
 1	src/sys/app/app.c:cwist_multiport_http_client *payload = malloc(sizeof(*payload));
@@ -201,11 +202,11 @@
 1	src/sys/app/compress.c:merged = (uint8_t *)malloc(total_in_len);
 1	src/sys/app/compress.c:uint8_t *encoded = (uint8_t *)malloc(encoded_size);
 2	src/sys/app/compress.c:z_stream *zs = (z_stream *)calloc(1, sizeof(z_stream));
-1	src/sys/port/baremetal.c:buffer = malloc(capacity);
-1	src/sys/port/baremetal.c:char *next = realloc(buffer, grown);
-2	src/sys/port/baremetal.c:if (!*lineptr) free(buffer);
 1	src/sys/app/config.c:free(line);
 1	src/sys/metrics/metrics.c:char *buf = malloc(cap);
 1	src/sys/metrics/metrics.c:char *nb = realloc(buf, new_cap);
 3	src/sys/metrics/metrics.c:free(buf);
 1	src/sys/metrics/metrics.c:free(text);
+1	src/sys/port/baremetal.c:buffer = malloc(capacity);
+1	src/sys/port/baremetal.c:char *next = realloc(buffer, grown);
+2	src/sys/port/baremetal.c:if (!*lineptr) free(buffer);

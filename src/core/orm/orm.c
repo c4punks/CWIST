@@ -368,6 +368,43 @@ static char *cwist_orm_escape_sqlite(const char *src) {
     return dst;
 }
 
+static char *cwist_orm_literal(const cwist_orm_t *orm, const char *src) {
+    if (!src) return NULL;
+    bool mysql = orm && (orm->dialect == CWIST_ORM_MYSQL || orm->dialect == CWIST_ORM_MARIADB);
+    if (mysql) {
+        static const char hex[] = "0123456789ABCDEF";
+        size_t len = strlen(src);
+        if (len > (SIZE_MAX - 4) / 2) return NULL;
+        char *out = (char *)malloc(len * 2 + 4);
+        if (!out) return NULL;
+        out[0] = 'X';
+        out[1] = '\'';
+        for (size_t i = 0; i < len; i++) {
+            unsigned char c = (unsigned char)src[i];
+            out[2 + i * 2] = hex[c >> 4];
+            out[3 + i * 2] = hex[c & 0x0f];
+        }
+        out[2 + len * 2] = '\'';
+        out[3 + len * 2] = '\0';
+        return out;
+    }
+
+    char *escaped = cwist_orm_escape_sqlite(src);
+    if (!escaped) return NULL;
+    size_t len = strlen(escaped);
+    char *out = (char *)malloc(len + 3);
+    if (!out) {
+        free(escaped);
+        return NULL;
+    }
+    out[0] = '\'';
+    memcpy(out + 1, escaped, len);
+    out[len + 1] = '\'';
+    out[len + 2] = '\0';
+    free(escaped);
+    return out;
+}
+
 /**
  * @brief Quote an SQL identifier according to the active dialect.
  *
@@ -417,9 +454,9 @@ static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id) 
  * @brief Convert a single cJSON node into an SQL literal fragment.
  *
  * Maps cJSON types to SQL literals (NULL, booleans as TRUE/FALSE or 1/0 by
- * dialect, numbers with round-trip precision, strings single-quoted with
- * quote doubling, and arrays/objects as single-quoted JSON text). The
- * returned string is heap-allocated and must be freed by the caller.
+ * dialect, numbers with round-trip precision, and text or JSON values rendered
+ * by the active dialect). The returned string is heap-allocated and must be
+ * freed by the caller.
  *
  * @param orm  Session (determines boolean rendering; may be NULL).
  * @param node cJSON value node (may be NULL, treated as SQL NULL).
@@ -451,40 +488,15 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
     }
     if (cJSON_IsString(node)) {
         if (!node->valuestring) return strdup("''");
-        char *escaped = cwist_orm_escape_sqlite(node->valuestring);
-        if (!escaped) return NULL;
-        size_t elen = strlen(escaped);
-        char *quoted = (char *)malloc(elen + 3);
-        if (!quoted) {
-            free(escaped);
-            return NULL;
-        }
-        quoted[0] = '\'';
-        memcpy(quoted + 1, escaped, elen);
-        quoted[elen + 1] = '\'';
-        quoted[elen + 2] = '\0';
-        free(escaped);
-        return quoted;
+        return cwist_orm_literal(orm, node->valuestring);
     }
 
     /* Fallback: stringify arrays/objects as JSON text. */
     char *raw = cJSON_PrintUnformatted((cJSON *)node);
     if (!raw) return strdup("NULL");
-    char *escaped = cwist_orm_escape_sqlite(raw);
+    char *literal = cwist_orm_literal(orm, raw);
     free(raw);
-    if (!escaped) return NULL;
-    size_t elen = strlen(escaped);
-    char *quoted = (char *)malloc(elen + 3);
-    if (!quoted) {
-        free(escaped);
-        return NULL;
-    }
-    quoted[0] = '\'';
-    memcpy(quoted + 1, escaped, elen);
-    quoted[elen + 1] = '\'';
-    quoted[elen + 2] = '\0';
-    free(escaped);
-    return quoted;
+    return literal;
 }
 
 /* ------------------------------------------------------------------------- */

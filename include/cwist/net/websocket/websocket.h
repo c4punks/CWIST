@@ -43,8 +43,7 @@ typedef struct cwist_ws_frame {
  *
  * Computes the Sec-WebSocket-Accept key (sha1 + base64), sets status 101 and
  * the Upgrade/Connection/Sec-WebSocket-Accept headers on @p res, but does NOT
- * send anything.  Shared by the blocking cwist_websocket_upgrade() and the
- * C1M reactor path, which sends the 101 through the coalesced HTTP writer.
+ * send anything. A version mismatch fills a 426 response instead.
  *
  * @param req Parsed upgrade request to validate.
  * @param res Response object to fill (must be empty).
@@ -53,10 +52,25 @@ typedef struct cwist_ws_frame {
 bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_response *res);
 
 /**
+ * @brief Validate an upgrade with an exact Origin allowlist.
+ * @param allowed_origins Allowed scheme/host/port origins, or NULL to disable Origin checks.
+ * @param origin_count Number of entries. A non-NULL empty list rejects every Origin.
+ */
+bool cwist_websocket_upgrade_response_ex(cwist_http_request *req, cwist_http_response *res,
+                                         const char *const *allowed_origins, size_t origin_count);
+
+/**
  * @brief Upgrade a standard HTTP request to a WebSocket connection.
  * @return `NULL` if the handshake fails or the request is invalid, otherwise the upgraded context.
  */
 cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd);
+
+/**
+ * @brief Upgrade with an exact Origin allowlist and send 403/426 failures when applicable.
+ */
+cwist_websocket *cwist_websocket_upgrade_ex(cwist_http_request *req, int client_fd,
+                                            const char *const *allowed_origins,
+                                            size_t origin_count);
 
 /**
  * @brief Receive a frame, blocking until data arrives or the socket closes.

@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (818) ==
+== functions (828) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -144,6 +144,7 @@ cwist_conn_registry_track
 cwist_conn_registry_untrack
 cwist_cookie_decode
 cwist_cookie_delete
+cwist_cookie_delete_ex
 cwist_cookie_encode
 cwist_cookie_get
 cwist_cookie_parse
@@ -229,8 +230,11 @@ cwist_graphql_schema_destroy
 cwist_graphql_serve
 cwist_graphql_ws_add_subscription
 cwist_graphql_ws_attach
+cwist_graphql_ws_attach_ex
 cwist_graphql_ws_create
 cwist_graphql_ws_destroy
+cwist_graphql_ws_upgrade
+cwist_graphql_ws_upgrade_response
 cwist_grpc_call_await_headers
 cwist_grpc_call_cancel
 cwist_grpc_call_committed
@@ -362,6 +366,7 @@ cwist_http_client_enable_altsvc
 cwist_http_client_request
 cwist_http_client_set_altsvc_db
 cwist_http_client_set_ca_bundle
+cwist_http_client_set_file_root
 cwist_http_client_set_follow_redirects
 cwist_http_client_set_timeout_ms
 cwist_http_coalesce_append
@@ -388,6 +393,7 @@ cwist_http_pool_submit
 cwist_http_pool_submit_async
 cwist_http_receive_request
 cwist_http_receive_request_nb
+cwist_http_request_client_ip
 cwist_http_request_create
 cwist_http_request_destroy
 cwist_http_request_fragment_target
@@ -521,6 +527,7 @@ cwist_lwip_get_server_stats
 cwist_lwip_listen
 cwist_lwip_tls_create
 cwist_lwip_tls_destroy
+cwist_make_socket_dual
 cwist_make_socket_ipv4
 cwist_malloc
 cwist_malloc_shim
@@ -573,6 +580,7 @@ cwist_nats_publish_string
 cwist_nats_subscribe
 cwist_nuke_close
 cwist_nuke_deserialize
+cwist_nuke_force_disk_mode
 cwist_nuke_get_db
 cwist_nuke_init
 cwist_nuke_serialize
@@ -819,12 +827,14 @@ cwist_websocket_send
 cwist_websocket_send_fragments
 cwist_websocket_send_sequenced
 cwist_websocket_upgrade
+cwist_websocket_upgrade_ex
 cwist_websocket_upgrade_response
+cwist_websocket_upgrade_response_ex
 cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (819) ==
+== function signatures (829) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -965,6 +975,7 @@ cwist_conn_registry_track: void (void *, cwist_conn_close_fn)
 cwist_conn_registry_untrack: bool (void *)
 cwist_cookie_decode: int (const char *, char *, size_t)
 cwist_cookie_delete: int (cwist_http_response *, const char *)
+cwist_cookie_delete_ex: int (cwist_http_response *, const char *, const cwist_cookie_options *)
 cwist_cookie_encode: char * (const char *)
 cwist_cookie_get: const char * (cwist_query_map *, const char *)
 cwist_cookie_parse: void (cwist_query_map *, const char *)
@@ -1050,8 +1061,11 @@ cwist_graphql_schema_destroy: void (cwist_graphql_schema_t *)
 cwist_graphql_serve: void (cwist_graphql_schema_t *, cwist_http_request *, cwist_http_response *)
 cwist_graphql_ws_add_subscription: bool (cwist_graphql_ws_t *, const char *, cwist_graphql_subscribe_fn, void *)
 cwist_graphql_ws_attach: bool (cwist_graphql_ws_t *, int, cwist_reactor_t *, const uint8_t *, size_t)
+cwist_graphql_ws_attach_ex: bool (cwist_graphql_ws_t *, int, cwist_reactor_t *, const uint8_t *, size_t, uint64_t)
 cwist_graphql_ws_create: cwist_graphql_ws_t * (cwist_graphql_schema_t *)
 cwist_graphql_ws_destroy: void (cwist_graphql_ws_t *)
+cwist_graphql_ws_upgrade: bool (cwist_http_request *, int)
+cwist_graphql_ws_upgrade_response: bool (cwist_http_request *, cwist_http_response *)
 cwist_grpc_call_await_headers: int (cwist_grpc_call *)
 cwist_grpc_call_cancel: void (cwist_grpc_call *)
 cwist_grpc_call_committed: int (const cwist_grpc_call *)
@@ -1183,6 +1197,7 @@ cwist_http_client_enable_altsvc: void (cwist_http_client *, int)
 cwist_http_client_request: cwist_error_t (cwist_http_client *, const char *, cwist_http_method_t, cwist_http_header_node *, const char *, size_t, cwist_http_response **)
 cwist_http_client_set_altsvc_db: void (cwist_http_client *, const char *)
 cwist_http_client_set_ca_bundle: void (cwist_http_client *, const char *)
+cwist_http_client_set_file_root: int (cwist_http_client *, const char *)
 cwist_http_client_set_follow_redirects: void (cwist_http_client *, int)
 cwist_http_client_set_timeout_ms: void (cwist_http_client *, int)
 cwist_http_coalesce_append: int (cwist_http_async_conn_t *, const void *, size_t)
@@ -1209,6 +1224,7 @@ cwist_http_pool_submit: void (int, void (*)(int, void *), void *)
 cwist_http_pool_submit_async: bool (int, cwist_async_handler_t, void *)
 cwist_http_receive_request: cwist_http_request * (int, char *, size_t, size_t *, cwist_http_parse_error_t *)
 cwist_http_receive_request_nb: cwist_recv_status_t (cwist_http_async_conn_t *, cwist_http_request **, cwist_http_parse_error_t *)
+cwist_http_request_client_ip: cwist_sstring * (const cwist_http_request *)
 cwist_http_request_create: cwist_http_request * (void)
 cwist_http_request_destroy: void (cwist_http_request *)
 cwist_http_request_fragment_target: const char * (const cwist_http_request *)
@@ -1342,6 +1358,7 @@ cwist_lwip_get_server_stats: void (const cwist_lwip_server *, cwist_lwip_server_
 cwist_lwip_listen: cwist_lwip_server * (cwist_app *, const cwist_lwip_config *)
 cwist_lwip_tls_create: cwist_lwip_tls * (const unsigned char *, size_t, const unsigned char *, size_t)
 cwist_lwip_tls_destroy: void (cwist_lwip_tls *)
+cwist_make_socket_dual: int (struct sockaddr_in6 *, const char *, uint16_t, uint16_t)
 cwist_make_socket_ipv4: int (struct sockaddr_in *, const char *, uint16_t, uint16_t)
 cwist_malloc: void * (size_t)
 cwist_malloc_shim: void * (size_t)
@@ -1394,6 +1411,7 @@ cwist_nats_publish_string: cwist_error_t (cwist_nats_t *, const char *, const ch
 cwist_nats_subscribe: cwist_error_t (cwist_nats_t *, const char *, cwist_nats_msg_cb, void *)
 cwist_nuke_close: void (void)
 cwist_nuke_deserialize: int (unsigned char *, sqlite3_int64)
+cwist_nuke_force_disk_mode: int (void)
 cwist_nuke_get_db: sqlite3 * (void)
 cwist_nuke_init: int (const char *, int)
 cwist_nuke_serialize: unsigned char * (sqlite3_int64 *)
@@ -1640,7 +1658,9 @@ cwist_websocket_send: int (cwist_websocket *, cwist_ws_opcode_t, const uint8_t *
 cwist_websocket_send_fragments: int (cwist_websocket *, cwist_ws_opcode_t, const cwist_ws_fragment *, size_t)
 cwist_websocket_send_sequenced: int (cwist_websocket *, const uint8_t *, size_t, uint16_t)
 cwist_websocket_upgrade: cwist_websocket * (cwist_http_request *, int)
+cwist_websocket_upgrade_ex: cwist_websocket * (cwist_http_request *, int, const char *const *, size_t)
 cwist_websocket_upgrade_response: bool (cwist_http_request *, cwist_http_response *)
+cwist_websocket_upgrade_response_ex: bool (cwist_http_request *, cwist_http_response *, const char *const *, size_t)
 cwist_zod_parse: cwist_zod_result_t (const char *, const cwist_schema_t *, cJSON **)
 cwist_zod_print_errors: void (const cwist_zod_result_t *)
 cwist_zod_validate: cwist_zod_result_t (const cJSON *, const cwist_schema_t *)
@@ -2715,6 +2735,7 @@ struct cwist_http_request [24] void *async_conn
 struct cwist_http_request [25] bool ws_async_handoff
 struct cwist_http_request [26] void *https_conn
 struct cwist_http_request [27] void *h2_queue
+struct cwist_http_request [28] cwist_http_header_node *trailers
 struct cwist_http_response [0] cwist_sstring *version
 struct cwist_http_response [1] cwist_http_status_t status_code
 struct cwist_http_response [2] cwist_sstring *status_text

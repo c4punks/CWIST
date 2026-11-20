@@ -1274,6 +1274,16 @@ static void cwist_h3_on_conncloseframe_received(lsquic_conn_t *conn, int app_err
     __atomic_store_n(&h3_ctx->last_close_received, 1, __ATOMIC_RELEASE);
 }
 
+cwist_sstring *cwist_http3_request_client_ip(const cwist_http_request *req) {
+    if (!req || !req->private_data) return NULL;
+    lsquic_conn_t *conn = lsquic_stream_conn((const lsquic_stream_t *)req->private_data);
+    if (!conn) return NULL;
+    const struct sockaddr *local = NULL;
+    const struct sockaddr *peer = NULL;
+    if (lsquic_conn_get_sockaddr(conn, &local, &peer) != 0) return NULL;
+    return cwist_http_client_ip_from_sockaddr(peer);
+}
+
 /**
  * @brief on_new_stream callback: allocate the per-request stream context.
  * @return New stream ctx with an empty cwist_http_request ("HTTP/3"), or
@@ -3515,6 +3525,36 @@ int cwist_http3_last_close_error(const cwist_http3_context *ctx, bool *app_error
 /* Server loop                                                        */
 /* ------------------------------------------------------------------ */
 
+static void cwist_h3_normalize_packet_addrs(struct sockaddr_storage *local, socklen_t *local_len,
+                                            struct sockaddr_storage *peer) {
+    if (peer->ss_family == AF_INET6) {
+        const struct sockaddr_in6 *peer6 = (const struct sockaddr_in6 *)peer;
+        if (IN6_IS_ADDR_V4MAPPED(&peer6->sin6_addr)) {
+            struct sockaddr_in peer4 = {.sin_family = AF_INET, .sin_port = peer6->sin6_port};
+            memcpy(&peer4.sin_addr, (const unsigned char *)&peer6->sin6_addr + 12,
+                   sizeof(peer4.sin_addr));
+            memset(peer, 0, sizeof(*peer));
+            memcpy(peer, &peer4, sizeof(peer4));
+        }
+    }
+
+    if (local && local_len && *local_len && peer->ss_family == AF_INET &&
+        local->ss_family == AF_INET6) {
+        const struct sockaddr_in6 *local6 = (const struct sockaddr_in6 *)local;
+        if (IN6_IS_ADDR_UNSPECIFIED(&local6->sin6_addr) ||
+            IN6_IS_ADDR_V4MAPPED(&local6->sin6_addr)) {
+            struct sockaddr_in local4 = {.sin_family = AF_INET, .sin_port = local6->sin6_port};
+            if (IN6_IS_ADDR_V4MAPPED(&local6->sin6_addr)) {
+                memcpy(&local4.sin_addr, (const unsigned char *)&local6->sin6_addr + 12,
+                       sizeof(local4.sin_addr));
+            }
+            memset(local, 0, sizeof(*local));
+            memcpy(local, &local4, sizeof(local4));
+            *local_len = sizeof(local4);
+        }
+    }
+}
+
 /**
  * @brief Run the blocking HTTP/3 server loop on a UDP socket.
  * @param udp_fd Bound UDP socket; forced non-blocking here (idempotent).
@@ -3901,6 +3941,8 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                         }
                     }
 
+                    cwist_h3_normalize_packet_addrs(&cur_local_addr, &cur_local_len,
+                                                    &batch_peers[b]);
                     lsquic_engine_packet_in(engine, batch_bufs[b], nr,
                                             cur_local_len ? (struct sockaddr *)&cur_local_addr
                                                           : NULL,
@@ -3991,6 +4033,7 @@ cwist_error_t cwist_http3_server_loop(int udp_fd, cwist_http3_context *ctx,
                     }
                 }
 
+                cwist_h3_normalize_packet_addrs(&cur_local_addr, &cur_local_len, &peer_addr);
                 lsquic_engine_packet_in(engine, pkt_buf, (size_t)nr,
                                         cur_local_len ? (struct sockaddr *)&cur_local_addr : NULL,
                                         (struct sockaddr *)&peer_addr, ctx, ecn);

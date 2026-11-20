@@ -250,6 +250,16 @@ int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t 
 void cwist_ice_random_creds(char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd_cap);
 /**@}*/
 
+#define CWIST_SDP_MAX_SECTIONS 16
+
+typedef struct {
+    char media[16];
+    char proto[32];
+    char fmt[32];
+    char mid[16];
+    int is_data;
+} cwist_sdp_section;
+
 /** @brief Fields the ICE-lite agent needs from an SDP description. */
 typedef struct {
     char ice_ufrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
@@ -258,6 +268,8 @@ typedef struct {
     char setup[16];        /**< a=setup value (e.g. "active", "passive"). */
     char mid[16];          /**< a=mid value. */
     int has_lite;          /**< Non-zero if a=ice-lite was present. */
+    cwist_sdp_section sections[CWIST_SDP_MAX_SECTIONS];
+    size_t section_count;
 } cwist_sdp_info;
 
 /** @name SDP (sdp.c) */
@@ -274,6 +286,9 @@ int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info);
  */
 int cwist_sdp_write_answer(char *out, size_t cap, const char *fingerprint, const char *ufrag,
                            const char *pwd, const char *mid, const char *host, uint16_t port);
+int cwist_sdp_write_answer_for_offer(char *out, size_t cap, const char *fingerprint,
+                                     const char *ufrag, const char *pwd,
+                                     const cwist_sdp_info *offer, const char *host, uint16_t port);
 /**
  * @brief Write a DTLS-active DataChannel offer (loopback tests).
  * @return 0 on success, -1 if it does not fit in @p cap.

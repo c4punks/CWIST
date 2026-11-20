@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,6 +18,9 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 
 typedef struct {
     cwist_io_queue *queue;
@@ -195,11 +199,33 @@ static void *file_worker_main(void *arg) {
     return NULL;
 }
 
+static char *file_confined_path(const char *path, const char *root_dir) {
+#ifdef CWIST_BAREMETAL
+    (void)path;
+    (void)root_dir;
+    return NULL;
+#else
+    if (!root_dir) return NULL;
+    char resolved[PATH_MAX];
+    if (!realpath(path, resolved)) return NULL;
+    size_t root_len = strlen(root_dir);
+    bool root_is_slash = root_len == 1 && root_dir[0] == '/';
+    if (!root_is_slash &&
+        (strncmp(resolved, root_dir, root_len) != 0 ||
+         (resolved[root_len] != '\0' && resolved[root_len] != '/')))
+        return NULL;
+    return cwist_strdup(resolved);
+#endif
+}
+
 int cwist_http_client_file_request(const char *url, cwist_http_method_t method, int timeout_ms,
-                                   cwist_http_response **out_response) {
+                                   const char *root_dir, cwist_http_response **out_response) {
     if (!url || !out_response || (method != CWIST_HTTP_GET && method != CWIST_HTTP_HEAD)) return -1;
     *out_response = NULL;
-    char *path = file_url_path(url);
+    char *decoded = file_url_path(url);
+    if (!decoded) return -1;
+    char *path = file_confined_path(decoded, root_dir);
+    cwist_free(decoded);
     if (!path) return -1;
 
     file_job *job = cwist_alloc(sizeof(*job));

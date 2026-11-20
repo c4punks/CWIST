@@ -13,6 +13,21 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
 - Automatically handles the handshake and sends the `101 Switching Protocols` response.
 - **Ownership:** The returned pointer is owned by the caller and must be destroyed with `cwist_websocket_destroy`.
 
+### `cwist_websocket_upgrade_ex`
+```c
+cwist_websocket *cwist_websocket_upgrade_ex(cwist_http_request *req, int client_fd,
+                                            const char *const *allowed_origins,
+                                            size_t origin_count);
+```
+Applies an exact Origin allowlist during the upgrade. Pass `NULL` for
+`allowed_origins` to disable Origin checks. A missing or mismatched Origin is
+rejected with 403. Every upgrade rejects an unsupported WebSocket version with
+426 and `Sec-WebSocket-Version: 13`. `Upgrade` and `Connection` accept
+comma-separated, case-insensitive token lists.
+
+`cwist_websocket_upgrade_response_ex()` provides the same validation when the
+caller constructs the response directly.
+
 ### `cwist_websocket_receive`
 Receives a single WebSocket frame.
 ```c
@@ -99,7 +114,12 @@ callback; `NULL` is ignored.
 > behavior when unused.
 
 `cwist/graphql_ws.h` implements the `graphql-transport-ws` subprotocol on top
-of the non-blocking WebSocket transport:
+of the non-blocking WebSocket transport. Use `cwist_graphql_ws_upgrade()` (or
+`cwist_graphql_ws_upgrade_response()`) to require and select that subprotocol
+during the HTTP upgrade. Once attached, the server closes connections that do
+not send `connection_init` within 5 seconds with code 4408;
+`cwist_graphql_ws_attach_ex()` accepts a custom timeout in milliseconds, or 0
+to disable it.
 
 - `connection_init` -> `connection_ack`; `subscribe` before init closes the
   socket with code `4429`.

@@ -13,6 +13,20 @@ cwist_websocket *cwist_websocket_upgrade(cwist_http_request *req, int client_fd)
 - 핸드셰이크를 자동으로 처리하고 `101 Switching Protocols` 응답을 보냅니다.
 - **소유권:** 반환된 포인터는 호출자가 소유하며 `cwist_websocket_destroy`로 파괴해야 합니다.
 
+### `cwist_websocket_upgrade_ex`
+```c
+cwist_websocket *cwist_websocket_upgrade_ex(cwist_http_request *req, int client_fd,
+                                            const char *const *allowed_origins,
+                                            size_t origin_count);
+```
+업그레이드할 때 Origin 허용 목록을 정확히 비교합니다. `allowed_origins`가 `NULL`이면 Origin
+검사를 하지 않습니다. Origin이 없거나 일치하지 않으면 403으로 거부합니다. 지원하지 않는
+WebSocket 버전은 모든 업그레이드에서 426과 `Sec-WebSocket-Version: 13`으로 거부합니다.
+`Upgrade`와 `Connection`은 쉼표로 구분된 토큰 목록을 대소문자 구분 없이 처리합니다.
+
+응답을 직접 구성할 때는 `cwist_websocket_upgrade_response_ex()`로 같은 검사를 적용할 수
+있습니다.
+
 ### `cwist_websocket_receive`
 WebSocket 프레임 하나를 받습니다.
 ```c
@@ -95,7 +109,11 @@ void cwist_websocket_async_close(cwist_websocket_async *ws);
 > 바꾸지 않습니다.
 
 `cwist/graphql_ws.h`는 논블로킹 WebSocket 전송 위에서 `graphql-transport-ws` 서브 프로토콜을
-구현합니다.
+구현합니다. HTTP 업그레이드에는 `cwist_graphql_ws_upgrade()` 또는
+`cwist_graphql_ws_upgrade_response()`를 사용해 해당 서브 프로토콜을 요구하고 선택합니다.
+연결 후 5초 안에 `connection_init`이 오지 않으면 코드 4408로 닫습니다.
+`cwist_graphql_ws_attach_ex()`로 밀리초 단위의 다른 제한 시간을 지정하거나 0으로 끌 수
+있습니다.
 
 - `connection_init` -> `connection_ack`. init 전에 `subscribe`를 보내면 코드 `4429`로 소켓을
   닫습니다.

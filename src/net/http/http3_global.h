@@ -1,6 +1,12 @@
 #ifndef CWIST_HTTP3_GLOBAL_H
 #define CWIST_HTTP3_GLOBAL_H
 
+#include <cwist/core/sstring/sstring.h>
+#include <cwist/net/http/http.h>
+
+cwist_sstring *cwist_http_client_ip_from_sockaddr(const struct sockaddr *addr);
+cwist_sstring *cwist_http3_request_client_ip(const cwist_http_request *req);
+
 void cwist_h3_global_acquire(void);
 void cwist_h3_global_release(void);
 

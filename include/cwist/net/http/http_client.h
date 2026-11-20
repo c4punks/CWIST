@@ -65,6 +65,15 @@ void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follo
 void cwist_http_client_set_timeout_ms(cwist_http_client *client, int timeout_ms);
 
 /**
+ * @brief Allow file:// requests only below a configured directory.
+ *
+ * File URLs are rejected by default. The root is canonicalized when set, and
+ * each requested file must resolve inside it. Pass NULL to disable file URLs.
+ * @return 0 on success, -1 for an invalid client, root, or unsupported host.
+ */
+int cwist_http_client_set_file_root(cwist_http_client *client, const char *root_dir);
+
+/**
  * @brief Set path to CA bundle for TLS verification.
  * @param client Client handle.
  * @param path Filesystem path to PEM CA bundle, or NULL for system default.

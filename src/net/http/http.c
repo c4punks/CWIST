@@ -30,6 +30,9 @@
 #include "cond_clock.h"
 #include "http_live.h"
 #include "sockopts.h"
+#ifdef CWIST_HTTP3
+#include "http3_global.h"
+#endif
 
 #include <limits.h>
 #include <ctype.h>
@@ -2315,6 +2318,7 @@ cwist_http_request *cwist_http_request_create(void) {
     req->path_params = NULL;
     req->version = cwist_http_sstring_create(arena);
     req->headers = NULL;
+    req->trailers = NULL;
     req->body = cwist_http_sstring_create(arena);
     req->keep_alive = true;
     req->client_fd = -1;
@@ -2379,44 +2383,56 @@ time_t cwist_http_parse_date(const char *str) {
     return timegm(&tm);
 }
 
-/**
- * @brief Resolve the peer IP address for a connected client socket.
- * @param fd Connected client socket descriptor.
- * @return New sstring with the textual IP; "127.0.0.1" when unavailable.
- */
-cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
-    cwist_sstring *s = cwist_sstring_create();
-    cwist_sstring_assign(s, "127.0.0.1");
-    // First, check if fd is available
-    // If unavailable, return localhost
-    if (fd <= 0) return s;
-
+cwist_sstring *cwist_http_client_ip_from_sockaddr(const struct sockaddr *addr) {
 #ifndef CWIST_PLATFORM_NO_SOCKETS
-    /* WASI preview1 has no socket peer addresses; the caller only needs a
-     * placeholder when running under a WASM host. */
-    struct sockaddr_storage addr;
-    socklen_t len = sizeof(addr);
-
-    // get client info
-    if (getpeername(fd, (struct sockaddr *)&addr, &len) == -1) {
-        fprintf(stdout, "[ERROR] Failed to get client info from file descriptor");
-        return s;
-    }
-
+    if (!addr) return NULL;
     char ip[INET6_ADDRSTRLEN];
-
-    if (addr.ss_family == AF_INET) {
-        struct sockaddr_in *s = (struct sockaddr_in *)&addr;
-        inet_ntop(AF_INET, &s->sin_addr, ip, sizeof(ip));
-    } else if (addr.ss_family == AF_INET6) {
-        struct sockaddr_in6 *s = (struct sockaddr_in6 *)&addr;
-        inet_ntop(AF_INET6, &s->sin6_addr, ip, sizeof(ip));
+    int family = addr->sa_family;
+    const void *src = NULL;
+    if (family == AF_INET) {
+        src = &((const struct sockaddr_in *)addr)->sin_addr;
+    } else if (family == AF_INET6) {
+        const struct in6_addr *v6 = &((const struct sockaddr_in6 *)addr)->sin6_addr;
+        if (IN6_IS_ADDR_V4MAPPED(v6)) {
+            family = AF_INET;
+            src = (const unsigned char *)v6 + 12;
+        } else {
+            src = v6;
+        }
+    } else {
+        return NULL;
     }
-
-    // assign found ip as a value
-    cwist_sstring_assign(s, ip);
-#endif
+    if (!inet_ntop(family, src, ip, sizeof(ip))) return NULL;
+    cwist_sstring *s = cwist_sstring_create();
+    if (s) cwist_sstring_assign(s, ip);
     return s;
+#else
+    (void)addr;
+    return NULL;
+#endif
+}
+
+cwist_sstring *cwist_get_client_ip_from_fd(int fd) {
+#ifndef CWIST_PLATFORM_NO_SOCKETS
+    if (fd >= 0) {
+        struct sockaddr_storage addr;
+        socklen_t len = sizeof(addr);
+        if (getpeername(fd, (struct sockaddr *)&addr, &len) == 0)
+            return cwist_http_client_ip_from_sockaddr((const struct sockaddr *)&addr);
+    }
+#else
+    (void)fd;
+#endif
+    return NULL;
+}
+
+cwist_sstring *cwist_http_request_client_ip(const cwist_http_request *req) {
+    if (!req) return NULL;
+#ifdef CWIST_HTTP3
+    if (req->version && req->version->data && strcmp(req->version->data, "HTTP/3") == 0)
+        return cwist_http3_request_client_ip(req);
+#endif
+    return cwist_get_client_ip_from_fd(req->client_fd);
 }
 
 /**
@@ -2436,6 +2452,7 @@ void cwist_http_request_destroy(cwist_http_request *req) {
         cwist_session_destroy(req->session);
         cwist_free(req->csrf_token);
         cwist_http_header_free_all(req->headers);
+        cwist_http_header_free_all(req->trailers);
         if (!arena || !cwist_arena_owns(arena, req)) {
             cwist_free(req);
         }
@@ -6101,7 +6118,7 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
         perror(cjson_error_log);
         cwist_free(cjson_error_log);
         cJSON_Delete(err_json);
-
+        close(server_fd);
         return CWIST_HTTP_SETSOCKOPT_FAILED;
     }
 
@@ -6128,7 +6145,7 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
         perror(cjson_error_log);
         cwist_free(cjson_error_log);
         cJSON_Delete(err_json);
-
+        close(server_fd);
         return CWIST_HTTP_BIND_FAILED;
     }
 
@@ -6143,10 +6160,52 @@ int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint
         perror(cjson_error_log);
         cwist_free(cjson_error_log);
         cJSON_Delete(err_json);
-
+        close(server_fd);
         return CWIST_HTTP_LISTEN_FAILED;
     }
 
+    return server_fd;
+}
+
+int cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uint16_t port,
+                           uint16_t backlog) {
+    if (!sockv6 || !address) return CWIST_HTTP_UNAVAILABLE_ADDRESS;
+    memset(sockv6, 0, sizeof(*sockv6));
+    sockv6->sin6_family = AF_INET6;
+    sockv6->sin6_port = htons(port);
+    if (strcmp(address, "0.0.0.0") == 0) {
+        sockv6->sin6_addr = in6addr_any;
+    } else if (inet_pton(AF_INET6, address, &sockv6->sin6_addr) != 1) {
+        return CWIST_HTTP_UNAVAILABLE_ADDRESS;
+    }
+
+    int server_fd = socket(AF_INET6, SOCK_STREAM, 0);
+    if (server_fd < 0) return CWIST_CREATE_SOCKET_FAILED;
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != 0) {
+        close(server_fd);
+        return CWIST_HTTP_SETSOCKOPT_FAILED;
+    }
+    opt = 0;
+    setsockopt(server_fd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt));
+    opt = 1;
+#if defined(SO_REUSEPORT)
+    if (cwist_reuseport_enabled()) setsockopt(server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#ifdef SO_NOSIGPIPE
+    setsockopt(server_fd, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt));
+#endif
+#endif
+
+    if (bind(server_fd, (struct sockaddr *)sockv6, sizeof(*sockv6)) != 0) {
+        close(server_fd);
+        return CWIST_HTTP_BIND_FAILED;
+    }
+    if (listen(server_fd, backlog) != 0) {
+        close(server_fd);
+        return CWIST_HTTP_LISTEN_FAILED;
+    }
     return server_fd;
 }
 
