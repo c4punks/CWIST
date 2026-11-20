@@ -437,6 +437,9 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
 /** @brief Create an IPv4 socket and perform bind/listen. */
 int cwist_make_socket_ipv4(struct sockaddr_in *sockv4, const char *address, uint16_t port,
                            uint16_t backlog);
+/** @brief Create a dual-stack IPv6 socket and perform bind/listen. */
+int cwist_make_socket_dual(struct sockaddr_in6 *sockv6, const char *address, uint16_t port,
+                           uint16_t backlog);
 /** @brief Accept sockets and invoke a handler callback. */
 cwist_error_t cwist_accept_socket(int server_fd, struct sockaddr *sockv4,
                                   void (*handler_func)(int client_fd, void *ctx), void *ctx);

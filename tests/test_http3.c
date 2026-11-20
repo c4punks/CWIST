@@ -547,15 +547,16 @@ int main(void) {
     err = cwist_http3_init_context(&ctx, TEST_CERT, TEST_KEY);
     assert(err.error.err_i16 == 0);
 
-    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    struct sockaddr_in6 addr6;
+    udp_fd = socket(AF_INET6, SOCK_DGRAM, 0);
     assert(udp_fd >= 0);
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    addr.sin_port = htons(0);
-    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
-    addr_len = sizeof(addr);
-    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
+    memset(&addr6, 0, sizeof(addr6));
+    addr6.sin6_family = AF_INET6;
+    addr6.sin6_addr = in6addr_any;
+    addr6.sin6_port = htons(0);
+    assert(bind(udp_fd, (struct sockaddr *)&addr6, sizeof(addr6)) == 0);
+    addr_len = sizeof(addr6);
+    assert(getsockname(udp_fd, (struct sockaddr *)&addr6, &addr_len) == 0);
 
     server_thread_args_t args11 = {.udp_fd = udp_fd, .ctx = ctx};
     rc = pthread_create(&tid, NULL, http3_server_thread, &args11);
@@ -565,7 +566,7 @@ int main(void) {
     client = cwist_http3_client_create();
     assert(client != NULL);
     /* TEST_CERT is issued for CN=localhost */
-    assert(cwist_http3_client_set_server(client, "localhost", ntohs(addr.sin_port)) == 0);
+    assert(cwist_http3_client_set_server(client, "localhost", ntohs(addr6.sin6_port)) == 0);
     assert(cwist_http3_client_set_ca_bundle(client, TEST_CERT) == 0);
     cwist_http3_client_set_timeout_ms(client, 10000);
     cwist_http3_client_set_conn_timeout_ms(client, 10000);
@@ -706,15 +707,15 @@ int main(void) {
     err = cwist_http3_init_context(&ctx, TEST_CERT, TEST_KEY);
     assert(err.error.err_i16 == 0);
 
-    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    udp_fd = socket(AF_INET6, SOCK_DGRAM, 0);
     assert(udp_fd >= 0);
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    addr.sin_port = htons(0);
-    assert(bind(udp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0);
-    addr_len = sizeof(addr);
-    assert(getsockname(udp_fd, (struct sockaddr *)&addr, &addr_len) == 0);
+    memset(&addr6, 0, sizeof(addr6));
+    addr6.sin6_family = AF_INET6;
+    addr6.sin6_addr = in6addr_any;
+    addr6.sin6_port = htons(0);
+    assert(bind(udp_fd, (struct sockaddr *)&addr6, sizeof(addr6)) == 0);
+    addr_len = sizeof(addr6);
+    assert(getsockname(udp_fd, (struct sockaddr *)&addr6, &addr_len) == 0);
 
     server_thread_args_t args13 = {.udp_fd = udp_fd, .ctx = ctx};
     rc = pthread_create(&tid, NULL, http3_server_thread, &args13);
@@ -723,7 +724,7 @@ int main(void) {
 
     client = cwist_http3_client_create();
     assert(client != NULL);
-    assert(cwist_http3_client_set_server(client, "localhost", ntohs(addr.sin_port)) == 0);
+    assert(cwist_http3_client_set_server(client, "localhost", ntohs(addr6.sin6_port)) == 0);
     assert(cwist_http3_client_set_ca_bundle(client, TEST_CERT) == 0);
     cwist_http3_client_set_timeout_ms(client, 5000);
     cwist_http3_client_set_conn_timeout_ms(client, 5000);

@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (826) ==
+== functions (827) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -527,6 +527,7 @@ cwist_lwip_get_server_stats
 cwist_lwip_listen
 cwist_lwip_tls_create
 cwist_lwip_tls_destroy
+cwist_make_socket_dual
 cwist_make_socket_ipv4
 cwist_malloc
 cwist_malloc_shim
@@ -832,7 +833,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (827) ==
+== function signatures (828) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1356,6 +1357,7 @@ cwist_lwip_get_server_stats: void (const cwist_lwip_server *, cwist_lwip_server_
 cwist_lwip_listen: cwist_lwip_server * (cwist_app *, const cwist_lwip_config *)
 cwist_lwip_tls_create: cwist_lwip_tls * (const unsigned char *, size_t, const unsigned char *, size_t)
 cwist_lwip_tls_destroy: void (cwist_lwip_tls *)
+cwist_make_socket_dual: int (struct sockaddr_in6 *, const char *, uint16_t, uint16_t)
 cwist_make_socket_ipv4: int (struct sockaddr_in *, const char *, uint16_t, uint16_t)
 cwist_malloc: void * (size_t)
 cwist_malloc_shim: void * (size_t)
