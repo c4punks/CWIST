@@ -203,6 +203,17 @@ static const knob_t k_knobs[] = {
 };
 #define KNOB_COUNT (sizeof(k_knobs) / sizeof(k_knobs[0]))
 
+static int reserve_test_port(void) {
+    int fd = socket(AF_INET6, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
+    struct sockaddr_in6 addr = {.sin6_family = AF_INET6, .sin6_addr = IN6ADDR_ANY_INIT};
+    socklen_t len = sizeof(addr);
+    int rc = bind(fd, (struct sockaddr *)&addr, sizeof(addr));
+    if (rc == 0) rc = getsockname(fd, (struct sockaddr *)&addr, &len);
+    close(fd);
+    return rc == 0 ? ntohs(addr.sin6_port) : -1;
+}
+
 static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     char mode[256];
     size_t used = (size_t)snprintf(mode, sizeof(mode), "run %llu:", (unsigned long long)run);
@@ -305,7 +316,14 @@ int main(void) {
         return 1;
     }
     uint64_t runs = cwist_latin_oa_runs(oa);
-    for (uint64_t run = 0; run < runs; run++) run_row(oa, run, 19900 + (int)run);
+    for (uint64_t run = 0; run < runs; run++) {
+        int port = reserve_test_port();
+        if (port < 0) {
+            failures++;
+            break;
+        }
+        run_row(oa, run, port);
+    }
     cwist_latin_family_destroy(oa);
     if (failures) {
         fprintf(stderr, "%d BDR privacy check(s) failed\n", failures);
