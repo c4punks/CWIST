@@ -2315,6 +2315,7 @@ cwist_http_request *cwist_http_request_create(void) {
     req->path_params = NULL;
     req->version = cwist_http_sstring_create(arena);
     req->headers = NULL;
+    req->trailers = NULL;
     req->body = cwist_http_sstring_create(arena);
     req->keep_alive = true;
     req->client_fd = -1;
@@ -2436,6 +2437,7 @@ void cwist_http_request_destroy(cwist_http_request *req) {
         cwist_session_destroy(req->session);
         cwist_free(req->csrf_token);
         cwist_http_header_free_all(req->headers);
+        cwist_http_header_free_all(req->trailers);
         if (!arena || !cwist_arena_owns(arena, req)) {
             cwist_free(req);
         }

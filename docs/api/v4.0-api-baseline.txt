@@ -2715,6 +2715,7 @@ struct cwist_http_request [24] void *async_conn
 struct cwist_http_request [25] bool ws_async_handoff
 struct cwist_http_request [26] void *https_conn
 struct cwist_http_request [27] void *h2_queue
+struct cwist_http_request [28] cwist_http_header_node *trailers
 struct cwist_http_response [0] cwist_sstring *version
 struct cwist_http_response [1] cwist_http_status_t status_code
 struct cwist_http_response [2] cwist_sstring *status_text
