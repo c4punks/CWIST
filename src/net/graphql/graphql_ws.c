@@ -25,6 +25,7 @@
  * drained.
  */
 #include <cwist/net/graphql/graphql_ws.h>
+#include <cwist/net/websocket/websocket.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
 #include <cwist/net/websocket/websocket_async.h>
@@ -42,6 +43,59 @@
 #define GQL_WS_CLOSE_UNAUTHORIZED 4401
 #define GQL_WS_CLOSE_DUPLICATE_ID 4409
 #define GQL_WS_CLOSE_TOO_MANY_INIT 4429
+#define GQL_WS_CLOSE_INIT_TIMEOUT 4408
+#define GQL_WS_INIT_TIMEOUT_MS 5000
+
+static bool gql_ws_subprotocol_offered(const char *value) {
+    static const char protocol[] = "graphql-transport-ws";
+    if (!value) return false;
+    const char *p = value;
+    while (*p) {
+        while (*p == ' ' || *p == '\t' || *p == ',') p++;
+        const char *start = p;
+        while (*p && *p != ',') p++;
+        const char *end = p;
+        while (end > start && (end[-1] == ' ' || end[-1] == '\t')) end--;
+        if ((size_t)(end - start) == sizeof(protocol) - 1 &&
+            memcmp(start, protocol, sizeof(protocol) - 1) == 0)
+            return true;
+        if (*p) p++;
+    }
+    return false;
+}
+
+bool cwist_graphql_ws_upgrade_response(cwist_http_request *req, cwist_http_response *res) {
+    if (!req || !res) return false;
+    const char *offered = cwist_http_header_get(req->headers, "Sec-WebSocket-Protocol");
+    if (!gql_ws_subprotocol_offered(offered)) {
+        res->status_code = CWIST_HTTP_BAD_REQUEST;
+        cwist_sstring_assign(res->status_text, (char *)cwist_http_status_reason(res->status_code));
+        cwist_sstring_assign(res->body, "graphql-transport-ws subprotocol required");
+        return false;
+    }
+    if (!cwist_websocket_upgrade_response(req, res)) return false;
+    cwist_http_header_add(&res->headers, "Sec-WebSocket-Protocol", "graphql-transport-ws");
+    return true;
+}
+
+bool cwist_graphql_ws_upgrade(cwist_http_request *req, int client_fd) {
+    if (!req || client_fd < 0) return false;
+    cwist_http_response *res = cwist_http_response_create();
+    if (!res) return false;
+    bool ok = cwist_graphql_ws_upgrade_response(req, res);
+    if (!ok) {
+        if (res->status_code != CWIST_HTTP_OK) cwist_http_send_response(client_fd, res);
+        cwist_http_response_destroy(res);
+        return false;
+    }
+    if (cwist_http_send_response(client_fd, res).error.err_i16 != 0) {
+        cwist_http_response_destroy(res);
+        return false;
+    }
+    cwist_http_response_destroy(res);
+    req->upgraded = true;
+    return true;
+}
 
 /* ------------------------------------------------------------------ */
 /* Event source                                                        */
@@ -249,6 +303,7 @@ typedef struct gql_ws_conn {
     size_t pending_cap;
     size_t pending_bytes;
     bool flush_pending;
+    cwist_reactor_timer_t init_timer;
 } gql_ws_conn_t;
 
 /* Reactor-posted flush node: drains a connection's pending queue on the
@@ -696,6 +751,7 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
                 cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
                 return;
             }
+            cwist_reactor_timer_cancel(conn->reactor, &conn->init_timer);
             conn->init_done = true;
             cJSON *ack = cJSON_CreateObject();
             if (!ack) {
@@ -738,6 +794,12 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
 /* Connection lifecycle                                                */
 /* ------------------------------------------------------------------ */
 
+static void gql_ws_init_timeout(void *ctx) {
+    gql_ws_conn_t *conn = ctx;
+    if (!conn->dead && !conn->init_done && conn->ws)
+        cwist_websocket_async_close_code(conn->ws, GQL_WS_CLOSE_INIT_TIMEOUT);
+}
+
 static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_t *reactor) {
     gql_ws_conn_t *conn = (gql_ws_conn_t *)cwist_alloc(sizeof(*conn));
     if (!conn) return NULL;
@@ -753,6 +815,7 @@ static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_
     conn->pending_cap = 0;
     conn->pending_bytes = 0;
     conn->flush_pending = false;
+    cwist_reactor_timer_init(&conn->init_timer, gql_ws_init_timeout, conn);
     return conn;
 }
 
@@ -760,6 +823,7 @@ static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_
  * broker operations and the pending queue, release the protocol reference.
  * Flush nodes still in flight keep the state alive and no-op on dispatch. */
 static void gql_ws_conn_dispose(gql_ws_conn_t *conn) {
+    cwist_reactor_timer_cancel(conn->reactor, &conn->init_timer);
     pthread_mutex_lock(&g_broker_lock);
     conn->dead = true;
     conn->ws = NULL;
@@ -799,8 +863,9 @@ static void gql_ws_on_message(cwist_websocket_async *ws, cwist_ws_frame *frame, 
     cJSON_Delete(msg);
 }
 
-bool cwist_graphql_ws_attach(cwist_graphql_ws_t *gws, int fd, cwist_reactor_t *reactor,
-                             const uint8_t *initial, size_t initial_len) {
+bool cwist_graphql_ws_attach_ex(cwist_graphql_ws_t *gws, int fd, cwist_reactor_t *reactor,
+                                const uint8_t *initial, size_t initial_len,
+                                uint64_t init_timeout_ms) {
     if (!gws || fd < 0 || !reactor) return false;
 
     gql_ws_conn_t *conn = gql_ws_conn_create(gws, reactor);
@@ -823,7 +888,17 @@ bool cwist_graphql_ws_attach(cwist_graphql_ws_t *gws, int fd, cwist_reactor_t *r
     conn->ws = ws;
     pthread_mutex_unlock(&g_broker_lock);
 
+    if (!conn->dead && !conn->init_done && init_timeout_ms > 0 &&
+        !cwist_reactor_timer_arm(reactor, &conn->init_timer, init_timeout_ms * 1000))
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_INIT_TIMEOUT);
+
     /* Drain anything queued by inline initial-bytes delivery. */
     gql_ws_post_flush(conn);
     return true;
+}
+
+bool cwist_graphql_ws_attach(cwist_graphql_ws_t *gws, int fd, cwist_reactor_t *reactor,
+                             const uint8_t *initial, size_t initial_len) {
+    return cwist_graphql_ws_attach_ex(gws, fd, reactor, initial, initial_len,
+                                      GQL_WS_INIT_TIMEOUT_MS);
 }

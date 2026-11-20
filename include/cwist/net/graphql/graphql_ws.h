@@ -61,9 +61,16 @@ void cwist_graphql_ws_destroy(cwist_graphql_ws_t *gws);
 bool cwist_graphql_ws_add_subscription(cwist_graphql_ws_t *gws, const char *field,
                                        cwist_graphql_subscribe_fn subscribe_fn, void *ctx);
 
+/** Validate and answer an upgrade, requiring and selecting graphql-transport-ws. */
+bool cwist_graphql_ws_upgrade_response(cwist_http_request *req, cwist_http_response *res);
+
+/** Upgrade a socket and negotiate graphql-transport-ws. Attach it to a reactor next. */
+bool cwist_graphql_ws_upgrade(cwist_http_request *req, int client_fd);
+
 /** Attach the graphql-ws protocol handler to a connected, upgraded fd. The fd is driven
  *  reactively by @p reactor (same ownership contract as cwist_websocket_async_attach):
- *  the HTTP layer must not touch the fd after a successful call.
+ *  the HTTP layer must not touch the fd after a successful call. Unless configured
+ *  otherwise, an incomplete connection_init handshake closes with 4408 after 5 seconds.
  * @param gws Endpoint whose schema resolves subscriptions.
  * @param fd Connected client socket (set non-blocking here).
  * @param reactor Reactor that will own the connection.
@@ -72,6 +79,11 @@ bool cwist_graphql_ws_add_subscription(cwist_graphql_ws_t *gws, const char *fiel
  * @return true when the fd was handed to the reactor path, false on failure (fd closed). */
 bool cwist_graphql_ws_attach(cwist_graphql_ws_t *gws, int fd, cwist_reactor_t *reactor,
                              const uint8_t *initial, size_t initial_len);
+
+/** Attach with a custom connection_init timeout in milliseconds; zero disables the timer. */
+bool cwist_graphql_ws_attach_ex(cwist_graphql_ws_t *gws, int fd, cwist_reactor_t *reactor,
+                                const uint8_t *initial, size_t initial_len,
+                                uint64_t init_timeout_ms);
 
 /** Create an empty event source for use as a subscription resolver's return value. */
 cwist_graphql_event_source_t *cwist_graphql_event_source_create(void);
