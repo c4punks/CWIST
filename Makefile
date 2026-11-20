@@ -1013,8 +1013,8 @@ INCLUDEDIR ?= $(PREFIX)/include
 PCDIR ?= $(LIBDIR)/pkgconfig
 DEPSDIR ?= $(LIBDIR)/cwist
 
-# Release version: latest git tag without the leading 'v'.
-VERSION ?= $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+# Release version: latest numeric release tag without the leading 'v'.
+VERSION ?= $(shell git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null | sed 's/^v//')
 ifeq ($(strip $(VERSION)),)
 VERSION = 0.0.0
 endif
