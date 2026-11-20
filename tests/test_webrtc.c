@@ -383,6 +383,46 @@ static void unit_checks(void) {
         assert(cwist_sdp_parse(max_sdp, 0, NULL) == -1);
     }
 
+    /* Multi-section offers preserve m-line order and negotiate one data channel. */
+    {
+        static const char offer[] =
+            "v=0\r\n"
+            "o=- 1234 2 IN IP4 192.0.2.1\r\n"
+            "s=-\r\n"
+            "t=0 0\r\n"
+            "a=group:BUNDLE audio video data\r\n"
+            "m=audio 49170 RTP/AVP 0\r\n"
+            "a=mid:audio\r\n"
+            "a=ice-ufrag:remoteu\r\n"
+            "a=ice-pwd:remotepassword\r\n"
+            "a=fingerprint:sha-512 AA\r\n"
+            "a=fingerprint:SHA-256 BB\r\n"
+            "m=video 51372 RTP/AVP 99\r\n"
+            "a=mid:video\r\n"
+            "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+            "a=mid:data\r\n"
+            "a=setup:passive\r\n";
+        cwist_sdp_info info;
+        assert(cwist_sdp_parse(offer, sizeof(offer) - 1, &info) == 0);
+        assert(info.section_count == 3);
+        assert(strcmp(info.sections[0].mid, "audio") == 0);
+        assert(strcmp(info.sections[1].mid, "video") == 0);
+        assert(strcmp(info.sections[2].mid, "data") == 0);
+        assert(strcmp(info.fingerprint, "BB") == 0);
+
+        char answer[4096];
+        assert(cwist_sdp_write_answer_for_offer(answer, sizeof(answer), "CC", "localu",
+                                                "localpassword", &info, "127.0.0.1", 5000) == 0);
+        assert(strstr(answer, "a=group:BUNDLE audio video data\r\n") != NULL);
+        char *audio = strstr(answer, "m=audio 0 RTP/AVP 0\r\n");
+        char *video = strstr(answer, "m=video 0 RTP/AVP 99\r\n");
+        char *data = strstr(answer, "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n");
+        assert(audio && video && data && audio < video && video < data);
+        assert(strstr(answer, "a=setup:active\r\n") != NULL);
+        assert(strstr(answer, "a=fingerprint:sha-256 CC\r\n") != NULL);
+        assert(strstr(answer, "a=ice-lite\r\n") != NULL);
+    }
+
     /* Partial-message reassembly never mixes stream or payload identities. */
     {
         struct cwist_webrtc_conn partial = {0};
