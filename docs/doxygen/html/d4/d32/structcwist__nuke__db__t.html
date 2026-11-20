@@ -120,10 +120,10 @@ $(document).ready(function(){initNavTree('d4/d32/structcwist__nuke__db__t.html',
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
 <tr class="memitem:ab729b9bd62d36dd083da0e7ea4abd839" id="r_ab729b9bd62d36dd083da0e7ea4abd839"><td class="memItemLeft" align="right" valign="top">sqlite3 *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d32/structcwist__nuke__db__t.html#ab729b9bd62d36dd083da0e7ea4abd839">mem_db</a></td></tr>
-<tr class="memdesc:ab729b9bd62d36dd083da0e7ea4abd839"><td class="mdescLeft">&#160;</td><td class="mdescRight">The active in-memory database handle.  <br /></td></tr>
+<tr class="memdesc:ab729b9bd62d36dd083da0e7ea4abd839"><td class="mdescLeft">&#160;</td><td class="mdescRight">Optional in-memory mirror refreshed from disk.  <br /></td></tr>
 <tr class="separator:ab729b9bd62d36dd083da0e7ea4abd839"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a03778cda85bcd0b4cbeeee31c179b39c" id="r_a03778cda85bcd0b4cbeeee31c179b39c"><td class="memItemLeft" align="right" valign="top">sqlite3 *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d32/structcwist__nuke__db__t.html#a03778cda85bcd0b4cbeeee31c179b39c">disk_db</a></td></tr>
-<tr class="memdesc:a03778cda85bcd0b4cbeeee31c179b39c"><td class="mdescLeft">&#160;</td><td class="mdescRight">The backup disk database handle.  <br /></td></tr>
+<tr class="memdesc:a03778cda85bcd0b4cbeeee31c179b39c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Stable disk-backed application handle.  <br /></td></tr>
 <tr class="separator:a03778cda85bcd0b4cbeeee31c179b39c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a04cc9aebcd002be3df436de040f36463" id="r_a04cc9aebcd002be3df436de040f36463"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d32/structcwist__nuke__db__t.html#a04cc9aebcd002be3df436de040f36463">disk_path</a></td></tr>
 <tr class="memdesc:a04cc9aebcd002be3df436de040f36463"><td class="mdescLeft">&#160;</td><td class="mdescRight">Path to the disk database file.  <br /></td></tr>
@@ -154,7 +154,7 @@ Public Attributes</h2></td></tr>
 <li>Exit: Catch signals (SIGINT, SIGTERM) and force final Sync. </li>
 </ol>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00036">36</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00035">35</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
 <a id="aa28772404874b4c25be7d32beed7759e" name="aa28772404874b4c25be7d32beed7759e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#aa28772404874b4c25be7d32beed7759e">&#9670;&#160;</a></span>auto_sync</h2>
@@ -170,9 +170,9 @@ Public Attributes</h2></td></tr>
 
 <p>Whether auto-sync is enabled. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00040">40</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00039">39</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00392">cwist_nuke_init()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>.</p>
 
 </div>
 </div>
@@ -188,11 +188,11 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>The backup disk database handle. </p>
+<p>Stable disk-backed application handle. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00038">38</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00037">37</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00493">cwist_nuke_get_db()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00392">cwist_nuke_init()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00512">cwist_nuke_serialize()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00243">cwist_nuke_sync()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00534">cwist_nuke_deserialize()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00493">cwist_nuke_get_db()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00511">cwist_nuke_serialize()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00244">cwist_nuke_sync()</a>.</p>
 
 </div>
 </div>
@@ -210,9 +210,9 @@ Public Attributes</h2></td></tr>
 
 <p>Path to the disk database file. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00039">39</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00038">38</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00392">cwist_nuke_init()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>.</p>
 
 </div>
 </div>
@@ -230,9 +230,9 @@ Public Attributes</h2></td></tr>
 
 <p>True if running in low-memory disk fallback mode. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00043">43</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00042">42</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00535">cwist_nuke_deserialize()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00493">cwist_nuke_get_db()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00392">cwist_nuke_init()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00512">cwist_nuke_serialize()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00243">cwist_nuke_sync()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00511">cwist_nuke_serialize()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00244">cwist_nuke_sync()</a>.</p>
 
 </div>
 </div>
@@ -250,9 +250,9 @@ Public Attributes</h2></td></tr>
 
 <p>True if initial load from disk was successful. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00044">44</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00043">43</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00392">cwist_nuke_init()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00243">cwist_nuke_sync()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00244">cwist_nuke_sync()</a>.</p>
 
 </div>
 </div>
@@ -268,11 +268,11 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>The active in-memory database handle. </p>
+<p>Optional in-memory mirror refreshed from disk. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00037">37</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00036">36</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00535">cwist_nuke_deserialize()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00493">cwist_nuke_get_db()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00392">cwist_nuke_init()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00512">cwist_nuke_serialize()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00243">cwist_nuke_sync()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00534">cwist_nuke_deserialize()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00511">cwist_nuke_serialize()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00244">cwist_nuke_sync()</a>.</p>
 
 </div>
 </div>
@@ -290,9 +290,9 @@ Public Attributes</h2></td></tr>
 
 <p>Sync interval in milliseconds. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00041">41</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00040">40</a> of file <a class="el" href="../../dc/dfe/nuke__db_8h_source.html">nuke_db.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00392">cwist_nuke_init()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>.</p>
 
 </div>
 </div>

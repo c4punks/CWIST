@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['kq_5fwake_5fident_0',['KQ_WAKE_IDENT',['../dd/d2e/kqueue_8c.html#a63e26ec989f4bd26fb81e81fd85c5fbe',1,'kqueue.c']]]
+  ['ip_5fbucket_5fidle_5fms_0',['IP_BUCKET_IDLE_MS',['../d9/dc9/middleware_8c.html#a7e7e2cdaf79a541f93fbeaf6026a83a5',1,'middleware.c']]]
 ];

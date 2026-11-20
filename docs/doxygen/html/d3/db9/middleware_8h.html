@@ -379,18 +379,18 @@ Functions</h2></td></tr>
 
 <p>Fixed-window rate limiter middleware (per-IP). </p>
 <p>Fixed-window rate limiter middleware (per-IP).</p>
-<p>Reuses an existing wrapper when the same rate was already registered. If all CWIST_RATE_LIMIT_MAX_CFGS config slots are taken, logs a warning and falls back to the first registered wrapper.</p>
+<p>Every call allocates a distinct limiter configuration, including repeated calls with the same rate. Returns NULL when all configuration slots are used.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requests_per_minute</td><td>Allowed requests per minute (token bucket rate); values &lt;= 0 fall back to 60. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for per-IP rate limiting. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for per-IP rate limiting, or NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00536">536</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00570">570</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00485">CWIST_RATE_LIMIT_MAX_CFGS</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00520">CWIST_RATE_LIMIT_MAX_CFGS</a>.</p>
 
 </div>
 </div>

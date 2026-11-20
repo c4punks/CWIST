@@ -9,6 +9,9 @@ var net_2graphql_2graphql__ws_8h =
     [ "cwist_graphql_publish", "da/dc7/net_2graphql_2graphql__ws_8h.html#aaeb854b70b085b4aa06250726ed6fb7a", null ],
     [ "cwist_graphql_ws_add_subscription", "da/dc7/net_2graphql_2graphql__ws_8h.html#a7170a006e65284f9115c6e32e8280fc6", null ],
     [ "cwist_graphql_ws_attach", "da/dc7/net_2graphql_2graphql__ws_8h.html#a4bd821fd1b3e33b5c8d4e03a7ac1c12b", null ],
+    [ "cwist_graphql_ws_attach_ex", "da/dc7/net_2graphql_2graphql__ws_8h.html#a8de4e8baedecce82834c218047361137", null ],
     [ "cwist_graphql_ws_create", "da/dc7/net_2graphql_2graphql__ws_8h.html#a7cfa54fa39ba52785ec9cef66c74edcf", null ],
-    [ "cwist_graphql_ws_destroy", "da/dc7/net_2graphql_2graphql__ws_8h.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc", null ]
+    [ "cwist_graphql_ws_destroy", "da/dc7/net_2graphql_2graphql__ws_8h.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc", null ],
+    [ "cwist_graphql_ws_upgrade", "da/dc7/net_2graphql_2graphql__ws_8h.html#a92cb6bc4a03e17d2e6b3fd6e80818a22", null ],
+    [ "cwist_graphql_ws_upgrade_response", "da/dc7/net_2graphql_2graphql__ws_8h.html#a260f4cb7f9028e1545769f491f6ce92c", null ]
 ];

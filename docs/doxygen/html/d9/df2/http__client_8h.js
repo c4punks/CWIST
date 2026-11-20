@@ -7,6 +7,7 @@ var http__client_8h =
     [ "cwist_http_client_request", "d9/df2/http__client_8h.html#a6f802eeeb71d3ddbb7dbe2717ba10b20", null ],
     [ "cwist_http_client_set_altsvc_db", "d9/df2/http__client_8h.html#a2bd87b67daa51f0be3a4ce2b18fde35b", null ],
     [ "cwist_http_client_set_ca_bundle", "d9/df2/http__client_8h.html#aa5e60d8ba60874b799e0341889dcff6b", null ],
+    [ "cwist_http_client_set_file_root", "d9/df2/http__client_8h.html#aa6216fca7eaa260898ee3fc80c449f38", null ],
     [ "cwist_http_client_set_follow_redirects", "d9/df2/http__client_8h.html#acaee550b56642ab21ef4d1fc0dc4e87d", null ],
     [ "cwist_http_client_set_timeout_ms", "d9/df2/http__client_8h.html#af2144e2d3d301d214f946faa9ca9ce8e", null ]
 ];

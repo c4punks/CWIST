@@ -298,6 +298,8 @@ Typedefs</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a318ce3acf3db12b8f481a3557e61d22c" id="r_a318ce3acf3db12b8f481a3557e61d22c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d1d/assets__internal_8h.html#a318ce3acf3db12b8f481a3557e61d22c">cwist_assets_etag_matches</a> (const char *if_none_match, const char *etag)</td></tr>
+<tr class="separator:a318ce3acf3db12b8f481a3557e61d22c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aef4959a5b4ebb92e76bac62a2a65e5e7" id="r_aef4959a5b4ebb92e76bac62a2a65e5e7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d1d/assets__internal_8h.html#aef4959a5b4ebb92e76bac62a2a65e5e7">cwist_assets_match</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, const <a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="el" href="../../d6/d37/structcwist__asset__match.html">cwist_asset_match</a> *out)</td></tr>
 <tr class="memdesc:aef4959a5b4ebb92e76bac62a2a65e5e7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Match an HTTP request to a registered asset.  <br /></td></tr>
 <tr class="separator:aef4959a5b4ebb92e76bac62a2a65e5e7"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -396,7 +398,41 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01499">cwist_app_destroy()</a>, and <a class="el" href="../../d3/d05/assets_8c_source.html#l00533">cwist_assets_clone()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01518">cwist_app_destroy()</a>, and <a class="el" href="../../d3/d05/assets_8c_source.html#l00533">cwist_assets_clone()</a>.</p>
+
+</div>
+</div>
+<a id="a318ce3acf3db12b8f481a3557e61d22c" name="a318ce3acf3db12b8f481a3557e61d22c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a318ce3acf3db12b8f481a3557e61d22c">&#9670;&#160;</a></span>cwist_assets_etag_matches()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_assets_etag_matches </td>
+          <td>(</td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>if_none_match</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>etag</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Whether an If-None-Match list names an ETag (weak or strong) or is "*".</p>
+<p>Whether an If-None-Match list names <code>etag</code> (weak or strong) or is "*". </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00457">457</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d3/d05/assets_8c_source.html#l00493">cwist_assets_respond()</a>.</p>
 
 </div>
 </div>
@@ -495,7 +531,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d3/d05/assets_8c_source.html#l00493">493</a> of file <a class="el" href="../../d3/d05/assets_8c_source.html">assets.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00016">cwist_asset_match::asset</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dc/d7a/assets_8h_source.html#l00036">CWIST_ASSET_IMMUTABLE_CACHE</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00043">cwist_error_dispose()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02125">cwist_http_header_get()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00071">CWIST_HTTP_NOT_MODIFIED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02592">cwist_http_response_set_body_ptr()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00017">cwist_asset_match::immutable</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00016">cwist_asset_match::asset</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dc/d7a/assets_8h_source.html#l00036">CWIST_ASSET_IMMUTABLE_CACHE</a>, <a class="el" href="../../d3/d05/assets_8c_source.html#l00457">cwist_assets_etag_matches()</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00043">cwist_error_dispose()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02128">cwist_http_header_get()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00072">CWIST_HTTP_NOT_MODIFIED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02609">cwist_http_response_set_body_ptr()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../d7/d1d/assets__internal_8h_source.html#l00017">cwist_asset_match::immutable</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>.</p>
 
 </div>
 </div>

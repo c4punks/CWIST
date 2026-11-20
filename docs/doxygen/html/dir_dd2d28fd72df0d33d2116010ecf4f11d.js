@@ -26,6 +26,7 @@ var dir_dd2d28fd72df0d33d2116010ecf4f11d =
     [ "https_upgrade_hook.c", "dc/d23/https__upgrade__hook_8c.html", "dc/d23/https__upgrade__hook_8c" ],
     [ "multipart.c", "d3/d79/multipart_8c.html", "d3/d79/multipart_8c" ],
     [ "mux.c", "dd/d49/mux_8c.html", "dd/d49/mux_8c" ],
+    [ "path_decode.h", "d4/da9/path__decode_8h.html", null ],
     [ "query.c", "dd/d7f/query_8c.html", "dd/d7f/query_8c" ],
     [ "session.c", "de/d67/session_8c.html", "de/d67/session_8c" ],
     [ "simd_parser.h", "d9/d9b/simd__parser_8h.html", null ],

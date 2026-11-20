@@ -517,9 +517,9 @@ Functions</h2></td></tr>
 <p>CORS middleware. Adds CORS headers and handles OPTIONS requests (returns 204).</p>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for CORS handling. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00595">595</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00621">621</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00569">cwist_mw_cors_handler()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00595">cwist_mw_cors_handler()</a>.</p>
 
 </div>
 </div>
@@ -557,7 +557,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware wrapper bound to the supplied secret, or NULL on overflow or when the JWT module is compiled out (CWIST_JWT=0). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00724">724</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00750">750</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -595,7 +595,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Active decoded claims, or NULL when the request is not inside JWT auth on this thread. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00762">762</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00788">788</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -706,16 +706,16 @@ Functions</h2></td></tr>
 
 <p>Fixed-window rate limiter middleware (per-IP). </p>
 <p>Fixed-window rate limiter middleware (per-IP).</p>
-<p>Reuses an existing wrapper when the same rate was already registered. If all CWIST_RATE_LIMIT_MAX_CFGS config slots are taken, logs a warning and falls back to the first registered wrapper.</p>
+<p>Every call allocates a distinct limiter configuration, including repeated calls with the same rate. Returns NULL when all configuration slots are used.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">requests_per_minute</td><td>Allowed requests per minute (token bucket rate); values &lt;= 0 fall back to 60. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for per-IP rate limiting. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for per-IP rate limiting, or NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00536">536</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00570">570</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -739,7 +739,7 @@ Functions</h2></td></tr>
 <p>Uses the socket peer, never forwarded headers. A rejected request returns 429 with Retry-After: 60. Backend errors and missing peer addresses follow fail_closed. The first backend failure per configuration in each process writes its error code and policy to stderr (no keys or credentials). No local fallback counter is used. Requests do not extend TTL. Use a dedicated pool on DB 0, with the default user and no AUTH.</p>
 <p>Create the pool separately in every serving process after fork. Pool creation and DNS are blocking; timeout_ms bounds request-time pool wait and I/O. Use <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ac41b80406f8bc60ccf68ba36b2810db2" title="cwist_app_listen() with the worker count and server mode given explicitly.">cwist_app_listen_ex()</a> with one worker or CWIST_WORKERS=1, so the application listener does not fork the initialized pool. Do not destroy the pool while calls may still run. Eight distinct immutable configurations are supported per process; equal configurations reuse a slot. </p><dl class="section return"><dt>Returns</dt><dd>Middleware, or NULL for invalid configuration or exhausted slots. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00129">129</a> of file <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html">rate_limit_redis.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00115">115</a> of file <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html">rate_limit_redis.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00037">cwist_rate_limit_redis_cfg_t::fail_closed</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00035">cwist_rate_limit_redis_cfg_t::key_prefix</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00033">cwist_rate_limit_redis_cfg_t::pool</a>, <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00018">REDIS_RATE_PREFIX_MAX</a>, <a class="el" href="../../dc/d97/rate__limit__redis_8c_source.html#l00017">REDIS_RATE_SLOTS</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00034">cwist_rate_limit_redis_cfg_t::requests_per_minute</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00036">cwist_rate_limit_redis_cfg_t::timeout_ms</a>.</p>
 
@@ -764,7 +764,7 @@ Functions</h2></td></tr>
 <p>Reset the process-local IP table; Redis configs and keys are unchanged. </p>
 <p>Reset the process-local IP table; Redis configs and keys are unchanged. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00519">519</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00554">554</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>

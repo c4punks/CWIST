@@ -295,7 +295,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00605">605</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00618">618</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
 </div>
 </div>
@@ -324,7 +324,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00616">616</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00629">629</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
 </div>
 </div>
@@ -353,9 +353,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00529">529</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00542">542</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00561">cwist_websocket_receive_sequenced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00574">cwist_websocket_receive_sequenced()</a>.</p>
 
 </div>
 </div>
@@ -389,9 +389,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated frame, or NULL when the connection is closed or invalid. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00247">247</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00260">260</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00561">cwist_websocket_receive_sequenced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00574">cwist_websocket_receive_sequenced()</a>.</p>
 
 </div>
 </div>
@@ -447,9 +447,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, or -1 when the socket write fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00493">493</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00506">506</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00605">cwist_websocket_close()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00247">cwist_websocket_receive()</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00539">cwist_websocket_send_sequenced()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de6/websocket_8c_source.html#l00618">cwist_websocket_close()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00260">cwist_websocket_receive()</a>, and <a class="el" href="../../d4/de6/websocket_8c_source.html#l00552">cwist_websocket_send_sequenced()</a>.</p>
 
 </div>
 </div>
@@ -482,18 +482,9 @@ Functions</h2></td></tr>
 <p>Upgrade an HTTP request to WebSocket. </p>
 <dl class="section return"><dt>Returns</dt><dd>NULL if the handshake fails or the request is not a valid WebSocket upgrade.</dd></dl>
 <p>Upgrade an HTTP request to WebSocket.</p>
-<p>Upgrade a standard HTTP request to a WebSocket connection.</p>
-<p>The function validates the required upgrade headers, computes the Sec-WebSocket-Accept response, emits the 101 Switching Protocols reply, and returns a lightweight wrapper around the already-open client socket.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">req</td><td>Parsed HTTP request that requested the upgrade. </td></tr>
-    <tr><td class="paramname">client_fd</td><td>Accepted client socket descriptor. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>WebSocket wrapper on success, or NULL when the handshake fails. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd><code>NULL</code> if the handshake fails or the request is invalid, otherwise the upgraded context. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00149">149</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/de6/websocket_8c_source.html#l00188">188</a> of file <a class="el" href="../../d4/de6/websocket_8c_source.html">websocket.c</a>.</p>
 
 </div>
 </div>

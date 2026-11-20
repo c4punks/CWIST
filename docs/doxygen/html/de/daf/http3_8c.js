@@ -35,6 +35,7 @@ var http3_8c =
     [ "cwist_http3_normalize_response_header_name", "de/daf/http3_8c.html#ae94fc8039345a940b4368d27fe775210", null ],
     [ "cwist_http3_push_resource", "de/daf/http3_8c.html#afe2dc023265c7f47f7f311b79e48973a", null ],
     [ "cwist_http3_reload_context", "de/daf/http3_8c.html#a7bb102c8e1d282026b8103570713420e", null ],
+    [ "cwist_http3_request_client_ip", "de/daf/http3_8c.html#a76a6122cb146a9830279e486a8ec203e", null ],
     [ "cwist_http3_response_header_value_is_safe", "de/daf/http3_8c.html#a0e633ec429baf49ca1ab37356642b844", null ],
     [ "cwist_http3_send_datagram", "de/daf/http3_8c.html#a99860db5e8d04b8134684ce9ae5ebbc1", null ],
     [ "cwist_http3_server_loop", "de/daf/http3_8c.html#a8d60b85d41105c404f177a04a03f0d51", null ],

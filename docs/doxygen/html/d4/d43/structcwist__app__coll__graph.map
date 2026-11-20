@@ -16,21 +16,21 @@
 <area shape="poly" id="edge20_Node000013_Node000005" title=" " alt="" coords="1158,411,1245,407,1283,402,1283,407,1246,413,1158,417"/>
 <area shape="rect" id="Node000017" href="$d9/dae/structcwist__http3__context.html" title="HTTP/3 server context encapsulating lsquic/BoringSSL settings." alt="" coords="1282,169,1435,195"/>
 <area shape="poly" id="edge28_Node000017_Node000005" title=" " alt="" coords="1094,387,1142,336,1166,300,1212,251,1268,212,1311,192,1314,197,1271,216,1216,255,1170,304,1146,340,1098,391"/>
-<area shape="rect" id="Node000006" href="$d5/ddc/structcwist__sstring.html" title=" " alt="" coords="339,715,446,740"/>
-<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="423,705,461,684,503,664,575,639,639,624,750,606,803,595,855,578,912,551,973,509,1022,463,1058,422,1062,426,1026,467,976,513,914,556,857,583,804,601,751,611,640,629,577,644,505,668,463,688,426,710"/>
+<area shape="rect" id="Node000006" href="$d5/ddc/structcwist__sstring.html" title=" " alt="" coords="339,720,446,745"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="422,710,460,687,503,665,575,639,638,624,750,606,802,595,855,578,911,551,973,509,1022,463,1058,422,1062,426,1026,467,976,513,914,556,857,583,803,600,751,611,639,629,576,644,505,670,462,691,425,714"/>
 <area shape="rect" id="Node000008" href="$d8/dca/struct____prim__cwist__error__t.html" title="Internal union&#45;like structure to store the actual error value." alt="" coords="689,804,846,829"/>
-<area shape="poly" id="edge8_Node000008_Node000006" title=" " alt="" coords="424,746,462,768,505,786,551,798,599,806,688,814,688,819,598,812,550,803,503,791,459,772,422,750"/>
+<area shape="poly" id="edge8_Node000008_Node000006" title=" " alt="" coords="427,750,463,770,505,786,551,797,599,805,689,813,688,818,599,811,550,803,503,791,461,775,424,755"/>
 <area shape="rect" id="Node000011" href="$d3/d72/structcwist__http__header__node.html" title="Linked list for headers to handle multiple headers easily." alt="" coords="677,676,857,701"/>
-<area shape="poly" id="edge13_Node000011_Node000006" title=" " alt="" coords="459,718,677,695,677,701,460,723"/>
+<area shape="poly" id="edge13_Node000011_Node000006" title=" " alt="" coords="459,722,677,697,677,702,460,728"/>
 <area shape="rect" id="Node000007" href="$d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system." alt="" coords="1018,767,1125,792"/>
-<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="1004,777,446,734,447,729,1004,772"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="1004,777,446,739,447,734,1004,772"/>
 <area shape="poly" id="edge7_Node000007_Node000008" title=" " alt="" coords="860,803,1017,783,1018,788,860,808"/>
 <area shape="rect" id="Node000009" href="$dd/d72/structcwist__query__map.html" title=" " alt="" coords="699,480,835,505"/>
 <area shape="poly" id="edge9_Node000005_Node000009" title=" " alt="" coords="849,503,911,503,943,499,974,490,1000,477,1024,459,1058,423,1062,426,1027,463,1003,481,976,495,944,504,912,508,849,508"/>
 <area shape="rect" id="Node000010" href="$d1/d8f/structcwist__query__bucket.html" title=" " alt="" coords="317,492,468,517"/>
 <area shape="poly" id="edge10_Node000009_Node000010" title=" " alt="" coords="482,499,699,492,699,497,482,504"/>
 <area shape="poly" id="edge11_Node000010_Node000010" title=" " alt="" coords="361,477,371,469,393,465,411,468,422,474,425,484,420,493,415,491,420,483,418,477,409,473,393,471,373,474,365,481"/>
-<area shape="poly" id="edge12_Node000005_Node000011" title=" " alt="" coords="870,671,924,651,950,637,973,620,994,597,1012,571,1040,515,1057,462,1065,424,1070,425,1062,464,1045,517,1017,574,998,601,976,624,953,642,927,656,872,676"/>
+<area shape="poly" id="edge12_Node000005_Node000011" title=" " alt="" coords="870,679,925,663,950,651,973,635,996,611,1015,583,1043,522,1059,465,1066,424,1071,425,1064,466,1048,524,1020,586,1000,614,976,639,953,655,926,668,871,684"/>
 <area shape="poly" id="edge14_Node000011_Node000011" title=" " alt="" coords="736,661,745,653,767,649,786,652,797,658,800,668,794,677,790,675,795,667,793,661,784,657,767,655,748,658,739,665"/>
 <area shape="rect" id="Node000012" href="$dd/d55/structcwist__db.html" title="Wrapper for Database Operations. Currently uses SQLite3." alt="" coords="353,404,432,429"/>
 <area shape="poly" id="edge29_Node000001_Node000012" title=" " alt="" coords="446,413,561,405,615,397,652,385,688,359,719,325,757,266,762,269,723,329,692,362,655,390,616,402,561,410,446,418"/>

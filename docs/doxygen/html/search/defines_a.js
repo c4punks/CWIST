@@ -1,14 +1,10 @@
 var searchData=
 [
-  ['magic_5fdele_0',['MAGIC_DELE',['../dd/d43/http_8c.html#abedcbca62717d101488b274cef500da7',1,'http.c']]],
-  ['magic_5fget_1',['MAGIC_GET',['../dd/d43/http_8c.html#ad293bd885f83f4b0f276fa6a68b94cc2',1,'http.c']]],
-  ['magic_5fhead_2',['MAGIC_HEAD',['../dd/d43/http_8c.html#acff8c026c82ebc80c66502628ac21400',1,'http.c']]],
-  ['magic_5fpost_3',['MAGIC_POST',['../dd/d43/http_8c.html#a465d6710c431dc2fbb6b01aa9d1f9dca',1,'http.c']]],
-  ['magic_5fput_4',['MAGIC_PUT',['../dd/d43/http_8c.html#af5e0434abab450cce6d948614d41d2d0',1,'http.c']]],
-  ['make_5fmagic4_5',['MAKE_MAGIC4',['../dd/d43/http_8c.html#a0788789cf191c463a373244a614de6fb',1,'http.c']]],
-  ['max3_6',['MAX3',['../dd/dd7/css__composer_8c.html#a37c6d7fcb9c177c308ef38e1d51d35e3',1,'css_composer.c']]],
-  ['max_5fip_5fbuckets_7',['MAX_IP_BUCKETS',['../d9/dc9/middleware_8c.html#afab03948cc93e496f7212921f92ae4a1',1,'middleware.c']]],
-  ['min3_8',['MIN3',['../dd/dd7/css__composer_8c.html#a4887ceeae88266064841cbbc11ef8b53',1,'css_composer.c']]],
-  ['msg_5fdontwait_9',['msg_dontwait',['../de/daf/http3_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376',1,'MSG_DONTWAIT:&#160;http3.c'],['../d1/d88/http3__client_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376',1,'MSG_DONTWAIT:&#160;http3_client.c']]],
-  ['msg_5fnosignal_10',['msg_nosignal',['../d8/d03/orm_8c.html#a9f55d0e90dc8cc6b2287312435cdde48',1,'MSG_NOSIGNAL:&#160;orm.c'],['../da/dec/rdbms__auto__mount_8c.html#a9f55d0e90dc8cc6b2287312435cdde48',1,'MSG_NOSIGNAL:&#160;rdbms_auto_mount.c'],['../d4/d48/db__sync_8c.html#a9f55d0e90dc8cc6b2287312435cdde48',1,'MSG_NOSIGNAL:&#160;db_sync.c']]]
+  ['latin_5fmax_5fcomponents_0',['LATIN_MAX_COMPONENTS',['../d3/da8/latin__square_8c.html#a1805760918a2c4709811c58b01518f75',1,'latin_square.c']]],
+  ['livemsg_5farena_5fbytes_1',['LIVEMSG_ARENA_BYTES',['../da/df2/livemsg_8c.html#ad9cfd86ff84ab0b49bce50bb9d9246b6',1,'livemsg.c']]],
+  ['livemsg_5fmax_5fsdp_5fbytes_2',['LIVEMSG_MAX_SDP_BYTES',['../da/df2/livemsg_8c.html#ab0cb534ba105e6b4e7394f850993d1c2',1,'livemsg.c']]],
+  ['livemsg_5fws_5fframe_5foverhead_3',['LIVEMSG_WS_FRAME_OVERHEAD',['../da/df2/livemsg_8c.html#a00795005432234952a777808a5f527d8',1,'livemsg.c']]],
+  ['liveness_5ftimeout_5fms_4',['LIVENESS_TIMEOUT_MS',['../d3/d90/webrtc_8c.html#ac7f343253bd234aa0375359e9d256c0d',1,'webrtc.c']]],
+  ['log_5fasync_5fdefault_5fbytes_5',['LOG_ASYNC_DEFAULT_BYTES',['../df/dff/log__async_8c.html#aca15e1e8dae2ad889c99f7a379ab34cf',1,'log_async.c']]],
+  ['log_5fasync_5fstreams_6',['LOG_ASYNC_STREAMS',['../df/dff/log__async_8c.html#a13c44db93f8c16244d93695832086aa4',1,'log_async.c']]]
 ];
