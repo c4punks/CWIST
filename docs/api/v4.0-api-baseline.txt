@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (818) ==
+== functions (819) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -144,6 +144,7 @@ cwist_conn_registry_track
 cwist_conn_registry_untrack
 cwist_cookie_decode
 cwist_cookie_delete
+cwist_cookie_delete_ex
 cwist_cookie_encode
 cwist_cookie_get
 cwist_cookie_parse
@@ -824,7 +825,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (819) ==
+== function signatures (820) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -965,6 +966,7 @@ cwist_conn_registry_track: void (void *, cwist_conn_close_fn)
 cwist_conn_registry_untrack: bool (void *)
 cwist_cookie_decode: int (const char *, char *, size_t)
 cwist_cookie_delete: int (cwist_http_response *, const char *)
+cwist_cookie_delete_ex: int (cwist_http_response *, const char *, const cwist_cookie_options *)
 cwist_cookie_encode: char * (const char *)
 cwist_cookie_get: const char * (cwist_query_map *, const char *)
 cwist_cookie_parse: void (cwist_query_map *, const char *)
