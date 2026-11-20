@@ -57,8 +57,10 @@ static void b64url_encode(const unsigned char *src, size_t src_len, char *dst) {
 }
 
 /**
- * @brief Decode a Base64URL string.
- * @param src Base64URL input; either standard or URL-safe alphabet, with optional '=' padding.
+ * @brief Decode one unpadded Base64URL segment of a JWS (RFC 7515 section 2).
+ * @param src Base64URL input: only the URL-safe alphabet, no '=' padding, and
+ *            unused trailing bits must be zero, so every segment has exactly
+ *            one accepted spelling (no token malleability).
  * @param src_len Length of @p src in bytes.
  * @param out_len Set to the number of decoded bytes on success.
  * @return Heap-allocated decoded buffer, or NULL on invalid input or allocation failure.
@@ -84,6 +86,13 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     };
+
+    for (size_t k = 0; k < src_len; k++) {
+        unsigned char ch = (unsigned char)src[k];
+        if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') ||
+              ch == '-' || ch == '_'))
+            return NULL;
+    }
 
     /* Calculate how many padding chars to expect */
     size_t padded_len = src_len;
@@ -115,7 +124,7 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
     if (rem == 2) {
         signed char a = lut[(unsigned char)src[i]];
         signed char b = lut[(unsigned char)src[i + 1]];
-        if (a < 0 || b < 0) {
+        if (a < 0 || b < 0 || (b & 0x0F) != 0) {
             cwist_free(out);
             return NULL;
         }
@@ -124,7 +133,7 @@ static unsigned char *b64url_decode(const char *src, size_t src_len, size_t *out
         signed char a = lut[(unsigned char)src[i]];
         signed char b = lut[(unsigned char)src[i + 1]];
         signed char c = lut[(unsigned char)src[i + 2]];
-        if (a < 0 || b < 0 || c < 0) {
+        if (a < 0 || b < 0 || c < 0 || (c & 0x03) != 0) {
             cwist_free(out);
             return NULL;
         }

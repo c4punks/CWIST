@@ -321,7 +321,9 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
                 char *end = NULL;
                 errno = 0;
                 v = strtoull(value, &end, 10);
-                if (errno == ERANGE || end == value || *end != '\0' || value[0] == '-') {
+                /* strtoull() skips leading whitespace and then negates a '-'
+                 * value, so " -5" would wrap to 2^64 - 5. */
+                if (errno == ERANGE || end == value || *end != '\0' || strchr(value, '-')) {
                     bind_add_error(r, f->json_key, "expected unsigned integer");
                     return false;
                 }
@@ -360,6 +362,23 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
             break;
         }
         case CWIST_BIND_DOUBLE: {
+            /* CWIST_BIND_TYPEOF maps long double here as well; writing an
+             * 8-byte double into a long double member left garbage. */
+            if (f->target_size == sizeof(long double) && sizeof(long double) != sizeof(double)) {
+                long double lv = 0.0L;
+                if (value) {
+                    char *end = NULL;
+                    errno = 0;
+                    lv = strtold(value, &end);
+                    if (errno == ERANGE || end == value || *end != '\0' ||
+                        !cwist_number_long_double_is_finite(lv)) {
+                        bind_add_error(r, f->json_key, "expected finite double");
+                        return false;
+                    }
+                }
+                memcpy(dest, &lv, sizeof(lv));
+                break;
+            }
             double v = 0.0;
             if (value) {
                 char *end = NULL;
@@ -504,9 +523,8 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                         item->valuedouble < 9223372036854775808.0) {
                         snprintf(numbuf, sizeof(numbuf), "%lld", (long long)item->valuedouble);
                         raw_value = numbuf;
-                    } else if (cwist_number_long_double_is_finite(item->valuedouble) &&
-                               intpart != item->valuedouble) {
-                        snprintf(numbuf, sizeof(numbuf), "%g", item->valuedouble);
+                    } else if (cwist_number_long_double_is_finite(item->valuedouble)) {
+                        cwist_number_format_double(numbuf, sizeof(numbuf), item->valuedouble);
                         raw_value = numbuf;
                     } else {
                         bind_add_error(result, f->json_key,

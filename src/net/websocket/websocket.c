@@ -187,6 +187,7 @@ static ssize_t read_exact(int fd, void *buf, size_t len) {
     size_t total = 0;
     while (total < len) {
         ssize_t n = recv(fd, (uint8_t *)buf + total, len - total, 0);
+        if (n < 0 && errno == EINTR) continue; /* a signal is not a disconnect */
         if (n <= 0) return -1;
         total += n;
     }

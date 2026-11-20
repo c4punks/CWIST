@@ -176,7 +176,9 @@ static bool cookie_same_site_is_valid(const char *same_site) {
 }
 
 static bool cookie_options_are_valid(const char *name, const cwist_cookie_options *opts) {
-    if (!opts) return true;
+    /* Without options the cookie carries no Secure attribute, which the
+     * __Secure- and __Host- prefixes require (RFC 6265bis section 4.1.3). */
+    if (!opts) return strncmp(name, "__Secure-", 9) != 0 && strncmp(name, "__Host-", 7) != 0;
     if (opts->path && !cookie_path_is_valid(opts->path)) return false;
     if (opts->domain && !cookie_domain_is_valid(opts->domain)) return false;
     if (opts->same_site && !cookie_same_site_is_valid(opts->same_site)) return false;

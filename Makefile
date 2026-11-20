@@ -879,6 +879,9 @@ TEST_TARGETS = test_worker_affinity \
                test_orm \
                test_app_resource_limits \
                test_app_named_routes_and_error_handler \
+               test_app_route_helpers \
+               test_regression_batch \
+               test_classic_pool_scaling \
                test_reactor_wake \
                test_classic_pool_scaling \
                test_reactor_timer \
@@ -1087,6 +1090,21 @@ test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c src/sys/a
 test_app_named_routes_and_error_handler: $(LIB_NAME) tests/test_app_named_routes_and_error_handler.c
 	$(CC) $(CFLAGS) -o $@ tests/test_app_named_routes_and_error_handler.c $(LIB_NAME) $(LIBS)
 	./$@
+
+test_app_route_helpers: $(LIB_NAME) tests/test_app_route_helpers.c
+	$(CC) $(CFLAGS) -o $@ tests/test_app_route_helpers.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_regression_batch: $(LIB_NAME) tests/test_regression_batch.c
+	$(CC) $(CFLAGS) -o $@ tests/test_regression_batch.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
+	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
+	./$@ burst
+	./$@ multi
+	./$@ cap
+	./$@ failure
 
 # Kernel/queue contract test: use the real reactor with a test-only allocator,
 # without pulling HTTP/TLS or libttak runtime state into the wake-up schedule.
