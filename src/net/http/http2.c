@@ -1785,6 +1785,18 @@ static int h2_parse_content_length(const char *value, size_t len, size_t *out) {
     return 0;
 }
 
+static bool h2_trailer_is_prohibited(const char *name) {
+    static const char *const fields[] = {
+        "host", "authorization", "proxy-authorization", "cookie", "set-cookie",
+        "content-length", "content-type", "content-encoding", "cache-control",
+        "expect", "max-forwards", "te", "forwarded", "x-forwarded-for",
+    };
+    for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); i++) {
+        if (strcmp(name, fields[i]) == 0) return true;
+    }
+    return false;
+}
+
 static int h2_apply_header(h2_stream *s, const char *name, size_t name_len, const char *value,
                            size_t value_len, h2_header_state *st) {
     if (!s || !s->req || !name || !value || !st || !h2_field_name_is_valid(name, name_len) ||
@@ -1830,6 +1842,7 @@ static int h2_apply_header(h2_stream *s, const char *name, size_t name_len, cons
     }
 
     st->seen_regular = true;
+    if (!st->is_request && h2_trailer_is_prohibited(name)) return -1;
     if (strcmp(name, "connection") == 0 || strcmp(name, "keep-alive") == 0 ||
         strcmp(name, "proxy-connection") == 0 || strcmp(name, "transfer-encoding") == 0 ||
         strcmp(name, "upgrade") == 0)
@@ -1847,7 +1860,7 @@ static int h2_apply_header(h2_stream *s, const char *name, size_t name_len, cons
         s->has_content_length = true;
         req->content_length = content_length;
     }
-    cwist_http_header_add(&req->headers, name, value);
+    cwist_http_header_add(st->is_request ? &req->headers : &req->trailers, name, value);
     return 0;
 }
 

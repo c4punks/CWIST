@@ -185,6 +185,7 @@ typedef struct cwist_http_request {
     bool ws_async_handoff;  ///< WebSocket async path took fd ownership; C1M layer must detach.
     void *https_conn;       ///< HTTPS connection wrapper when on TLS path (internal).
     void *h2_queue;         ///< HTTP/2 async queue when on H2 path (internal).
+    cwist_http_header_node *trailers; ///< Trailer fields kept separate from initial headers.
 } cwist_http_request;
 
 typedef void (*cwist_http_body_cleanup_fn)(const void *ptr, size_t len, void *ctx);

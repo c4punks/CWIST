@@ -999,6 +999,77 @@ static void test_http2_hook_error_sends_reset(void) {
     test_http2_stop_client(client, sv[1], tid);
 }
 
+static void http2_trailer_handler(void *user_ctx, cwist_http_request *req,
+                                  cwist_http_response *res) {
+    (void)user_ctx;
+    assert(strcmp(cwist_http_header_get(req->headers, "host"), "original.example") == 0);
+    assert(cwist_http_header_get(req->headers, "x-check") == NULL);
+    assert(strcmp(cwist_http_header_get(req->trailers, "x-check"), "ok") == 0);
+    cwist_sstring_assign(res->body, "trailers ok");
+}
+
+static void test_http2_request_trailers(void) {
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char initial[] = {0x82, 0x87, 0x84, 0x41, 0x10, 'o', 'r', 'i', 'g', 'i',
+                                            'n',  'a',  'l',  '.',  'e',  'x', 'a', 'm', 'p', 'l',
+                                            'e'};
+    static const unsigned char trailer[] = {0x00, 0x07, 'x', '-', 'c', 'h', 'e', 'c', 'k',
+                                            0x02, 'o',  'k'};
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx server = {
+        .fd = sv[0], .handler = http2_trailer_handler, .standard_data = true};
+    pthread_t tid;
+    SSL *client = test_http2_start_client(sv, &server, &tid);
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
+    test_http2_write_frame(client, 0x1, 0x4, 1, initial, sizeof(initial));
+    test_http2_write_frame(client, 0x1, 0x5, 1, trailer, sizeof(trailer));
+
+    bool saw_body = false;
+    for (int i = 0; i < 20 && !saw_body; i++) {
+        unsigned char hdr[9];
+        assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint8_t type = hdr[3];
+        unsigned char payload[17000];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (type == 0x0 && len == 11 && memcmp(payload, "trailers ok", 11) == 0) saw_body = true;
+    }
+    assert(saw_body);
+    test_http2_stop_client(client, sv[1], tid);
+
+    static const unsigned char forbidden[] = {0x00, 0x04, 'h', 'o', 's', 't', 0x0c, 'e',
+                                              'v',  'i',  'l',  '.',  'e', 'x', 'a', 'm',
+                                              'p',  'l',  'e'};
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx rejected = {.fd = sv[0], .handler = http2_test_handler};
+    client = test_http2_start_client(sv, &rejected, &tid);
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
+    test_http2_write_frame(client, 0x1, 0x4, 1, initial, sizeof(initial));
+    test_http2_write_frame(client, 0x1, 0x5, 1, forbidden, sizeof(forbidden));
+
+    bool reset = false;
+    for (int i = 0; i < 20 && !reset; i++) {
+        unsigned char hdr[9];
+        assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
+                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        unsigned char payload[4096];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x3 && stream_id == 1) {
+            assert(len == 4 && payload[3] == 0x1);
+            reset = true;
+        }
+    }
+    assert(reset);
+    test_http2_stop_client(client, sv[1], tid);
+}
+
 /* Handler for the HPACK incremental-indexing test: replies "h2 ok" only when
  * the request carried x-token: abc123 (delivered via the dynamic table on the
  * second request). */
@@ -2396,6 +2467,7 @@ int main(void) {
     test_http2_response_headers();
     test_http2_decoded_header_list_limit();
     test_http2_hook_error_sends_reset();
+    test_http2_request_trailers();
     test_http2_hpack_incremental_indexing();
     test_http2_async_defer();
     test_http2_async_defer_rst_drops();
