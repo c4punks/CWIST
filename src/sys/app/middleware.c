@@ -407,7 +407,9 @@ cwist_middleware_func cwist_mw_metrics(void) {
 
 #include <ttak/limit/limit.h>
 #include <ttak/timing/timing.h>
+#ifndef CWIST_PLATFORM_NO_SOCKETS
 #include <arpa/inet.h>
+#endif
 
 #define IP_BUCKET_IDLE_MS 600000
 
@@ -425,11 +427,13 @@ static int ip_bucket_count = 0;
 static pthread_mutex_t rate_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void rate_limit_ip_key(const char *input, char output[46]) {
+#ifndef CWIST_PLATFORM_NO_SOCKETS
     struct in6_addr addr;
     if (input && inet_pton(AF_INET6, input, &addr) == 1) {
         memset(addr.s6_addr + 8, 0, 8);
         if (inet_ntop(AF_INET6, &addr, output, 46)) return;
     }
+#endif
     snprintf(output, 46, "%s", input ? input : "");
 }
 

@@ -21,6 +21,7 @@
 #else
 struct sockaddr;
 struct sockaddr_in;
+struct sockaddr_in6;
 #endif
 #include <sys/types.h>
 #include <stdio.h>

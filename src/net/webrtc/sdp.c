@@ -157,7 +157,7 @@ int cwist_sdp_write_answer_for_offer(char *out, size_t cap, const char *fingerpr
     char bundle[CWIST_SDP_MAX_SECTIONS * 20];
     bundle[0] = '\0';
     for (size_t i = 0; i < offer->section_count; i++) {
-        char fallback[16];
+        char fallback[sizeof(size_t) * 3 + 1];
         const char *mid = offer->sections[i].mid;
         if (!mid[0]) {
             snprintf(fallback, sizeof(fallback), "%zu", i);
@@ -178,7 +178,7 @@ int cwist_sdp_write_answer_for_offer(char *out, size_t cap, const char *fingerpr
     int accepted = 0;
     for (size_t i = 0; i < offer->section_count; i++) {
         const cwist_sdp_section *section = &offer->sections[i];
-        char fallback[16];
+        char fallback[sizeof(size_t) * 3 + 1];
         const char *mid = section->mid;
         if (!mid[0]) {
             snprintf(fallback, sizeof(fallback), "%zu", i);
