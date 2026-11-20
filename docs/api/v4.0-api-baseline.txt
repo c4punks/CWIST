@@ -574,6 +574,7 @@ cwist_nats_publish_string
 cwist_nats_subscribe
 cwist_nuke_close
 cwist_nuke_deserialize
+cwist_nuke_force_disk_mode
 cwist_nuke_get_db
 cwist_nuke_init
 cwist_nuke_serialize
@@ -1396,6 +1397,7 @@ cwist_nats_publish_string: cwist_error_t (cwist_nats_t *, const char *, const ch
 cwist_nats_subscribe: cwist_error_t (cwist_nats_t *, const char *, cwist_nats_msg_cb, void *)
 cwist_nuke_close: void (void)
 cwist_nuke_deserialize: int (unsigned char *, sqlite3_int64)
+cwist_nuke_force_disk_mode: int (void)
 cwist_nuke_get_db: sqlite3 * (void)
 cwist_nuke_init: int (const char *, int)
 cwist_nuke_serialize: unsigned char * (sqlite3_int64 *)

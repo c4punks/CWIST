@@ -97,10 +97,7 @@ cwist_nats_dispatch
 cwist_nats_native
 cwist_nats_publish_string
 cwist_nats_subscribe
-cwist_nuke_close
 cwist_nuke_deserialize
-cwist_nuke_get_db
-cwist_nuke_init
 cwist_nuke_serialize
 cwist_nuke_signal_handler
 cwist_nuke_sync

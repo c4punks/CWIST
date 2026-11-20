@@ -3,10 +3,9 @@
  * @brief High-Performance Read-Optimal Persistent Store using SQLite.
  *
  * Concept:
- * - Reads: Always from In-Memory DB (Extreme speed).
- * - Writes: Immediately synchronized to Disk DB via WAL (Durability).
- * - Trade-off: Slightly higher write latency for the sake of guaranteed durability
- *   and non-blocking ultra-fast reads.
+ * - Reads and writes use one stable disk-backed SQLite handle with WAL durability.
+ * - An in-memory mirror is refreshed from that handle for low-overhead snapshots.
+ * - Low-memory fallback releases only the mirror and never replaces the active handle.
  */
 
 #ifndef __CWIST_NUKE_DB_H__
@@ -34,8 +33,8 @@
  * 4. Exit: Catch signals (SIGINT, SIGTERM) and force final Sync.
  */
 typedef struct cwist_nuke_db_t {
-    sqlite3 *mem_db;     ///< The active in-memory database handle
-    sqlite3 *disk_db;    ///< The backup disk database handle
+    sqlite3 *mem_db;     ///< Optional in-memory mirror refreshed from disk
+    sqlite3 *disk_db;    ///< Stable disk-backed application handle
     char *disk_path;     ///< Path to the disk database file
     bool auto_sync;      ///< Whether auto-sync is enabled
     int sync_interval_ms;///< Sync interval in milliseconds
@@ -58,10 +57,16 @@ typedef struct cwist_nuke_db_t {
 int cwist_nuke_init(const char *disk_path, int sync_interval_ms);
 
 /**
- * @brief Force synchronization from Memory to Disk.
+ * @brief Refresh the in-memory mirror from the stable disk-backed handle.
  * @return 0 on success, -1 on failure.
  */
 int cwist_nuke_sync(void);
+
+/**
+ * @brief Release the in-memory mirror while keeping the active handle stable.
+ * @return 0 on success, -1 if the mirror could not be refreshed first.
+ */
+int cwist_nuke_force_disk_mode(void);
 
 /**
  * @brief Close databases safely.
@@ -70,9 +75,8 @@ int cwist_nuke_sync(void);
 void cwist_nuke_close(void);
 
 /**
- * @brief Get the raw SQLite3 handle for the In-Memory DB.
- * @return Pointer to the active sqlite3* handle. Returns the disk handle when
- *         NukeDB is operating in disk-only fallback mode.
+ * @brief Get the stable SQLite handle used for all application operations.
+ * @return Pointer to the disk-backed sqlite3 handle, or NULL before init/after close.
  */
 sqlite3 *cwist_nuke_get_db(void);
 
