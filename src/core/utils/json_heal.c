@@ -435,7 +435,7 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
         /* Number → String */
         else if (fd->type == CWIST_FIELD_STRING && cJSON_IsNumber(item)) {
             char numstr[64];
-            snprintf(numstr, sizeof(numstr), "%g", item->valuedouble);
+            cwist_number_format_double(numstr, sizeof(numstr), item->valuedouble);
             cJSON *str = cJSON_CreateString(numstr);
             if (str) {
                 cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, str);

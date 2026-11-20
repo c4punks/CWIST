@@ -885,9 +885,10 @@ static void cwist_mem_init(cwist_app *app) {
 
     app->mem_manager = cwist_alloc(sizeof(cwist_fix_server_mem));
     if (!app->mem_manager) {
-        /* Serving still works: static files are then read from disk per
-         * request instead of from the in-memory cache (#341). */
-        fprintf(stderr, "[StaticMem] Out of memory; static cache disabled\n");
+        /* The server keeps running (#341), but static files are only ever
+         * served from this cache: without it cwist_static_handler() answers
+         * 500 "Server memory not initialized" for every static path. */
+        fprintf(stderr, "[StaticMem] Out of memory; static files will answer 500\n");
         return;
     }
     app->mem_manager->check_interval_ms = 2000;
@@ -937,7 +938,9 @@ static void *cwist_mem_watcher(void *arg) {
             cwist_file_t *f = &mem->files[i];
             struct stat st;
             if (stat(f->fs_path, &st) == 0) {
-                if (st.st_mtime > f->last_mod) {
+                /* Any change counts: a deploy or rollback that restores an
+                 * older mtime (rsync -t, tar, git checkout) must reload too. */
+                if (st.st_mtime != f->last_mod || (size_t)st.st_size != f->size) {
                     if (cwist_mem_refresh_file(mem, f, &st)) {
                         printf("[Hot Reload] Updated: %s\n", f->fs_path);
                     }
@@ -1029,6 +1032,22 @@ static void cwist_static_release_body(const void *ptr, size_t len, void *ctx) {
  * @param req Incoming request targeting a static mapping.
  * @param res Response object to populate.
  */
+/** Parse one or more ASCII digits at @p p into @p out. Returns the first
+ * byte after them, or NULL when there is no digit or the value overflows. */
+static const char *static_range_digits(const char *p, uint64_t *out) {
+    uint64_t v = 0;
+    const char *s = p;
+    while (*p >= '0' && *p <= '9') {
+        unsigned d = (unsigned)(*p - '0');
+        if (v > (UINT64_MAX - d) / 10) return NULL;
+        v = v * 10 + d;
+        p++;
+    }
+    if (p == s) return NULL;
+    *out = v;
+    return p;
+}
+
 static void cwist_static_handler(cwist_http_request *req, cwist_http_response *res) {
     mw_executor_ctx *ctx = (mw_executor_ctx *)req->private_data;
     cwist_static_request_info *info = ctx ? (cwist_static_request_info *)ctx->handler_data : NULL;
@@ -1094,31 +1113,21 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
     cwist_fix_server_mem *mem = app->mem_manager;
     pthread_mutex_lock(&mem->lock);
     cwist_file_t *file = cwist_mem_get_file(mem, canonical);
+    if (!file) {
+        /* The startup scan only saw files that existed then; load a file
+         * added to the static root later on first request. canonical was
+         * already confined to fs_root above. */
+        struct stat st;
+        if (stat(canonical, &st) == 0 && S_ISREG(st.st_mode) &&
+            cwist_mem_register_file(mem, canonical, &st)) {
+            file = cwist_mem_get_file(mem, canonical);
+        }
+    }
 
     if (file) {
-        // Simple MIME guess
-        const char *dot = strrchr(canonical, '.');
-        const char *mime = "application/octet-stream";
-        if (dot) {
-            if (strcasecmp(dot, ".html") == 0)
-                mime = "text/html; charset=utf-8";
-            else if (strcasecmp(dot, ".css") == 0)
-                mime = "text/css; charset=utf-8";
-            else if (strcasecmp(dot, ".js") == 0)
-                mime = "application/javascript";
-            else if (strcasecmp(dot, ".json") == 0)
-                mime = "application/json";
-            else if (strcasecmp(dot, ".png") == 0)
-                mime = "image/png";
-            else if (strcasecmp(dot, ".jpg") == 0 || strcasecmp(dot, ".jpeg") == 0)
-                mime = "image/jpeg";
-            else if (strcasecmp(dot, ".gif") == 0)
-                mime = "image/gif";
-            else if (strcasecmp(dot, ".svg") == 0)
-                mime = "image/svg+xml";
-            else if (strcasecmp(dot, ".txt") == 0)
-                mime = "text/plain; charset=utf-8";
-        }
+        /* Same extension table as in-memory assets (.mjs, .wasm, .webp,
+         * fonts, ...); the old local list sent those as octet-stream. */
+        const char *mime = cwist_assets_content_type(canonical);
 
         // Cache headers are formatted once at load/reload time.
         const char *etag = file->etag;
@@ -1168,30 +1177,34 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
                 size_t range_start = 0, range_end = file->size - 1;
                 bool range_valid = true;
 
-                if (p[0] == '-') {
-                    /* suffix-range: bytes=-N means the last N bytes */
-                    char *end = NULL;
-                    unsigned long long sv = strtoull(p + 1, &end, 10);
-                    if (end == p + 1 || *end != '\0') {
+                /* RFC 9110 section 14.1.2: only DIGIT runs, so strtoull()'s
+                 * whitespace, sign and trailing-junk tolerance never leaks in
+                 * ("bytes=0--1", "bytes=0-5junk" used to be served). */
+                uint64_t first = 0, last = 0;
+                const char *q = p;
+                if (*q == '-') {
+                    q = static_range_digits(q + 1, &last);
+                    if (!q || *q != '\0') {
                         range_valid = false;
                     } else {
-                        range_start = (file->size > (size_t)sv) ? file->size - (size_t)sv : 0;
+                        range_start = (file->size > last) ? file->size - (size_t)last : 0;
                         range_end = file->size - 1;
                     }
                 } else {
-                    /* first-byte-pos [ "-" [ last-byte-pos ] ] */
-                    char *end = NULL;
-                    unsigned long long rs = strtoull(p, &end, 10);
-                    if (end == p) {
+                    q = static_range_digits(q, &first);
+                    if (!q || *q != '-') {
                         range_valid = false;
                     } else {
-                        range_start = (size_t)rs;
-                        char *dash = strchr(p, '-');
-                        if (dash && dash[1] != '\0') {
-                            unsigned long long re = strtoull(dash + 1, &end, 10);
-                            range_end = (end != dash + 1) ? (size_t)re : file->size - 1;
-                        } else {
+                        range_start = first > SIZE_MAX ? SIZE_MAX : (size_t)first;
+                        q++;
+                        if (*q == '\0') {
                             range_end = file->size - 1;
+                        } else {
+                            q = static_range_digits(q, &last);
+                            if (!q || *q != '\0')
+                                range_valid = false;
+                            else
+                                range_end = last > SIZE_MAX ? SIZE_MAX : (size_t)last;
                         }
                     }
                 }
@@ -2550,6 +2563,29 @@ static cwist_route_entry *cwist_route_table_find_by_name(cwist_route_table *tabl
     return NULL;
 }
 
+/** Append @p value percent-encoded as one path segment (RFC 3986 unreserved
+ * characters pass through, every other byte becomes %XX). */
+static bool url_for_append_encoded(cwist_sstring *out, const char *value) {
+    static const char hex[] = "0123456789ABCDEF";
+    for (const unsigned char *v = (const unsigned char *)value; *v; v++) {
+        char buf[3];
+        size_t n = 1;
+        if (isalnum(*v) || *v == '-' || *v == '.' || *v == '_' || *v == '~') {
+            buf[0] = (char)*v;
+        } else {
+            buf[0] = '%';
+            buf[1] = hex[*v >> 4];
+            buf[2] = hex[*v & 0x0f];
+            n = 3;
+        }
+        cwist_error_t err = cwist_sstring_append_len(out, buf, n);
+        bool ok = cwist_error_is_ok(&err);
+        cwist_error_dispose(&err);
+        if (!ok) return false;
+    }
+    return true;
+}
+
 char *cwist_url_for(cwist_app *app, const char *name, cwist_query_map *params) {
     if (!app || !app->router || !name) return NULL;
     cwist_route_entry *entry = cwist_route_table_find_by_name(app->router, name);
@@ -2558,31 +2594,41 @@ char *cwist_url_for(cwist_app *app, const char *name, cwist_query_map *params) {
     if (!params || !entry->has_params) {
         return cwist_strdup(path);
     }
-    // Build URL by replacing :param segments
+    /* Copy the pattern verbatim (leading and trailing '/' included) and
+     * replace each ":name" segment with its percent-encoded value, so a
+     * value can never add path segments, a query, or a fragment. */
     cwist_sstring *result = cwist_sstring_create();
     if (!result) return NULL;
-    char path_copy[512];
-    strncpy(path_copy, path, sizeof(path_copy) - 1);
-    path_copy[sizeof(path_copy) - 1] = '\0';
-    char *saveptr;
-    char *tok = strtok_r(path_copy, "/", &saveptr);
-    int first = 1;
-    while (tok) {
-        if (!first) cwist_sstring_append(result, "/");
-        first = 0;
-        if (tok[0] == ':') {
-            const char *val = cwist_query_map_get(params, tok + 1);
-            if (val) {
-                cwist_sstring_append(result, val);
-            } else {
-                cwist_sstring_append(result, tok);
+    bool ok = true;
+    const char *p = path;
+    while (*p && ok) {
+        const char *seg_end = strchr(p, '/');
+        size_t seg_len = seg_end ? (size_t)(seg_end - p) : strlen(p);
+        const char *val = NULL;
+        if (seg_len > 1 && p[0] == ':') {
+            char name[256];
+            if (seg_len - 1 < sizeof(name)) {
+                memcpy(name, p + 1, seg_len - 1);
+                name[seg_len - 1] = '\0';
+                val = cwist_query_map_get(params, name);
             }
-        } else {
-            cwist_sstring_append(result, tok);
         }
-        tok = strtok_r(NULL, "/", &saveptr);
+        if (val) {
+            ok = url_for_append_encoded(result, val);
+        } else {
+            cwist_error_t err = cwist_sstring_append_len(result, p, seg_len);
+            ok = cwist_error_is_ok(&err);
+            cwist_error_dispose(&err);
+        }
+        p += seg_len;
+        if (*p == '/' && ok) {
+            cwist_error_t err = cwist_sstring_append_len(result, "/", 1);
+            ok = cwist_error_is_ok(&err);
+            cwist_error_dispose(&err);
+            p++;
+        }
     }
-    char *out = cwist_strdup(result->data);
+    char *out = ok && result->data ? cwist_strdup(result->data) : NULL;
     cwist_sstring_destroy(result);
     return out;
 }

@@ -105,6 +105,9 @@ void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, 
 
 /**
  * @brief Attach middleware to a specific route.
+ *
+ * Middleware runs in registration order (the first one attached runs
+ * first), the same order as cwist_app_use().
  */
 void cwist_mux_route_use(cwist_mux_route *route, cwist_middleware_func mw);
 

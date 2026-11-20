@@ -60,24 +60,42 @@ static bool mp_token_char(unsigned char c) {
     return c > 32 && c < 127 && c != '\\' && c != '"' && !strchr("()<>@,;:/[]?={}", c);
 }
 
+/** Advance to the ';' that ends the current parameter, stepping over
+ * quoted-strings (RFC 9110 section 5.6.4) so a ';' or "name=" inside quotes
+ * is never taken as the start of another parameter. */
+static const char *mp_skip_param(const char *p) {
+    while (*p && *p != ';') {
+        if (*p == '"') {
+            p++;
+            while (*p && *p != '"') {
+                if (*p == '\\' && p[1]) p++;
+                p++;
+            }
+            if (!*p) break;
+        }
+        p++;
+    }
+    return p;
+}
+
 static int mp_disposition_param(const char *value, const char *key, char **out) {
     size_t key_len = strlen(key);
     const char *p = value;
     while (*p) {
         while (isspace((unsigned char)*p) || *p == ';') p++;
         if (strncasecmp(p, key, key_len) != 0) {
-            while (*p && *p != ';') p++;
+            p = mp_skip_param(p);
             continue;
         }
         const char *name_end = p + key_len;
         if (*name_end != '=' && !isspace((unsigned char)*name_end)) {
-            while (*p && *p != ';') p++;
+            p = mp_skip_param(p);
             continue;
         }
         p = name_end;
         while (isspace((unsigned char)*p)) p++;
         if (*p != '=') {
-            while (*p && *p != ';') p++;
+            p = mp_skip_param(p);
             continue;
         }
         p++;
@@ -390,7 +408,7 @@ char *cwist_multipart_extract_boundary(const char *content_type) {
                 return boundary;
             }
         }
-        while (*p && *p != ';') p++;
+        p = mp_skip_param(p);
         if (*p == ';') p++;
     }
     return NULL;

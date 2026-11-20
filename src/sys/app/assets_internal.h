@@ -17,6 +17,9 @@ typedef struct cwist_asset_match {
     bool immutable;
 } cwist_asset_match;
 
+/** Content-Type for a file name by extension (shared with static directories). */
+const char *cwist_assets_content_type(const char *name);
+
 /** Whether an If-None-Match list names an ETag (weak or strong) or is "*". */
 bool cwist_assets_etag_matches(const char *if_none_match, const char *etag);
 

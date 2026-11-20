@@ -429,8 +429,12 @@ void cwist_mux_route_use(cwist_mux_route *route, cwist_middleware_func mw) {
         (cwist_mux_middleware_node *)cwist_alloc(sizeof(cwist_mux_middleware_node));
     if (!node) return;
     node->func = mw;
-    node->next = route->middleware;
-    route->middleware = node;
+    node->next = NULL;
+    /* Append, so per-route middleware runs in registration order like
+     * cwist_app_use(); prepending ran the last-registered one first. */
+    cwist_mux_middleware_node **tail = &route->middleware;
+    while (*tail) tail = &(*tail)->next;
+    *tail = node;
 }
 
 /**
