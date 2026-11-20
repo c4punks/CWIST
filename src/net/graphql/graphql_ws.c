@@ -304,6 +304,8 @@ typedef struct gql_ws_conn {
     size_t pending_bytes;
     bool flush_pending;
     cwist_reactor_timer_t init_timer;
+    cwist_reactor_post_t init_post;
+    uint64_t init_timeout_us;
 } gql_ws_conn_t;
 
 /* Reactor-posted flush node: drains a connection's pending queue on the
@@ -800,6 +802,14 @@ static void gql_ws_init_timeout(void *ctx) {
         cwist_websocket_async_close_code(conn->ws, GQL_WS_CLOSE_INIT_TIMEOUT);
 }
 
+static void gql_ws_arm_init_timeout(void *ctx) {
+    gql_ws_conn_t *conn = ctx;
+    if (!conn->dead && !conn->init_done && conn->ws &&
+        !cwist_reactor_timer_arm(conn->reactor, &conn->init_timer, conn->init_timeout_us))
+        cwist_websocket_async_close_code(conn->ws, GQL_WS_CLOSE_INIT_TIMEOUT);
+    gql_ws_conn_unref(conn);
+}
+
 static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_t *reactor) {
     gql_ws_conn_t *conn = (gql_ws_conn_t *)cwist_alloc(sizeof(*conn));
     if (!conn) return NULL;
@@ -821,7 +831,7 @@ static gql_ws_conn_t *gql_ws_conn_create(cwist_graphql_ws_t *gws, cwist_reactor_
 
 /* Shared by on_close (teardown) and the attach-failure path: mark dead, purge
  * broker operations and the pending queue, release the protocol reference.
- * Flush nodes still in flight keep the state alive and no-op on dispatch. */
+ * Posted callbacks still in flight keep the state alive and no-op on dispatch. */
 static void gql_ws_conn_dispose(gql_ws_conn_t *conn) {
     cwist_reactor_timer_cancel(conn->reactor, &conn->init_timer);
     pthread_mutex_lock(&g_broker_lock);
@@ -888,9 +898,16 @@ bool cwist_graphql_ws_attach_ex(cwist_graphql_ws_t *gws, int fd, cwist_reactor_t
     conn->ws = ws;
     pthread_mutex_unlock(&g_broker_lock);
 
-    if (!conn->dead && !conn->init_done && init_timeout_ms > 0 &&
-        !cwist_reactor_timer_arm(reactor, &conn->init_timer, init_timeout_ms * 1000))
-        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_INIT_TIMEOUT);
+    if (init_timeout_ms > 0) {
+        conn->init_timeout_us = init_timeout_ms * 1000;
+        conn->init_post.cb = gql_ws_arm_init_timeout;
+        conn->init_post.ctx = conn;
+        gql_ws_conn_ref(conn);
+        if (!cwist_reactor_post(reactor, &conn->init_post)) {
+            gql_ws_conn_unref(conn);
+            cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_INIT_TIMEOUT);
+        }
+    }
 
     /* Drain anything queued by inline initial-bytes delivery. */
     gql_ws_post_flush(conn);
