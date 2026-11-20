@@ -202,23 +202,24 @@ static int nuke_backup(sqlite3 *dest, sqlite3 *source) {
 /**
  * @brief Switch the live NUKE database into disk mode after a low-memory event.
  */
-static void nuke_switch_to_disk(void) {
-    if (g_nuke.is_disk_mode) return;
+static int nuke_switch_to_disk(void) {
+    if (g_nuke.is_disk_mode) return 0;
 
-    printf("[NukeDB] CRITICAL: Low RAM detected (%zu bytes). Switching to Disk DB.\n",
+    printf("[NukeDB] CRITICAL: Low RAM detected (%zu bytes). Releasing the memory mirror.\n",
            (size_t)cwist_get_available_ram());
 
     pthread_mutex_lock(&g_nuke_lock);
-
-    // 1. Flush Memory -> Disk
-    nuke_backup(g_nuke.disk_db, g_nuke.mem_db);
-
-    // 2. Set mode flag
-    sqlite3_db_release_memory(g_nuke.mem_db);
-
-    g_nuke.is_disk_mode = true;
-
+    int rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
+    if (rc == 0) {
+        sqlite3_db_release_memory(g_nuke.mem_db);
+        g_nuke.is_disk_mode = true;
+    }
     pthread_mutex_unlock(&g_nuke_lock);
+    return rc;
+}
+
+int cwist_nuke_force_disk_mode(void) {
+    return nuke_switch_to_disk();
 }
 
 // Internal commit hook to trigger immediate sync
@@ -237,7 +238,7 @@ static int nuke_commit_hook(void *arg) {
 }
 
 /**
- * @brief Persist the current in-memory database back to disk or checkpoint WAL mode.
+ * @brief Refresh the in-memory mirror from disk or checkpoint WAL mode.
  * @return 0 on success, or -1 when syncing is impossible or fails.
  */
 int cwist_nuke_sync(void) {
@@ -265,7 +266,7 @@ int cwist_nuke_sync(void) {
         return -1;
     }
 
-    int rc = nuke_backup(g_nuke.disk_db, g_nuke.mem_db);
+    int rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
     pthread_mutex_unlock(&g_nuke_lock);
     return rc;
 }
@@ -457,7 +458,7 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
 
     // Register commit hook for immediate sync. Only needed while in-memory mode is active.
     if (g_nuke.mem_db && !g_nuke.is_disk_mode) {
-        sqlite3_commit_hook(g_nuke.mem_db, nuke_commit_hook, NULL);
+        sqlite3_commit_hook(g_nuke.disk_db, nuke_commit_hook, NULL);
     }
 
     g_running = true;
@@ -486,13 +487,11 @@ int cwist_nuke_init(const char *disk_path, int sync_interval_ms) {
 }
 
 /**
- * @brief Return the SQLite handle that callers should use for the NUKE database.
- * @return The in-memory handle in normal mode, or the disk handle after a
- *         low-memory fallback to disk mode. May be NULL before init or after close.
+ * @brief Return the stable disk-backed SQLite handle for application operations.
+ * @return The disk handle in normal and low-memory modes. May be NULL before init or after close.
  */
 sqlite3 *cwist_nuke_get_db(void) {
-    if (g_nuke.is_disk_mode) return g_nuke.disk_db;
-    return g_nuke.mem_db;
+    return g_nuke.disk_db;
 }
 
 /**
@@ -537,16 +536,14 @@ int cwist_nuke_deserialize(unsigned char *data, sqlite3_int64 data_len) {
 
     pthread_mutex_lock(&g_nuke_lock);
 
-    if (g_nuke.is_disk_mode || !g_nuke.mem_db) {
+    if (!g_nuke.disk_db) {
         pthread_mutex_unlock(&g_nuke_lock);
         return -1;
     }
 
-    /* SQLITE_DESERIALIZE_FREEONCLOSE: SQLite will free the buffer when the
-     * database connection is closed.
-     * SQLITE_DESERIALIZE_RESIZABLE: allows the in-memory DB to grow. */
-    int rc = sqlite3_deserialize(g_nuke.mem_db, "main", data, data_len, data_len,
+    int rc = sqlite3_deserialize(g_nuke.disk_db, "main", data, data_len, data_len,
                                  SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_RESIZEABLE);
+    if (rc == SQLITE_OK && g_nuke.mem_db) rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
     pthread_mutex_unlock(&g_nuke_lock);
     return (rc == SQLITE_OK) ? 0 : -1;
 }

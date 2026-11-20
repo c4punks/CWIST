@@ -83,9 +83,27 @@ int main(void) {
     test_integrity_check(&db);
     test_null_db_guards();
 
+    assert(sqlite3_exec(handle, "CREATE TABLE IF NOT EXISTS stable_state(id INT);", NULL, NULL,
+                        NULL) == SQLITE_OK);
+    assert(cwist_nuke_force_disk_mode() == 0);
+    assert(cwist_nuke_get_db() == handle);
+    assert(sqlite3_exec(handle, "INSERT INTO stable_state VALUES (1);", NULL, NULL, NULL) ==
+           SQLITE_OK);
+    assert(sqlite3_exec(handle, "INSERT INTO stable_state VALUES (2);", NULL, NULL, NULL) ==
+           SQLITE_OK);
+
     printf("[NukeDB] Missing-record safety tests passed.\n");
 
     cwist_nuke_close();
+    setup = NULL;
+    assert(sqlite3_open(db_path, &setup) == SQLITE_OK);
+    sqlite3_stmt *stmt = NULL;
+    assert(sqlite3_prepare_v2(setup, "SELECT count(*) FROM stable_state;", -1, &stmt, NULL) ==
+           SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW);
+    assert(sqlite3_column_int(stmt, 0) == 2);
+    sqlite3_finalize(stmt);
+    sqlite3_close(setup);
     unlink(db_path);
     return 0;
 }
