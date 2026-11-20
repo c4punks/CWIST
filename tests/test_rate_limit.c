@@ -80,7 +80,8 @@ void test_rate_limit_instances_are_independent(void) {
     printf("test_rate_limit_instances_are_independent...\n");
     cwist_http_request *req = cwist_http_request_create();
     cwist_http_response *res = cwist_http_response_create();
-    req->client_fd = -1;
+    req->client_fd = test_peer_fd();
+    assert(req->client_fd >= 0);
     cwist_middleware_func first = cwist_mw_rate_limit_ip(1);
     cwist_middleware_func second = cwist_mw_rate_limit_ip(1);
     assert(first && second && first != second);
@@ -94,6 +95,7 @@ void test_rate_limit_instances_are_independent(void) {
     second(req, res, dummy_next);
     assert(res->status_code == 429);
 
+    close(req->client_fd);
     cwist_http_request_destroy(req);
     cwist_http_response_destroy(res);
     cwist_mw_rate_limit_reset();
