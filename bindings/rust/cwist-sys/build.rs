@@ -137,13 +137,14 @@ fn main() {
     println!("cargo:rerun-if-env-changed=PKG_CONFIG_PATH");
 
     let cwist = pkg_config::Config::new()
+        .atleast_version("4.3.3")
         .statik(true)
         // Link lines are emitted below, so the C++ runtime can be adjusted.
         .cargo_metadata(false)
         .probe("cwist")
         .unwrap_or_else(|err| {
             panic!(
-                "cwist-sys: libcwist was not found through pkg-config ({err}).\n\
+                "cwist-sys: libcwist 4.3.3 or newer was not found through pkg-config ({err}).\n\
                  Build and install CWIST first, for example:\n    \
                  make && make install PREFIX=$HOME/.local\n\
                  then set PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig"
