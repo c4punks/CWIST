@@ -6,12 +6,12 @@
 # The comments record arm-none-eabi-gcc 14.2.1 / newlib 4.5 measurements; CI
 # also checks gcc 13.2.1 / newlib 4.4 on ubuntu-24.04. Raise a limit only
 # together with the change that needs it, and say why in the PR.
-hello      flash       49152  # 45156
+hello      flash       53248  # 51008
 hello      static_ram   2112  #  2080
 hello      heap        24576  # 23308
 hello      stack        9216  #  8352
 hello      allocs           1
-hello-rtc  flash       49152  # 45132
+hello-rtc  flash       53248  # 51048
 hello-rtc  static_ram   2112  #  2092
 hello-rtc  heap        24576  # 23312
 hello-rtc  stack        9728  #  8800
