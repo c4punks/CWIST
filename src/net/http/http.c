@@ -4865,6 +4865,9 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
             const char *val_start = colon + 1;
             while (val_start < line_end && (*val_start == ' ' || *val_start == '\t')) val_start++;
             size_t val_len = line_end - val_start;
+            /* RFC 9110 section 5.5: trailing OWS is not part of the value. */
+            while (val_len > 0 && (val_start[val_len - 1] == ' ' || val_start[val_len - 1] == '\t'))
+                val_len--;
             for (size_t i = 0; i < val_len; i++) {
                 unsigned char c = (unsigned char)val_start[i];
                 if ((c < 0x20 && c != '\t') || c == 0x7f) goto malformed_request;

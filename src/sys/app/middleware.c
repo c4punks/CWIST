@@ -4,11 +4,16 @@
 #include <cwist/core/macros.h>
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/siphash/siphash.h>
+#include <cwist/sys/platform.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <sys/types.h>
 #include <strings.h>
 #include <time.h>
 #include <sys/time.h>
@@ -24,25 +29,53 @@
  */
 
 static pthread_mutex_t rid_mutex = PTHREAD_MUTEX_INITIALIZER;
-static unsigned int rid_seed = 0;
+static uint8_t rid_key[16];
+static uint64_t rid_counter = 0;
+static bool rid_keyed = false;
+#ifndef CWIST_PLATFORM_NO_PROC
+static pid_t rid_pid = 0;
+#endif
 
 /**
  * @brief Generate a short pseudo-random request identifier for logging and tracing.
  * @param id Receives 16 identifier characters and a NUL terminator.
  *
  * Writes into the caller's buffer so the middleware has no allocation that
- * can fail on a request path (#341).
+ * can fail on a request path (#341). Each process keys SipHash from the
+ * entropy source (re-keyed after fork) and hashes a per-process counter.
+ * The old time(NULL) ^ pthread_self() seed was identical in forked workers
+ * that took their first request in the same second, so they emitted the
+ * same ID sequence.
  */
 static void generate_request_id(char id[17]) {
     static const char charset[] = "abcdefghijklmnopqrstuvwxyz0123456789";
 
     pthread_mutex_lock(&rid_mutex);
-    if (rid_seed == 0) rid_seed = (unsigned int)time(NULL) ^ (unsigned int)pthread_self();
-    unsigned int seed = rid_seed++;
+#ifndef CWIST_PLATFORM_NO_PROC
+    pid_t pid = getpid();
+    if (!rid_keyed || rid_pid != pid) {
+        cwist_generate_hash_seed(rid_key);
+        rid_pid = pid;
+        rid_keyed = true;
+    }
+#else
+    if (!rid_keyed) {
+        cwist_generate_hash_seed(rid_key);
+        rid_keyed = true;
+    }
+#endif
+    uint64_t n = rid_counter++;
+    uint8_t key[16];
+    memcpy(key, rid_key, sizeof(key));
     pthread_mutex_unlock(&rid_mutex);
 
-    for (int i = 0; i < 16; i++) {
-        id[i] = charset[rand_r(&seed) % (sizeof(charset) - 1)];
+    for (int half = 0; half < 2; half++) {
+        uint64_t in = (n << 1) | (uint64_t)half;
+        uint64_t v = siphash24(&in, sizeof(in), key);
+        for (int i = 0; i < 8; i++) {
+            id[half * 8 + i] = charset[v % (sizeof(charset) - 1)];
+            v /= (sizeof(charset) - 1);
+        }
     }
     id[16] = '\0';
 }
@@ -603,7 +636,7 @@ void cwist_mw_cors_handler(cwist_http_request *req, cwist_http_response *res,
         cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods",
                               "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
         cwist_http_header_add(&res->headers, "Access-Control-Allow-Headers",
-                              "Content-Type, Authorization, X-Request-Id");
+                              "Content-Type, Authorization, X-Request-Id, X-CSRF-Token");
         cwist_http_header_add(&res->headers, "Access-Control-Max-Age", "86400"); // 24 hours
 
         res->status_code = CWIST_HTTP_NO_CONTENT; // 204 No Content

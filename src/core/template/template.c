@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <stdbool.h>
+#include "../utils/number_internal.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -244,7 +245,7 @@ static bool json_truthy(const cJSON *value) {
 static const char *json_scalar_text(const cJSON *value, char *buf, size_t buf_len) {
     switch (value->type & 0xFF) {
         case cJSON_String: return value->valuestring;
-        case cJSON_Number: snprintf(buf, buf_len, "%g", value->valuedouble); return buf;
+        case cJSON_Number: cwist_number_format_double(buf, buf_len, value->valuedouble); return buf;
         case cJSON_True: return "true";
         case cJSON_False: return "false";
         default: return NULL;
@@ -328,7 +329,9 @@ static cwist_sstring *apply_filters(const char *value, char *filters) {
             }
             cwist_sstring_destroy(current);
             current = next;
-            escaped = strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0;
+            /* Sticky: once escaped, later filters (upper, trim, ...) work
+             * on markup, and escaping it again would print "&amp;lt;". */
+            if (strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0) escaped = true;
         }
         filter = strtok_r(NULL, "|", &saveptr);
     }

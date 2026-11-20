@@ -141,6 +141,10 @@ static const char *guess_content_type(const char *name) {
     return "application/octet-stream";
 }
 
+const char *cwist_assets_content_type(const char *name) {
+    return guess_content_type(name);
+}
+
 /** Write the hex of the first ASSET_HASH_HEX/2 bytes of the SHA-256 digest of `data` to `out`. */
 static void content_hash(const void *data, size_t len, char out[ASSET_HASH_HEX + 1]) {
     static const char hex[] = "0123456789abcdef";
