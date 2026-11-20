@@ -87,7 +87,6 @@ cwist_job_id
 cwist_json_schema_align
 cwist_log_init
 cwist_log_write
-cwist_make_socket_ipv4
 cwist_malloc_shim
 cwist_metric_observe
 cwist_mux_group_create
