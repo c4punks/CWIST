@@ -1053,9 +1053,8 @@ int cwist_webrtc_handle_offer(cwist_webrtc_ctx *ctx, const char *offer, char *an
     if (!ctx || !offer || cwist_sdp_parse(offer, strlen(offer), &info) < 0) return -1;
     if (getpid() != ctx->owner_pid)
         return -1; /* inherited across fork(): this process has no loop for it */
-    const char *mid = info.mid[0] ? info.mid : "0";
-    if (cwist_sdp_write_answer(answer_out, out_len, ctx->fingerprint, ctx->ice_ufrag, ctx->ice_pwd,
-                               mid, ctx->host_ip, ctx->port) < 0)
+    if (cwist_sdp_write_answer_for_offer(answer_out, out_len, ctx->fingerprint, ctx->ice_ufrag,
+                                         ctx->ice_pwd, &info, ctx->host_ip, ctx->port) < 0)
         return -1;
     struct cwist_webrtc_conn *conn = conn_new(ctx, NULL, true);
     if (!conn) return -1;
