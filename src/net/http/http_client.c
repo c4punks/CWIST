@@ -412,15 +412,16 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
             /* libcurl drops "Name: " (nothing after the colon) as a request
              * to remove the header; "Name;" is its syntax for an empty value. */
             bool empty = node->value->data[strspn(node->value->data, " \t")] == '\0';
-            const char *fmt = empty ? "%s;" : "%s: %s";
-            int needed = snprintf(NULL, 0, fmt, node->key->data, node->value->data);
+            const char *value = empty ? "" : node->value->data;
+            const char *sep = empty ? ";" : ": ";
+            int needed = snprintf(NULL, 0, "%s%s%s", node->key->data, sep, value);
             char *header_line = needed >= 0 ? cwist_alloc((size_t)needed + 1) : NULL;
             if (!header_line) {
                 curl_slist_free_all(curl_headers);
                 err.error.err_i16 = -1;
                 return err;
             }
-            snprintf(header_line, (size_t)needed + 1, fmt, node->key->data, node->value->data);
+            snprintf(header_line, (size_t)needed + 1, "%s%s%s", node->key->data, sep, value);
             struct curl_slist *appended = curl_slist_append(curl_headers, header_line);
             cwist_free(header_line);
             if (!appended) {
