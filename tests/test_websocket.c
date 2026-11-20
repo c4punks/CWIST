@@ -142,6 +142,67 @@ static void test_handshake_validation(void) {
     printf("WebSocket handshake validation tests passed.\n");
 }
 
+static cwist_http_request *new_handshake_request(void) {
+    cwist_http_request *req = cwist_http_request_create();
+    assert(req != NULL);
+    cwist_http_header_add(&req->headers, "Connection", "keep-alive, Upgrade");
+    cwist_http_header_add(&req->headers, "Upgrade", "websocket");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "13");
+    return req;
+}
+
+static void test_handshake_protocol_errors(void) {
+    cwist_http_request *req = new_handshake_request();
+    cwist_http_header_remove(&req->headers, "Upgrade");
+    cwist_http_header_add(&req->headers, "Upgrade", "h2c, websocket");
+    cwist_http_response *res = cwist_http_response_create();
+    assert(cwist_websocket_upgrade_response(req, res));
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    req = new_handshake_request();
+    cwist_http_header_remove(&req->headers, "Sec-WebSocket-Version");
+    cwist_http_header_add(&req->headers, "Sec-WebSocket-Version", "8");
+    res = cwist_http_response_create();
+    assert(!cwist_websocket_upgrade_response(req, res));
+    assert(res->status_code == CWIST_HTTP_UPGRADE_REQUIRED);
+    assert(strcmp(cwist_http_header_get(res->headers, "Sec-WebSocket-Version"), "13") == 0);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    static const char *allowed[] = {"https://api.example", "https://app.example"};
+    req = new_handshake_request();
+    cwist_http_header_add(&req->headers, "Origin", "https://app.example");
+    res = cwist_http_response_create();
+    assert(cwist_websocket_upgrade_response_ex(req, res, allowed, 2));
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    req = new_handshake_request();
+    cwist_http_header_add(&req->headers, "Origin", "https://evil.example");
+    res = cwist_http_response_create();
+    assert(!cwist_websocket_upgrade_response_ex(req, res, allowed, 2));
+    assert(res->status_code == CWIST_HTTP_FORBIDDEN);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    req = new_handshake_request();
+    assert(cwist_websocket_upgrade_ex(req, sv[0], allowed, 2) == NULL);
+    char reply[1024];
+    ssize_t reply_len = read(sv[1], reply, sizeof(reply) - 1);
+    assert(reply_len > 0);
+    reply[reply_len] = '\0';
+    assert(strstr(reply, "403 Forbidden") != NULL);
+    close(sv[0]);
+    close(sv[1]);
+    cwist_http_request_destroy(req);
+
+    printf("WebSocket handshake protocol error tests passed.\n");
+}
+
 static void send_masked_frame(int fd, uint8_t head0, const uint8_t *payload, size_t len) {
     assert(len < 126);
     uint8_t frame[140];
@@ -641,6 +702,7 @@ int main() {
     test_handshake_key_generation();
     test_handshake_rejects_bad_version();
     test_handshake_validation();
+    test_handshake_protocol_errors();
     test_websocket_sequenced();
     test_orphan_continuation_rejected();
     test_reserved_opcodes_rejected();

@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (818) ==
+== functions (820) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -819,12 +819,14 @@ cwist_websocket_send
 cwist_websocket_send_fragments
 cwist_websocket_send_sequenced
 cwist_websocket_upgrade
+cwist_websocket_upgrade_ex
 cwist_websocket_upgrade_response
+cwist_websocket_upgrade_response_ex
 cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (819) ==
+== function signatures (821) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1640,7 +1642,9 @@ cwist_websocket_send: int (cwist_websocket *, cwist_ws_opcode_t, const uint8_t *
 cwist_websocket_send_fragments: int (cwist_websocket *, cwist_ws_opcode_t, const cwist_ws_fragment *, size_t)
 cwist_websocket_send_sequenced: int (cwist_websocket *, const uint8_t *, size_t, uint16_t)
 cwist_websocket_upgrade: cwist_websocket * (cwist_http_request *, int)
+cwist_websocket_upgrade_ex: cwist_websocket * (cwist_http_request *, int, const char *const *, size_t)
 cwist_websocket_upgrade_response: bool (cwist_http_request *, cwist_http_response *)
+cwist_websocket_upgrade_response_ex: bool (cwist_http_request *, cwist_http_response *, const char *const *, size_t)
 cwist_zod_parse: cwist_zod_result_t (const char *, const cwist_schema_t *, cJSON **)
 cwist_zod_print_errors: void (const cwist_zod_result_t *)
 cwist_zod_validate: cwist_zod_result_t (const cJSON *, const cwist_schema_t *)

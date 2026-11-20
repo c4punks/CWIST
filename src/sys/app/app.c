@@ -2887,7 +2887,8 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
                     req->async_conn = NULL;
                     req->ws_async_handoff = true;
                 }
-            } else {
+            } else if (res->status_code != CWIST_HTTP_FORBIDDEN &&
+                       res->status_code != CWIST_HTTP_UPGRADE_REQUIRED) {
                 res->status_code = CWIST_HTTP_BAD_REQUEST;
                 cwist_sstring_assign(res->body, "WebSocket Upgrade Failed");
             }
