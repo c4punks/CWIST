@@ -15,6 +15,227 @@ static void write_text(const char *path, const char *text) {
     assert(fclose(file) == 0);
 }
 
+static void assert_error(const cwist_template_error_t *error, cwist_template_error_code_t code,
+                         size_t offset, const char *path, const char *tag) {
+    assert(error->code == code);
+    assert(error->byte_offset == offset);
+    assert(strcmp(error->file_path, path) == 0);
+    if (tag) {
+        assert(error->tag_type != NULL && strcmp(error->tag_type, tag) == 0);
+    } else {
+        assert(error->tag_type == NULL);
+    }
+}
+
+static void test_string_diagnostics(const cJSON *context) {
+    const struct {
+        const char *text;
+        cwist_template_error_code_t code;
+        size_t offset;
+        const char *tag;
+    } cases[] = {
+        {NULL, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT, 0, NULL},
+        {"Hello {{ name", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 6, "variable"},
+        {"\xc3\xa9{{ name", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 2, "variable"},
+        {"Hello {% if name", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 6, "if"},
+        {"Hello {% for item", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 6, "for"},
+        {"Hello {% include", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 6, "include"},
+        {"Hello {% unknown", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 6, "control"},
+        {"Hello {% if name %}yes", CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK, 6, "if"},
+        {"Hello {% for item in items %}yes", CWIST_TEMPLATE_ERROR_UNCLOSED_BLOCK, 6, "for"},
+        {"{% if name %}{% endif", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 13, "control"},
+        {"{% for x in items %}{% endfor", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 20, "control"},
+        {"{% if name %}{{ bad{% endif %}", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 13, "variable"},
+        {"{% if absent %}{{ bad{% endif %}", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 15, "variable"},
+        {"{% for x in absent %}{{ bad{% endfor %}", CWIST_TEMPLATE_ERROR_UNCLOSED_TAG, 21,
+         "variable"},
+    };
+    cwist_template_error_t error;
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        assert(cwist_template_render_ex(cases[i].text, context, &error) == NULL);
+        assert_error(&error, cases[i].code, cases[i].offset, "", cases[i].tag);
+        assert(cwist_template_render(cases[i].text, context) == NULL);
+    }
+
+    memset(&error, 0xff, sizeof(error));
+    cwist_sstring *rendered = cwist_template_render_ex("Hello {{ name }}", context, &error);
+    assert(rendered != NULL && strcmp(rendered->data, "Hello world") == 0);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_NONE, 0, "", NULL);
+    cwist_sstring_destroy(rendered);
+    rendered = cwist_template_render_ex("plain text", NULL, NULL);
+    assert(rendered != NULL && strcmp(rendered->data, "plain text") == 0);
+    cwist_sstring_destroy(rendered);
+
+    const struct {
+        const char *text;
+        const char *expected;
+    } blocks[] = {
+        {"{% if name %}yes{# {% endif %} {% if missing %} #}{% else %}no{% endif %}", "yes"},
+        {"{% if absent %}no{% else %}{% if name %}yes{% endif %}{% endif %}", "yes"},
+        {"{% for x in items %}{{ x }}{# {% endfor %} #}{% endfor %}", "1"},
+        {"{% for x in items %}{% for y in items %}{{ y }}{% endfor %}{% endfor %}", "1"},
+    };
+    for (size_t i = 0; i < sizeof(blocks) / sizeof(blocks[0]); i++) {
+        rendered = cwist_template_render_ex(blocks[i].text, context, &error);
+        assert(rendered != NULL && strcmp(rendered->data, blocks[i].expected) == 0);
+        assert_error(&error, CWIST_TEMPLATE_ERROR_NONE, 0, "", NULL);
+        cwist_sstring_destroy(rendered);
+    }
+
+    /* The 33rd nested block fails at its opening, not at the start of its body. */
+    char nested[2048] = "";
+    for (int i = 0; i < 32; i++) strcat(nested, "{% if name %}");
+    size_t opening = strlen(nested);
+    strcat(nested, "{{ name }}");
+    for (int i = 0; i < 32; i++) strcat(nested, "{% endif %}");
+    rendered = cwist_template_render_ex(nested, context, &error);
+    assert(rendered != NULL && strcmp(rendered->data, "world") == 0);
+    cwist_sstring_destroy(rendered);
+    memmove(nested + opening + 13, nested + opening, strlen(nested + opening) + 1);
+    memcpy(nested + opening, "{% if name %}", 13);
+    strcat(nested, "{% endif %}");
+    assert(cwist_template_render_ex(nested, context, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_DEPTH, opening, "", "if");
+}
+
+static void join_path(char *out, size_t out_len, const char *dir, const char *name) {
+    int n = snprintf(out, out_len, "%s/%s", dir, name);
+    assert(n > 0 && (size_t)n < out_len);
+}
+
+static void assert_rendered(cwist_sstring *rendered, const char *expected) {
+    assert(rendered != NULL && strcmp(rendered->data, expected) == 0);
+    cwist_sstring_destroy(rendered);
+}
+
+static void test_autoescape_filters(cJSON *context) {
+    assert(cJSON_AddStringToObject(context, "html", "<script>alert(1)</script>") != NULL);
+    assert_rendered(cwist_template_render("{{ html }}", context),
+                    "&lt;script&gt;alert(1)&lt;/script&gt;");
+    assert_rendered(cwist_template_render("{{ html | safe }}", context),
+                    "<script>alert(1)</script>");
+    assert_rendered(cwist_template_render("{{ html | upper | e }}", context),
+                    "&lt;SCRIPT&gt;ALERT(1)&lt;/SCRIPT&gt;");
+    assert_rendered(cwist_template_render("{{ html | upper | safe }}", context),
+                    "<SCRIPT>ALERT(1)</SCRIPT>");
+    assert_rendered(cwist_template_render("{{ html | unknown }}", context),
+                    "&lt;script&gt;alert(1)&lt;/script&gt;");
+    assert_rendered(cwist_template_render("{{ html | e }}", context),
+                    "&lt;script&gt;alert(1)&lt;/script&gt;");
+}
+
+static void test_include_root(const cJSON *context) {
+    char base[] = "/tmp/cwist-template-root-XXXXXX";
+    assert(mkdtemp(base) != NULL);
+
+    char root[PATH_MAX], partials[PATH_MAX], outside[PATH_MAX], evil[PATH_MAX];
+    join_path(root, sizeof(root), base, "root");
+    join_path(partials, sizeof(partials), root, "partials");
+    join_path(outside, sizeof(outside), base, "outside");
+    join_path(evil, sizeof(evil), base, "root-evil");
+    assert(mkdir(root, 0700) == 0);
+    assert(mkdir(partials, 0700) == 0);
+    assert(mkdir(outside, 0700) == 0);
+    assert(mkdir(evil, 0700) == 0);
+
+    char nav[PATH_MAX], up[PATH_MAX], page[PATH_MAX], escape[PATH_MAX], secret[PATH_MAX];
+    char evil_file[PATH_MAX], abs_in[PATH_MAX], abs_out[PATH_MAX], link[PATH_MAX];
+    char via_link[PATH_MAX], nested[PATH_MAX], sibling[PATH_MAX], missing[PATH_MAX];
+    join_path(nav, sizeof(nav), partials, "nav.html");
+    join_path(up, sizeof(up), partials, "up.html");
+    join_path(page, sizeof(page), root, "page.html");
+    join_path(escape, sizeof(escape), root, "escape.html");
+    join_path(secret, sizeof(secret), outside, "secret.html");
+    join_path(evil_file, sizeof(evil_file), evil, "x.html");
+    join_path(abs_in, sizeof(abs_in), root, "abs_in.html");
+    join_path(abs_out, sizeof(abs_out), root, "abs_out.html");
+    join_path(link, sizeof(link), root, "link.html");
+    join_path(via_link, sizeof(via_link), root, "via_link.html");
+    join_path(nested, sizeof(nested), root, "nested.html");
+    join_path(sibling, sizeof(sibling), root, "sibling.html");
+    join_path(missing, sizeof(missing), root, "missing.html");
+
+    char text[PATH_MAX + 64];
+    write_text(nav, "N{{ name }}");
+    write_text(secret, "SECRET");
+    write_text(evil_file, "EVIL");
+    write_text(page, "P[{% include \"partials/nav.html\" %}]");
+    write_text(escape, "x{% include \"../outside/secret.html\" %}");
+    write_text(up, "u{% include \"../../outside/secret.html\" %}");
+    write_text(nested, "{% include \"partials/up.html\" %}");
+    write_text(sibling, "{% include \"../root-evil/x.html\" %}");
+    write_text(missing, "{% include \"partials/none.html\" %}");
+    assert(snprintf(text, sizeof(text), "{%% include \"%s\" %%}", nav) > 0);
+    write_text(abs_in, text);
+    assert(snprintf(text, sizeof(text), "{%% include \"%s\" %%}", secret) > 0);
+    write_text(abs_out, text);
+    assert(symlink(secret, link) == 0);
+    write_text(via_link, "{% include \"link.html\" %}");
+
+    cwist_template_error_t error;
+
+    /* Includes inside the root render as usual. */
+    assert_rendered(cwist_template_render_file_rooted(page, context, root, &error), "P[Nworld]");
+    assert_error(&error, CWIST_TEMPLATE_ERROR_NONE, 0, "", NULL);
+    assert_rendered(cwist_template_render_file_rooted(abs_in, context, root, &error), "Nworld");
+
+    /* "..", absolute paths, symlinks and prefix-sharing siblings cannot leave it. */
+    assert(cwist_template_render_file_rooted(escape, context, root, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_FORBIDDEN, 1, escape, "include");
+    assert(cwist_template_render_file_rooted(abs_out, context, root, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_FORBIDDEN, 0, abs_out, "include");
+    assert(cwist_template_render_file_rooted(via_link, context, root, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_FORBIDDEN, 0, via_link, "include");
+    assert(cwist_template_render_file_rooted(sibling, context, root, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_FORBIDDEN, 0, sibling, "include");
+
+    /* An escape deep in the include chain names the file that tried it. */
+    char up_as_included[PATH_MAX];
+    join_path(up_as_included, sizeof(up_as_included), root, "partials/up.html");
+    assert(cwist_template_render_file_rooted(nested, context, root, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_FORBIDDEN, 1, up_as_included, "include");
+
+    /* A missing file inside the root is still an I/O error. */
+    assert(cwist_template_render_file_rooted(missing, context, root, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_IO, 0, missing, "include");
+
+    /* In-memory templates resolve relative includes against the root. */
+    assert_rendered(
+        cwist_template_render_rooted("{% include \"partials/nav.html\" %}", context, root, &error),
+        "Nworld");
+    assert(cwist_template_render_rooted("ab{% include \"../outside/secret.html\" %}", context, root,
+                                        &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_FORBIDDEN, 2, "", "include");
+
+    /* The root must exist. */
+    char no_root[PATH_MAX];
+    join_path(no_root, sizeof(no_root), base, "absent");
+    assert(cwist_template_render_rooted("x", context, no_root, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT, 0, "", NULL);
+    assert(cwist_template_render_file_rooted(page, context, NULL, &error) == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT, 0, "", NULL);
+
+    /* Without a root, behavior is unchanged: the escape is followed. */
+    assert_rendered(cwist_template_render_file_ex(escape, context, &error), "xSECRET");
+    assert_rendered(cwist_template_render_file(via_link, context), "SECRET");
+
+    const char *files[] = {nav,     up,   page,     escape, secret,  evil_file, abs_in,
+                           abs_out, link, via_link, nested, sibling, missing};
+    for (size_t i = 0; i < sizeof(files) / sizeof(files[0]); i++) assert(unlink(files[i]) == 0);
+    assert(rmdir(partials) == 0);
+    assert(rmdir(root) == 0);
+    assert(rmdir(outside) == 0);
+    assert(rmdir(evil) == 0);
+    assert(rmdir(base) == 0);
+}
+
+static void test_unclosed_comment_is_an_error(void) {
+    cwist_template_error_t error;
+    cwist_sstring *out = cwist_template_render_ex("before {# unterminated", NULL, &error);
+    assert(out == NULL);
+    assert(error.code == CWIST_TEMPLATE_ERROR_UNCLOSED_TAG);
+}
+
 int main(void) {
     cJSON *context = cJSON_CreateObject();
     assert(context != NULL);
