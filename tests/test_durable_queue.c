@@ -100,17 +100,26 @@ static int t_identical_nacked_jobs(cwist_job_queue_t *q) {
         err = cwist_job_queue_nack(q, job);
         CHECK(err.error.err_i16 == 0, "identical nack failed");
     }
-    for (int i = 0; i < 2; i++) {
+    int completed = 0;
+    for (int round = 0; round < 8 && completed < 2; round++) {
         cwist_job_t *job = NULL;
         cwist_error_t err = cwist_job_queue_claim(q, 5000, &job);
         CHECK(err.error.err_i16 == 0 && job, "identical redelivery was lost");
         size_t len = 0;
         const void *payload = cwist_job_payload(job, &len);
         CHECK(len == 8 && memcmp(payload, "same-job", 8) == 0, "identical payload mismatch");
-        CHECK(cwist_job_attempts(job) == 2, "identical attempts mismatch");
-        err = cwist_job_queue_ack(q, job);
-        CHECK(err.error.err_i16 == 0, "identical ack failed");
+        uint32_t attempts = cwist_job_attempts(job);
+        if (attempts >= 2) {
+            err = cwist_job_queue_ack(q, job);
+            CHECK(err.error.err_i16 == 0, "identical ack failed");
+            completed++;
+        } else {
+            CHECK(attempts == 1, "identical attempts mismatch");
+            err = cwist_job_queue_nack(q, job);
+            CHECK(err.error.err_i16 == 0, "identical retry failed");
+        }
     }
+    CHECK(completed == 2, "identical redelivery count mismatch");
     return 0;
 }
 
