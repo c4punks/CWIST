@@ -325,7 +325,7 @@ int main(void) {
             failures++;
             continue;
         }
-        char request[1024];
+        char request[8192];
         snprintf(request, sizeof(request), "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\n%s\r\n",
                  conditional[i].headers);
         send_request(fd, request);

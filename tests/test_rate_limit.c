@@ -8,6 +8,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+static int test_peer_fd(void) {
+    int listener = socket(AF_INET, SOCK_STREAM, 0);
+    assert(listener >= 0);
+    struct sockaddr_in addr = {.sin_family = AF_INET, .sin_addr.s_addr = htonl(INADDR_LOOPBACK)};
+    assert(bind(listener, (struct sockaddr *)&addr, sizeof(addr)) == 0);
+    assert(listen(listener, 1) == 0);
+    socklen_t addr_len = sizeof(addr);
+    assert(getsockname(listener, (struct sockaddr *)&addr, &addr_len) == 0);
+    int client = socket(AF_INET, SOCK_STREAM, 0);
+    assert(client >= 0);
+    assert(connect(client, (struct sockaddr *)&addr, sizeof(addr)) == 0);
+    int peer = accept(listener, NULL, NULL);
+    assert(peer >= 0);
+    close(client);
+    close(listener);
+    return peer;
+}
 
 static void dummy_next(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
