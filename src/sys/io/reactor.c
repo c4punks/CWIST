@@ -494,11 +494,22 @@ bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor) {
  * run thread of the reactor that armed the fd. Every state value is only a
  * hint for epoll_ctl: a stale one costs one failed call (ENOENT/EEXIST) and
  * the fallback, never a lost registration, except RX, which recv_arm trusts
- * only for the same connection pointer (see cwist_reactor_fd_forget). */
+ * only for the same connection pointer (see cwist_reactor_fd_forget).
+ *
+ * The table is shared by every reactor, but an fd number moves between
+ * reactors when one closes it and the kernel hands it to a connection that
+ * another reactor serves. An epoll event already fetched for the closed
+ * socket can then still be in the first reactor's batch. owner records the
+ * reactor whose run thread may use the RX fields; only that reactor handles
+ * RX events and queued receives for the slot. recv_arm takes ownership
+ * before it writes any field, and cwist_reactor_rx_release() gives it up
+ * on the closing connection's run thread before the fd number can be reused
+ * (issue #950). */
 enum { EPFD_UNKNOWN = 0, EPFD_ONESHOT = 1, EPFD_RX = 2 };
 
 typedef struct {
     _Atomic uint8_t state;
+    _Atomic(cwist_reactor_t *) owner; /* Reactor allowed to touch the fields below. */
     bool armed;      /* A receive is armed: the next readable edge recv()s. */
     bool queued;     /* On the owning reactor's rx_ready list. */
     bool maybe_more; /* Bytes may be waiting that no new edge will report. */
@@ -546,6 +557,21 @@ static uint8_t epfd_get_state(int fd) {
 
 void cwist_reactor_fd_forget(int fd) {
     epfd_set_state(fd, EPFD_UNKNOWN);
+}
+
+void cwist_reactor_rx_release(cwist_reactor_t *reactor, int fd) {
+    epoll_fd_slot_t *slot = epfd_slot(fd, false);
+    if (!slot || !reactor) return;
+    /* Only the owner gives the slot up; if another reactor already took the
+     * reused fd number, the CAS fails and its state is left alone. */
+    cwist_reactor_t *expected = reactor;
+    atomic_compare_exchange_strong_explicit(&slot->owner, &expected, NULL, memory_order_acq_rel,
+                                            memory_order_relaxed);
+}
+
+/** @brief True when @p r owns @p slot's RX fields. */
+static inline bool rx_slot_owned(const epoll_fd_slot_t *slot, const cwist_reactor_t *r) {
+    return atomic_load_explicit(&((epoll_fd_slot_t *)slot)->owner, memory_order_acquire) == r;
 }
 
 /** @brief Point @p fd's registration on @p epfd at @p ev, trying MOD or ADD first per the hint. */
@@ -599,7 +625,11 @@ static void rx_epoll_recv(cwist_reactor_t *r, int fd, epoll_fd_slot_t *slot) {
 /** @brief Handle one readiness event of an RX-mode fd. Run thread only. */
 static void rx_epoll_event(cwist_reactor_t *r, int fd) {
     epoll_fd_slot_t *slot = epfd_slot(fd, false);
-    if (!slot || atomic_load_explicit(&slot->state, memory_order_relaxed) != EPFD_RX) return;
+    /* An event for an fd another reactor now owns belongs to a socket this
+     * reactor already closed: drop it without touching the slot. */
+    if (!slot || !rx_slot_owned(slot, r) ||
+        atomic_load_explicit(&slot->state, memory_order_relaxed) != EPFD_RX)
+        return;
     if (!slot->armed) {
         /* The connection is between receives (serving, or parked on a
          * deferred response). Remember the edge for the next arm. */
@@ -616,7 +646,7 @@ static void rx_epoll_drain_ready(cwist_reactor_t *r) {
     for (uint32_t i = 0; i < n; i++) {
         int fd = r->rx_ready[i];
         epoll_fd_slot_t *slot = epfd_slot(fd, false);
-        if (!slot) continue;
+        if (!slot || !rx_slot_owned(slot, r)) continue;
         slot->queued = false;
         if (atomic_load_explicit(&slot->state, memory_order_relaxed) != EPFD_RX || !slot->armed) {
             continue;
@@ -636,8 +666,14 @@ static bool rx_epoll_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigned l
     if (!reactor_on_run_thread(reactor)) return false;
     epoll_fd_slot_t *slot = epfd_slot(fd, true);
     if (!slot) return false;
-    bool registered =
-        atomic_load_explicit(&slot->state, memory_order_relaxed) == EPFD_RX && slot->conn == conn;
+    /* Take the slot before writing any field; a previous owner has released
+     * it (or never will touch it again: its socket is closed). */
+    cwist_reactor_t *prev =
+        atomic_exchange_explicit(&slot->owner, reactor, memory_order_acq_rel);
+    if (prev != reactor) slot->queued = false; /* Any queue entry is the old owner's. */
+    bool registered = prev == reactor &&
+                      atomic_load_explicit(&slot->state, memory_order_relaxed) == EPFD_RX &&
+                      slot->conn == conn;
     slot->buf = buf;
     slot->len = len;
     slot->conn = conn;

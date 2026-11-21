@@ -63,6 +63,12 @@ bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor);
  * must never let an RX arm for a new connection skip registration). */
 void cwist_reactor_fd_forget(int fd);
 
+/* Give up reactor's RX ownership of fd.  Call on the reactor's run thread
+ * when the connection on fd closes, before control returns to the event
+ * loop, so a stale event for the closed socket is not handled against the
+ * slot of a new connection that reuses the fd number (issue #950). */
+void cwist_reactor_rx_release(cwist_reactor_t *reactor, int fd);
+
 /* Completion handler for tagged RECV SQEs.  conn is the untagged connection
  * pointer; res is the CQE result: byte count, 0 (EOF), -EAGAIN, or another
  * negative errno.  Invoked on the reactor owner thread while dispatching. */
@@ -126,6 +132,10 @@ static inline bool cwist_reactor_rx_supported(const cwist_reactor_t *reactor) {
     return false;
 }
 static inline void cwist_reactor_fd_forget(int fd) {
+    (void)fd;
+}
+static inline void cwist_reactor_rx_release(cwist_reactor_t *reactor, int fd) {
+    (void)reactor;
     (void)fd;
 }
 typedef void (*cwist_rx_cb_t)(void *conn, int res);
