@@ -39,6 +39,9 @@ cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result);
 ```
 Executes a SELECT query. `result` is populated with a cJSON Array of Objects on
 success and reset to `NULL` if validation or SQLite execution fails.
+Every non-NULL value is a JSON string whatever its SQLite type (`"id":"1"`,
+not `"id":1`), and NULL is JSON `null`. Convert numbers yourself, or use the
+ORM, which keeps column types.
 
 Integrate the handle with the framework via `cwist_app_use_db(app, "app.db");` — every incoming `cwist_http_request` then exposes the pointer at `req->db`.
 

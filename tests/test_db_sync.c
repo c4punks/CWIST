@@ -184,8 +184,44 @@ static void test_authenticated_sync_survives_unauthenticated_client(void) {
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 
+/* A client that connects and never sends its hello must not hold the serve
+ * window: after the per-client hello timeout the server accepts the next
+ * client, so the real replica still syncs well before the 30 s deadline. */
+static void test_silent_client_does_not_block_sync(void) {
+    int port = 0;
+    int listener = listener_on_loopback(&port);
+    close(listener);
+    cwist_db_crypt_ctx_t ctx;
+    memset(&ctx, 0x31, sizeof(ctx));
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        sqlite3 *db = NULL;
+        assert(sqlite3_open(":memory:", &db) == SQLITE_OK);
+        int rc = cwist_db_sync_serve(db, &ctx, port);
+        sqlite3_close(db);
+        _exit(rc == CWIST_DB_SYNC_OK ? 0 : 1);
+    }
+
+    int silent = connect_loopback(port);
+    assert(silent >= 0);
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    unsigned char *out = NULL;
+    size_t out_len = 0;
+    assert(cwist_db_sync_pull("127.0.0.1", port, &ctx, &out, &out_len) == CWIST_DB_SYNC_OK);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    free(out);
+    assert(t1.tv_sec - t0.tv_sec < 15);
+    close(silent);
+    int status = 0;
+    assert(waitpid(pid, &status, 0) == pid);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+}
+
 int main(void) {
     test_oversized_blob_is_rejected_before_allocation();
+    test_silent_client_does_not_block_sync();
     test_reset_peer_does_not_raise_sigpipe();
     test_authenticated_sync_survives_unauthenticated_client();
     puts("test_db_sync: OK");

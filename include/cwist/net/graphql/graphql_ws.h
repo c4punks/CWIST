@@ -57,6 +57,14 @@ cwist_graphql_ws_t *cwist_graphql_ws_create(cwist_graphql_schema_t *schema);
  *  the protocol layer's point of view and must be gone first. */
 void cwist_graphql_ws_destroy(cwist_graphql_ws_t *gws);
 
+/** Default limit of open subscriptions per connection. */
+#define CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS 100
+
+/** Set the limit of open subscriptions per connection (default
+ *  CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS; 0 removes the limit). A `subscribe`
+ *  beyond it receives an operation-level `error`; the connection stays open. */
+void cwist_graphql_ws_set_max_operations(cwist_graphql_ws_t *gws, size_t max);
+
 /** Register or replace a subscription field resolver on the endpoint. */
 bool cwist_graphql_ws_add_subscription(cwist_graphql_ws_t *gws, const char *field,
                                        cwist_graphql_subscribe_fn subscribe_fn, void *ctx);

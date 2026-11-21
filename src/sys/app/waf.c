@@ -1,6 +1,7 @@
 /** @file waf.c @brief Bounded, case-insensitive WAF-lite checks. */
 #include <cwist/sys/app/waf.h>
 #include <cwist/net/http/http.h>
+#include <cwist/net/http/multipart.h>
 #include <cwist/core/mem/alloc.h>
 #include <string.h>
 #include <strings.h>
@@ -220,10 +221,92 @@ static bool waf_headers_safe(const cwist_http_header_node *header) {
     return true;
 }
 
+/** @brief Compare the media type of a Content-Type value (before ';').
+ * @param ct Content-Type header value.
+ * @param type Lowercase media type to compare with.
+ * @return true when @p ct names @p type, ignoring case and parameters. */
+static bool waf_media_is(const char *ct, const char *type) {
+    size_t n = strlen(type);
+    if (strncasecmp(ct, type, n) != 0) return false;
+    char c = ct[n];
+    return c == '\0' || c == ';' || c == ' ' || c == '\t';
+}
+
+/** @brief Decide whether a body of this Content-Type is text the WAF scans.
+ *
+ * Text media (text/x, JSON, XML, GraphQL, JavaScript, and +json / +xml
+ * suffixes) and bodies without a Content-Type are scanned. Other media types
+ * are opaque bytes (images, archives, protobuf, octet-stream) that the
+ * framework does not interpret, so they are handed to the handler unchanged,
+ * like Drogon does; their size is bounded by the body limit, not by the WAF.
+ *
+ * @param ct Content-Type header value, or NULL.
+ * @return true when the body should be scanned as text. */
+static bool waf_body_is_text(const char *ct) {
+    if (!ct) return true;
+    while (*ct == ' ' || *ct == '\t') ct++;
+    if (*ct == '\0') return true;
+    if (strncasecmp(ct, "text/", 5) == 0) return true;
+    static const char *const text_types[] = {"application/json", "application/xml",
+                                             "application/graphql", "application/javascript",
+                                             "application/ecmascript"};
+    for (size_t i = 0; i < sizeof(text_types) / sizeof(text_types[0]); ++i)
+        if (waf_media_is(ct, text_types[i])) return true;
+    const char *end = strchr(ct, ';');
+    size_t len = end ? (size_t)(end - ct) : strlen(ct);
+    while (len > 0 && (ct[len - 1] == ' ' || ct[len - 1] == '\t')) len--;
+    return (len > 5 && strncasecmp(ct + len - 5, "+json", 5) == 0) ||
+           (len > 4 && strncasecmp(ct + len - 4, "+xml", 4) == 0);
+}
+
+/** @brief Screen a multipart/form-data body part by part.
+ *
+ * Part names and file names are always scanned. Part contents are scanned
+ * only for form fields (no filename) whose own Content-Type is text, so file
+ * uploads pass unchanged. A body that does not parse as multipart is rejected.
+ *
+ * @param body Request body.
+ * @param ct Content-Type header value carrying the boundary.
+ * @return true when every scanned piece is safe. */
+static bool waf_multipart_safe(const cwist_sstring *body, const char *ct) {
+    if (!body || !body->data || body->size == 0) return true;
+    char *boundary = cwist_multipart_extract_boundary(ct);
+    if (!boundary) return false;
+    cwist_multipart_result *mp = cwist_multipart_parse(body->data, body->size, boundary);
+    cwist_free(boundary);
+    if (!mp) return false;
+    bool safe = true;
+    for (cwist_multipart_field *f = mp->fields; f && safe; f = f->next) {
+        if (f->name && !cwist_waf_is_safe(f->name, strlen(f->name))) safe = false;
+        if (safe && f->filename && !cwist_waf_is_safe(f->filename, strlen(f->filename)))
+            safe = false;
+        if (safe && !f->filename && waf_body_is_text(f->content_type) &&
+            !cwist_waf_is_safe(f->data, f->data_len))
+            safe = false;
+    }
+    cwist_multipart_result_destroy(mp);
+    return safe;
+}
+
+/** @brief Screen the request body according to its Content-Type.
+ * @param req Request whose body is screened.
+ * @return true when the body is safe or is opaque binary content. */
+static bool waf_body_safe(const cwist_http_request *req) {
+    if (!req->body || !req->body->data || req->body->size == 0) return true;
+    const char *ct = cwist_http_header_get(req->headers, "Content-Type");
+    if (ct && waf_media_is(ct, "application/x-www-form-urlencoded"))
+        return waf_url_safe(req->body, true);
+    if (ct && waf_media_is(ct, "multipart/form-data")) return waf_multipart_safe(req->body, ct);
+    if (waf_body_is_text(ct)) return cwist_waf_is_safe(req->body->data, req->body->size);
+    return true;
+}
+
 /** @brief Middleware handler that screens a request with the WAF checks.
  *
  * Decodes path, query, and form-body URL encoding before scanning. Header
  * names are screened without rejecting generic header values such as Accept.
+ * Text bodies are scanned, multipart bodies are scanned per part (names, file
+ * names, text fields), and opaque binary bodies are not scanned.
  * If any part fails, the response is set to HTTP 400 with a fixed body and
  * the next handler is not invoked; otherwise the request is passed through.
  *
@@ -232,13 +315,8 @@ static bool waf_headers_safe(const cwist_http_header_node *header) {
  * @param next Next handler in the chain, invoked when the request passes. */
 static void waf_handler(cwist_http_request *req, cwist_http_response *res,
                         cwist_handler_func next) {
-    const char *content_type = req ? cwist_http_header_get(req->headers, "Content-Type") : NULL;
-    bool form_body = content_type &&
-                     strncasecmp(content_type, "application/x-www-form-urlencoded", 33) == 0;
     bool safe = req && waf_url_safe(req->path, false) && waf_url_safe(req->query, true) &&
-                (form_body ? waf_url_safe(req->body, true)
-                           : (!req->body || cwist_waf_is_safe(req->body->data, req->body->size))) &&
-                waf_headers_safe(req->headers);
+                waf_body_safe(req) && waf_headers_safe(req->headers);
     if (!safe) {
         res->status_code = CWIST_HTTP_BAD_REQUEST;
         cwist_sstring_assign(res->body, "Request rejected by WAF");

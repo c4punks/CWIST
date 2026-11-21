@@ -1039,8 +1039,11 @@ static const char *const grpc_status_names[] = {
  */
 static int grpc_status_from_json(const cJSON *item, uint32_t *bit) {
     if (cJSON_IsNumber(item)) {
+        /* Range-check the double first: converting an out-of-range value
+         * to int is undefined (C17 section 6.3.1.4). */
+        if (!(item->valuedouble >= 0 && item->valuedouble <= 16)) return -1;
         int code = (int)item->valuedouble;
-        if (code < 0 || code > 16) return -1;
+        if ((double)code != item->valuedouble) return -1;
         *bit = CWIST_GRPC_STATUS_BIT(code);
         return 0;
     }
@@ -1055,23 +1058,45 @@ static int grpc_status_from_json(const cJSON *item, uint32_t *bit) {
     return -1;
 }
 
+/** @brief Largest Duration seconds value allowed by google.protobuf.Duration. */
+#define GRPC_DURATION_MAX_SECONDS 315576000000ULL
+
 /** @brief Parse a proto3 JSON Duration ("1.5s") into milliseconds.
  *
- * The value is rounded to the nearest millisecond, minimum 1 ms.
+ * Accepts only the proto3 JSON form: decimal seconds, an optional fraction of
+ * 1 to 9 digits, and an "s" suffix, at most 315576000000 s. Signs, exponents,
+ * hex, "inf" and "nan" are rejected. The value is rounded to the nearest
+ * millisecond, minimum 1 ms.
  *
  * @param[out] out_ms parsed duration in milliseconds
  * @retval 0 parsed
- * @retval -1 not a string, missing "s" suffix, or non-positive value
+ * @retval -1 not a string, malformed, out of range, or zero
  */
 static int grpc_json_duration_ms(const cJSON *item, uint64_t *out_ms) {
-    if (!cJSON_IsString(item)) return -1;
-    const char *s = item->valuestring;
-    size_t len = strlen(s);
-    if (len < 2 || s[len - 1] != 's') return -1;
-    char *end = NULL;
-    double v = strtod(s, &end);
-    if (end != s + len - 1 || v <= 0) return -1;
-    *out_ms = (uint64_t)(v * 1000.0 + 0.5);
+    if (!cJSON_IsString(item) || !item->valuestring) return -1;
+    const char *p = item->valuestring;
+    uint64_t sec = 0;
+    size_t int_digits = 0;
+    while (*p >= '0' && *p <= '9') {
+        sec = sec * 10 + (uint64_t)(*p++ - '0');
+        if (sec > GRPC_DURATION_MAX_SECONDS) return -1;
+        int_digits++;
+    }
+    if (int_digits == 0) return -1;
+    uint64_t nanos = 0;
+    if (*p == '.') {
+        p++;
+        size_t frac_digits = 0;
+        while (*p >= '0' && *p <= '9') {
+            if (++frac_digits > 9) return -1;
+            nanos = nanos * 10 + (uint64_t)(*p++ - '0');
+        }
+        if (frac_digits == 0) return -1;
+        while (frac_digits++ < 9) nanos *= 10;
+    }
+    if (p[0] != 's' || p[1] != '\0') return -1;
+    if (sec == 0 && nanos == 0) return -1;
+    *out_ms = sec * 1000 + (nanos + 500000) / 1000000;
     if (*out_ms == 0) *out_ms = 1;
     return 0;
 }

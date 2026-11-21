@@ -59,15 +59,39 @@ static uint64_t now_ms(void) {
     return (uint64_t)ts.tv_sec * 1000ULL + (uint64_t)ts.tv_nsec / 1000000ULL;
 }
 
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#define SCHED_COND_CLOCK CLOCK_MONOTONIC
+#else
+/* macOS has no pthread_condattr_setclock: its condvars use the realtime clock. */
+#define SCHED_COND_CLOCK CLOCK_REALTIME
+#endif
+
 /**
- * @brief Convert a millisecond timestamp into a struct timespec.
+ * @brief Absolute deadline @p wait_ms from now on the condvar's clock.
  *
- * @param[in] ms Milliseconds since the monotonic clock epoch.
+ * Deadlines are kept on the monotonic clock, but pthread_cond_timedwait()
+ * compares against the clock the condvar was created with. On platforms
+ * where that is CLOCK_REALTIME, a monotonic deadline lies decades in the past
+ * and the wait would return at once, so the deadline is rebuilt from the
+ * condvar's own clock.
+ *
+ * @param[in] wait_ms Milliseconds to wait.
  * @param[out] ts Destination timespec to fill.
  */
-static void ms_to_timespec(uint64_t ms, struct timespec *ts) {
-    ts->tv_sec = (time_t)(ms / 1000ULL);
-    ts->tv_nsec = (long)((ms % 1000ULL) * 1000000ULL);
+static void cond_deadline_after(uint64_t wait_ms, struct timespec *ts) {
+    /* The caller re-checks the heap after every wake, so a far deadline can
+     * be capped; this keeps tv_sec from overflowing. */
+    if (wait_ms > 86400000ULL) wait_ms = 86400000ULL;
+    struct timespec now = {0, 0};
+    clock_gettime(SCHED_COND_CLOCK, &now);
+    uint64_t sec = wait_ms / 1000ULL;
+    long nsec = now.tv_nsec + (long)((wait_ms % 1000ULL) * 1000000ULL);
+    if (nsec >= 1000000000L) {
+        nsec -= 1000000000L;
+        sec++;
+    }
+    ts->tv_sec = now.tv_sec + (time_t)sec;
+    ts->tv_nsec = nsec;
 }
 
 /**
@@ -83,7 +107,7 @@ static void cond_init_monotonic(pthread_cond_t *cond) {
     pthread_condattr_t attr;
     pthread_condattr_init(&attr);
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    pthread_condattr_setclock(&attr, CLOCK_MONOTONIC);
+    pthread_condattr_setclock(&attr, SCHED_COND_CLOCK);
 #endif
     pthread_cond_init(cond, &attr);
     pthread_condattr_destroy(&attr);
@@ -224,7 +248,7 @@ static void *scheduler_timer_thread(void *arg) {
 
         uint64_t wait_ms = s->heap[0].deadline_ms - current_ms;
         struct timespec deadline;
-        ms_to_timespec(current_ms + wait_ms, &deadline);
+        cond_deadline_after(wait_ms, &deadline);
         pthread_cond_timedwait(&s->delayed_cond, &s->delayed_mtx, &deadline);
     }
     pthread_mutex_unlock(&s->delayed_mtx);

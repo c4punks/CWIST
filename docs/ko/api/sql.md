@@ -37,7 +37,9 @@ cwist_error_t cwist_db_exec(cwist_db *db, const char *sql);
 cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result);
 ```
 SELECT 쿼리를 실행합니다. 성공하면 `result`에 객체들의 cJSON 배열이 채워지고, 검증이나
-SQLite 실행이 실패하면 `NULL`로 재설정됩니다.
+SQLite 실행이 실패하면 `NULL`로 재설정됩니다. NULL이 아닌 값은 SQLite 타입과 상관없이 모두
+JSON 문자열(`"id":1`이 아니라 `"id":"1"`)이고, NULL은 JSON `null`입니다. 숫자는 직접 변환하거나
+컬럼 타입을 유지하는 ORM을 쓰세요.
 
 핸들은 `cwist_app_use_db(app, "app.db");`로 프레임워크와 연동하세요. 그러면 들어오는 모든
 `cwist_http_request`가 `req->db`에서 이 포인터를 노출합니다.

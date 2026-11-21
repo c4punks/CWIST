@@ -673,6 +673,34 @@ static void test_json_service_config(test_backend *a, test_backend *b, uint16_t 
                                "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
                                "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}";
     assert(cwist_grpc_channel_apply_service_config_json(ch, bad3) == -1);
+    /* Durations use the proto3 JSON form only: no inf/nan, exponents, hex,
+     * signs, more than 9 fraction digits, or values past the Duration range
+     * (each of these used to reach an out-of-range float conversion). */
+    static const char *const bad_durations[] = {"infs", "nans", "1e300s", "0x10s", "+1s", "-1s",
+                                                "1.0000000001s", "315576000001s", "0s", ".5s",
+                                                "1.s", "1"};
+    for (size_t i = 0; i < sizeof(bad_durations) / sizeof(bad_durations[0]); i++) {
+        char bad[512];
+        snprintf(bad, sizeof(bad),
+                 "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
+                 "\"retryPolicy\":{\"maxAttempts\":2,\"initialBackoff\":\"%s\","
+                 "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
+                 "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}",
+                 bad_durations[i]);
+        assert(cwist_grpc_channel_apply_service_config_json(ch, bad) == -1);
+    }
+    static const char edge_ok[] = "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
+                                  "\"retryPolicy\":{\"maxAttempts\":2,"
+                                  "\"initialBackoff\":\"0.000000001s\","
+                                  "\"maxBackoff\":\"315576000000s\",\"backoffMultiplier\":2,"
+                                  "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}";
+    assert(cwist_grpc_channel_apply_service_config_json(ch, edge_ok) == 0);
+    /* A non-integral or huge numeric status code is rejected, not truncated. */
+    static const char bad_code[] = "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
+                                   "\"retryPolicy\":{\"maxAttempts\":2,\"initialBackoff\":\"0.1s\","
+                                   "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
+                                   "\"retryableStatusCodes\":[1e300]}}]}";
+    assert(cwist_grpc_channel_apply_service_config_json(ch, bad_code) == -1);
 
     cwist_grpc_channel_close(ch);
 }

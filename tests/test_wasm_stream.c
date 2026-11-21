@@ -224,6 +224,28 @@ int main(void) {
     static const char bad_head[] =
         "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: bananas\r\n\r\n";
     assert(cwist_stream_req_begin(bad_head, sizeof(bad_head) - 1) == NULL);
+    /* Same rules as the main parser: digits only, matching duplicates, and no
+     * Transfer-Encoding next to Content-Length. */
+    static const char *const ambiguous[] = {
+        "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: 10abc\r\n\r\n",
+        "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: +10\r\n\r\n",
+        "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: 10, 20\r\n\r\n",
+        "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: 10\r\nContent-Length: 20\r\n\r\n",
+        "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: 10\r\n"
+        "Transfer-Encoding: chunked\r\n\r\n",
+    };
+    for (size_t i = 0; i < sizeof(ambiguous) / sizeof(ambiguous[0]); i++)
+        assert(cwist_stream_req_begin(ambiguous[i], strlen(ambiguous[i])) == NULL);
+    static const char dup_ok[] =
+        "POST /echo HTTP/1.1\r\nHost: t\r\nContent-Length: 3 \r\ncontent-length: 3\r\n\r\n";
+    sr = cwist_stream_req_begin(dup_ok, sizeof(dup_ok) - 1);
+    assert(sr);
+    assert(cwist_stream_req_feed(sr, "abc", 3) == 0);
+    assert(cwist_stream_req_end(sr) == 0);
+    sink = (sink_t){.abort_after = (size_t)-1};
+    assert(cwist_stream_req_dispatch(sr, app, sink_write, &sink) == 0);
+    assert(sink.len > 3 && memcmp(sink.buf + sink.len - 3, "abc", 3) == 0);
+    sink_free(&sink);
     printf("overflow/short/malformed incremental cases rejected\n");
 
     /* 8. Body beyond the eager reservation grows on feed and echoes back

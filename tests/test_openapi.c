@@ -98,6 +98,21 @@ int main(void) {
             "path parameter");
     cJSON_Delete(doc);
 
+    /* A wildcard route becomes a {wildcard} path parameter, not a literal '*'. */
+    cwist_app_get(app, "/static/*", users_handler);
+    doc = fetch_spec(client, "/spec.json");
+    FAIL_IF(!doc, "spec after adding wildcard route");
+    paths = cJSON_GetObjectItemCaseSensitive(doc, "paths");
+    FAIL_IF(cJSON_GetObjectItemCaseSensitive(paths, "/static/*"), "literal wildcard path");
+    const cJSON *wild = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(paths, "/static/{wildcard}"), "get");
+    FAIL_IF(!wild, "wildcard templated path");
+    param = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(wild, "parameters"), 0);
+    FAIL_IF(!str_at(param, "name") || strcmp(str_at(param, "name"), "wildcard") != 0 ||
+                strcmp(str_at(param, "in"), "path") != 0,
+            "wildcard path parameter");
+    cJSON_Delete(doc);
+
     /* A second app keeps its own document. */
     cwist_app *other = cwist_app_create();
     FAIL_IF(!other, "second app");

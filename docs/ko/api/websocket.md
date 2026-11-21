@@ -122,6 +122,9 @@ void cwist_websocket_async_close(cwist_websocket_async *ws);
   끝나면 `complete {id}`.
 - init 이후 `ping`/`pong` JSON keepalive. 잘못된 트래픽은 `4400`/`4401`로 닫고, 중복 연산 id는
   `4409`로 닫습니다.
+- 연결 하나는 구독을 최대 100개(`CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS`)까지 열 수 있습니다.
+  이를 넘는 `subscribe`에는 `error`를 보내고 연결은 유지합니다. 엔드포인트별 한도는
+  `cwist_graphql_ws_set_max_operations(gws, n)`으로 바꾸며, 0이면 한도가 없습니다.
 
 구독 필드는 `cwist_graphql_ws_add_subscription()`으로 엔드포인트에 등록하며, 리졸버는 이벤트
 소스(`cwist_graphql_event_source_create()` + `cwist_graphql_event_source_add_topic()`)를

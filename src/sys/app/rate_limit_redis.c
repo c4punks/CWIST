@@ -34,8 +34,20 @@ static pthread_mutex_t rate_cfg_mutex = PTHREAD_MUTEX_INITIALIZER;
  * atomic operation as INCR and is not extended by later or denied requests.
  * Repair a pre-existing counter without an expiry instead of leaking it. */
 static const char rate_script[] = "local n=redis.call('INCR',KEYS[1]);"
-                                  "if n==1 or redis.call('PTTL',KEYS[1])<0 then "
-                                  "redis.call('PEXPIRE',KEYS[1],60000);end;return n";
+                                  "local t=redis.call('PTTL',KEYS[1]);"
+                                  "if n==1 or t<0 then "
+                                  "redis.call('PEXPIRE',KEYS[1],60000);t=60000;end;return {n,t}";
+
+/* IPv6 clients usually control a whole /64, so they share one counter, as in
+ * the in-memory limiter. IPv4 and unparsable input are used as given. */
+static void redis_rate_ip_key(const char *input, char output[INET6_ADDRSTRLEN]) {
+    struct in6_addr addr;
+    if (inet_pton(AF_INET6, input, &addr) == 1) {
+        memset(addr.s6_addr + 8, 0, 8);
+        if (inet_ntop(AF_INET6, &addr, output, INET6_ADDRSTRLEN)) return;
+    }
+    snprintf(output, INET6_ADDRSTRLEN, "%s", input);
+}
 
 static void backend_failure(const redis_rate_cfg *cfg, cwist_http_request *req,
                             cwist_http_response *res, cwist_handler_func next, int code) {
@@ -68,21 +80,28 @@ static void redis_rate_handler(size_t slot, cwist_http_request *req, cwist_http_
     memcpy(ip, peer->data, peer->size);
     ip[peer->size] = '\0';
     cwist_sstring_destroy(peer);
-    char key[REDIS_RATE_PREFIX_MAX + 1 + INET6_ADDRSTRLEN];
-    snprintf(key, sizeof(key), "%s%s", cfg->prefix, ip);
+    char grouped[INET6_ADDRSTRLEN];
+    redis_rate_ip_key(ip, grouped);
+    /* The limit is part of the key: limiters with different limits that
+     * share a prefix must not share a counter. */
+    char key[REDIS_RATE_PREFIX_MAX + 16 + INET6_ADDRSTRLEN];
+    snprintf(key, sizeof(key), "%s%d:%s", cfg->prefix, cfg->rpm, grouped);
     const void *args[] = {"EVAL", rate_script, "1", key};
     size_t lengths[] = {4, sizeof(rate_script) - 1, 1, strlen(key)};
     cwist_redis_reply_t *reply = NULL;
     cwist_error_t err = cwist_redis_pool_command_argv_reply_timeout(cfg->pool, 4, args, lengths,
                                                                     cfg->timeout_ms, &reply);
-    if (!cwist_error_is_ok(&err) || !reply || reply->type != ':' || reply->integer <= 0) {
+    if (!cwist_error_is_ok(&err) || !reply || reply->type != '*' || reply->elements != 2 ||
+        !reply->element[0] || reply->element[0]->type != ':' || reply->element[0]->integer <= 0 ||
+        !reply->element[1] || reply->element[1]->type != ':') {
         int code = cwist_error_is_ok(&err) ? -EPROTO : err.error.err_i16;
         cwist_error_dispose(&err);
         cwist_redis_reply_free(reply);
         backend_failure(cfg, req, res, next, code);
         return;
     }
-    bool allowed = reply->integer <= cfg->rpm;
+    bool allowed = reply->element[0]->integer <= cfg->rpm;
+    long long ttl_ms = reply->element[1]->integer;
     cwist_redis_reply_free(reply);
     if (allowed) {
         next(req, res);
@@ -90,7 +109,12 @@ static void redis_rate_handler(size_t slot, cwist_http_request *req, cwist_http_
     }
     res->status_code = 429;
     cwist_sstring_assign(res->body, "Too Many Requests");
-    cwist_http_header_add(&res->headers, "Retry-After", "60");
+    /* Seconds until the window ends, rounded up (RFC 9110 section 10.2.3). */
+    long long retry = ttl_ms > 0 ? (ttl_ms + 999) / 1000 : 1;
+    if (retry > 60) retry = 60;
+    char retry_buf[24];
+    snprintf(retry_buf, sizeof(retry_buf), "%lld", retry);
+    cwist_http_header_add(&res->headers, "Retry-After", retry_buf);
 }
 
 #define REDIS_RATE_WRAPPER(N)                                                          \

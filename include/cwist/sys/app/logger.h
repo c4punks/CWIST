@@ -28,6 +28,10 @@ typedef struct cwist_logger {
 
 /**
  * @brief Create a logger.
+ *
+ * Colors start enabled only when stdout and stderr are both terminals and
+ * the NO_COLOR environment variable is unset or empty; use
+ * cwist_logger_set_colors() to override.
  */
 cwist_logger *cwist_logger_create(const char *name);
 
