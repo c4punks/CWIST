@@ -229,7 +229,8 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
             break;
 
         case CWIST_BIND_RULE_CUSTOM:
-            if (!value || !rule->u.custom.fn(value, len, rule->u.custom.ctx)) {
+            if (!rule->u.custom.fn || !value ||
+                !rule->u.custom.fn(value, len, rule->u.custom.ctx)) {
                 snprintf(buf, sizeof(buf), "%s",
                          rule->error_message ? rule->error_message : "custom validation failed");
                 bind_add_error(r, key, buf);
