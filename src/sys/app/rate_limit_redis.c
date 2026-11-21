@@ -112,7 +112,7 @@ static void redis_rate_handler(size_t slot, cwist_http_request *req, cwist_http_
     /* Seconds until the window ends, rounded up (RFC 9110 section 10.2.3). */
     long long retry = ttl_ms > 0 ? (ttl_ms + 999) / 1000 : 1;
     if (retry > 60) retry = 60;
-    char retry_buf[8];
+    char retry_buf[24];
     snprintf(retry_buf, sizeof(retry_buf), "%lld", retry);
     cwist_http_header_add(&res->headers, "Retry-After", retry_buf);
 }
