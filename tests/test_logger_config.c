@@ -71,8 +71,20 @@ static void test_logger_create_defaults(void) {
     assert(log);
     assert(strcmp(log->name, "svc") == 0);
     assert(log->level == CWIST_LOG_INFO);
-    assert(log->use_colors);
+    /* Colors follow the terminal: on only when stdout and stderr are TTYs. */
+    bool tty = isatty(STDOUT_FILENO) && isatty(STDERR_FILENO);
+    const char *no_color = getenv("NO_COLOR");
+    assert(log->use_colors == (tty && !(no_color && no_color[0])));
     cwist_logger_destroy(log);
+
+    setenv("NO_COLOR", "1", 1);
+    log = cwist_logger_create("svc");
+    assert(log && !log->use_colors);
+    cwist_logger_destroy(log);
+    if (no_color)
+        setenv("NO_COLOR", no_color, 1);
+    else
+        unsetenv("NO_COLOR");
 
     log = cwist_logger_create(NULL);
     assert(log && strcmp(log->name, "cwist") == 0);
@@ -147,6 +159,9 @@ static void test_logger_level_filter(void) {
 
 static void test_logger_colors(void) {
     cwist_logger *log = cwist_logger_create("c");
+    /* Captured output is not a TTY, so colors are off by default; turn them
+     * on to check the escape sequences. */
+    cwist_logger_set_colors(log, true);
     capture_t c;
     char *out, *err;
     capture_begin(&c);
@@ -256,6 +271,9 @@ static void test_config_load_file(void) {
           "name=cwist\n"
           "  spaced key  =   spaced value  \n"
           "quoted=\"with quotes\"\n"
+          "single='it is $HOME'\n"
+          "mixed='a\"\n"
+          "export EXPORTED=yes\n"
           "half=\"open\n"
           "eq=a=b\n"
           "no_equals_line\n"
@@ -271,6 +289,10 @@ static void test_config_load_file(void) {
     assert(strcmp(cwist_config_get(cfg, "spaced key"), "spaced value") == 0);
     assert(strcmp(cwist_config_get(cfg, "quoted"), "with quotes") == 0);
     assert(strcmp(cwist_config_get(cfg, "half"), "\"open") == 0);
+    assert(strcmp(cwist_config_get(cfg, "single"), "it is $HOME") == 0);
+    assert(strcmp(cwist_config_get(cfg, "mixed"), "'a\"") == 0); /* quotes must match */
+    assert(strcmp(cwist_config_get(cfg, "EXPORTED"), "yes") == 0);
+    assert(cwist_config_get(cfg, "export EXPORTED") == NULL);
     assert(strcmp(cwist_config_get(cfg, "eq"), "a=b") == 0); /* split at the first '=' */
     assert(strcmp(cwist_config_get(cfg, "empty"), "") == 0);
     assert(cwist_config_get(cfg, "no_equals_line") == NULL);

@@ -39,6 +39,9 @@
 #include <sqlite3.h>
 #include <cjson/cJSON.h>
 #include <cwist/core/mem/alloc.h>
+#include "../utils/number_internal.h"
+#include <math.h>
+#include <stdbool.h>
 
 /* ------------------------------------------------------------------------- */
 /* Protocol constants                                                        */
@@ -115,19 +118,62 @@ static void free_worker_ctx(cwist_orm_worker_ctx_t *ctx) {
 /* ------------------------------------------------------------------------- */
 
 /**
+ * @brief Check for canonical decimal text such as "1.5" or "-0.25".
+ *
+ * Accepts the JSON number grammar without an exponent, with a fraction that
+ * does not end in '0'. Text that strtod() would also take ("0x1A", "1e3",
+ * "inf", "nan", "1.50", " 1") is not canonical and stays a string.
+ *
+ * @param txt NUL-terminated cell text.
+ * @return true when @p txt is a canonical decimal with a fraction.
+ */
+static bool socket_is_plain_decimal(const char *txt) {
+    const char *p = txt;
+    if (*p == '-') p++;
+    if (*p == '0') {
+        p++;
+    } else if (*p >= '1' && *p <= '9') {
+        while (*p >= '0' && *p <= '9') p++;
+    } else {
+        return false;
+    }
+    if (*p != '.') return false;
+    p++;
+    const char *frac = p;
+    while (*p >= '0' && *p <= '9') p++;
+    return p > frac && *p == '\0' && p[-1] != '0';
+}
+
+/**
  * @brief Add one cell of the current row to the legacy JSON row object.
  *
  * The legacy "rows" payload keeps its text-based typing so existing
- * readers are unaffected: canonical integer text is emitted as raw JSON
- * digits, other numeric-looking text stays a string, and NULL stays null.
+ * readers are unaffected: REAL values and canonical integer or decimal text
+ * are emitted as JSON numbers, other numeric-looking text ("0x1A", "1e3",
+ * "nan", "1.50") stays a string, and NULL stays null.
+ *
+ * @param ctype sqlite3_column_type() read before any text conversion.
  */
-static void socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i) {
+static void socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i, int ctype) {
     const char *txt = (const char *)sqlite3_column_text(stmt, i);
     const char *colname = sqlite3_column_name(stmt, i);
     if (!colname) colname = "";
 
     if (!txt) {
         cJSON_AddNullToObject(row, colname);
+        return;
+    }
+
+    /* A REAL value is a number whatever its text looks like ("100.0"). */
+    if (ctype == SQLITE_FLOAT) {
+        double d = sqlite3_column_double(stmt, i);
+        if (isfinite(d)) {
+            char num[40];
+            cwist_number_format_double(num, sizeof(num), d);
+            cJSON_AddRawToObject(row, colname, num);
+        } else {
+            cJSON_AddStringToObject(row, colname, txt);
+        }
         return;
     }
 
@@ -147,13 +193,12 @@ static void socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i) {
         } else {
             cJSON_AddStringToObject(row, colname, txt);
         }
+    } else if (socket_is_plain_decimal(txt)) {
+        /* Emit the text itself: it already is a JSON number, and printing
+         * a parsed double could change its digits. */
+        cJSON_AddRawToObject(row, colname, txt);
     } else {
-        double d = strtod(txt, &endptr);
-        if (endptr && *endptr == '\0' && errno == 0) {
-            cJSON_AddNumberToObject(row, colname, d);
-        } else {
-            cJSON_AddStringToObject(row, colname, txt);
-        }
+        cJSON_AddStringToObject(row, colname, txt);
     }
 }
 
@@ -303,7 +348,7 @@ static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *ac
             for (int i = 0; i < ncols; i++) {
                 int ctype = sqlite3_column_type(stmt, i);
                 cJSON_AddItemToArray(trow, socket_typed_cell(stmt, i, ctype));
-                socket_add_legacy_cell(row, stmt, i);
+                socket_add_legacy_cell(row, stmt, i, ctype);
             }
             cJSON_AddItemToArray(acc->rows, row);
             cJSON_AddItemToArray(acc->trows, trow);

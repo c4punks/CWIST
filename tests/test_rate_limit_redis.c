@@ -55,6 +55,8 @@ static int peer_fd6(void) {
     return fd;
 }
 
+static long last_retry_after;
+
 static int request(cwist_middleware_func mw, int fd) {
     cwist_http_request *req = cwist_http_request_create();
     cwist_http_response *res = cwist_http_response_create();
@@ -64,7 +66,11 @@ static int request(cwist_middleware_func mw, int fd) {
     mw(req, res, next_ok);
     int status = res->status_code;
     if (status == 429) {
-        assert(strcmp(cwist_http_header_get(res->headers, "Retry-After"), "60") == 0);
+        const char *retry = cwist_http_header_get(res->headers, "Retry-After");
+        char *end = NULL;
+        assert(retry);
+        last_retry_after = strtol(retry, &end, 10);
+        assert(*end == '\0' && last_retry_after >= 1 && last_retry_after <= 60);
     }
     cwist_http_request_destroy(req);
     cwist_http_response_destroy(res);
@@ -231,7 +237,7 @@ int main(void) {
     assert(port > 0);
     char prefix[96], key[128];
     snprintf(prefix, sizeof(prefix), "cwist:test:rl:%ld:", (long)getpid());
-    snprintf(key, sizeof(key), "%s127.0.0.1", prefix);
+    snprintf(key, sizeof(key), "%s7:127.0.0.1", prefix);
     test_shared_processes(port, prefix);
     cwist_redis_t *redis = cwist_redis_connect("127.0.0.1", port);
     cwist_redis_pool_t *pool = cwist_redis_pool_create("127.0.0.1", port, 1);
@@ -244,7 +250,9 @@ int main(void) {
     cwist_free(command(redis, 3, expire));
     assert(request(shared, fd) == 429);
     assert(number(redis, "PTTL", key) <= 1000);
+    assert(last_retry_after == 1);
     puts("[PASS] rejected requests do not extend the Redis TTL");
+    puts("[PASS] Retry-After reports the time left in the window");
     const char *persist[] = {"PERSIST", key};
     cwist_free(command(redis, 2, persist));
     assert(number(redis, "PTTL", key) == -1);
@@ -254,7 +262,10 @@ int main(void) {
     int ipv6 = peer_fd6();
     assert(request(shared, ipv6) == 200);
     close(ipv6);
-    puts("[PASS] distinct IPv6 peer has an independent bucket");
+    char key6[160];
+    snprintf(key6, sizeof(key6), "%s7:::", prefix);
+    assert(number(redis, "GET", key6) == 1);
+    puts("[PASS] distinct IPv6 peer has an independent bucket, keyed by its /64");
     const char *expire_now[] = {"PEXPIRE", key, "1"};
     cwist_free(command(redis, 3, expire_now));
     for (int i = 0; number(redis, "PTTL", key) != -2; ++i) {
@@ -265,6 +276,12 @@ int main(void) {
     assert(request(shared, fd) == 200);
     assert(number(redis, "GET", key) == 1);
     puts("[PASS] key expiry opens a fresh shared window");
+    cwist_middleware_func stricter = limiter(pool, prefix, 2, 1);
+    assert(request(stricter, fd) == 200 && request(stricter, fd) == 200);
+    assert(request(stricter, fd) == 429);
+    assert(request(shared, fd) == 200);
+    assert(number(redis, "GET", key) == 2);
+    puts("[PASS] different limits on one prefix keep separate counters");
     char other[sizeof(prefix) + sizeof("other:")];
     snprintf(other, sizeof(other), "%sother:", prefix);
     cwist_middleware_func isolated = limiter(pool, other, 1, 1);

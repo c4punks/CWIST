@@ -552,6 +552,10 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
         if (hset) {
             h3c_hset_t *hs = hset;
             st->res = cwist_http_response_create();
+            /* RFC 9114 section 4.3.2: exactly one :status, three digits,
+             * before any regular field; otherwise the response is malformed
+             * (section 4.1.2) and the request fails. */
+            bool status_seen = false, regular_seen = false, malformed = false;
             size_t i;
             for (i = 0; i < hs->count && st->res; ++i) {
                 const char *raw_name = lsxpack_header_get_name(&hs->headers[i]);
@@ -575,12 +579,31 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 memcpy(value, raw_value, value_len);
                 value[value_len] = '\0';
                 if (strcmp(name, ":status") == 0) {
-                    st->res->status_code = (cwist_http_status_t)atoi(value);
+                    bool digits = value_len == 3 && value[0] >= '1' && value[0] <= '5' &&
+                                  value[1] >= '0' && value[1] <= '9' && value[2] >= '0' &&
+                                  value[2] <= '9';
+                    if (status_seen || regular_seen || !digits) malformed = true;
+                    status_seen = true;
+                    if (digits)
+                        st->res->status_code =
+                            (cwist_http_status_t)((value[0] - '0') * 100 + (value[1] - '0') * 10 +
+                                                  (value[2] - '0'));
+                } else if (name[0] == ':') {
+                    malformed = true; /* no other response pseudo-header exists */
                 } else {
+                    regular_seen = true;
                     cwist_http_header_add(&st->res->headers, name, value);
                 }
                 free(value);
                 free(name);
+            }
+            if (st->res && (malformed || !status_seen)) {
+                cwist_http_response_destroy(st->res);
+                st->res = NULL;
+                h3c_hsi_discard(hset);
+                st->headers_done = 1;
+                lsquic_stream_close(stream);
+                return;
             }
             /* Ownership moved to us with lsquic_stream_get_hset(): lsquic
              * no longer discards the header set on stream teardown, so it

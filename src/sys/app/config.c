@@ -184,9 +184,10 @@ void cwist_config_load_env(cwist_config *cfg, const char *prefix) {
 
 /** @brief Load key/value pairs from a simple properties-style file.
  * Each non-blank, non-comment line must be `key=value`. Leading/trailing
- * whitespace around keys and values is trimmed, and a value wrapped in double
- * quotes is unquoted. Lines starting with '#' and lines without '=' are
- * skipped. If the file cannot be opened, nothing is loaded.
+ * whitespace around keys and values is trimmed, and a value wrapped in single
+ * or double quotes is unquoted (no escape processing). A leading `export `
+ * before the key is ignored, as in shell-style .env files. Lines starting
+ * with '#' and lines without '=' are skipped. If the file cannot be opened, nothing is loaded.
  * @param cfg Config store; NULL is accepted and ignored.
  * @param path Path of the file to load; NULL is accepted and ignored.
  */
@@ -205,6 +206,10 @@ void cwist_config_load_file(cwist_config *cfg, const char *path) {
         *eq = '\0';
         char *key = p;
         char *value = eq + 1;
+        if (strncmp(key, "export", 6) == 0 && (key[6] == ' ' || key[6] == '\t')) {
+            key += 6;
+            while (isspace((unsigned char)*key)) key++;
+        }
         // trim key
         char *ke = key + strlen(key);
         while (ke > key && isspace((unsigned char)ke[-1])) *--ke = '\0';
@@ -215,7 +220,8 @@ void cwist_config_load_file(cwist_config *cfg, const char *path) {
         while (ve > value && isspace((unsigned char)ve[-1])) *--ve = '\0';
         // unquote value
         size_t value_len = strlen(value);
-        if (value_len >= 2 && value[0] == '"' && value[value_len - 1] == '"') {
+        if (value_len >= 2 && (value[0] == '"' || value[0] == '\'') &&
+            value[value_len - 1] == value[0]) {
             value++;
             value[value_len - 2] = '\0';
         }

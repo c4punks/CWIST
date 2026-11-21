@@ -41,7 +41,7 @@ typedef struct {
  * @brief Shared per-IP 60-second window using one atomic Redis Lua command.
  *
  * Uses the socket peer, never forwarded headers. A rejected request returns
- * 429 with Retry-After: 60. Backend errors and missing peer addresses follow
+ * 429 with Retry-After set to the seconds left in the window. Backend errors and missing peer addresses follow
  * fail_closed. The first backend failure per configuration in each process
  * writes its error code and policy to stderr (no keys or credentials).
  * No local fallback counter is used. Requests do not extend TTL.

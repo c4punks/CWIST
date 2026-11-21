@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <stdbool.h>
+#include <time.h>
+#include <cwist/net/http/http.h>
 
 /** @brief Duplicate a C string using cwist_alloc.
  * @param s Source string; may be NULL.
@@ -107,9 +110,26 @@ static char *trim(char *s) {
     return s;
 }
 
+/** @brief Remove a cookie by name from the jar, if present.
+ * @param client Client owning the cookie jar.
+ * @param name Cookie name.
+ */
+static void cookie_jar_remove(cwist_test_client *client, const char *name) {
+    for (cwist_test_client_cookie **pp = &client->cookies; *pp; pp = &(*pp)->next) {
+        if ((*pp)->name && strcmp((*pp)->name, name) == 0) {
+            cwist_test_client_cookie *dead = *pp;
+            *pp = dead->next;
+            free_cookie(dead);
+            return;
+        }
+    }
+}
+
 /** @brief Update the cookie jar from Set-Cookie headers in a response.
  * Adds new cookies to the head of the list; existing cookie names get their value
- * (and path, if present) replaced. Malformed Set-Cookie headers are ignored.
+ * (and path, if present) replaced. A cookie with Max-Age <= 0, or with an Expires
+ * date in the past and no Max-Age, is removed (RFC 6265 section 5.2.1, 5.2.2 and
+ * 5.3). Malformed Set-Cookie headers are ignored.
  * @param client Client owning the cookie jar.
  * @param res Response whose headers are scanned; NULL is a no-op.
  */
@@ -141,14 +161,35 @@ static void cookie_jar_update(cwist_test_client *client, cwist_http_response *re
             continue;
         }
         char *path = NULL;
+        bool has_max_age = false, expired = false, expires_past = false;
         char *rest = strtok_r(NULL, ";", &saveptr);
         while (rest) {
             rest = trim(rest);
-            if (strncasecmp(rest, "Path=", 5) == 0) {
+            if (strncasecmp(rest, "Path=", 5) == 0 && !path) {
                 path = clone_str(trim(rest + 5));
-                break;
+            } else if (strncasecmp(rest, "Max-Age=", 8) == 0) {
+                /* RFC 6265 section 5.2.2: digits with an optional leading
+                 * '-'; anything else is ignored. */
+                const char *v = trim(rest + 8);
+                const char *d = *v == '-' ? v + 1 : v;
+                if (*d && strspn(d, "0123456789") == strlen(d)) {
+                    has_max_age = true;
+                    expired = *v == '-' || strspn(d, "0") == strlen(d);
+                }
+            } else if (strncasecmp(rest, "Expires=", 8) == 0) {
+                time_t when = cwist_http_parse_date(trim(rest + 8));
+                expires_past = when != (time_t)-1 && when <= time(NULL);
             }
             rest = strtok_r(NULL, ";", &saveptr);
+        }
+        /* Max-Age wins over Expires (RFC 6265 section 5.3, step 3). */
+        if (has_max_age ? expired : expires_past) {
+            cookie_jar_remove(client, name);
+            cwist_free(name);
+            cwist_free(value);
+            cwist_free(path);
+            cwist_free(buf);
+            continue;
         }
         cwist_test_client_cookie *c = find_cookie(client->cookies, name);
         if (c) {
@@ -403,7 +444,7 @@ cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
 
     cwist_test_client_request_options opts = {0};
     opts.body = body;
-    opts.body_len = body_len;
+    opts.body_len = pos; /* bytes written; body_len is only an upper bound */
     opts.content_type = ct;
     cwist_http_response *res = do_request(client, CWIST_HTTP_POST, path, &opts);
     cwist_free(body);

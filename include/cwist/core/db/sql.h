@@ -62,7 +62,10 @@ cwist_error_t cwist_db_exec(cwist_db *db, const char *sql);
 
 /**
  * Execute a query and return results as a cJSON Array of Objects.
- * Example: [{"id":1, "name":"foo"}, {"id":2, "name":"bar"}]
+ * Every non-NULL column value is returned as a JSON string, whatever its
+ * SQLite type; NULL becomes JSON null. Convert numbers yourself
+ * (for example with strtoll()), or use the ORM, which keeps column types.
+ * Example: [{"id":"1", "name":"foo", "note":null}, {"id":"2", "name":"bar", "note":null}]
  * The `result` pointer is reset to NULL on entry and left NULL on failure.
  */
 cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result);

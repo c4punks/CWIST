@@ -61,8 +61,8 @@ limit across independent server processes, give each process its own
 same prefix and limit. Replacement connections start fresh: AUTH, SELECT,
 HELLO and other connection state are not replayed. Legacy calls that share
 this pool may also receive fresh connections after a timed call discards one.
-Use one prefix per rate policy: different limits with the same prefix
-share one counter, not independent buckets.
+Limiters with different limits keep separate counters even when they
+share a prefix, because the limit is part of the key.
 
 ```c
 cwist_redis_pool_t *pool = cwist_redis_pool_create("127.0.0.1", 6379, 4);
@@ -82,11 +82,13 @@ cwist_app_listen_ex(app, 8080, 1, -1);
 cwist_redis_pool_destroy(pool);
 ```
 
-Each key is `prefix + peer-IP`. One Lua EVAL increments the counter and
+Each key is `prefix + limit + ":" + peer-IP`; IPv6 peers are grouped by
+their /64, like the in-memory limiter. One Lua EVAL increments the counter and
 sets a 60-second expiry on the first request. It repairs missing expiry
 without extending a running window. The window starts at the first hit,
 not a process-local clock boundary. Allowed and rejected attempts count.
-Over-limit replies are 429 with a conservative `Retry-After: 60`.
+Over-limit replies are 429 with `Retry-After` set to the seconds left in
+the window, rounded up.
 
 With `fail_closed = false` (default), backend errors allow the request.
 With `true`, errors return 503, not 429. This includes timeout, pool

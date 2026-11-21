@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (828) ==
+== functions (829) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -233,6 +233,7 @@ cwist_graphql_ws_attach
 cwist_graphql_ws_attach_ex
 cwist_graphql_ws_create
 cwist_graphql_ws_destroy
+cwist_graphql_ws_set_max_operations
 cwist_graphql_ws_upgrade
 cwist_graphql_ws_upgrade_response
 cwist_grpc_call_await_headers
@@ -834,7 +835,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (829) ==
+== function signatures (830) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1064,6 +1065,7 @@ cwist_graphql_ws_attach: bool (cwist_graphql_ws_t *, int, cwist_reactor_t *, con
 cwist_graphql_ws_attach_ex: bool (cwist_graphql_ws_t *, int, cwist_reactor_t *, const uint8_t *, size_t, uint64_t)
 cwist_graphql_ws_create: cwist_graphql_ws_t * (cwist_graphql_schema_t *)
 cwist_graphql_ws_destroy: void (cwist_graphql_ws_t *)
+cwist_graphql_ws_set_max_operations: void (cwist_graphql_ws_t *, size_t)
 cwist_graphql_ws_upgrade: bool (cwist_http_request *, int)
 cwist_graphql_ws_upgrade_response: bool (cwist_http_request *, cwist_http_response *)
 cwist_grpc_call_await_headers: int (cwist_grpc_call *)
