@@ -1109,6 +1109,10 @@ static void http_reap_teardown(http_thread_worker_t *w) {
  */
 static void http_async_conn_release(cwist_http_async_conn_t *conn) {
     if (!conn) return;
+    /* The fd is closed (or handed off) by now; give up the RX slot before the
+     * event loop runs again, so a stale event cannot reach a connection that
+     * reuses the fd number on another reactor (issue #950). */
+    if (conn->fd >= 0 && conn->reactor) cwist_reactor_rx_release(conn->reactor, conn->fd);
     http_reap_unlink(conn);
     if (g_worker_loads && conn->worker_id < (uint32_t)g_http_thread_count) {
         atomic_fetch_sub_explicit(&g_worker_loads[conn->worker_id], 1, memory_order_relaxed);
