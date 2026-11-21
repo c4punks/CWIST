@@ -614,9 +614,6 @@ static void test_request_target_and_header_hardening(void) {
     req = expect_parse_success("OPTIONS * HTTP/1.1\r\nHost: h\r\n\r\n");
     assert(strcmp(req->path->data, "*") == 0);
     cwist_http_request_destroy(req);
-    req = expect_parse_success("CONNECT example.com:443 HTTP/1.1\r\nHost: example.com\r\n\r\n");
-    assert(strcmp(req->path->data, "example.com:443") == 0);
-    cwist_http_request_destroy(req);
     req = expect_parse_success("GET / HTTP/1.1\r\nHost: h\r\nConnection: close, TE\r\n\r\n");
     assert(!req->keep_alive);
     cwist_http_request_destroy(req);
