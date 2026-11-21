@@ -480,6 +480,28 @@ int main(void) {
     publish_and_expect_next(fd, "default", "2", 3);
     printf("11. default topic subscription: ok\n");
 
+    /* 11b. The per-connection operation limit answers with `error` and keeps
+     *      the connection; the limit counts this connection's open ops. */
+    cwist_graphql_ws_set_max_operations(g_gws, 2);
+    write_text(fd, "{\"id\":\"3\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+                   "counter(topic: \\\"t9\\\") }\"}}");
+    expect_silence(fd, 200);
+    write_text(fd, "{\"id\":\"4\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+                   "counter(topic: \\\"t9\\\") }\"}}");
+    {
+        cJSON *err = read_json_message(fd);
+        cJSON *type = cJSON_GetObjectItemCaseSensitive(err, "type");
+        assert(cJSON_IsString(type) && strcmp(type->valuestring, "error") == 0);
+        cJSON *id = cJSON_GetObjectItemCaseSensitive(err, "id");
+        assert(cJSON_IsString(id) && strcmp(id->valuestring, "4") == 0);
+        cJSON_Delete(err);
+    }
+    write_text(fd, "{\"id\":\"3\",\"type\":\"complete\"}");
+    expect_silence(fd, 200);
+    cwist_graphql_ws_set_max_operations(g_gws, CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS);
+    cwist_graphql_ws_set_max_operations(NULL, 1);
+    printf("11b. per-connection subscription limit -> error: ok\n");
+
     /* 12. Socket close tears the subscription down; later publishes find
      *     nothing. */
     {

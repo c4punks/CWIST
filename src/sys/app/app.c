@@ -2691,34 +2691,53 @@ struct cwist_stream_req {
     bool complete; /* set by a successful cwist_stream_req_end() */
 };
 
-/* Case-insensitive scan of the head block for a Content-Length header.
- * Returns the declared length, 0 when absent, -1 on malformed values. */
+/* Scan the head block for Content-Length with the main HTTP/1 parser's rules
+ * (RFC 9112 section 6.3): the value is digits only after trimming OWS, every
+ * copy must carry the same value, and Transfer-Encoding is refused because
+ * this API frames bodies by Content-Length alone; accepting both is the
+ * classic request smuggling setup.
+ * Returns the declared length, 0 when absent, -1 on malformed or ambiguous
+ * framing. */
 static long cwist_stream_parse_content_length(const char *head, size_t head_len) {
-    static const char cl_name[] = "content-length:";
     const char *p = head;
     const char *end = head + head_len;
-    while (p + sizeof(cl_name) - 1 <= end) {
-        size_t i = 0;
-        while (i < sizeof(cl_name) - 1) {
-            unsigned char c = (unsigned char)p[i];
-            if (c >= 'A' && c <= 'Z') c = (unsigned char)(c + ('a' - 'A'));
-            if ((char)c != cl_name[i]) break;
-            i++;
+    bool first_line = true;
+    bool seen = false;
+    long value = 0;
+    while (p < end) {
+        const char *eol = memchr(p, '\n', (size_t)(end - p));
+        const char *line_end = eol ? eol : end;
+        const char *le = line_end;
+        if (le > p && le[-1] == '\r') le--;
+        if (first_line) {
+            first_line = false;
+        } else if (le > p) {
+            const char *colon = memchr(p, ':', (size_t)(le - p));
+            if (colon) {
+                size_t name_len = (size_t)(colon - p);
+                const char *v = colon + 1;
+                const char *ve = le;
+                while (v < ve && (*v == ' ' || *v == '\t')) v++;
+                while (ve > v && (ve[-1] == ' ' || ve[-1] == '\t')) ve--;
+                if (name_len == 17 && strncasecmp(p, "transfer-encoding", 17) == 0) return -1;
+                if (name_len == 14 && strncasecmp(p, "content-length", 14) == 0) {
+                    if (v == ve) return -1;
+                    long n = 0;
+                    for (const char *d = v; d < ve; d++) {
+                        if (*d < '0' || *d > '9') return -1;
+                        if (n > (LONG_MAX - 9) / 10) return -1;
+                        n = n * 10 + (*d - '0');
+                    }
+                    if (seen && n != value) return -1;
+                    seen = true;
+                    value = n;
+                }
+            }
         }
-        if (i == sizeof(cl_name) - 1) {
-            const char *v = p + i;
-            while (v < end && (*v == ' ' || *v == '\t')) v++;
-            errno = 0;
-            char *num_end = NULL;
-            long n = strtol(v, &num_end, 10);
-            if (errno != 0 || num_end == v || n < 0) return -1;
-            return n;
-        }
-        /* advance to the next header line */
-        while (p < end && *p != '\n') p++;
-        if (p < end) p++;
+        if (!eol) break;
+        p = eol + 1;
     }
-    return 0;
+    return value;
 }
 
 cwist_stream_req_t *cwist_stream_req_begin(const char *head, size_t head_len) {

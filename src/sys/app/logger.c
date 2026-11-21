@@ -38,7 +38,12 @@ cwist_logger *cwist_logger_create(const char *name) {
         return NULL;
     }
     log->level = CWIST_LOG_INFO;
-    log->use_colors = true;
+    /* Colors only when both output streams are terminals; redirected logs
+     * (files, pipes, journald) stay free of escape sequences. NO_COLOR
+     * (https://no-color.org) turns them off. cwist_logger_set_colors()
+     * overrides either way. */
+    const char *no_color = getenv("NO_COLOR");
+    log->use_colors = !(no_color && no_color[0]) && isatty(STDOUT_FILENO) && isatty(STDERR_FILENO);
     return log;
 }
 

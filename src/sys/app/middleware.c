@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/middleware.h>
 #include <cwist/net/http/http.h>
+#include "../../net/http/http_date_internal.h"
 #include <cwist/core/macros.h>
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/core/mem/alloc.h>
@@ -198,9 +199,9 @@ static void format_clf_time(char *buf, size_t len, const struct timeval *tv) {
     localtime_r(&tv->tv_sec, &tm);
     char tzbuf[8];
     strftime(tzbuf, sizeof(tzbuf), "%z", &tm);
-    strftime(buf, len, "%d/%b/%Y:%H:%M:%S", &tm);
-    size_t pos = strlen(buf);
-    snprintf(buf + pos, len - pos, " %s", tzbuf);
+    int mon = tm.tm_mon >= 0 && tm.tm_mon < 12 ? tm.tm_mon : 0;
+    snprintf(buf, len, "%02d/%s/%04d:%02d:%02d:%02d %s", tm.tm_mday, cwist_http_month_names[mon],
+             tm.tm_year + 1900, tm.tm_hour, tm.tm_min, tm.tm_sec, tzbuf);
 }
 
 /**

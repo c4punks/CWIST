@@ -56,6 +56,23 @@ static void test_transfer_sqlite_to_socket(void) {
     assert(cJSON_GetArraySize(rows) == 0);
     cJSON_Delete(rows);
 
+    /* Legacy rows: only canonical numbers become JSON numbers. */
+    assert(cwist_orm_exec(orm, "CREATE TABLE vals(a TEXT, b TEXT, c TEXT, d TEXT, e TEXT, "
+                               "f TEXT, g TEXT, h REAL);")
+               .error.err_i16 == 0);
+    assert(cwist_orm_exec(orm, "INSERT INTO vals VALUES('nan', 'inf', '0x1A', '1e3', '1.50', "
+                               "'1.5', '42', 100.0);")
+               .error.err_i16 == 0);
+    rows = NULL;
+    assert(cwist_orm_select(orm, "vals", "*", NULL, &rows).error.err_i16 == 0);
+    assert(rows && cJSON_GetArraySize(rows) == 1);
+    char *text = cJSON_PrintUnformatted(cJSON_GetArrayItem(rows, 0));
+    assert(text);
+    assert(strcmp(text, "{\"a\":\"nan\",\"b\":\"inf\",\"c\":\"0x1A\",\"d\":\"1e3\","
+                        "\"e\":\"1.50\",\"f\":1.5,\"g\":42,\"h\":100}") == 0);
+    cJSON_free(text);
+    cJSON_Delete(rows);
+
     cwist_orm_close_socket(orm);
     printf("cwist_db_transfer_sqlite_to_socket round-trip test passed.\n");
 }

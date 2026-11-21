@@ -100,13 +100,30 @@ static void doc_destroy(void *ctx) {
     cwist_free(doc);
 }
 
-/* "/users/:id" -> "/users/{id}", with one required path parameter per segment. */
+/* "/users/:id" -> "/users/{id}", with one required path parameter per segment.
+ * A trailing '*' (a mux wildcard route: "/static/" followed by '*') becomes the path
+ * parameter {wildcard}: OpenAPI path templating has no wildcard, and a literal
+ * '*' would be read as part of the URL. */
 static char *openapi_path(const char *route, cJSON *params) {
     size_t len = strlen(route);
-    char *out = cwist_alloc(len * 2 + 1);
+    char *out = cwist_alloc(len * 2 + sizeof("{wildcard}"));
     if (!out) return NULL;
     char *w = out;
     for (const char *r = route; *r;) {
+        if (*r == '*' && r[1] == '\0') {
+            memcpy(w, "{wildcard}", 10);
+            w += 10;
+            r++;
+            cJSON *p = cJSON_CreateObject();
+            cJSON_AddStringToObject(p, "name", "wildcard");
+            cJSON_AddStringToObject(p, "in", "path");
+            cJSON_AddBoolToObject(p, "required", 1);
+            cJSON_AddStringToObject(p, "description",
+                                    "Rest of the request path; may contain '/'.");
+            cJSON_AddStringToObject(cJSON_AddObjectToObject(p, "schema"), "type", "string");
+            cJSON_AddItemToArray(params, p);
+            continue;
+        }
         if (*r != ':' || (r != route && r[-1] != '/')) {
             *w++ = *r++;
             continue;

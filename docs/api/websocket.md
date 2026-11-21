@@ -128,6 +128,10 @@ to disable it.
   when the operation fails to start, `complete {id}` when it ends.
 - `ping`/`pong` JSON keepalive after init. Malformed traffic closes with
   `4400`/`4401`; duplicate operation ids close with `4409`.
+- One connection may keep at most 100 subscriptions open
+  (`CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS`); a `subscribe` beyond that gets an
+  `error` and the connection stays open. Change the limit per endpoint with
+  `cwist_graphql_ws_set_max_operations(gws, n)`, where 0 removes it.
 
 Subscription fields are registered on an endpoint with
 `cwist_graphql_ws_add_subscription()`; the resolver returns an event source

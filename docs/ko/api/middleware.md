@@ -60,8 +60,8 @@ cwist_app_use(app, cwist_mw_rate_limit_ip(60));
 전용 풀**을 따로 생성하고 같은 prefix와 한도를 사용합니다.
 재연결은 AUTH·SELECT·HELLO 등 연결 상태를 복원하지 않습니다. timed API가
 소켓을 폐기한 뒤에는 같은 풀의 기존 API도 새 연결을 받을 수 있습니다.
-정책마다 다른 prefix를 쓰세요. 같은 prefix에 서로 다른 한도를 주면
-독립 버킷이 아니라 같은 카운터를 공유합니다.
+한도가 키에 포함되므로, 같은 prefix를 써도 한도가 다른 리미터는 카운터를
+따로 씁니다.
 
 ```c
 cwist_redis_pool_t *pool = cwist_redis_pool_create("127.0.0.1", 6379, 4);
@@ -81,10 +81,12 @@ cwist_app_listen_ex(app, 8080, 1, -1);
 cwist_redis_pool_destroy(pool);
 ```
 
-키는 `prefix + 실제 소켓 peer IP`입니다. Lua EVAL 한 번으로 카운트를
+키는 `prefix + 한도 + ":" + 실제 소켓 peer IP`이며, IPv6 peer는 메모리 리미터처럼
+/64 단위로 묶습니다. Lua EVAL 한 번으로 카운트를
 증가시키고 첫 요청부터 60초 TTL을 설정합니다. TTL이 없으면 복구하며,
 진행 중인 윈도는 연장하지 않습니다. 허용·차단 요청 모두 카운트합니다.
-한도 초과는 429와 보수적인 `Retry-After: 60`을 반환합니다.
+한도 초과는 429와 윈도가 끝날 때까지 남은 초(올림)를 담은 `Retry-After`를
+반환합니다.
 
 `fail_closed = false`가 기본값이며 Redis 오류가 나면 요청을 허용합니다.
 `true`이면 429가 아닌 503을 반환합니다. 타임아웃, 풀 고갈, 잘못된 응답,
