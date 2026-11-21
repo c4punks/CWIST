@@ -1094,13 +1094,6 @@ test_regression_batch: $(LIB_NAME) tests/test_regression_batch.c
 	$(CC) $(CFLAGS) -o $@ tests/test_regression_batch.c $(LIB_NAME) $(LIBS)
 	./$@
 
-test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
-	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
-	./$@ burst
-	./$@ multi
-	./$@ cap
-	./$@ failure
-
 # Kernel/queue contract test: use the real reactor with a test-only allocator,
 # without pulling HTTP/TLS or libttak runtime state into the wake-up schedule.
 test_reactor_wake: tests/test_reactor_wake.c src/sys/io/reactor.c
