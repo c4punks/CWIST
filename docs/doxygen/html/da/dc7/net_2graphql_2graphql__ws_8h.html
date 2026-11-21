@@ -106,6 +106,7 @@ $(document).ready(function(){initNavTree('da/dc7/net_2graphql_2graphql__ws_8h.ht
 
 <div class="header">
   <div class="summary">
+<a href="#define-members">Macros</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">graphql_ws.h File Reference</div></div>
@@ -226,6 +227,11 @@ This graph shows which files directly or indirectly include this file:</div>
 </div>
 <p><a href="../../da/dc7/net_2graphql_2graphql__ws_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a1d6c69071e22320a374e13db3b302bf3" id="r_a1d6c69071e22320a374e13db3b302bf3"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a1d6c69071e22320a374e13db3b302bf3">CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS</a>&#160;&#160;&#160;100</td></tr>
+<tr class="separator:a1d6c69071e22320a374e13db3b302bf3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
 Typedefs</h2></td></tr>
 <tr class="memitem:a89a61c3d96d26a3e773fa73142be11c7" id="r_a89a61c3d96d26a3e773fa73142be11c7"><td class="memItemLeft" align="right" valign="top">typedef struct cwist_graphql_ws&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7">cwist_graphql_ws_t</a></td></tr>
@@ -243,6 +249,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc" id="r_ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc">cwist_graphql_ws_destroy</a> (<a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7">cwist_graphql_ws_t</a> *gws)</td></tr>
 <tr class="memdesc:ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Drop the caller's endpoint reference.  <br /></td></tr>
 <tr class="separator:ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4beb4576f06cd84e9c56d4b2a6013ad0" id="r_a4beb4576f06cd84e9c56d4b2a6013ad0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a4beb4576f06cd84e9c56d4b2a6013ad0">cwist_graphql_ws_set_max_operations</a> (<a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7">cwist_graphql_ws_t</a> *gws, size_t max)</td></tr>
+<tr class="memdesc:a4beb4576f06cd84e9c56d4b2a6013ad0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set how many subscriptions one connection may keep open.  <br /></td></tr>
+<tr class="separator:a4beb4576f06cd84e9c56d4b2a6013ad0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7170a006e65284f9115c6e32e8280fc6" id="r_a7170a006e65284f9115c6e32e8280fc6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a7170a006e65284f9115c6e32e8280fc6">cwist_graphql_ws_add_subscription</a> (<a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7">cwist_graphql_ws_t</a> *gws, const char *field, <a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a30dcfcc30e864dcd038d6d237995f91b">cwist_graphql_subscribe_fn</a> subscribe_fn, void *ctx)</td></tr>
 <tr class="memdesc:a7170a006e65284f9115c6e32e8280fc6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Register (or replace) the resolver for a subscription root field.  <br /></td></tr>
 <tr class="separator:a7170a006e65284f9115c6e32e8280fc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -273,7 +282,25 @@ Functions</h2></td></tr>
 <p>Opt-in only; no existing behavior changes when unused. Requires the C1M (callback-shaped) WebSocket path. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h_source.html">graphql_ws.h</a>.</p>
-</div><h2 class="groupheader">Typedef Documentation</h2>
+</div><h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a1d6c69071e22320a374e13db3b302bf3" name="a1d6c69071e22320a374e13db3b302bf3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d6c69071e22320a374e13db3b302bf3">&#9670;&#160;</a></span>CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS&#160;&#160;&#160;100</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Default limit of open subscriptions per connection. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h_source.html#l00061">61</a> of file <a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h_source.html">graphql_ws.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Typedef Documentation</h2>
 <a id="a55ef23928941bd834de72d3592e69b25" name="a55ef23928941bd834de72d3592e69b25"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a55ef23928941bd834de72d3592e69b25">&#9670;&#160;</a></span>cwist_graphql_event_source_t</h2>
 
@@ -467,7 +494,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of <code>next</code> messages queued. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00564">564</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00580">580</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -525,7 +552,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true on success, false on invalid arguments or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00254">254</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00270">270</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
 
@@ -586,9 +613,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when the fd was handed to the reactor path, false on failure (fd closed). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00917">917</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00943">943</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00876">cwist_graphql_ws_attach_ex()</a>, and <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00047">GQL_WS_INIT_TIMEOUT_MS</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00902">cwist_graphql_ws_attach_ex()</a>, and <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00047">GQL_WS_INIT_TIMEOUT_MS</a>.</p>
 
 </div>
 </div>
@@ -643,11 +670,11 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 <p>Attach with a custom connection_init timeout in milliseconds; zero disables the timer. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00876">876</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00902">902</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l01230">cwist_websocket_async_attach_ex()</a>, <a class="el" href="../../d4/d57/websocket__async_8c_source.html#l00783">cwist_websocket_async_close_code()</a>, and <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00046">GQL_WS_CLOSE_INIT_TIMEOUT</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00917">cwist_graphql_ws_attach()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00943">cwist_graphql_ws_attach()</a>.</p>
 
 </div>
 </div>
@@ -677,9 +704,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New endpoint, or NULL if <code>schema</code> is NULL or allocation fails. Free with <a class="el" href="../../d7/d38/graphql__ws_8c.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc" title="Drop the caller&#39;s endpoint reference.">cwist_graphql_ws_destroy()</a>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00216">216</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00217">217</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, and <a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h_source.html#l00061">CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS</a>.</p>
 
 </div>
 </div>
@@ -709,7 +736,48 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00234">234</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00250">250</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
+
+</div>
+</div>
+<a id="a4beb4576f06cd84e9c56d4b2a6013ad0" name="a4beb4576f06cd84e9c56d4b2a6013ad0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4beb4576f06cd84e9c56d4b2a6013ad0">&#9670;&#160;</a></span>cwist_graphql_ws_set_max_operations()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_graphql_ws_set_max_operations </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7">cwist_graphql_ws_t</a> *&#160;</td>
+          <td class="paramname"><em>gws</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>max</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Set how many subscriptions one connection may keep open. </p>
+<p>Set the limit of open subscriptions per connection (default CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS; 0 removes the limit). A <code>subscribe</code> beyond it receives an operation-level <code>error</code>; the connection stays open.</p>
+<p>A <code>subscribe</code> beyond the limit gets an operation-level <code>error</code> and the connection stays open. Applies to later subscribes on every connection of the endpoint.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">gws</td><td>Endpoint to configure; NULL is ignored. </td></tr>
+    <tr><td class="paramname">max</td><td>Limit per connection; 0 removes the limit. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00239">239</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
 </div>
 </div>
@@ -742,7 +810,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00081">81</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00067">cwist_graphql_ws_upgrade_response()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02554">cwist_http_response_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02578">cwist_http_response_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03152">cwist_http_send_response()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00076">cwist_http_request::upgraded</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00067">cwist_graphql_ws_upgrade_response()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02602">cwist_http_response_create()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02626">cwist_http_response_destroy()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l03200">cwist_http_send_response()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00076">cwist_http_request::upgraded</a>.</p>
 
 </div>
 </div>
@@ -775,7 +843,7 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00067">67</a> of file <a class="el" href="../../d7/d38/graphql__ws_8c_source.html">graphql_ws.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02099">cwist_http_header_add()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02128">cwist_http_header_get()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04451">cwist_http_status_reason()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00149">cwist_websocket_upgrade_response()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02100">cwist_http_header_add()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02129">cwist_http_header_get()</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l04499">cwist_http_status_reason()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00534">cwist_sstring_assign()</a>, <a class="el" href="../../d4/de6/websocket_8c_source.html#l00149">cwist_websocket_upgrade_response()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d7/d38/graphql__ws_8c_source.html#l00081">cwist_graphql_ws_upgrade()</a>.</p>
 

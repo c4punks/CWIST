@@ -1495,485 +1495,494 @@ $(document).ready(function(){initNavTree('d3/d99/reactor_8c_source.html','../../
 <div class="line"><a id="l01448" name="l01448"></a><span class="lineno"> 1448</span>    <span class="keywordtype">int</span> v = atomic_load_explicit(&amp;cached, memory_order_relaxed);</div>
 <div class="line"><a id="l01449" name="l01449"></a><span class="lineno"> 1449</span>    <span class="keywordflow">if</span> (v &lt; 0) {</div>
 <div class="line"><a id="l01450" name="l01450"></a><span class="lineno"> 1450</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *s = getenv(<span class="stringliteral">&quot;CWIST_REACTOR_DRAIN_CHUNK&quot;</span>);</div>
-<div class="line"><a id="l01451" name="l01451"></a><span class="lineno"> 1451</span>        <span class="keywordflow">if</span> (s) {</div>
-<div class="line"><a id="l01452" name="l01452"></a><span class="lineno"> 1452</span>            <span class="keywordtype">long</span> parsed = strtol(s, NULL, 10);</div>
-<div class="line"><a id="l01453" name="l01453"></a><span class="lineno"> 1453</span>            v = (parsed &gt;= 0 &amp;&amp; parsed &lt; INT_MAX) ? (<span class="keywordtype">int</span>)parsed : 64;</div>
-<div class="line"><a id="l01454" name="l01454"></a><span class="lineno"> 1454</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01455" name="l01455"></a><span class="lineno"> 1455</span>            v = 64;</div>
-<div class="line"><a id="l01456" name="l01456"></a><span class="lineno"> 1456</span>        }</div>
-<div class="line"><a id="l01457" name="l01457"></a><span class="lineno"> 1457</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
-<div class="line"><a id="l01458" name="l01458"></a><span class="lineno"> 1458</span>    }</div>
-<div class="line"><a id="l01459" name="l01459"></a><span class="lineno"> 1459</span>    <span class="keywordflow">return</span> (uint32_t)v;</div>
-<div class="line"><a id="l01460" name="l01460"></a><span class="lineno"> 1460</span>}</div>
-<div class="line"><a id="l01461" name="l01461"></a><span class="lineno"> 1461</span> </div>
-<div class="line"><a id="l01462" name="l01462"></a><span class="lineno"> 1462</span><span class="preprocessor">#if defined(__x86_64__) || defined(__i386__)</span></div>
-<div class="line"><a id="l01463" name="l01463"></a><span class="lineno"> 1463</span><span class="preprocessor">#define reactor_cpu_relax() __builtin_ia32_pause()</span></div>
-<div class="line"><a id="l01464" name="l01464"></a><span class="lineno"> 1464</span><span class="preprocessor">#elif defined(__aarch64__)</span></div>
-<div class="line"><a id="l01465" name="l01465"></a><span class="lineno"> 1465</span><span class="preprocessor">#define reactor_cpu_relax() __asm__ __volatile__(&quot;yield&quot;)</span></div>
-<div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l01467" name="l01467"></a><span class="lineno"><a class="line" href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96"> 1467</a></span><span class="preprocessor">#define reactor_cpu_relax() ((void)0)</span></div>
-<div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span> </div>
-<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span><span class="preprocessor">#ifdef __linux__</span></div>
-<div class="line"><a id="l01471" name="l01471"></a><span class="lineno"> 1471</span><span class="comment">/* CQ grace: how long a reactor loop peeks its completion ring (pure</span></div>
-<div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span><span class="comment"> * userspace, no syscall) before committing to the kernel wait. Completions</span></div>
-<div class="line"><a id="l01473" name="l01473"></a><span class="lineno"> 1473</span><span class="comment"> * that land while a dispatch batch is being processed -- the common shape</span></div>
-<div class="line"><a id="l01474" name="l01474"></a><span class="lineno"> 1474</span><span class="comment"> * under keep-alive load, where the peer&#39;s next request often arrives within</span></div>
-<div class="line"><a id="l01475" name="l01475"></a><span class="lineno"> 1475</span><span class="comment"> * microseconds of the response -- would otherwise force a fresh wake each;</span></div>
-<div class="line"><a id="l01476" name="l01476"></a><span class="lineno"> 1476</span><span class="comment"> * the grace folds them into the current one. 0 disables the spin.</span></div>
-<div class="line"><a id="l01477" name="l01477"></a><span class="lineno"> 1477</span><span class="comment"> * CWIST_REACTOR_CQ_GRACE_NS overrides the 20 us default. */</span></div>
-<div class="line"><a id="l01478" name="l01478"></a><span class="lineno"> 1478</span><span class="keyword">static</span> uint64_t reactor_cq_grace_ns(<span class="keywordtype">void</span>) {</div>
-<div class="line"><a id="l01479" name="l01479"></a><span class="lineno"> 1479</span>    <span class="keyword">static</span> _Atomic <span class="keywordtype">long</span> cached = -1;</div>
-<div class="line"><a id="l01480" name="l01480"></a><span class="lineno"> 1480</span>    <span class="keywordtype">long</span> v = atomic_load_explicit(&amp;cached, memory_order_relaxed);</div>
-<div class="line"><a id="l01481" name="l01481"></a><span class="lineno"> 1481</span>    <span class="keywordflow">if</span> (v &lt; 0) {</div>
-<div class="line"><a id="l01482" name="l01482"></a><span class="lineno"> 1482</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *s = getenv(<span class="stringliteral">&quot;CWIST_REACTOR_CQ_GRACE_NS&quot;</span>);</div>
-<div class="line"><a id="l01483" name="l01483"></a><span class="lineno"> 1483</span>        <span class="keywordflow">if</span> (s &amp;&amp; *s) {</div>
-<div class="line"><a id="l01484" name="l01484"></a><span class="lineno"> 1484</span>            <span class="keywordtype">char</span> *end = NULL;</div>
-<div class="line"><a id="l01485" name="l01485"></a><span class="lineno"> 1485</span>            <span class="keywordtype">long</span> parsed = strtol(s, &amp;end, 10);</div>
-<div class="line"><a id="l01486" name="l01486"></a><span class="lineno"> 1486</span>            v = (end != s &amp;&amp; parsed &gt;= 0 &amp;&amp; parsed &lt; 1000000000L) ? parsed : 20000;</div>
-<div class="line"><a id="l01487" name="l01487"></a><span class="lineno"> 1487</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01488" name="l01488"></a><span class="lineno"> 1488</span>            v = 20000;</div>
-<div class="line"><a id="l01489" name="l01489"></a><span class="lineno"> 1489</span>        }</div>
-<div class="line"><a id="l01490" name="l01490"></a><span class="lineno"> 1490</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
-<div class="line"><a id="l01491" name="l01491"></a><span class="lineno"> 1491</span>    }</div>
-<div class="line"><a id="l01492" name="l01492"></a><span class="lineno"> 1492</span>    <span class="keywordflow">return</span> (uint64_t)v;</div>
-<div class="line"><a id="l01493" name="l01493"></a><span class="lineno"> 1493</span>}</div>
-<div class="line"><a id="l01494" name="l01494"></a><span class="lineno"> 1494</span> </div>
-<div class="line"><a id="l01495" name="l01495"></a><span class="lineno"> 1495</span><span class="comment">/* Round budget: an io_uring dispatch round drains every CQE in the ring, and</span></div>
-<div class="line"><a id="l01496" name="l01496"></a><span class="lineno"> 1496</span><span class="comment"> * a busy round can hold hundreds of connections&#39; callbacks. Callbacks re-arm</span></div>
-<div class="line"><a id="l01497" name="l01497"></a><span class="lineno"> 1497</span><span class="comment"> * their connections into the deferred SQE array, which only reaches the</span></div>
-<div class="line"><a id="l01498" name="l01498"></a><span class="lineno"> 1498</span><span class="comment"> * kernel when the round ends -- so a request that arrived right after its</span></div>
-<div class="line"><a id="l01499" name="l01499"></a><span class="lineno"> 1499</span><span class="comment"> * connection was re-armed waits out the whole batch, which is where the</span></div>
-<div class="line"><a id="l01500" name="l01500"></a><span class="lineno"> 1500</span><span class="comment"> * arm-to-dispatch tail comes from (issue #166). The budget bounds that wait</span></div>
-<div class="line"><a id="l01501" name="l01501"></a><span class="lineno"> 1501</span><span class="comment"> * without breaking the round: past it, parked re-arms are flushed to the</span></div>
-<div class="line"><a id="l01502" name="l01502"></a><span class="lineno"> 1502</span><span class="comment"> * kernel at the next check instead of at round end (one extra enter per</span></div>
-<div class="line"><a id="l01503" name="l01503"></a><span class="lineno"> 1503</span><span class="comment"> * check, only while a round is long). The round still runs to completion,</span></div>
-<div class="line"><a id="l01504" name="l01504"></a><span class="lineno"> 1504</span><span class="comment"> * so the stop-at-round-boundary contract is unchanged. The check rides its</span></div>
-<div class="line"><a id="l01505" name="l01505"></a><span class="lineno"> 1505</span><span class="comment"> * own cadence (every 64 callbacks), independent of CWIST_REACTOR_DRAIN_CHUNK.</span></div>
-<div class="line"><a id="l01506" name="l01506"></a><span class="lineno"> 1506</span><span class="comment"> * 0 disables the bound. CWIST_REACTOR_ROUND_BUDGET_US overrides the 2000 us</span></div>
-<div class="line"><a id="l01507" name="l01507"></a><span class="lineno"> 1507</span><span class="comment"> * default. */</span></div>
-<div class="line"><a id="l01508" name="l01508"></a><span class="lineno"> 1508</span><span class="keyword">static</span> uint64_t reactor_round_budget_us(<span class="keywordtype">void</span>) {</div>
-<div class="line"><a id="l01509" name="l01509"></a><span class="lineno"> 1509</span>    <span class="keyword">static</span> _Atomic <span class="keywordtype">long</span> cached = -1;</div>
-<div class="line"><a id="l01510" name="l01510"></a><span class="lineno"> 1510</span>    <span class="keywordtype">long</span> v = atomic_load_explicit(&amp;cached, memory_order_relaxed);</div>
-<div class="line"><a id="l01511" name="l01511"></a><span class="lineno"> 1511</span>    <span class="keywordflow">if</span> (v &lt; 0) {</div>
-<div class="line"><a id="l01512" name="l01512"></a><span class="lineno"> 1512</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *s = getenv(<span class="stringliteral">&quot;CWIST_REACTOR_ROUND_BUDGET_US&quot;</span>);</div>
-<div class="line"><a id="l01513" name="l01513"></a><span class="lineno"> 1513</span>        <span class="keywordflow">if</span> (s &amp;&amp; *s) {</div>
-<div class="line"><a id="l01514" name="l01514"></a><span class="lineno"> 1514</span>            <span class="keywordtype">char</span> *end = NULL;</div>
-<div class="line"><a id="l01515" name="l01515"></a><span class="lineno"> 1515</span>            <span class="keywordtype">long</span> parsed = strtol(s, &amp;end, 10);</div>
-<div class="line"><a id="l01516" name="l01516"></a><span class="lineno"> 1516</span>            v = (end != s &amp;&amp; parsed &gt;= 0 &amp;&amp; parsed &lt; 3600000000L) ? parsed : 2000;</div>
-<div class="line"><a id="l01517" name="l01517"></a><span class="lineno"> 1517</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01518" name="l01518"></a><span class="lineno"> 1518</span>            v = 2000;</div>
-<div class="line"><a id="l01519" name="l01519"></a><span class="lineno"> 1519</span>        }</div>
-<div class="line"><a id="l01520" name="l01520"></a><span class="lineno"> 1520</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
-<div class="line"><a id="l01521" name="l01521"></a><span class="lineno"> 1521</span>    }</div>
-<div class="line"><a id="l01522" name="l01522"></a><span class="lineno"> 1522</span>    <span class="keywordflow">return</span> (uint64_t)v;</div>
-<div class="line"><a id="l01523" name="l01523"></a><span class="lineno"> 1523</span>}</div>
-<div class="line"><a id="l01524" name="l01524"></a><span class="lineno"> 1524</span> </div>
-<div class="line"><a id="l01525" name="l01525"></a><span class="lineno"> 1525</span><span class="comment">/* Idle malloc trim (measured ~1.2 MiB median per worker returned to the OS on</span></div>
-<div class="line"><a id="l01526" name="l01526"></a><span class="lineno"> 1526</span><span class="comment"> * an idle HTTPS worker after a load round): glibc never gives back the free</span></div>
-<div class="line"><a id="l01527" name="l01527"></a><span class="lineno"> 1527</span><span class="comment"> * top of the main arena unless asked. CWIST_MALLOC_TRIM_IDLE_SEC bounds how</span></div>
-<div class="line"><a id="l01528" name="l01528"></a><span class="lineno"> 1528</span><span class="comment"> * many seconds of cumulative event-free idleness a reactor may accumulate</span></div>
-<div class="line"><a id="l01529" name="l01529"></a><span class="lineno"> 1529</span><span class="comment"> * before it calls malloc_trim(0) on a wake that saw zero events -- a mostly</span></div>
-<div class="line"><a id="l01530" name="l01530"></a><span class="lineno"> 1530</span><span class="comment"> * idle deployment sheds arena top memory without any hot-path cost. The knob</span></div>
-<div class="line"><a id="l01531" name="l01531"></a><span class="lineno"> 1531</span><span class="comment"> * is cached after the first read like the other env knobs in this file; 0</span></div>
-<div class="line"><a id="l01532" name="l01532"></a><span class="lineno"> 1532</span><span class="comment"> * disables the trim. */</span></div>
-<div class="line"><a id="l01533" name="l01533"></a><span class="lineno"> 1533</span><span class="keyword">static</span> uint32_t reactor_malloc_trim_idle_sec(<span class="keywordtype">void</span>) {</div>
-<div class="line"><a id="l01534" name="l01534"></a><span class="lineno"> 1534</span>    <span class="keyword">static</span> _Atomic <span class="keywordtype">int</span> cached = -1;</div>
-<div class="line"><a id="l01535" name="l01535"></a><span class="lineno"> 1535</span>    <span class="keywordtype">int</span> v = atomic_load_explicit(&amp;cached, memory_order_relaxed);</div>
-<div class="line"><a id="l01536" name="l01536"></a><span class="lineno"> 1536</span>    <span class="keywordflow">if</span> (v &lt; 0) {</div>
-<div class="line"><a id="l01537" name="l01537"></a><span class="lineno"> 1537</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *s = getenv(<span class="stringliteral">&quot;CWIST_MALLOC_TRIM_IDLE_SEC&quot;</span>);</div>
-<div class="line"><a id="l01538" name="l01538"></a><span class="lineno"> 1538</span>        <span class="keywordflow">if</span> (s &amp;&amp; *s) {</div>
-<div class="line"><a id="l01539" name="l01539"></a><span class="lineno"> 1539</span>            <span class="keywordtype">char</span> *end = NULL;</div>
-<div class="line"><a id="l01540" name="l01540"></a><span class="lineno"> 1540</span>            <span class="keywordtype">long</span> parsed = strtol(s, &amp;end, 10);</div>
-<div class="line"><a id="l01541" name="l01541"></a><span class="lineno"> 1541</span>            v = (end != s &amp;&amp; parsed &gt;= 0 &amp;&amp; parsed &lt; 86400) ? (<span class="keywordtype">int</span>)parsed : 30;</div>
-<div class="line"><a id="l01542" name="l01542"></a><span class="lineno"> 1542</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01543" name="l01543"></a><span class="lineno"> 1543</span>            v = 30;</div>
-<div class="line"><a id="l01544" name="l01544"></a><span class="lineno"> 1544</span>        }</div>
-<div class="line"><a id="l01545" name="l01545"></a><span class="lineno"> 1545</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
-<div class="line"><a id="l01546" name="l01546"></a><span class="lineno"> 1546</span>    }</div>
-<div class="line"><a id="l01547" name="l01547"></a><span class="lineno"> 1547</span>    <span class="keywordflow">return</span> (uint32_t)v;</div>
-<div class="line"><a id="l01548" name="l01548"></a><span class="lineno"> 1548</span>}</div>
-<div class="line"><a id="l01549" name="l01549"></a><span class="lineno"> 1549</span> </div>
-<div class="line"><a id="l01550" name="l01550"></a><span class="lineno"> 1550</span><span class="comment">/* Weak: musl and other non-glibc Linux libcs have no malloc_trim. */</span></div>
-<div class="line"><a id="l01551" name="l01551"></a><span class="lineno"> 1551</span><span class="keyword">extern</span> <span class="keywordtype">int</span> malloc_trim(<span class="keywordtype">size_t</span> __pad) <a class="code hl_function" href="../../d9/d39/alloc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d">__attribute__</a>((weak));</div>
-<div class="line"><a id="l01552" name="l01552"></a><span class="lineno"> 1552</span> </div>
-<div class="line"><a id="l01553" name="l01553"></a><span class="lineno"> 1553</span><span class="comment">/* A wake that dispatched events (or ran posted work) ends the idle streak. */</span></div>
-<div class="line"><a id="l01554" name="l01554"></a><span class="lineno"> 1554</span><span class="keyword">static</span> <span class="keywordtype">void</span> reactor_idle_note_eventful(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *r) {</div>
-<div class="line"><a id="l01555" name="l01555"></a><span class="lineno"> 1555</span>    r-&gt;idle_since_ns = 0;</div>
-<div class="line"><a id="l01556" name="l01556"></a><span class="lineno"> 1556</span>}</div>
-<div class="line"><a id="l01557" name="l01557"></a><span class="lineno"> 1557</span> </div>
-<div class="line"><a id="l01558" name="l01558"></a><span class="lineno"> 1558</span><span class="comment">/* Bookkeeping for a wake that saw zero events. Starts an idle streak on the</span></div>
-<div class="line"><a id="l01559" name="l01559"></a><span class="lineno"> 1559</span><span class="comment"> * first such wake; once the streak has lasted CWIST_MALLOC_TRIM_IDLE_SEC</span></div>
-<div class="line"><a id="l01560" name="l01560"></a><span class="lineno"> 1560</span><span class="comment"> * cumulative seconds, returns the arena top to the OS and re-anchors the</span></div>
-<div class="line"><a id="l01561" name="l01561"></a><span class="lineno"> 1561</span><span class="comment"> * streak. Runs on the run thread only, after the wait returned empty. */</span></div>
-<div class="line"><a id="l01562" name="l01562"></a><span class="lineno"> 1562</span><span class="keyword">static</span> <span class="keywordtype">void</span> reactor_idle_note_wake(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *r) {</div>
-<div class="line"><a id="l01563" name="l01563"></a><span class="lineno"> 1563</span>    uint32_t sec = reactor_malloc_trim_idle_sec();</div>
-<div class="line"><a id="l01564" name="l01564"></a><span class="lineno"> 1564</span>    <span class="keywordflow">if</span> (sec == 0 || &amp;malloc_trim == NULL) {</div>
-<div class="line"><a id="l01565" name="l01565"></a><span class="lineno"> 1565</span>        r-&gt;idle_since_ns = 0;</div>
-<div class="line"><a id="l01566" name="l01566"></a><span class="lineno"> 1566</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l01567" name="l01567"></a><span class="lineno"> 1567</span>    }</div>
-<div class="line"><a id="l01568" name="l01568"></a><span class="lineno"> 1568</span>    <span class="keyword">struct </span>timespec ts;</div>
-<div class="line"><a id="l01569" name="l01569"></a><span class="lineno"> 1569</span>    clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
-<div class="line"><a id="l01570" name="l01570"></a><span class="lineno"> 1570</span>    uint64_t now = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
-<div class="line"><a id="l01571" name="l01571"></a><span class="lineno"> 1571</span>    <span class="keywordflow">if</span> (r-&gt;idle_since_ns == 0) {</div>
-<div class="line"><a id="l01572" name="l01572"></a><span class="lineno"> 1572</span>        r-&gt;idle_since_ns = now;</div>
-<div class="line"><a id="l01573" name="l01573"></a><span class="lineno"> 1573</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l01574" name="l01574"></a><span class="lineno"> 1574</span>    }</div>
-<div class="line"><a id="l01575" name="l01575"></a><span class="lineno"> 1575</span>    <span class="keywordflow">if</span> (now - r-&gt;idle_since_ns &gt;= (uint64_t)sec * 1000000000ull) {</div>
-<div class="line"><a id="l01576" name="l01576"></a><span class="lineno"> 1576</span>        malloc_trim(0);</div>
-<div class="line"><a id="l01577" name="l01577"></a><span class="lineno"> 1577</span>        r-&gt;idle_since_ns = now;</div>
-<div class="line"><a id="l01578" name="l01578"></a><span class="lineno"> 1578</span>    }</div>
-<div class="line"><a id="l01579" name="l01579"></a><span class="lineno"> 1579</span>}</div>
-<div class="line"><a id="l01580" name="l01580"></a><span class="lineno"> 1580</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l01581" name="l01581"></a><span class="lineno"> 1581</span> </div>
-<div class="line"><a id="l01582" name="l01582"></a><span class="lineno"> 1582</span><span class="keyword">static</span> <span class="keywordtype">void</span> reactor_ctx_invoke(reactor_event_ctx_t *ev_ctx) {</div>
-<div class="line"><a id="l01583" name="l01583"></a><span class="lineno"> 1583</span>    <a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a> cb;</div>
-<div class="line"><a id="l01584" name="l01584"></a><span class="lineno"> 1584</span>    <span class="keywordflow">while</span> (!(cb = __atomic_load_n(&amp;ev_ctx-&gt;cb, __ATOMIC_ACQUIRE))) <a class="code hl_define" href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96">reactor_cpu_relax</a>();</div>
-<div class="line"><a id="l01585" name="l01585"></a><span class="lineno"> 1585</span>    cb(ev_ctx-&gt;fd, ev_ctx-&gt;ctx);</div>
-<div class="line"><a id="l01586" name="l01586"></a><span class="lineno"> 1586</span>}</div>
-<div class="line"><a id="l01587" name="l01587"></a><span class="lineno"> 1587</span> </div>
-<div class="foldopen" id="foldopen01588" data-start="{" data-end="}">
-<div class="line"><a id="l01588" name="l01588"></a><span class="lineno"><a class="line" href="../../dc/d85/reactor_8h.html#ac07bb3ce2393c0588f863eb97c4d6f5c"> 1588</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d3/d99/reactor_8c.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a>(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor) {</div>
-<div class="line"><a id="l01589" name="l01589"></a><span class="lineno"> 1589</span>    <span class="keywordflow">if</span> (!reactor) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l01590" name="l01590"></a><span class="lineno"> 1590</span>    __atomic_store_n(&amp;reactor-&gt;running, <span class="keyword">true</span>, __ATOMIC_RELEASE);</div>
-<div class="line"><a id="l01591" name="l01591"></a><span class="lineno"> 1591</span>    t_run_reactor = reactor;</div>
-<div class="line"><a id="l01592" name="l01592"></a><span class="lineno"> 1592</span> </div>
-<div class="line"><a id="l01593" name="l01593"></a><span class="lineno"> 1593</span><span class="preprocessor">#ifdef __linux__</span></div>
-<div class="line"><a id="l01594" name="l01594"></a><span class="lineno"> 1594</span>    <span class="keywordflow">if</span> (!reactor-&gt;impl.use_epoll) {</div>
-<div class="line"><a id="l01595" name="l01595"></a><span class="lineno"> 1595</span>        <span class="keyword">const</span> uint64_t cq_grace_ns = reactor_cq_grace_ns();</div>
-<div class="line"><a id="l01596" name="l01596"></a><span class="lineno"> 1596</span>        <span class="keywordflow">while</span> (reactor_running(reactor)) {</div>
-<div class="line"><a id="l01597" name="l01597"></a><span class="lineno"> 1597</span>            reactor_drain_posts(reactor);</div>
-<div class="line"><a id="l01598" name="l01598"></a><span class="lineno"> 1598</span>            reactor_run_timers(reactor);</div>
-<div class="line"><a id="l01599" name="l01599"></a><span class="lineno"> 1599</span>            <span class="comment">/* Submit the re-arms queued by the previous dispatch batch under</span></div>
-<div class="line"><a id="l01600" name="l01600"></a><span class="lineno"> 1600</span><span class="comment">             * the SQ lock, then wait in a separate call.  The submit enter</span></div>
-<div class="line"><a id="l01601" name="l01601"></a><span class="lineno"> 1601</span><span class="comment">             * MUST hold the lock: uring_submit/uring_submit_batch roll the</span></div>
-<div class="line"><a id="l01602" name="l01602"></a><span class="lineno"> 1602</span><span class="comment">             * SQ tail back when their own enter fails, and a concurrent</span></div>
-<div class="line"><a id="l01603" name="l01603"></a><span class="lineno"> 1603</span><span class="comment">             * unlocked enter here could consume that SQE first, leaving</span></div>
-<div class="line"><a id="l01604" name="l01604"></a><span class="lineno"> 1604</span><span class="comment">             * sq_tail behind sq_head.  tail &lt; head reads as a permanently</span></div>
-<div class="line"><a id="l01605" name="l01605"></a><span class="lineno"> 1605</span><span class="comment">             * full SQ to every later submit (tail - head underflows past</span></div>
-<div class="line"><a id="l01606" name="l01606"></a><span class="lineno"> 1606</span><span class="comment">             * sq_entries), so the reactor goes deaf: no re-arm, no accept,</span></div>
-<div class="line"><a id="l01607" name="l01607"></a><span class="lineno"> 1607</span><span class="comment">             * no completions - the server stops answering while every thread</span></div>
-<div class="line"><a id="l01608" name="l01608"></a><span class="lineno"> 1608</span><span class="comment">             * looks idle.  With all SQ consumers under the lock, a failed</span></div>
-<div class="line"><a id="l01609" name="l01609"></a><span class="lineno"> 1609</span><span class="comment">             * enter means the SQE was definitely not consumed and the</span></div>
-<div class="line"><a id="l01610" name="l01610"></a><span class="lineno"> 1610</span><span class="comment">             * rollback is exact.</span></div>
-<div class="line"><a id="l01611" name="l01611"></a><span class="lineno"> 1611</span><span class="comment">             *</span></div>
-<div class="line"><a id="l01612" name="l01612"></a><span class="lineno"> 1612</span><span class="comment">             * The wait is bounded (like the epoll path&#39;s 100 ms poll)</span></div>
-<div class="line"><a id="l01613" name="l01613"></a><span class="lineno"> 1613</span><span class="comment">             * because the shutdown handler runs with SA_RESTART: an</span></div>
-<div class="line"><a id="l01614" name="l01614"></a><span class="lineno"> 1614</span><span class="comment">             * unbounded enter would be restarted after SIGTERM and hang an</span></div>
-<div class="line"><a id="l01615" name="l01615"></a><span class="lineno"> 1615</span><span class="comment">             * idle reactor forever.  It passes to_submit=0, so it consumes</span></div>
-<div class="line"><a id="l01616" name="l01616"></a><span class="lineno"> 1616</span><span class="comment">             * nothing and needs no lock. */</span></div>
-<div class="line"><a id="l01617" name="l01617"></a><span class="lineno"> 1617</span>            <span class="comment">/* CQ grace: completions that land while the previous batch is</span></div>
-<div class="line"><a id="l01618" name="l01618"></a><span class="lineno"> 1618</span><span class="comment">             * dispatching would otherwise force a fresh wake. After the</span></div>
-<div class="line"><a id="l01619" name="l01619"></a><span class="lineno"> 1619</span><span class="comment">             * locked submit enter below, peek the CQ ring from userspace for</span></div>
-<div class="line"><a id="l01620" name="l01620"></a><span class="lineno"> 1620</span><span class="comment">             * a bounded window; completions caught in time are dispatched in</span></div>
-<div class="line"><a id="l01621" name="l01621"></a><span class="lineno"> 1621</span><span class="comment">             * the current round and the wait enter is skipped. Re-arms are</span></div>
-<div class="line"><a id="l01622" name="l01622"></a><span class="lineno"> 1622</span><span class="comment">             * safe either way: the submit enter above already flushed them.</span></div>
-<div class="line"><a id="l01623" name="l01623"></a><span class="lineno"> 1623</span><span class="comment">             * The deadline bounds the spin; on expiry (or when disabled) the</span></div>
-<div class="line"><a id="l01624" name="l01624"></a><span class="lineno"> 1624</span><span class="comment">             * code falls through to the bounded wait below. */</span></div>
-<div class="line"><a id="l01625" name="l01625"></a><span class="lineno"> 1625</span>            <span class="keywordtype">bool</span> cq_pending = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l01626" name="l01626"></a><span class="lineno"> 1626</span>            <span class="keywordflow">if</span> (cq_grace_ns &gt; 0) {</div>
-<div class="line"><a id="l01627" name="l01627"></a><span class="lineno"> 1627</span>                uint32_t ph = __atomic_load_n(reactor-&gt;impl.cq_head, __ATOMIC_ACQUIRE);</div>
-<div class="line"><a id="l01628" name="l01628"></a><span class="lineno"> 1628</span>                <span class="keywordflow">if</span> (ph == *reactor-&gt;impl.cq_tail) {</div>
-<div class="line"><a id="l01629" name="l01629"></a><span class="lineno"> 1629</span>                    <span class="keyword">struct </span>timespec gs;</div>
-<div class="line"><a id="l01630" name="l01630"></a><span class="lineno"> 1630</span>                    clock_gettime(CLOCK_MONOTONIC, &amp;gs);</div>
-<div class="line"><a id="l01631" name="l01631"></a><span class="lineno"> 1631</span>                    uint64_t g_end =</div>
-<div class="line"><a id="l01632" name="l01632"></a><span class="lineno"> 1632</span>                        (uint64_t)gs.tv_sec * 1000000000ull + (uint64_t)gs.tv_nsec + cq_grace_ns;</div>
-<div class="line"><a id="l01633" name="l01633"></a><span class="lineno"> 1633</span>                    uint32_t spins = 0;</div>
-<div class="line"><a id="l01634" name="l01634"></a><span class="lineno"> 1634</span>                    <span class="keywordflow">while</span> (ph == *reactor-&gt;impl.cq_tail) {</div>
-<div class="line"><a id="l01635" name="l01635"></a><span class="lineno"> 1635</span>                        <a class="code hl_define" href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96">reactor_cpu_relax</a>();</div>
-<div class="line"><a id="l01636" name="l01636"></a><span class="lineno"> 1636</span>                        <span class="keywordflow">if</span> (((++spins) &amp; 31u) == 0) {</div>
-<div class="line"><a id="l01637" name="l01637"></a><span class="lineno"> 1637</span>                            clock_gettime(CLOCK_MONOTONIC, &amp;gs);</div>
-<div class="line"><a id="l01638" name="l01638"></a><span class="lineno"> 1638</span>                            uint64_t now =</div>
-<div class="line"><a id="l01639" name="l01639"></a><span class="lineno"> 1639</span>                                (uint64_t)gs.tv_sec * 1000000000ull + (uint64_t)gs.tv_nsec;</div>
-<div class="line"><a id="l01640" name="l01640"></a><span class="lineno"> 1640</span>                            <span class="keywordflow">if</span> (now &gt;= g_end) <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l01641" name="l01641"></a><span class="lineno"> 1641</span>                        }</div>
-<div class="line"><a id="l01642" name="l01642"></a><span class="lineno"> 1642</span>                        ph = __atomic_load_n(reactor-&gt;impl.cq_head, __ATOMIC_ACQUIRE);</div>
-<div class="line"><a id="l01643" name="l01643"></a><span class="lineno"> 1643</span>                    }</div>
-<div class="line"><a id="l01644" name="l01644"></a><span class="lineno"> 1644</span>                    cq_pending = (ph != *reactor-&gt;impl.cq_tail);</div>
-<div class="line"><a id="l01645" name="l01645"></a><span class="lineno"> 1645</span>                }</div>
-<div class="line"><a id="l01646" name="l01646"></a><span class="lineno"> 1646</span>            }</div>
-<div class="line"><a id="l01647" name="l01647"></a><span class="lineno"> 1647</span> </div>
-<div class="line"><a id="l01648" name="l01648"></a><span class="lineno"> 1648</span>            <span class="comment">/* Bounded by the idle wait, shortened to the next timer. */</span></div>
-<div class="line"><a id="l01649" name="l01649"></a><span class="lineno"> 1649</span>            <span class="keyword">const</span> uint64_t wait_ns = reactor_wait_ns(reactor);</div>
-<div class="line"><a id="l01650" name="l01650"></a><span class="lineno"> 1650</span>            <span class="keyword">const</span> <span class="keyword">struct </span>__kernel_timespec idle_ts = {</div>
-<div class="line"><a id="l01651" name="l01651"></a><span class="lineno"> 1651</span>                .tv_sec = (<span class="keywordtype">long</span> long)(wait_ns / 1000000000ull),</div>
-<div class="line"><a id="l01652" name="l01652"></a><span class="lineno"> 1652</span>                .tv_nsec = (<span class="keywordtype">long</span> long)(wait_ns % 1000000000ull)};</div>
-<div class="line"><a id="l01653" name="l01653"></a><span class="lineno"> 1653</span>            uint32_t to_submit = reactor-&gt;sq_unsubmitted;</div>
-<div class="line"><a id="l01654" name="l01654"></a><span class="lineno"> 1654</span>            reactor-&gt;sq_unsubmitted = 0;</div>
-<div class="line"><a id="l01655" name="l01655"></a><span class="lineno"> 1655</span>            <span class="keywordflow">if</span> (to_submit &gt; 0) {</div>
-<div class="line"><a id="l01656" name="l01656"></a><span class="lineno"> 1656</span>                pthread_mutex_lock(&amp;reactor-&gt;impl.sq_lock);</div>
-<div class="line"><a id="l01657" name="l01657"></a><span class="lineno"> 1657</span>                <span class="keywordtype">int</span> sret = sys_io_uring_enter(reactor-&gt;impl.ring_fd, to_submit, 0, 0, NULL);</div>
-<div class="line"><a id="l01658" name="l01658"></a><span class="lineno"> 1658</span>                pthread_mutex_unlock(&amp;reactor-&gt;impl.sq_lock);</div>
-<div class="line"><a id="l01659" name="l01659"></a><span class="lineno"> 1659</span>                <span class="keywordflow">if</span> (sret &lt; 0) {</div>
-<div class="line"><a id="l01660" name="l01660"></a><span class="lineno"> 1660</span>                    <span class="comment">/* Submission state is unknown on EINTR; anything else</span></div>
-<div class="line"><a id="l01661" name="l01661"></a><span class="lineno"> 1661</span><span class="comment">                     * failed before consuming.  Either way the SQEs are</span></div>
-<div class="line"><a id="l01662" name="l01662"></a><span class="lineno"> 1662</span><span class="comment">                     * still in the SQ (the kernel caps resubmission at what</span></div>
-<div class="line"><a id="l01663" name="l01663"></a><span class="lineno"> 1663</span><span class="comment">                     * is actually there), so restore the count and let the</span></div>
-<div class="line"><a id="l01664" name="l01664"></a><span class="lineno"> 1664</span><span class="comment">                     * next round retry. */</span></div>
-<div class="line"><a id="l01665" name="l01665"></a><span class="lineno"> 1665</span>                    reactor-&gt;sq_unsubmitted += to_submit;</div>
-<div class="line"><a id="l01666" name="l01666"></a><span class="lineno"> 1666</span>                }</div>
-<div class="line"><a id="l01667" name="l01667"></a><span class="lineno"> 1667</span>            }</div>
-<div class="line"><a id="l01668" name="l01668"></a><span class="lineno"> 1668</span>            <span class="keywordflow">if</span> (!cq_pending) {</div>
-<div class="line"><a id="l01669" name="l01669"></a><span class="lineno"> 1669</span>                <span class="keywordtype">int</span> ret = sys_io_uring_enter_timeout(reactor-&gt;impl.ring_fd, 0, 1,</div>
-<div class="line"><a id="l01670" name="l01670"></a><span class="lineno"> 1670</span>                                                     IORING_ENTER_GETEVENTS, &amp;idle_ts);</div>
-<div class="line"><a id="l01671" name="l01671"></a><span class="lineno"> 1671</span>                <span class="comment">/* EINTR and ETIME both leave the CQ untouched, so the</span></div>
-<div class="line"><a id="l01672" name="l01672"></a><span class="lineno"> 1672</span><span class="comment">                 * head/tail check below still decides eventfulness. */</span></div>
-<div class="line"><a id="l01673" name="l01673"></a><span class="lineno"> 1673</span>                <span class="keywordflow">if</span> (ret &lt; 0 &amp;&amp; errno != EINTR &amp;&amp; errno != ETIME) <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l01674" name="l01674"></a><span class="lineno"> 1674</span>            }</div>
-<div class="line"><a id="l01675" name="l01675"></a><span class="lineno"> 1675</span>            uint32_t <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> = __atomic_load_n(reactor-&gt;impl.cq_head, __ATOMIC_ACQUIRE);</div>
-<div class="line"><a id="l01676" name="l01676"></a><span class="lineno"> 1676</span>            uint32_t tail = *reactor-&gt;impl.cq_tail;</div>
-<div class="line"><a id="l01677" name="l01677"></a><span class="lineno"> 1677</span>            <span class="keywordflow">if</span> (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> == tail) {</div>
-<div class="line"><a id="l01678" name="l01678"></a><span class="lineno"> 1678</span>                <span class="comment">/* Zero-completion wake: pure idle. Feeds the idle malloc_trim</span></div>
-<div class="line"><a id="l01679" name="l01679"></a><span class="lineno"> 1679</span><span class="comment">                 * cadence; see reactor_idle_note_wake(). */</span></div>
-<div class="line"><a id="l01680" name="l01680"></a><span class="lineno"> 1680</span>                reactor_idle_note_wake(reactor);</div>
-<div class="line"><a id="l01681" name="l01681"></a><span class="lineno"> 1681</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01682" name="l01682"></a><span class="lineno"> 1682</span>            }</div>
-<div class="line"><a id="l01683" name="l01683"></a><span class="lineno"> 1683</span>            reactor_idle_note_eventful(reactor);</div>
-<div class="line"><a id="l01684" name="l01684"></a><span class="lineno"> 1684</span>            reactor_tsan_acquire(&amp;reactor-&gt;impl);</div>
-<div class="line"><a id="l01685" name="l01685"></a><span class="lineno"> 1685</span>            reactor-&gt;dispatching = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l01686" name="l01686"></a><span class="lineno"> 1686</span>            <span class="keyword">const</span> uint64_t round_budget_us = reactor_round_budget_us();</div>
-<div class="line"><a id="l01687" name="l01687"></a><span class="lineno"> 1687</span>            uint64_t round_start_ns = 0;</div>
-<div class="line"><a id="l01688" name="l01688"></a><span class="lineno"> 1688</span>            <span class="keywordflow">if</span> (round_budget_us) {</div>
-<div class="line"><a id="l01689" name="l01689"></a><span class="lineno"> 1689</span>                <span class="keyword">struct </span>timespec ts;</div>
-<div class="line"><a id="l01690" name="l01690"></a><span class="lineno"> 1690</span>                clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
-<div class="line"><a id="l01691" name="l01691"></a><span class="lineno"> 1691</span>                round_start_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
-<div class="line"><a id="l01692" name="l01692"></a><span class="lineno"> 1692</span>            }</div>
-<div class="line"><a id="l01693" name="l01693"></a><span class="lineno"> 1693</span>            <span class="comment">/* Cooperative queuing: a busy round can carry hundreds of ready</span></div>
-<div class="line"><a id="l01694" name="l01694"></a><span class="lineno"> 1694</span><span class="comment">             * connections in one CQE batch (the ring is 4096 deep). Foreign-</span></div>
-<div class="line"><a id="l01695" name="l01695"></a><span class="lineno"> 1695</span><span class="comment">             * thread completions (cwist_async_defer, background jobs) queue</span></div>
-<div class="line"><a id="l01696" name="l01696"></a><span class="lineno"> 1696</span><span class="comment">             * onto post_head via cwist_reactor_post() and used to wait for</span></div>
-<div class="line"><a id="l01697" name="l01697"></a><span class="lineno"> 1697</span><span class="comment">             * reactor_drain_posts() at the *top* of the next round -- i.e.</span></div>
-<div class="line"><a id="l01698" name="l01698"></a><span class="lineno"> 1698</span><span class="comment">             * behind this entire batch, even if the post arrived while we</span></div>
-<div class="line"><a id="l01699" name="l01699"></a><span class="lineno"> 1699</span><span class="comment">             * were only a few callbacks in. CWIST_REACTOR_DRAIN_CHUNK bounds</span></div>
-<div class="line"><a id="l01700" name="l01700"></a><span class="lineno"> 1700</span><span class="comment">             * how many connection callbacks run before posts are drained, so</span></div>
-<div class="line"><a id="l01701" name="l01701"></a><span class="lineno"> 1701</span><span class="comment">             * a foreign-thread completion&#39;s own tail latency stops scaling</span></div>
-<div class="line"><a id="l01702" name="l01702"></a><span class="lineno"> 1702</span><span class="comment">             * with how many *other* connections happened to be ready in the</span></div>
-<div class="line"><a id="l01703" name="l01703"></a><span class="lineno"> 1703</span><span class="comment">             * same wake. The default (64) applies the bound out of the box;</span></div>
-<div class="line"><a id="l01704" name="l01704"></a><span class="lineno"> 1704</span><span class="comment">             * 0 restores the legacy single-drain-at-end behavior. */</span></div>
-<div class="line"><a id="l01705" name="l01705"></a><span class="lineno"> 1705</span>            uint32_t drain_chunk = reactor_drain_chunk();</div>
-<div class="line"><a id="l01706" name="l01706"></a><span class="lineno"> 1706</span>            uint32_t since_drain = 0;</div>
-<div class="line"><a id="l01707" name="l01707"></a><span class="lineno"> 1707</span>            uint32_t since_budget_check = 0;</div>
-<div class="line"><a id="l01708" name="l01708"></a><span class="lineno"> 1708</span>            <span class="keywordflow">while</span> (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> != tail) {</div>
-<div class="line"><a id="l01709" name="l01709"></a><span class="lineno"> 1709</span>                <span class="keyword">struct </span>io_uring_cqe *cqe = &amp;reactor-&gt;impl.cqes[<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> &amp; *reactor-&gt;impl.cq_ring_mask];</div>
-<div class="line"><a id="l01710" name="l01710"></a><span class="lineno"> 1710</span>                uint64_t user_data = cqe-&gt;user_data;</div>
-<div class="line"><a id="l01711" name="l01711"></a><span class="lineno"> 1711</span>                <span class="keywordflow">if</span> (user_data &amp; 1u) {</div>
-<div class="line"><a id="l01712" name="l01712"></a><span class="lineno"> 1712</span>                    <span class="comment">/* Tagged data-path SQE (RX-uring RECV): the connection</span></div>
-<div class="line"><a id="l01713" name="l01713"></a><span class="lineno"> 1713</span><span class="comment">                     * pointer rides in the remaining bits.  Dispatch on any</span></div>
-<div class="line"><a id="l01714" name="l01714"></a><span class="lineno"> 1714</span><span class="comment">                     * res, including negative ones: -EAGAIN is the POLL</span></div>
-<div class="line"><a id="l01715" name="l01715"></a><span class="lineno"> 1715</span><span class="comment">                     * fallback signal and 0 is EOF.  Latency probe samples</span></div>
-<div class="line"><a id="l01716" name="l01716"></a><span class="lineno"> 1716</span><span class="comment">                     * are recorded by the handler itself (it owns the arm</span></div>
-<div class="line"><a id="l01717" name="l01717"></a><span class="lineno"> 1717</span><span class="comment">                     * timestamp), not by the ev_ctx wrapper below. */</span></div>
-<div class="line"><a id="l01718" name="l01718"></a><span class="lineno"> 1718</span>                    <span class="keywordflow">if</span> (reactor-&gt;rx_cb) {</div>
-<div class="line"><a id="l01719" name="l01719"></a><span class="lineno"> 1719</span>                        reactor-&gt;rx_cb((<span class="keywordtype">void</span> *)(user_data &amp; ~(uint64_t)1u), cqe-&gt;res);</div>
-<div class="line"><a id="l01720" name="l01720"></a><span class="lineno"> 1720</span>                    }</div>
-<div class="line"><a id="l01721" name="l01721"></a><span class="lineno"> 1721</span>                } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (user_data &amp; 2u) {</div>
-<div class="line"><a id="l01722" name="l01722"></a><span class="lineno"> 1722</span>                    <span class="comment">/* Multishot-accept slot (issue #406): cqe-&gt;res is the</span></div>
-<div class="line"><a id="l01723" name="l01723"></a><span class="lineno"> 1723</span><span class="comment">                     * accepted fd, already CLOEXEC|NONBLOCK.  A completion</span></div>
-<div class="line"><a id="l01724" name="l01724"></a><span class="lineno"> 1724</span><span class="comment">                     * without IORING_CQE_F_MORE ends the registration: notify</span></div>
-<div class="line"><a id="l01725" name="l01725"></a><span class="lineno"> 1725</span><span class="comment">                     * once with the terminal status (-errno, or -ECANCELED on</span></div>
-<div class="line"><a id="l01726" name="l01726"></a><span class="lineno"> 1726</span><span class="comment">                     * an error-free end) so the caller can resume the</span></div>
-<div class="line"><a id="l01727" name="l01727"></a><span class="lineno"> 1727</span><span class="comment">                     * one-shot POLL accept loop, then free the slot. */</span></div>
-<div class="line"><a id="l01728" name="l01728"></a><span class="lineno"> 1728</span>                    reactor_accept_slot_t *slot =</div>
-<div class="line"><a id="l01729" name="l01729"></a><span class="lineno"> 1729</span>                        (reactor_accept_slot_t *)(uintptr_t)(user_data &amp; ~(uint64_t)3u);</div>
-<div class="line"><a id="l01730" name="l01730"></a><span class="lineno"> 1730</span>                    <span class="keywordtype">int</span> res = cqe-&gt;res;</div>
-<div class="line"><a id="l01731" name="l01731"></a><span class="lineno"> 1731</span>                    <span class="keywordflow">if</span> (res &gt;= 0) slot-&gt;cb(slot-&gt;ctx, res);</div>
-<div class="line"><a id="l01732" name="l01732"></a><span class="lineno"> 1732</span>                    <span class="keywordflow">if</span> (!(cqe-&gt;flags &amp; IORING_CQE_F_MORE)) {</div>
-<div class="line"><a id="l01733" name="l01733"></a><span class="lineno"> 1733</span>                        reactor_accept_unlink(reactor, slot);</div>
-<div class="line"><a id="l01734" name="l01734"></a><span class="lineno"> 1734</span>                        slot-&gt;cb(slot-&gt;ctx, res &lt; 0 ? res : -ECANCELED);</div>
-<div class="line"><a id="l01735" name="l01735"></a><span class="lineno"> 1735</span>                        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(slot);</div>
-<div class="line"><a id="l01736" name="l01736"></a><span class="lineno"> 1736</span>                    }</div>
-<div class="line"><a id="l01737" name="l01737"></a><span class="lineno"> 1737</span>                } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01738" name="l01738"></a><span class="lineno"> 1738</span>                    reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)user_data;</div>
-<div class="line"><a id="l01739" name="l01739"></a><span class="lineno"> 1739</span>                    <span class="keywordflow">if</span> (ev_ctx) {</div>
-<div class="line"><a id="l01740" name="l01740"></a><span class="lineno"> 1740</span>                        <span class="keywordflow">if</span> (cqe-&gt;res &gt;= 0) {</div>
-<div class="line"><a id="l01741" name="l01741"></a><span class="lineno"> 1741</span>                            <span class="keywordflow">if</span> (latency_probe_enabled()) {</div>
-<div class="line"><a id="l01742" name="l01742"></a><span class="lineno"> 1742</span>                                <span class="keyword">struct </span>timespec ts;</div>
-<div class="line"><a id="l01743" name="l01743"></a><span class="lineno"> 1743</span>                                clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
-<div class="line"><a id="l01744" name="l01744"></a><span class="lineno"> 1744</span>                                uint64_t t0 =</div>
-<div class="line"><a id="l01745" name="l01745"></a><span class="lineno"> 1745</span>                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
-<div class="line"><a id="l01746" name="l01746"></a><span class="lineno"> 1746</span>                                <span class="comment">/* armed_ns == 0 means the slot was armed before</span></div>
-<div class="line"><a id="l01747" name="l01747"></a><span class="lineno"> 1747</span><span class="comment">                                 * the probe was enabled; fold it into the first</span></div>
-<div class="line"><a id="l01748" name="l01748"></a><span class="lineno"> 1748</span><span class="comment">                                 * bucket rather than producing a garbage delay. */</span></div>
-<div class="line"><a id="l01749" name="l01749"></a><span class="lineno"> 1749</span>                                uint64_t delay_ns = ev_ctx-&gt;armed_ns ? t0 - ev_ctx-&gt;armed_ns : 0;</div>
-<div class="line"><a id="l01750" name="l01750"></a><span class="lineno"> 1750</span>                                reactor_ctx_invoke(ev_ctx);</div>
-<div class="line"><a id="l01751" name="l01751"></a><span class="lineno"> 1751</span>                                clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
-<div class="line"><a id="l01752" name="l01752"></a><span class="lineno"> 1752</span>                                uint64_t t1 =</div>
-<div class="line"><a id="l01753" name="l01753"></a><span class="lineno"> 1753</span>                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
-<div class="line"><a id="l01754" name="l01754"></a><span class="lineno"> 1754</span>                                latency_probe_record(reactor-&gt;probe[LATENCY_PROBE_QUEUE].buckets,</div>
-<div class="line"><a id="l01755" name="l01755"></a><span class="lineno"> 1755</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].count,</div>
-<div class="line"><a id="l01756" name="l01756"></a><span class="lineno"> 1756</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].sum_us,</div>
-<div class="line"><a id="l01757" name="l01757"></a><span class="lineno"> 1757</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].max_us,</div>
-<div class="line"><a id="l01758" name="l01758"></a><span class="lineno"> 1758</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].over_5ms,</div>
-<div class="line"><a id="l01759" name="l01759"></a><span class="lineno"> 1759</span>                                                     delay_ns / 1000);</div>
-<div class="line"><a id="l01760" name="l01760"></a><span class="lineno"> 1760</span>                                latency_probe_record(reactor-&gt;probe[LATENCY_PROBE_SVC].buckets,</div>
-<div class="line"><a id="l01761" name="l01761"></a><span class="lineno"> 1761</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].count,</div>
-<div class="line"><a id="l01762" name="l01762"></a><span class="lineno"> 1762</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].sum_us,</div>
-<div class="line"><a id="l01763" name="l01763"></a><span class="lineno"> 1763</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].max_us,</div>
-<div class="line"><a id="l01764" name="l01764"></a><span class="lineno"> 1764</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].over_5ms,</div>
-<div class="line"><a id="l01765" name="l01765"></a><span class="lineno"> 1765</span>                                                     (t1 - t0) / 1000);</div>
-<div class="line"><a id="l01766" name="l01766"></a><span class="lineno"> 1766</span>                            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01767" name="l01767"></a><span class="lineno"> 1767</span>                                reactor_ctx_invoke(ev_ctx);</div>
-<div class="line"><a id="l01768" name="l01768"></a><span class="lineno"> 1768</span>                            }</div>
-<div class="line"><a id="l01769" name="l01769"></a><span class="lineno"> 1769</span>                        }</div>
-<div class="line"><a id="l01770" name="l01770"></a><span class="lineno"> 1770</span>                        free_reactor_ctx(reactor, ev_ctx);</div>
-<div class="line"><a id="l01771" name="l01771"></a><span class="lineno"> 1771</span>                    }</div>
-<div class="line"><a id="l01772" name="l01772"></a><span class="lineno"> 1772</span>                }</div>
-<div class="line"><a id="l01773" name="l01773"></a><span class="lineno"> 1773</span>                <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>++;</div>
-<div class="line"><a id="l01774" name="l01774"></a><span class="lineno"> 1774</span>                <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> != tail) {</div>
-<div class="line"><a id="l01775" name="l01775"></a><span class="lineno"> 1775</span>                    since_drain = 0;</div>
-<div class="line"><a id="l01776" name="l01776"></a><span class="lineno"> 1776</span>                    __atomic_store_n(reactor-&gt;impl.cq_head, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, __ATOMIC_RELEASE);</div>
-<div class="line"><a id="l01777" name="l01777"></a><span class="lineno"> 1777</span>                    reactor_drain_posts(reactor);</div>
-<div class="line"><a id="l01778" name="l01778"></a><span class="lineno"> 1778</span>                }</div>
-<div class="line"><a id="l01779" name="l01779"></a><span class="lineno"> 1779</span>                <span class="keywordflow">if</span> (round_budget_us &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> != tail &amp;&amp; (++since_budget_check &amp; 63u) == 0) {</div>
-<div class="line"><a id="l01780" name="l01780"></a><span class="lineno"> 1780</span>                    <span class="comment">/* The budget check rides its own cadence (every 64</span></div>
-<div class="line"><a id="l01781" name="l01781"></a><span class="lineno"> 1781</span><span class="comment">                     * callbacks), independent of CWIST_REACTOR_DRAIN_CHUNK,</span></div>
-<div class="line"><a id="l01782" name="l01782"></a><span class="lineno"> 1782</span><span class="comment">                     * so disabling the post drain does not disable the</span></div>
-<div class="line"><a id="l01783" name="l01783"></a><span class="lineno"> 1783</span><span class="comment">                     * round bound. */</span></div>
-<div class="line"><a id="l01784" name="l01784"></a><span class="lineno"> 1784</span>                    <span class="keyword">struct </span>timespec ts;</div>
-<div class="line"><a id="l01785" name="l01785"></a><span class="lineno"> 1785</span>                    clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
-<div class="line"><a id="l01786" name="l01786"></a><span class="lineno"> 1786</span>                    uint64_t now_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
-<div class="line"><a id="l01787" name="l01787"></a><span class="lineno"> 1787</span>                    <span class="keywordflow">if</span> (now_ns - round_start_ns &gt;= round_budget_us * 1000ull) {</div>
-<div class="line"><a id="l01788" name="l01788"></a><span class="lineno"> 1788</span>                        <span class="comment">/* Long round: flush the re-arms parked so far instead</span></div>
-<div class="line"><a id="l01789" name="l01789"></a><span class="lineno"> 1789</span><span class="comment">                         * of holding them to round end. The batch itself</span></div>
-<div class="line"><a id="l01790" name="l01790"></a><span class="lineno"> 1790</span><span class="comment">                         * still runs to completion. */</span></div>
-<div class="line"><a id="l01791" name="l01791"></a><span class="lineno"> 1791</span>                        flush_deferred(reactor);</div>
-<div class="line"><a id="l01792" name="l01792"></a><span class="lineno"> 1792</span>                    }</div>
-<div class="line"><a id="l01793" name="l01793"></a><span class="lineno"> 1793</span>                }</div>
-<div class="line"><a id="l01794" name="l01794"></a><span class="lineno"> 1794</span>            }</div>
-<div class="line"><a id="l01795" name="l01795"></a><span class="lineno"> 1795</span>            reactor-&gt;dispatching = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l01796" name="l01796"></a><span class="lineno"> 1796</span>            __atomic_store_n(reactor-&gt;impl.cq_head, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, __ATOMIC_RELEASE);</div>
-<div class="line"><a id="l01797" name="l01797"></a><span class="lineno"> 1797</span>            queue_deferred(reactor);</div>
-<div class="line"><a id="l01798" name="l01798"></a><span class="lineno"> 1798</span>        }</div>
-<div class="line"><a id="l01799" name="l01799"></a><span class="lineno"> 1799</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01800" name="l01800"></a><span class="lineno"> 1800</span>        <span class="keyword">struct </span>epoll_event events[1024];</div>
-<div class="line"><a id="l01801" name="l01801"></a><span class="lineno"> 1801</span>        <span class="keywordflow">while</span> (reactor_running(reactor)) {</div>
-<div class="line"><a id="l01802" name="l01802"></a><span class="lineno"> 1802</span>            reactor_drain_posts(reactor);</div>
-<div class="line"><a id="l01803" name="l01803"></a><span class="lineno"> 1803</span>            reactor_run_timers(reactor);</div>
-<div class="line"><a id="l01804" name="l01804"></a><span class="lineno"> 1804</span>            <span class="comment">/* Round to the nearest millisecond, with a 1 ms minimum so a</span></div>
-<div class="line"><a id="l01805" name="l01805"></a><span class="lineno"> 1805</span><span class="comment">             * sub-millisecond remainder never degenerates into a busy poll:</span></div>
-<div class="line"><a id="l01806" name="l01806"></a><span class="lineno"> 1806</span><span class="comment">             * the remainder is deliberately absorbed by that final 1 ms wait</span></div>
-<div class="line"><a id="l01807" name="l01807"></a><span class="lineno"> 1807</span><span class="comment">             * instead of rounding every wait up (which let a timer land up to</span></div>
-<div class="line"><a id="l01808" name="l01808"></a><span class="lineno"> 1808</span><span class="comment">             * ~1 ms late). An early epoll_wait return cannot dispatch a timer</span></div>
-<div class="line"><a id="l01809" name="l01809"></a><span class="lineno"> 1809</span><span class="comment">             * early: reactor_run_timers() re-checks each deadline against the</span></div>
-<div class="line"><a id="l01810" name="l01810"></a><span class="lineno"> 1810</span><span class="comment">             * clock, and the only armed timers (webrtc conn/SCTP ticks, see</span></div>
-<div class="line"><a id="l01811" name="l01811"></a><span class="lineno"> 1811</span><span class="comment">             * src/net/webrtc/webrtc.c) re-check their own expiry or are</span></div>
-<div class="line"><a id="l01812" name="l01812"></a><span class="lineno"> 1812</span><span class="comment">             * harmless when ticked slightly early. An already-due timer waits</span></div>
-<div class="line"><a id="l01813" name="l01813"></a><span class="lineno"> 1813</span><span class="comment">             * at most this 1 ms before firing. */</span></div>
-<div class="line"><a id="l01814" name="l01814"></a><span class="lineno"> 1814</span>            <span class="keywordtype">int</span> wait_ms = (int)((reactor_wait_ns(reactor) + 500000ull) / 1000000ull);</div>
-<div class="line"><a id="l01815" name="l01815"></a><span class="lineno"> 1815</span>            <span class="keywordflow">if</span> (wait_ms &lt; 1) wait_ms = 1;</div>
-<div class="line"><a id="l01816" name="l01816"></a><span class="lineno"> 1816</span>            <span class="comment">/* Queued RX receives must not wait behind a blocking poll. */</span></div>
-<div class="line"><a id="l01817" name="l01817"></a><span class="lineno"> 1817</span>            <span class="keywordflow">if</span> (reactor-&gt;rx_ready_n &gt; 0) wait_ms = 0;</div>
-<div class="line"><a id="l01818" name="l01818"></a><span class="lineno"> 1818</span>            <span class="keywordtype">int</span> n = epoll_wait(reactor-&gt;impl.epoll_fd, events, 1024, wait_ms);</div>
-<div class="line"><a id="l01819" name="l01819"></a><span class="lineno"> 1819</span>            <span class="keywordflow">if</span> (n &lt; 0) {</div>
-<div class="line"><a id="l01820" name="l01820"></a><span class="lineno"> 1820</span>                <span class="keywordflow">if</span> (errno == EINTR) <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01821" name="l01821"></a><span class="lineno"> 1821</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l01822" name="l01822"></a><span class="lineno"> 1822</span>            }</div>
-<div class="line"><a id="l01823" name="l01823"></a><span class="lineno"> 1823</span>            <span class="keywordflow">if</span> (n == 0) {</div>
-<div class="line"><a id="l01824" name="l01824"></a><span class="lineno"> 1824</span>                <span class="comment">/* Event-free idle wake: feeds the idle malloc_trim cadence;</span></div>
-<div class="line"><a id="l01825" name="l01825"></a><span class="lineno"> 1825</span><span class="comment">                 * see reactor_idle_note_wake(). */</span></div>
-<div class="line"><a id="l01826" name="l01826"></a><span class="lineno"> 1826</span>                reactor_idle_note_wake(reactor);</div>
-<div class="line"><a id="l01827" name="l01827"></a><span class="lineno"> 1827</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l01828" name="l01828"></a><span class="lineno"> 1828</span>                reactor_idle_note_eventful(reactor);</div>
-<div class="line"><a id="l01829" name="l01829"></a><span class="lineno"> 1829</span>            }</div>
-<div class="line"><a id="l01830" name="l01830"></a><span class="lineno"> 1830</span>            <span class="comment">/* Cooperative queuing, same cadence as the io_uring branch (see</span></div>
-<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span><span class="comment">             * the comment there): epoll_wait hands back up to 1024 events in</span></div>
-<div class="line"><a id="l01832" name="l01832"></a><span class="lineno"> 1832</span><span class="comment">             * one array, and this loop used to run them all with no drain</span></div>
-<div class="line"><a id="l01833" name="l01833"></a><span class="lineno"> 1833</span><span class="comment">             * point in between -- so a foreign-thread completion posted via</span></div>
-<div class="line"><a id="l01834" name="l01834"></a><span class="lineno"> 1834</span><span class="comment">             * cwist_reactor_post() mid-batch waited behind every remaining</span></div>
-<div class="line"><a id="l01835" name="l01835"></a><span class="lineno"> 1835</span><span class="comment">             * event&#39;s handler, even though the post itself costs nothing.</span></div>
-<div class="line"><a id="l01836" name="l01836"></a><span class="lineno"> 1836</span><span class="comment">             * CWIST_REACTOR_DRAIN_CHUNK bounds that wait to ~chunk callbacks</span></div>
-<div class="line"><a id="l01837" name="l01837"></a><span class="lineno"> 1837</span><span class="comment">             * so a foreign-thread completion&#39;s tail latency stops scaling</span></div>
-<div class="line"><a id="l01838" name="l01838"></a><span class="lineno"> 1838</span><span class="comment">             * with the same-wake batch size. 0 restores the legacy</span></div>
-<div class="line"><a id="l01839" name="l01839"></a><span class="lineno"> 1839</span><span class="comment">             * single-drain-at-top-of-round behavior. Not drained after the</span></div>
-<div class="line"><a id="l01840" name="l01840"></a><span class="lineno"> 1840</span><span class="comment">             * last event: the top-of-round drain covers it, mirroring the</span></div>
-<div class="line"><a id="l01841" name="l01841"></a><span class="lineno"> 1841</span><span class="comment">             * io_uring branch&#39;s head != tail guard. */</span></div>
-<div class="line"><a id="l01842" name="l01842"></a><span class="lineno"> 1842</span>            uint32_t drain_chunk = reactor_drain_chunk();</div>
-<div class="line"><a id="l01843" name="l01843"></a><span class="lineno"> 1843</span>            uint32_t since_drain = 0;</div>
-<div class="line"><a id="l01844" name="l01844"></a><span class="lineno"> 1844</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; n; i++) {</div>
-<div class="line"><a id="l01845" name="l01845"></a><span class="lineno"> 1845</span>                <span class="comment">/* Low bit set: an RX-mode fd (fd &lt;&lt; 1 | 1); ev_ctx slots are</span></div>
-<div class="line"><a id="l01846" name="l01846"></a><span class="lineno"> 1846</span><span class="comment">                 * at least 8-byte aligned and never carry it. */</span></div>
-<div class="line"><a id="l01847" name="l01847"></a><span class="lineno"> 1847</span>                <span class="keywordflow">if</span> (events[i].data.u64 &amp; 1u) {</div>
-<div class="line"><a id="l01848" name="l01848"></a><span class="lineno"> 1848</span>                    rx_epoll_event(reactor, (<span class="keywordtype">int</span>)(events[i].data.u64 &gt;&gt; 1));</div>
-<div class="line"><a id="l01849" name="l01849"></a><span class="lineno"> 1849</span>                    <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; i + 1 &lt; n) {</div>
-<div class="line"><a id="l01850" name="l01850"></a><span class="lineno"> 1850</span>                        since_drain = 0;</div>
-<div class="line"><a id="l01851" name="l01851"></a><span class="lineno"> 1851</span>                        reactor_drain_posts(reactor);</div>
-<div class="line"><a id="l01852" name="l01852"></a><span class="lineno"> 1852</span>                    }</div>
-<div class="line"><a id="l01853" name="l01853"></a><span class="lineno"> 1853</span>                    <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01854" name="l01854"></a><span class="lineno"> 1854</span>                }</div>
-<div class="line"><a id="l01855" name="l01855"></a><span class="lineno"> 1855</span>                reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].data.ptr;</div>
-<div class="line"><a id="l01856" name="l01856"></a><span class="lineno"> 1856</span>                <span class="keywordflow">if</span> (ev_ctx) {</div>
-<div class="line"><a id="l01857" name="l01857"></a><span class="lineno"> 1857</span>                    reactor_ctx_invoke(ev_ctx);</div>
-<div class="line"><a id="l01858" name="l01858"></a><span class="lineno"> 1858</span>                    free_reactor_ctx(reactor, ev_ctx);</div>
-<div class="line"><a id="l01859" name="l01859"></a><span class="lineno"> 1859</span>                    <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; i + 1 &lt; n) {</div>
-<div class="line"><a id="l01860" name="l01860"></a><span class="lineno"> 1860</span>                        since_drain = 0;</div>
-<div class="line"><a id="l01861" name="l01861"></a><span class="lineno"> 1861</span>                        reactor_drain_posts(reactor);</div>
-<div class="line"><a id="l01862" name="l01862"></a><span class="lineno"> 1862</span>                    }</div>
+<div class="line"><a id="l01451" name="l01451"></a><span class="lineno"> 1451</span>        v = 64;</div>
+<div class="line"><a id="l01452" name="l01452"></a><span class="lineno"> 1452</span>        <span class="keywordflow">if</span> (s) {</div>
+<div class="line"><a id="l01453" name="l01453"></a><span class="lineno"> 1453</span>            <span class="comment">/* Digits only: &quot;abc&quot; or &quot;&quot; must not read as 0, which would</span></div>
+<div class="line"><a id="l01454" name="l01454"></a><span class="lineno"> 1454</span><span class="comment">             * silently disable the drain. */</span></div>
+<div class="line"><a id="l01455" name="l01455"></a><span class="lineno"> 1455</span>            <span class="keywordtype">char</span> *end = NULL;</div>
+<div class="line"><a id="l01456" name="l01456"></a><span class="lineno"> 1456</span>            errno = 0;</div>
+<div class="line"><a id="l01457" name="l01457"></a><span class="lineno"> 1457</span>            <span class="keywordtype">long</span> parsed = strtol(s, &amp;end, 10);</div>
+<div class="line"><a id="l01458" name="l01458"></a><span class="lineno"> 1458</span>            <span class="keywordflow">if</span> (end != s &amp;&amp; *end == <span class="charliteral">&#39;\0&#39;</span> &amp;&amp; errno == 0 &amp;&amp; s[0] &gt;= <span class="charliteral">&#39;0&#39;</span> &amp;&amp; s[0] &lt;= <span class="charliteral">&#39;9&#39;</span> &amp;&amp;</div>
+<div class="line"><a id="l01459" name="l01459"></a><span class="lineno"> 1459</span>                parsed &lt; INT_MAX) {</div>
+<div class="line"><a id="l01460" name="l01460"></a><span class="lineno"> 1460</span>                v = (int)parsed;</div>
+<div class="line"><a id="l01461" name="l01461"></a><span class="lineno"> 1461</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01462" name="l01462"></a><span class="lineno"> 1462</span>                fprintf(stderr,</div>
+<div class="line"><a id="l01463" name="l01463"></a><span class="lineno"> 1463</span>                        <span class="stringliteral">&quot;[CWIST] invalid CWIST_REACTOR_DRAIN_CHUNK value \&quot;%s\&quot;; using 64\n&quot;</span>, s);</div>
+<div class="line"><a id="l01464" name="l01464"></a><span class="lineno"> 1464</span>            }</div>
+<div class="line"><a id="l01465" name="l01465"></a><span class="lineno"> 1465</span>        }</div>
+<div class="line"><a id="l01466" name="l01466"></a><span class="lineno"> 1466</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
+<div class="line"><a id="l01467" name="l01467"></a><span class="lineno"> 1467</span>    }</div>
+<div class="line"><a id="l01468" name="l01468"></a><span class="lineno"> 1468</span>    <span class="keywordflow">return</span> (uint32_t)v;</div>
+<div class="line"><a id="l01469" name="l01469"></a><span class="lineno"> 1469</span>}</div>
+<div class="line"><a id="l01470" name="l01470"></a><span class="lineno"> 1470</span> </div>
+<div class="line"><a id="l01471" name="l01471"></a><span class="lineno"> 1471</span><span class="preprocessor">#if defined(__x86_64__) || defined(__i386__)</span></div>
+<div class="line"><a id="l01472" name="l01472"></a><span class="lineno"> 1472</span><span class="preprocessor">#define reactor_cpu_relax() __builtin_ia32_pause()</span></div>
+<div class="line"><a id="l01473" name="l01473"></a><span class="lineno"> 1473</span><span class="preprocessor">#elif defined(__aarch64__)</span></div>
+<div class="line"><a id="l01474" name="l01474"></a><span class="lineno"> 1474</span><span class="preprocessor">#define reactor_cpu_relax() __asm__ __volatile__(&quot;yield&quot;)</span></div>
+<div class="line"><a id="l01475" name="l01475"></a><span class="lineno"> 1475</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l01476" name="l01476"></a><span class="lineno"><a class="line" href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96"> 1476</a></span><span class="preprocessor">#define reactor_cpu_relax() ((void)0)</span></div>
+<div class="line"><a id="l01477" name="l01477"></a><span class="lineno"> 1477</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01478" name="l01478"></a><span class="lineno"> 1478</span> </div>
+<div class="line"><a id="l01479" name="l01479"></a><span class="lineno"> 1479</span><span class="preprocessor">#ifdef __linux__</span></div>
+<div class="line"><a id="l01480" name="l01480"></a><span class="lineno"> 1480</span><span class="comment">/* CQ grace: how long a reactor loop peeks its completion ring (pure</span></div>
+<div class="line"><a id="l01481" name="l01481"></a><span class="lineno"> 1481</span><span class="comment"> * userspace, no syscall) before committing to the kernel wait. Completions</span></div>
+<div class="line"><a id="l01482" name="l01482"></a><span class="lineno"> 1482</span><span class="comment"> * that land while a dispatch batch is being processed -- the common shape</span></div>
+<div class="line"><a id="l01483" name="l01483"></a><span class="lineno"> 1483</span><span class="comment"> * under keep-alive load, where the peer&#39;s next request often arrives within</span></div>
+<div class="line"><a id="l01484" name="l01484"></a><span class="lineno"> 1484</span><span class="comment"> * microseconds of the response -- would otherwise force a fresh wake each;</span></div>
+<div class="line"><a id="l01485" name="l01485"></a><span class="lineno"> 1485</span><span class="comment"> * the grace folds them into the current one. 0 disables the spin.</span></div>
+<div class="line"><a id="l01486" name="l01486"></a><span class="lineno"> 1486</span><span class="comment"> * CWIST_REACTOR_CQ_GRACE_NS overrides the 20 us default. */</span></div>
+<div class="line"><a id="l01487" name="l01487"></a><span class="lineno"> 1487</span><span class="keyword">static</span> uint64_t reactor_cq_grace_ns(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l01488" name="l01488"></a><span class="lineno"> 1488</span>    <span class="keyword">static</span> _Atomic <span class="keywordtype">long</span> cached = -1;</div>
+<div class="line"><a id="l01489" name="l01489"></a><span class="lineno"> 1489</span>    <span class="keywordtype">long</span> v = atomic_load_explicit(&amp;cached, memory_order_relaxed);</div>
+<div class="line"><a id="l01490" name="l01490"></a><span class="lineno"> 1490</span>    <span class="keywordflow">if</span> (v &lt; 0) {</div>
+<div class="line"><a id="l01491" name="l01491"></a><span class="lineno"> 1491</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *s = getenv(<span class="stringliteral">&quot;CWIST_REACTOR_CQ_GRACE_NS&quot;</span>);</div>
+<div class="line"><a id="l01492" name="l01492"></a><span class="lineno"> 1492</span>        <span class="keywordflow">if</span> (s &amp;&amp; *s) {</div>
+<div class="line"><a id="l01493" name="l01493"></a><span class="lineno"> 1493</span>            <span class="keywordtype">char</span> *end = NULL;</div>
+<div class="line"><a id="l01494" name="l01494"></a><span class="lineno"> 1494</span>            <span class="keywordtype">long</span> parsed = strtol(s, &amp;end, 10);</div>
+<div class="line"><a id="l01495" name="l01495"></a><span class="lineno"> 1495</span>            v = (end != s &amp;&amp; parsed &gt;= 0 &amp;&amp; parsed &lt; 1000000000L) ? parsed : 20000;</div>
+<div class="line"><a id="l01496" name="l01496"></a><span class="lineno"> 1496</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01497" name="l01497"></a><span class="lineno"> 1497</span>            v = 20000;</div>
+<div class="line"><a id="l01498" name="l01498"></a><span class="lineno"> 1498</span>        }</div>
+<div class="line"><a id="l01499" name="l01499"></a><span class="lineno"> 1499</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
+<div class="line"><a id="l01500" name="l01500"></a><span class="lineno"> 1500</span>    }</div>
+<div class="line"><a id="l01501" name="l01501"></a><span class="lineno"> 1501</span>    <span class="keywordflow">return</span> (uint64_t)v;</div>
+<div class="line"><a id="l01502" name="l01502"></a><span class="lineno"> 1502</span>}</div>
+<div class="line"><a id="l01503" name="l01503"></a><span class="lineno"> 1503</span> </div>
+<div class="line"><a id="l01504" name="l01504"></a><span class="lineno"> 1504</span><span class="comment">/* Round budget: an io_uring dispatch round drains every CQE in the ring, and</span></div>
+<div class="line"><a id="l01505" name="l01505"></a><span class="lineno"> 1505</span><span class="comment"> * a busy round can hold hundreds of connections&#39; callbacks. Callbacks re-arm</span></div>
+<div class="line"><a id="l01506" name="l01506"></a><span class="lineno"> 1506</span><span class="comment"> * their connections into the deferred SQE array, which only reaches the</span></div>
+<div class="line"><a id="l01507" name="l01507"></a><span class="lineno"> 1507</span><span class="comment"> * kernel when the round ends -- so a request that arrived right after its</span></div>
+<div class="line"><a id="l01508" name="l01508"></a><span class="lineno"> 1508</span><span class="comment"> * connection was re-armed waits out the whole batch, which is where the</span></div>
+<div class="line"><a id="l01509" name="l01509"></a><span class="lineno"> 1509</span><span class="comment"> * arm-to-dispatch tail comes from (issue #166). The budget bounds that wait</span></div>
+<div class="line"><a id="l01510" name="l01510"></a><span class="lineno"> 1510</span><span class="comment"> * without breaking the round: past it, parked re-arms are flushed to the</span></div>
+<div class="line"><a id="l01511" name="l01511"></a><span class="lineno"> 1511</span><span class="comment"> * kernel at the next check instead of at round end (one extra enter per</span></div>
+<div class="line"><a id="l01512" name="l01512"></a><span class="lineno"> 1512</span><span class="comment"> * check, only while a round is long). The round still runs to completion,</span></div>
+<div class="line"><a id="l01513" name="l01513"></a><span class="lineno"> 1513</span><span class="comment"> * so the stop-at-round-boundary contract is unchanged. The check rides its</span></div>
+<div class="line"><a id="l01514" name="l01514"></a><span class="lineno"> 1514</span><span class="comment"> * own cadence (every 64 callbacks), independent of CWIST_REACTOR_DRAIN_CHUNK.</span></div>
+<div class="line"><a id="l01515" name="l01515"></a><span class="lineno"> 1515</span><span class="comment"> * 0 disables the bound. CWIST_REACTOR_ROUND_BUDGET_US overrides the 2000 us</span></div>
+<div class="line"><a id="l01516" name="l01516"></a><span class="lineno"> 1516</span><span class="comment"> * default. */</span></div>
+<div class="line"><a id="l01517" name="l01517"></a><span class="lineno"> 1517</span><span class="keyword">static</span> uint64_t reactor_round_budget_us(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l01518" name="l01518"></a><span class="lineno"> 1518</span>    <span class="keyword">static</span> _Atomic <span class="keywordtype">long</span> cached = -1;</div>
+<div class="line"><a id="l01519" name="l01519"></a><span class="lineno"> 1519</span>    <span class="keywordtype">long</span> v = atomic_load_explicit(&amp;cached, memory_order_relaxed);</div>
+<div class="line"><a id="l01520" name="l01520"></a><span class="lineno"> 1520</span>    <span class="keywordflow">if</span> (v &lt; 0) {</div>
+<div class="line"><a id="l01521" name="l01521"></a><span class="lineno"> 1521</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *s = getenv(<span class="stringliteral">&quot;CWIST_REACTOR_ROUND_BUDGET_US&quot;</span>);</div>
+<div class="line"><a id="l01522" name="l01522"></a><span class="lineno"> 1522</span>        <span class="keywordflow">if</span> (s &amp;&amp; *s) {</div>
+<div class="line"><a id="l01523" name="l01523"></a><span class="lineno"> 1523</span>            <span class="keywordtype">char</span> *end = NULL;</div>
+<div class="line"><a id="l01524" name="l01524"></a><span class="lineno"> 1524</span>            <span class="keywordtype">long</span> parsed = strtol(s, &amp;end, 10);</div>
+<div class="line"><a id="l01525" name="l01525"></a><span class="lineno"> 1525</span>            v = (end != s &amp;&amp; parsed &gt;= 0 &amp;&amp; parsed &lt; 3600000000L) ? parsed : 2000;</div>
+<div class="line"><a id="l01526" name="l01526"></a><span class="lineno"> 1526</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01527" name="l01527"></a><span class="lineno"> 1527</span>            v = 2000;</div>
+<div class="line"><a id="l01528" name="l01528"></a><span class="lineno"> 1528</span>        }</div>
+<div class="line"><a id="l01529" name="l01529"></a><span class="lineno"> 1529</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
+<div class="line"><a id="l01530" name="l01530"></a><span class="lineno"> 1530</span>    }</div>
+<div class="line"><a id="l01531" name="l01531"></a><span class="lineno"> 1531</span>    <span class="keywordflow">return</span> (uint64_t)v;</div>
+<div class="line"><a id="l01532" name="l01532"></a><span class="lineno"> 1532</span>}</div>
+<div class="line"><a id="l01533" name="l01533"></a><span class="lineno"> 1533</span> </div>
+<div class="line"><a id="l01534" name="l01534"></a><span class="lineno"> 1534</span><span class="comment">/* Idle malloc trim (measured ~1.2 MiB median per worker returned to the OS on</span></div>
+<div class="line"><a id="l01535" name="l01535"></a><span class="lineno"> 1535</span><span class="comment"> * an idle HTTPS worker after a load round): glibc never gives back the free</span></div>
+<div class="line"><a id="l01536" name="l01536"></a><span class="lineno"> 1536</span><span class="comment"> * top of the main arena unless asked. CWIST_MALLOC_TRIM_IDLE_SEC bounds how</span></div>
+<div class="line"><a id="l01537" name="l01537"></a><span class="lineno"> 1537</span><span class="comment"> * many seconds of cumulative event-free idleness a reactor may accumulate</span></div>
+<div class="line"><a id="l01538" name="l01538"></a><span class="lineno"> 1538</span><span class="comment"> * before it calls malloc_trim(0) on a wake that saw zero events -- a mostly</span></div>
+<div class="line"><a id="l01539" name="l01539"></a><span class="lineno"> 1539</span><span class="comment"> * idle deployment sheds arena top memory without any hot-path cost. The knob</span></div>
+<div class="line"><a id="l01540" name="l01540"></a><span class="lineno"> 1540</span><span class="comment"> * is cached after the first read like the other env knobs in this file; 0</span></div>
+<div class="line"><a id="l01541" name="l01541"></a><span class="lineno"> 1541</span><span class="comment"> * disables the trim. */</span></div>
+<div class="line"><a id="l01542" name="l01542"></a><span class="lineno"> 1542</span><span class="keyword">static</span> uint32_t reactor_malloc_trim_idle_sec(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l01543" name="l01543"></a><span class="lineno"> 1543</span>    <span class="keyword">static</span> _Atomic <span class="keywordtype">int</span> cached = -1;</div>
+<div class="line"><a id="l01544" name="l01544"></a><span class="lineno"> 1544</span>    <span class="keywordtype">int</span> v = atomic_load_explicit(&amp;cached, memory_order_relaxed);</div>
+<div class="line"><a id="l01545" name="l01545"></a><span class="lineno"> 1545</span>    <span class="keywordflow">if</span> (v &lt; 0) {</div>
+<div class="line"><a id="l01546" name="l01546"></a><span class="lineno"> 1546</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *s = getenv(<span class="stringliteral">&quot;CWIST_MALLOC_TRIM_IDLE_SEC&quot;</span>);</div>
+<div class="line"><a id="l01547" name="l01547"></a><span class="lineno"> 1547</span>        <span class="keywordflow">if</span> (s &amp;&amp; *s) {</div>
+<div class="line"><a id="l01548" name="l01548"></a><span class="lineno"> 1548</span>            <span class="keywordtype">char</span> *end = NULL;</div>
+<div class="line"><a id="l01549" name="l01549"></a><span class="lineno"> 1549</span>            <span class="keywordtype">long</span> parsed = strtol(s, &amp;end, 10);</div>
+<div class="line"><a id="l01550" name="l01550"></a><span class="lineno"> 1550</span>            v = (end != s &amp;&amp; parsed &gt;= 0 &amp;&amp; parsed &lt; 86400) ? (<span class="keywordtype">int</span>)parsed : 30;</div>
+<div class="line"><a id="l01551" name="l01551"></a><span class="lineno"> 1551</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01552" name="l01552"></a><span class="lineno"> 1552</span>            v = 30;</div>
+<div class="line"><a id="l01553" name="l01553"></a><span class="lineno"> 1553</span>        }</div>
+<div class="line"><a id="l01554" name="l01554"></a><span class="lineno"> 1554</span>        atomic_store_explicit(&amp;cached, v, memory_order_relaxed);</div>
+<div class="line"><a id="l01555" name="l01555"></a><span class="lineno"> 1555</span>    }</div>
+<div class="line"><a id="l01556" name="l01556"></a><span class="lineno"> 1556</span>    <span class="keywordflow">return</span> (uint32_t)v;</div>
+<div class="line"><a id="l01557" name="l01557"></a><span class="lineno"> 1557</span>}</div>
+<div class="line"><a id="l01558" name="l01558"></a><span class="lineno"> 1558</span> </div>
+<div class="line"><a id="l01559" name="l01559"></a><span class="lineno"> 1559</span><span class="comment">/* Weak: musl and other non-glibc Linux libcs have no malloc_trim. */</span></div>
+<div class="line"><a id="l01560" name="l01560"></a><span class="lineno"> 1560</span><span class="keyword">extern</span> <span class="keywordtype">int</span> malloc_trim(<span class="keywordtype">size_t</span> __pad) <a class="code hl_function" href="../../d9/d39/alloc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d">__attribute__</a>((weak));</div>
+<div class="line"><a id="l01561" name="l01561"></a><span class="lineno"> 1561</span> </div>
+<div class="line"><a id="l01562" name="l01562"></a><span class="lineno"> 1562</span><span class="comment">/* A wake that dispatched events (or ran posted work) ends the idle streak. */</span></div>
+<div class="line"><a id="l01563" name="l01563"></a><span class="lineno"> 1563</span><span class="keyword">static</span> <span class="keywordtype">void</span> reactor_idle_note_eventful(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *r) {</div>
+<div class="line"><a id="l01564" name="l01564"></a><span class="lineno"> 1564</span>    r-&gt;idle_since_ns = 0;</div>
+<div class="line"><a id="l01565" name="l01565"></a><span class="lineno"> 1565</span>}</div>
+<div class="line"><a id="l01566" name="l01566"></a><span class="lineno"> 1566</span> </div>
+<div class="line"><a id="l01567" name="l01567"></a><span class="lineno"> 1567</span><span class="comment">/* Bookkeeping for a wake that saw zero events. Starts an idle streak on the</span></div>
+<div class="line"><a id="l01568" name="l01568"></a><span class="lineno"> 1568</span><span class="comment"> * first such wake; once the streak has lasted CWIST_MALLOC_TRIM_IDLE_SEC</span></div>
+<div class="line"><a id="l01569" name="l01569"></a><span class="lineno"> 1569</span><span class="comment"> * cumulative seconds, returns the arena top to the OS and re-anchors the</span></div>
+<div class="line"><a id="l01570" name="l01570"></a><span class="lineno"> 1570</span><span class="comment"> * streak. Runs on the run thread only, after the wait returned empty. */</span></div>
+<div class="line"><a id="l01571" name="l01571"></a><span class="lineno"> 1571</span><span class="keyword">static</span> <span class="keywordtype">void</span> reactor_idle_note_wake(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *r) {</div>
+<div class="line"><a id="l01572" name="l01572"></a><span class="lineno"> 1572</span>    uint32_t sec = reactor_malloc_trim_idle_sec();</div>
+<div class="line"><a id="l01573" name="l01573"></a><span class="lineno"> 1573</span>    <span class="keywordflow">if</span> (sec == 0 || &amp;malloc_trim == NULL) {</div>
+<div class="line"><a id="l01574" name="l01574"></a><span class="lineno"> 1574</span>        r-&gt;idle_since_ns = 0;</div>
+<div class="line"><a id="l01575" name="l01575"></a><span class="lineno"> 1575</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l01576" name="l01576"></a><span class="lineno"> 1576</span>    }</div>
+<div class="line"><a id="l01577" name="l01577"></a><span class="lineno"> 1577</span>    <span class="keyword">struct </span>timespec ts;</div>
+<div class="line"><a id="l01578" name="l01578"></a><span class="lineno"> 1578</span>    clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
+<div class="line"><a id="l01579" name="l01579"></a><span class="lineno"> 1579</span>    uint64_t now = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
+<div class="line"><a id="l01580" name="l01580"></a><span class="lineno"> 1580</span>    <span class="keywordflow">if</span> (r-&gt;idle_since_ns == 0) {</div>
+<div class="line"><a id="l01581" name="l01581"></a><span class="lineno"> 1581</span>        r-&gt;idle_since_ns = now;</div>
+<div class="line"><a id="l01582" name="l01582"></a><span class="lineno"> 1582</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l01583" name="l01583"></a><span class="lineno"> 1583</span>    }</div>
+<div class="line"><a id="l01584" name="l01584"></a><span class="lineno"> 1584</span>    <span class="keywordflow">if</span> (now - r-&gt;idle_since_ns &gt;= (uint64_t)sec * 1000000000ull) {</div>
+<div class="line"><a id="l01585" name="l01585"></a><span class="lineno"> 1585</span>        malloc_trim(0);</div>
+<div class="line"><a id="l01586" name="l01586"></a><span class="lineno"> 1586</span>        r-&gt;idle_since_ns = now;</div>
+<div class="line"><a id="l01587" name="l01587"></a><span class="lineno"> 1587</span>    }</div>
+<div class="line"><a id="l01588" name="l01588"></a><span class="lineno"> 1588</span>}</div>
+<div class="line"><a id="l01589" name="l01589"></a><span class="lineno"> 1589</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01590" name="l01590"></a><span class="lineno"> 1590</span> </div>
+<div class="line"><a id="l01591" name="l01591"></a><span class="lineno"> 1591</span><span class="keyword">static</span> <span class="keywordtype">void</span> reactor_ctx_invoke(reactor_event_ctx_t *ev_ctx) {</div>
+<div class="line"><a id="l01592" name="l01592"></a><span class="lineno"> 1592</span>    <a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a55f44fe46a653a795375be3b803ba4ad">cwist_reactor_cb_t</a> cb;</div>
+<div class="line"><a id="l01593" name="l01593"></a><span class="lineno"> 1593</span>    <span class="keywordflow">while</span> (!(cb = __atomic_load_n(&amp;ev_ctx-&gt;cb, __ATOMIC_ACQUIRE))) <a class="code hl_define" href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96">reactor_cpu_relax</a>();</div>
+<div class="line"><a id="l01594" name="l01594"></a><span class="lineno"> 1594</span>    cb(ev_ctx-&gt;fd, ev_ctx-&gt;ctx);</div>
+<div class="line"><a id="l01595" name="l01595"></a><span class="lineno"> 1595</span>}</div>
+<div class="line"><a id="l01596" name="l01596"></a><span class="lineno"> 1596</span> </div>
+<div class="foldopen" id="foldopen01597" data-start="{" data-end="}">
+<div class="line"><a id="l01597" name="l01597"></a><span class="lineno"><a class="line" href="../../dc/d85/reactor_8h.html#ac07bb3ce2393c0588f863eb97c4d6f5c"> 1597</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d3/d99/reactor_8c.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a>(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor) {</div>
+<div class="line"><a id="l01598" name="l01598"></a><span class="lineno"> 1598</span>    <span class="keywordflow">if</span> (!reactor) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l01599" name="l01599"></a><span class="lineno"> 1599</span>    __atomic_store_n(&amp;reactor-&gt;running, <span class="keyword">true</span>, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01600" name="l01600"></a><span class="lineno"> 1600</span>    t_run_reactor = reactor;</div>
+<div class="line"><a id="l01601" name="l01601"></a><span class="lineno"> 1601</span> </div>
+<div class="line"><a id="l01602" name="l01602"></a><span class="lineno"> 1602</span><span class="preprocessor">#ifdef __linux__</span></div>
+<div class="line"><a id="l01603" name="l01603"></a><span class="lineno"> 1603</span>    <span class="keywordflow">if</span> (!reactor-&gt;impl.use_epoll) {</div>
+<div class="line"><a id="l01604" name="l01604"></a><span class="lineno"> 1604</span>        <span class="keyword">const</span> uint64_t cq_grace_ns = reactor_cq_grace_ns();</div>
+<div class="line"><a id="l01605" name="l01605"></a><span class="lineno"> 1605</span>        <span class="keywordflow">while</span> (reactor_running(reactor)) {</div>
+<div class="line"><a id="l01606" name="l01606"></a><span class="lineno"> 1606</span>            reactor_drain_posts(reactor);</div>
+<div class="line"><a id="l01607" name="l01607"></a><span class="lineno"> 1607</span>            reactor_run_timers(reactor);</div>
+<div class="line"><a id="l01608" name="l01608"></a><span class="lineno"> 1608</span>            <span class="comment">/* Submit the re-arms queued by the previous dispatch batch under</span></div>
+<div class="line"><a id="l01609" name="l01609"></a><span class="lineno"> 1609</span><span class="comment">             * the SQ lock, then wait in a separate call.  The submit enter</span></div>
+<div class="line"><a id="l01610" name="l01610"></a><span class="lineno"> 1610</span><span class="comment">             * MUST hold the lock: uring_submit/uring_submit_batch roll the</span></div>
+<div class="line"><a id="l01611" name="l01611"></a><span class="lineno"> 1611</span><span class="comment">             * SQ tail back when their own enter fails, and a concurrent</span></div>
+<div class="line"><a id="l01612" name="l01612"></a><span class="lineno"> 1612</span><span class="comment">             * unlocked enter here could consume that SQE first, leaving</span></div>
+<div class="line"><a id="l01613" name="l01613"></a><span class="lineno"> 1613</span><span class="comment">             * sq_tail behind sq_head.  tail &lt; head reads as a permanently</span></div>
+<div class="line"><a id="l01614" name="l01614"></a><span class="lineno"> 1614</span><span class="comment">             * full SQ to every later submit (tail - head underflows past</span></div>
+<div class="line"><a id="l01615" name="l01615"></a><span class="lineno"> 1615</span><span class="comment">             * sq_entries), so the reactor goes deaf: no re-arm, no accept,</span></div>
+<div class="line"><a id="l01616" name="l01616"></a><span class="lineno"> 1616</span><span class="comment">             * no completions - the server stops answering while every thread</span></div>
+<div class="line"><a id="l01617" name="l01617"></a><span class="lineno"> 1617</span><span class="comment">             * looks idle.  With all SQ consumers under the lock, a failed</span></div>
+<div class="line"><a id="l01618" name="l01618"></a><span class="lineno"> 1618</span><span class="comment">             * enter means the SQE was definitely not consumed and the</span></div>
+<div class="line"><a id="l01619" name="l01619"></a><span class="lineno"> 1619</span><span class="comment">             * rollback is exact.</span></div>
+<div class="line"><a id="l01620" name="l01620"></a><span class="lineno"> 1620</span><span class="comment">             *</span></div>
+<div class="line"><a id="l01621" name="l01621"></a><span class="lineno"> 1621</span><span class="comment">             * The wait is bounded (like the epoll path&#39;s 100 ms poll)</span></div>
+<div class="line"><a id="l01622" name="l01622"></a><span class="lineno"> 1622</span><span class="comment">             * because the shutdown handler runs with SA_RESTART: an</span></div>
+<div class="line"><a id="l01623" name="l01623"></a><span class="lineno"> 1623</span><span class="comment">             * unbounded enter would be restarted after SIGTERM and hang an</span></div>
+<div class="line"><a id="l01624" name="l01624"></a><span class="lineno"> 1624</span><span class="comment">             * idle reactor forever.  It passes to_submit=0, so it consumes</span></div>
+<div class="line"><a id="l01625" name="l01625"></a><span class="lineno"> 1625</span><span class="comment">             * nothing and needs no lock. */</span></div>
+<div class="line"><a id="l01626" name="l01626"></a><span class="lineno"> 1626</span>            <span class="comment">/* CQ grace: completions that land while the previous batch is</span></div>
+<div class="line"><a id="l01627" name="l01627"></a><span class="lineno"> 1627</span><span class="comment">             * dispatching would otherwise force a fresh wake. After the</span></div>
+<div class="line"><a id="l01628" name="l01628"></a><span class="lineno"> 1628</span><span class="comment">             * locked submit enter below, peek the CQ ring from userspace for</span></div>
+<div class="line"><a id="l01629" name="l01629"></a><span class="lineno"> 1629</span><span class="comment">             * a bounded window; completions caught in time are dispatched in</span></div>
+<div class="line"><a id="l01630" name="l01630"></a><span class="lineno"> 1630</span><span class="comment">             * the current round and the wait enter is skipped. Re-arms are</span></div>
+<div class="line"><a id="l01631" name="l01631"></a><span class="lineno"> 1631</span><span class="comment">             * safe either way: the submit enter above already flushed them.</span></div>
+<div class="line"><a id="l01632" name="l01632"></a><span class="lineno"> 1632</span><span class="comment">             * The deadline bounds the spin; on expiry (or when disabled) the</span></div>
+<div class="line"><a id="l01633" name="l01633"></a><span class="lineno"> 1633</span><span class="comment">             * code falls through to the bounded wait below. */</span></div>
+<div class="line"><a id="l01634" name="l01634"></a><span class="lineno"> 1634</span>            <span class="keywordtype">bool</span> cq_pending = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01635" name="l01635"></a><span class="lineno"> 1635</span>            <span class="keywordflow">if</span> (cq_grace_ns &gt; 0) {</div>
+<div class="line"><a id="l01636" name="l01636"></a><span class="lineno"> 1636</span>                uint32_t ph = __atomic_load_n(reactor-&gt;impl.cq_head, __ATOMIC_ACQUIRE);</div>
+<div class="line"><a id="l01637" name="l01637"></a><span class="lineno"> 1637</span>                <span class="keywordflow">if</span> (ph == *reactor-&gt;impl.cq_tail) {</div>
+<div class="line"><a id="l01638" name="l01638"></a><span class="lineno"> 1638</span>                    <span class="keyword">struct </span>timespec gs;</div>
+<div class="line"><a id="l01639" name="l01639"></a><span class="lineno"> 1639</span>                    clock_gettime(CLOCK_MONOTONIC, &amp;gs);</div>
+<div class="line"><a id="l01640" name="l01640"></a><span class="lineno"> 1640</span>                    uint64_t g_end =</div>
+<div class="line"><a id="l01641" name="l01641"></a><span class="lineno"> 1641</span>                        (uint64_t)gs.tv_sec * 1000000000ull + (uint64_t)gs.tv_nsec + cq_grace_ns;</div>
+<div class="line"><a id="l01642" name="l01642"></a><span class="lineno"> 1642</span>                    uint32_t spins = 0;</div>
+<div class="line"><a id="l01643" name="l01643"></a><span class="lineno"> 1643</span>                    <span class="keywordflow">while</span> (ph == *reactor-&gt;impl.cq_tail) {</div>
+<div class="line"><a id="l01644" name="l01644"></a><span class="lineno"> 1644</span>                        <a class="code hl_define" href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96">reactor_cpu_relax</a>();</div>
+<div class="line"><a id="l01645" name="l01645"></a><span class="lineno"> 1645</span>                        <span class="keywordflow">if</span> (((++spins) &amp; 31u) == 0) {</div>
+<div class="line"><a id="l01646" name="l01646"></a><span class="lineno"> 1646</span>                            clock_gettime(CLOCK_MONOTONIC, &amp;gs);</div>
+<div class="line"><a id="l01647" name="l01647"></a><span class="lineno"> 1647</span>                            uint64_t now =</div>
+<div class="line"><a id="l01648" name="l01648"></a><span class="lineno"> 1648</span>                                (uint64_t)gs.tv_sec * 1000000000ull + (uint64_t)gs.tv_nsec;</div>
+<div class="line"><a id="l01649" name="l01649"></a><span class="lineno"> 1649</span>                            <span class="keywordflow">if</span> (now &gt;= g_end) <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l01650" name="l01650"></a><span class="lineno"> 1650</span>                        }</div>
+<div class="line"><a id="l01651" name="l01651"></a><span class="lineno"> 1651</span>                        ph = __atomic_load_n(reactor-&gt;impl.cq_head, __ATOMIC_ACQUIRE);</div>
+<div class="line"><a id="l01652" name="l01652"></a><span class="lineno"> 1652</span>                    }</div>
+<div class="line"><a id="l01653" name="l01653"></a><span class="lineno"> 1653</span>                    cq_pending = (ph != *reactor-&gt;impl.cq_tail);</div>
+<div class="line"><a id="l01654" name="l01654"></a><span class="lineno"> 1654</span>                }</div>
+<div class="line"><a id="l01655" name="l01655"></a><span class="lineno"> 1655</span>            }</div>
+<div class="line"><a id="l01656" name="l01656"></a><span class="lineno"> 1656</span> </div>
+<div class="line"><a id="l01657" name="l01657"></a><span class="lineno"> 1657</span>            <span class="comment">/* Bounded by the idle wait, shortened to the next timer. */</span></div>
+<div class="line"><a id="l01658" name="l01658"></a><span class="lineno"> 1658</span>            <span class="keyword">const</span> uint64_t wait_ns = reactor_wait_ns(reactor);</div>
+<div class="line"><a id="l01659" name="l01659"></a><span class="lineno"> 1659</span>            <span class="keyword">const</span> <span class="keyword">struct </span>__kernel_timespec idle_ts = {</div>
+<div class="line"><a id="l01660" name="l01660"></a><span class="lineno"> 1660</span>                .tv_sec = (<span class="keywordtype">long</span> long)(wait_ns / 1000000000ull),</div>
+<div class="line"><a id="l01661" name="l01661"></a><span class="lineno"> 1661</span>                .tv_nsec = (<span class="keywordtype">long</span> long)(wait_ns % 1000000000ull)};</div>
+<div class="line"><a id="l01662" name="l01662"></a><span class="lineno"> 1662</span>            uint32_t to_submit = reactor-&gt;sq_unsubmitted;</div>
+<div class="line"><a id="l01663" name="l01663"></a><span class="lineno"> 1663</span>            reactor-&gt;sq_unsubmitted = 0;</div>
+<div class="line"><a id="l01664" name="l01664"></a><span class="lineno"> 1664</span>            <span class="keywordflow">if</span> (to_submit &gt; 0) {</div>
+<div class="line"><a id="l01665" name="l01665"></a><span class="lineno"> 1665</span>                pthread_mutex_lock(&amp;reactor-&gt;impl.sq_lock);</div>
+<div class="line"><a id="l01666" name="l01666"></a><span class="lineno"> 1666</span>                <span class="keywordtype">int</span> sret = sys_io_uring_enter(reactor-&gt;impl.ring_fd, to_submit, 0, 0, NULL);</div>
+<div class="line"><a id="l01667" name="l01667"></a><span class="lineno"> 1667</span>                pthread_mutex_unlock(&amp;reactor-&gt;impl.sq_lock);</div>
+<div class="line"><a id="l01668" name="l01668"></a><span class="lineno"> 1668</span>                <span class="keywordflow">if</span> (sret &lt; 0) {</div>
+<div class="line"><a id="l01669" name="l01669"></a><span class="lineno"> 1669</span>                    <span class="comment">/* Submission state is unknown on EINTR; anything else</span></div>
+<div class="line"><a id="l01670" name="l01670"></a><span class="lineno"> 1670</span><span class="comment">                     * failed before consuming.  Either way the SQEs are</span></div>
+<div class="line"><a id="l01671" name="l01671"></a><span class="lineno"> 1671</span><span class="comment">                     * still in the SQ (the kernel caps resubmission at what</span></div>
+<div class="line"><a id="l01672" name="l01672"></a><span class="lineno"> 1672</span><span class="comment">                     * is actually there), so restore the count and let the</span></div>
+<div class="line"><a id="l01673" name="l01673"></a><span class="lineno"> 1673</span><span class="comment">                     * next round retry. */</span></div>
+<div class="line"><a id="l01674" name="l01674"></a><span class="lineno"> 1674</span>                    reactor-&gt;sq_unsubmitted += to_submit;</div>
+<div class="line"><a id="l01675" name="l01675"></a><span class="lineno"> 1675</span>                }</div>
+<div class="line"><a id="l01676" name="l01676"></a><span class="lineno"> 1676</span>            }</div>
+<div class="line"><a id="l01677" name="l01677"></a><span class="lineno"> 1677</span>            <span class="keywordflow">if</span> (!cq_pending) {</div>
+<div class="line"><a id="l01678" name="l01678"></a><span class="lineno"> 1678</span>                <span class="keywordtype">int</span> ret = sys_io_uring_enter_timeout(reactor-&gt;impl.ring_fd, 0, 1,</div>
+<div class="line"><a id="l01679" name="l01679"></a><span class="lineno"> 1679</span>                                                     IORING_ENTER_GETEVENTS, &amp;idle_ts);</div>
+<div class="line"><a id="l01680" name="l01680"></a><span class="lineno"> 1680</span>                <span class="comment">/* EINTR and ETIME both leave the CQ untouched, so the</span></div>
+<div class="line"><a id="l01681" name="l01681"></a><span class="lineno"> 1681</span><span class="comment">                 * head/tail check below still decides eventfulness. */</span></div>
+<div class="line"><a id="l01682" name="l01682"></a><span class="lineno"> 1682</span>                <span class="keywordflow">if</span> (ret &lt; 0 &amp;&amp; errno != EINTR &amp;&amp; errno != ETIME) <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l01683" name="l01683"></a><span class="lineno"> 1683</span>            }</div>
+<div class="line"><a id="l01684" name="l01684"></a><span class="lineno"> 1684</span>            uint32_t <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> = __atomic_load_n(reactor-&gt;impl.cq_head, __ATOMIC_ACQUIRE);</div>
+<div class="line"><a id="l01685" name="l01685"></a><span class="lineno"> 1685</span>            uint32_t tail = *reactor-&gt;impl.cq_tail;</div>
+<div class="line"><a id="l01686" name="l01686"></a><span class="lineno"> 1686</span>            <span class="keywordflow">if</span> (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> == tail) {</div>
+<div class="line"><a id="l01687" name="l01687"></a><span class="lineno"> 1687</span>                <span class="comment">/* Zero-completion wake: pure idle. Feeds the idle malloc_trim</span></div>
+<div class="line"><a id="l01688" name="l01688"></a><span class="lineno"> 1688</span><span class="comment">                 * cadence; see reactor_idle_note_wake(). */</span></div>
+<div class="line"><a id="l01689" name="l01689"></a><span class="lineno"> 1689</span>                reactor_idle_note_wake(reactor);</div>
+<div class="line"><a id="l01690" name="l01690"></a><span class="lineno"> 1690</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l01691" name="l01691"></a><span class="lineno"> 1691</span>            }</div>
+<div class="line"><a id="l01692" name="l01692"></a><span class="lineno"> 1692</span>            reactor_idle_note_eventful(reactor);</div>
+<div class="line"><a id="l01693" name="l01693"></a><span class="lineno"> 1693</span>            reactor_tsan_acquire(&amp;reactor-&gt;impl);</div>
+<div class="line"><a id="l01694" name="l01694"></a><span class="lineno"> 1694</span>            reactor-&gt;dispatching = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01695" name="l01695"></a><span class="lineno"> 1695</span>            <span class="keyword">const</span> uint64_t round_budget_us = reactor_round_budget_us();</div>
+<div class="line"><a id="l01696" name="l01696"></a><span class="lineno"> 1696</span>            uint64_t round_start_ns = 0;</div>
+<div class="line"><a id="l01697" name="l01697"></a><span class="lineno"> 1697</span>            <span class="keywordflow">if</span> (round_budget_us) {</div>
+<div class="line"><a id="l01698" name="l01698"></a><span class="lineno"> 1698</span>                <span class="keyword">struct </span>timespec ts;</div>
+<div class="line"><a id="l01699" name="l01699"></a><span class="lineno"> 1699</span>                clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
+<div class="line"><a id="l01700" name="l01700"></a><span class="lineno"> 1700</span>                round_start_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
+<div class="line"><a id="l01701" name="l01701"></a><span class="lineno"> 1701</span>            }</div>
+<div class="line"><a id="l01702" name="l01702"></a><span class="lineno"> 1702</span>            <span class="comment">/* Cooperative queuing: a busy round can carry hundreds of ready</span></div>
+<div class="line"><a id="l01703" name="l01703"></a><span class="lineno"> 1703</span><span class="comment">             * connections in one CQE batch (the ring is 4096 deep). Foreign-</span></div>
+<div class="line"><a id="l01704" name="l01704"></a><span class="lineno"> 1704</span><span class="comment">             * thread completions (cwist_async_defer, background jobs) queue</span></div>
+<div class="line"><a id="l01705" name="l01705"></a><span class="lineno"> 1705</span><span class="comment">             * onto post_head via cwist_reactor_post() and used to wait for</span></div>
+<div class="line"><a id="l01706" name="l01706"></a><span class="lineno"> 1706</span><span class="comment">             * reactor_drain_posts() at the *top* of the next round -- i.e.</span></div>
+<div class="line"><a id="l01707" name="l01707"></a><span class="lineno"> 1707</span><span class="comment">             * behind this entire batch, even if the post arrived while we</span></div>
+<div class="line"><a id="l01708" name="l01708"></a><span class="lineno"> 1708</span><span class="comment">             * were only a few callbacks in. CWIST_REACTOR_DRAIN_CHUNK bounds</span></div>
+<div class="line"><a id="l01709" name="l01709"></a><span class="lineno"> 1709</span><span class="comment">             * how many connection callbacks run before posts are drained, so</span></div>
+<div class="line"><a id="l01710" name="l01710"></a><span class="lineno"> 1710</span><span class="comment">             * a foreign-thread completion&#39;s own tail latency stops scaling</span></div>
+<div class="line"><a id="l01711" name="l01711"></a><span class="lineno"> 1711</span><span class="comment">             * with how many *other* connections happened to be ready in the</span></div>
+<div class="line"><a id="l01712" name="l01712"></a><span class="lineno"> 1712</span><span class="comment">             * same wake. The default (64) applies the bound out of the box;</span></div>
+<div class="line"><a id="l01713" name="l01713"></a><span class="lineno"> 1713</span><span class="comment">             * 0 restores the legacy single-drain-at-end behavior. */</span></div>
+<div class="line"><a id="l01714" name="l01714"></a><span class="lineno"> 1714</span>            uint32_t drain_chunk = reactor_drain_chunk();</div>
+<div class="line"><a id="l01715" name="l01715"></a><span class="lineno"> 1715</span>            uint32_t since_drain = 0;</div>
+<div class="line"><a id="l01716" name="l01716"></a><span class="lineno"> 1716</span>            uint32_t since_budget_check = 0;</div>
+<div class="line"><a id="l01717" name="l01717"></a><span class="lineno"> 1717</span>            <span class="keywordflow">while</span> (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> != tail) {</div>
+<div class="line"><a id="l01718" name="l01718"></a><span class="lineno"> 1718</span>                <span class="keyword">struct </span>io_uring_cqe *cqe = &amp;reactor-&gt;impl.cqes[<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> &amp; *reactor-&gt;impl.cq_ring_mask];</div>
+<div class="line"><a id="l01719" name="l01719"></a><span class="lineno"> 1719</span>                uint64_t user_data = cqe-&gt;user_data;</div>
+<div class="line"><a id="l01720" name="l01720"></a><span class="lineno"> 1720</span>                <span class="keywordflow">if</span> (user_data &amp; 1u) {</div>
+<div class="line"><a id="l01721" name="l01721"></a><span class="lineno"> 1721</span>                    <span class="comment">/* Tagged data-path SQE (RX-uring RECV): the connection</span></div>
+<div class="line"><a id="l01722" name="l01722"></a><span class="lineno"> 1722</span><span class="comment">                     * pointer rides in the remaining bits.  Dispatch on any</span></div>
+<div class="line"><a id="l01723" name="l01723"></a><span class="lineno"> 1723</span><span class="comment">                     * res, including negative ones: -EAGAIN is the POLL</span></div>
+<div class="line"><a id="l01724" name="l01724"></a><span class="lineno"> 1724</span><span class="comment">                     * fallback signal and 0 is EOF.  Latency probe samples</span></div>
+<div class="line"><a id="l01725" name="l01725"></a><span class="lineno"> 1725</span><span class="comment">                     * are recorded by the handler itself (it owns the arm</span></div>
+<div class="line"><a id="l01726" name="l01726"></a><span class="lineno"> 1726</span><span class="comment">                     * timestamp), not by the ev_ctx wrapper below. */</span></div>
+<div class="line"><a id="l01727" name="l01727"></a><span class="lineno"> 1727</span>                    <span class="keywordflow">if</span> (reactor-&gt;rx_cb) {</div>
+<div class="line"><a id="l01728" name="l01728"></a><span class="lineno"> 1728</span>                        reactor-&gt;rx_cb((<span class="keywordtype">void</span> *)(user_data &amp; ~(uint64_t)1u), cqe-&gt;res);</div>
+<div class="line"><a id="l01729" name="l01729"></a><span class="lineno"> 1729</span>                    }</div>
+<div class="line"><a id="l01730" name="l01730"></a><span class="lineno"> 1730</span>                } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (user_data &amp; 2u) {</div>
+<div class="line"><a id="l01731" name="l01731"></a><span class="lineno"> 1731</span>                    <span class="comment">/* Multishot-accept slot (issue #406): cqe-&gt;res is the</span></div>
+<div class="line"><a id="l01732" name="l01732"></a><span class="lineno"> 1732</span><span class="comment">                     * accepted fd, already CLOEXEC|NONBLOCK.  A completion</span></div>
+<div class="line"><a id="l01733" name="l01733"></a><span class="lineno"> 1733</span><span class="comment">                     * without IORING_CQE_F_MORE ends the registration: notify</span></div>
+<div class="line"><a id="l01734" name="l01734"></a><span class="lineno"> 1734</span><span class="comment">                     * once with the terminal status (-errno, or -ECANCELED on</span></div>
+<div class="line"><a id="l01735" name="l01735"></a><span class="lineno"> 1735</span><span class="comment">                     * an error-free end) so the caller can resume the</span></div>
+<div class="line"><a id="l01736" name="l01736"></a><span class="lineno"> 1736</span><span class="comment">                     * one-shot POLL accept loop, then free the slot. */</span></div>
+<div class="line"><a id="l01737" name="l01737"></a><span class="lineno"> 1737</span>                    reactor_accept_slot_t *slot =</div>
+<div class="line"><a id="l01738" name="l01738"></a><span class="lineno"> 1738</span>                        (reactor_accept_slot_t *)(uintptr_t)(user_data &amp; ~(uint64_t)3u);</div>
+<div class="line"><a id="l01739" name="l01739"></a><span class="lineno"> 1739</span>                    <span class="keywordtype">int</span> res = cqe-&gt;res;</div>
+<div class="line"><a id="l01740" name="l01740"></a><span class="lineno"> 1740</span>                    <span class="keywordflow">if</span> (res &gt;= 0) slot-&gt;cb(slot-&gt;ctx, res);</div>
+<div class="line"><a id="l01741" name="l01741"></a><span class="lineno"> 1741</span>                    <span class="keywordflow">if</span> (!(cqe-&gt;flags &amp; IORING_CQE_F_MORE)) {</div>
+<div class="line"><a id="l01742" name="l01742"></a><span class="lineno"> 1742</span>                        reactor_accept_unlink(reactor, slot);</div>
+<div class="line"><a id="l01743" name="l01743"></a><span class="lineno"> 1743</span>                        slot-&gt;cb(slot-&gt;ctx, res &lt; 0 ? res : -ECANCELED);</div>
+<div class="line"><a id="l01744" name="l01744"></a><span class="lineno"> 1744</span>                        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(slot);</div>
+<div class="line"><a id="l01745" name="l01745"></a><span class="lineno"> 1745</span>                    }</div>
+<div class="line"><a id="l01746" name="l01746"></a><span class="lineno"> 1746</span>                } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01747" name="l01747"></a><span class="lineno"> 1747</span>                    reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)user_data;</div>
+<div class="line"><a id="l01748" name="l01748"></a><span class="lineno"> 1748</span>                    <span class="keywordflow">if</span> (ev_ctx) {</div>
+<div class="line"><a id="l01749" name="l01749"></a><span class="lineno"> 1749</span>                        <span class="keywordflow">if</span> (cqe-&gt;res &gt;= 0) {</div>
+<div class="line"><a id="l01750" name="l01750"></a><span class="lineno"> 1750</span>                            <span class="keywordflow">if</span> (latency_probe_enabled()) {</div>
+<div class="line"><a id="l01751" name="l01751"></a><span class="lineno"> 1751</span>                                <span class="keyword">struct </span>timespec ts;</div>
+<div class="line"><a id="l01752" name="l01752"></a><span class="lineno"> 1752</span>                                clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
+<div class="line"><a id="l01753" name="l01753"></a><span class="lineno"> 1753</span>                                uint64_t t0 =</div>
+<div class="line"><a id="l01754" name="l01754"></a><span class="lineno"> 1754</span>                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
+<div class="line"><a id="l01755" name="l01755"></a><span class="lineno"> 1755</span>                                <span class="comment">/* armed_ns == 0 means the slot was armed before</span></div>
+<div class="line"><a id="l01756" name="l01756"></a><span class="lineno"> 1756</span><span class="comment">                                 * the probe was enabled; fold it into the first</span></div>
+<div class="line"><a id="l01757" name="l01757"></a><span class="lineno"> 1757</span><span class="comment">                                 * bucket rather than producing a garbage delay. */</span></div>
+<div class="line"><a id="l01758" name="l01758"></a><span class="lineno"> 1758</span>                                uint64_t delay_ns = ev_ctx-&gt;armed_ns ? t0 - ev_ctx-&gt;armed_ns : 0;</div>
+<div class="line"><a id="l01759" name="l01759"></a><span class="lineno"> 1759</span>                                reactor_ctx_invoke(ev_ctx);</div>
+<div class="line"><a id="l01760" name="l01760"></a><span class="lineno"> 1760</span>                                clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
+<div class="line"><a id="l01761" name="l01761"></a><span class="lineno"> 1761</span>                                uint64_t t1 =</div>
+<div class="line"><a id="l01762" name="l01762"></a><span class="lineno"> 1762</span>                                    (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
+<div class="line"><a id="l01763" name="l01763"></a><span class="lineno"> 1763</span>                                latency_probe_record(reactor-&gt;probe[LATENCY_PROBE_QUEUE].buckets,</div>
+<div class="line"><a id="l01764" name="l01764"></a><span class="lineno"> 1764</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].count,</div>
+<div class="line"><a id="l01765" name="l01765"></a><span class="lineno"> 1765</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].sum_us,</div>
+<div class="line"><a id="l01766" name="l01766"></a><span class="lineno"> 1766</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].max_us,</div>
+<div class="line"><a id="l01767" name="l01767"></a><span class="lineno"> 1767</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_QUEUE].over_5ms,</div>
+<div class="line"><a id="l01768" name="l01768"></a><span class="lineno"> 1768</span>                                                     delay_ns / 1000);</div>
+<div class="line"><a id="l01769" name="l01769"></a><span class="lineno"> 1769</span>                                latency_probe_record(reactor-&gt;probe[LATENCY_PROBE_SVC].buckets,</div>
+<div class="line"><a id="l01770" name="l01770"></a><span class="lineno"> 1770</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].count,</div>
+<div class="line"><a id="l01771" name="l01771"></a><span class="lineno"> 1771</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].sum_us,</div>
+<div class="line"><a id="l01772" name="l01772"></a><span class="lineno"> 1772</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].max_us,</div>
+<div class="line"><a id="l01773" name="l01773"></a><span class="lineno"> 1773</span>                                                     &amp;reactor-&gt;probe[LATENCY_PROBE_SVC].over_5ms,</div>
+<div class="line"><a id="l01774" name="l01774"></a><span class="lineno"> 1774</span>                                                     (t1 - t0) / 1000);</div>
+<div class="line"><a id="l01775" name="l01775"></a><span class="lineno"> 1775</span>                            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01776" name="l01776"></a><span class="lineno"> 1776</span>                                reactor_ctx_invoke(ev_ctx);</div>
+<div class="line"><a id="l01777" name="l01777"></a><span class="lineno"> 1777</span>                            }</div>
+<div class="line"><a id="l01778" name="l01778"></a><span class="lineno"> 1778</span>                        }</div>
+<div class="line"><a id="l01779" name="l01779"></a><span class="lineno"> 1779</span>                        free_reactor_ctx(reactor, ev_ctx);</div>
+<div class="line"><a id="l01780" name="l01780"></a><span class="lineno"> 1780</span>                    }</div>
+<div class="line"><a id="l01781" name="l01781"></a><span class="lineno"> 1781</span>                }</div>
+<div class="line"><a id="l01782" name="l01782"></a><span class="lineno"> 1782</span>                <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>++;</div>
+<div class="line"><a id="l01783" name="l01783"></a><span class="lineno"> 1783</span>                <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> != tail) {</div>
+<div class="line"><a id="l01784" name="l01784"></a><span class="lineno"> 1784</span>                    since_drain = 0;</div>
+<div class="line"><a id="l01785" name="l01785"></a><span class="lineno"> 1785</span>                    __atomic_store_n(reactor-&gt;impl.cq_head, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01786" name="l01786"></a><span class="lineno"> 1786</span>                    reactor_drain_posts(reactor);</div>
+<div class="line"><a id="l01787" name="l01787"></a><span class="lineno"> 1787</span>                }</div>
+<div class="line"><a id="l01788" name="l01788"></a><span class="lineno"> 1788</span>                <span class="keywordflow">if</span> (round_budget_us &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a> != tail &amp;&amp; (++since_budget_check &amp; 63u) == 0) {</div>
+<div class="line"><a id="l01789" name="l01789"></a><span class="lineno"> 1789</span>                    <span class="comment">/* The budget check rides its own cadence (every 64</span></div>
+<div class="line"><a id="l01790" name="l01790"></a><span class="lineno"> 1790</span><span class="comment">                     * callbacks), independent of CWIST_REACTOR_DRAIN_CHUNK,</span></div>
+<div class="line"><a id="l01791" name="l01791"></a><span class="lineno"> 1791</span><span class="comment">                     * so disabling the post drain does not disable the</span></div>
+<div class="line"><a id="l01792" name="l01792"></a><span class="lineno"> 1792</span><span class="comment">                     * round bound. */</span></div>
+<div class="line"><a id="l01793" name="l01793"></a><span class="lineno"> 1793</span>                    <span class="keyword">struct </span>timespec ts;</div>
+<div class="line"><a id="l01794" name="l01794"></a><span class="lineno"> 1794</span>                    clock_gettime(CLOCK_MONOTONIC, &amp;ts);</div>
+<div class="line"><a id="l01795" name="l01795"></a><span class="lineno"> 1795</span>                    uint64_t now_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;</div>
+<div class="line"><a id="l01796" name="l01796"></a><span class="lineno"> 1796</span>                    <span class="keywordflow">if</span> (now_ns - round_start_ns &gt;= round_budget_us * 1000ull) {</div>
+<div class="line"><a id="l01797" name="l01797"></a><span class="lineno"> 1797</span>                        <span class="comment">/* Long round: flush the re-arms parked so far instead</span></div>
+<div class="line"><a id="l01798" name="l01798"></a><span class="lineno"> 1798</span><span class="comment">                         * of holding them to round end. The batch itself</span></div>
+<div class="line"><a id="l01799" name="l01799"></a><span class="lineno"> 1799</span><span class="comment">                         * still runs to completion. */</span></div>
+<div class="line"><a id="l01800" name="l01800"></a><span class="lineno"> 1800</span>                        flush_deferred(reactor);</div>
+<div class="line"><a id="l01801" name="l01801"></a><span class="lineno"> 1801</span>                    }</div>
+<div class="line"><a id="l01802" name="l01802"></a><span class="lineno"> 1802</span>                }</div>
+<div class="line"><a id="l01803" name="l01803"></a><span class="lineno"> 1803</span>            }</div>
+<div class="line"><a id="l01804" name="l01804"></a><span class="lineno"> 1804</span>            reactor-&gt;dispatching = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01805" name="l01805"></a><span class="lineno"> 1805</span>            __atomic_store_n(reactor-&gt;impl.cq_head, <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a>, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01806" name="l01806"></a><span class="lineno"> 1806</span>            queue_deferred(reactor);</div>
+<div class="line"><a id="l01807" name="l01807"></a><span class="lineno"> 1807</span>        }</div>
+<div class="line"><a id="l01808" name="l01808"></a><span class="lineno"> 1808</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01809" name="l01809"></a><span class="lineno"> 1809</span>        <span class="keyword">struct </span>epoll_event events[1024];</div>
+<div class="line"><a id="l01810" name="l01810"></a><span class="lineno"> 1810</span>        <span class="keywordflow">while</span> (reactor_running(reactor)) {</div>
+<div class="line"><a id="l01811" name="l01811"></a><span class="lineno"> 1811</span>            reactor_drain_posts(reactor);</div>
+<div class="line"><a id="l01812" name="l01812"></a><span class="lineno"> 1812</span>            reactor_run_timers(reactor);</div>
+<div class="line"><a id="l01813" name="l01813"></a><span class="lineno"> 1813</span>            <span class="comment">/* Round to the nearest millisecond, with a 1 ms minimum so a</span></div>
+<div class="line"><a id="l01814" name="l01814"></a><span class="lineno"> 1814</span><span class="comment">             * sub-millisecond remainder never degenerates into a busy poll:</span></div>
+<div class="line"><a id="l01815" name="l01815"></a><span class="lineno"> 1815</span><span class="comment">             * the remainder is deliberately absorbed by that final 1 ms wait</span></div>
+<div class="line"><a id="l01816" name="l01816"></a><span class="lineno"> 1816</span><span class="comment">             * instead of rounding every wait up (which let a timer land up to</span></div>
+<div class="line"><a id="l01817" name="l01817"></a><span class="lineno"> 1817</span><span class="comment">             * ~1 ms late). An early epoll_wait return cannot dispatch a timer</span></div>
+<div class="line"><a id="l01818" name="l01818"></a><span class="lineno"> 1818</span><span class="comment">             * early: reactor_run_timers() re-checks each deadline against the</span></div>
+<div class="line"><a id="l01819" name="l01819"></a><span class="lineno"> 1819</span><span class="comment">             * clock, and the only armed timers (webrtc conn/SCTP ticks, see</span></div>
+<div class="line"><a id="l01820" name="l01820"></a><span class="lineno"> 1820</span><span class="comment">             * src/net/webrtc/webrtc.c) re-check their own expiry or are</span></div>
+<div class="line"><a id="l01821" name="l01821"></a><span class="lineno"> 1821</span><span class="comment">             * harmless when ticked slightly early. An already-due timer waits</span></div>
+<div class="line"><a id="l01822" name="l01822"></a><span class="lineno"> 1822</span><span class="comment">             * at most this 1 ms before firing. */</span></div>
+<div class="line"><a id="l01823" name="l01823"></a><span class="lineno"> 1823</span>            <span class="keywordtype">int</span> wait_ms = (int)((reactor_wait_ns(reactor) + 500000ull) / 1000000ull);</div>
+<div class="line"><a id="l01824" name="l01824"></a><span class="lineno"> 1824</span>            <span class="keywordflow">if</span> (wait_ms &lt; 1) wait_ms = 1;</div>
+<div class="line"><a id="l01825" name="l01825"></a><span class="lineno"> 1825</span>            <span class="comment">/* Queued RX receives must not wait behind a blocking poll. */</span></div>
+<div class="line"><a id="l01826" name="l01826"></a><span class="lineno"> 1826</span>            <span class="keywordflow">if</span> (reactor-&gt;rx_ready_n &gt; 0) wait_ms = 0;</div>
+<div class="line"><a id="l01827" name="l01827"></a><span class="lineno"> 1827</span>            <span class="keywordtype">int</span> n = epoll_wait(reactor-&gt;impl.epoll_fd, events, 1024, wait_ms);</div>
+<div class="line"><a id="l01828" name="l01828"></a><span class="lineno"> 1828</span>            <span class="keywordflow">if</span> (n &lt; 0) {</div>
+<div class="line"><a id="l01829" name="l01829"></a><span class="lineno"> 1829</span>                <span class="keywordflow">if</span> (errno == EINTR) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l01830" name="l01830"></a><span class="lineno"> 1830</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l01831" name="l01831"></a><span class="lineno"> 1831</span>            }</div>
+<div class="line"><a id="l01832" name="l01832"></a><span class="lineno"> 1832</span>            <span class="keywordflow">if</span> (n == 0) {</div>
+<div class="line"><a id="l01833" name="l01833"></a><span class="lineno"> 1833</span>                <span class="comment">/* Event-free idle wake: feeds the idle malloc_trim cadence;</span></div>
+<div class="line"><a id="l01834" name="l01834"></a><span class="lineno"> 1834</span><span class="comment">                 * see reactor_idle_note_wake(). */</span></div>
+<div class="line"><a id="l01835" name="l01835"></a><span class="lineno"> 1835</span>                reactor_idle_note_wake(reactor);</div>
+<div class="line"><a id="l01836" name="l01836"></a><span class="lineno"> 1836</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01837" name="l01837"></a><span class="lineno"> 1837</span>                reactor_idle_note_eventful(reactor);</div>
+<div class="line"><a id="l01838" name="l01838"></a><span class="lineno"> 1838</span>            }</div>
+<div class="line"><a id="l01839" name="l01839"></a><span class="lineno"> 1839</span>            <span class="comment">/* Cooperative queuing, same cadence as the io_uring branch (see</span></div>
+<div class="line"><a id="l01840" name="l01840"></a><span class="lineno"> 1840</span><span class="comment">             * the comment there): epoll_wait hands back up to 1024 events in</span></div>
+<div class="line"><a id="l01841" name="l01841"></a><span class="lineno"> 1841</span><span class="comment">             * one array, and this loop used to run them all with no drain</span></div>
+<div class="line"><a id="l01842" name="l01842"></a><span class="lineno"> 1842</span><span class="comment">             * point in between -- so a foreign-thread completion posted via</span></div>
+<div class="line"><a id="l01843" name="l01843"></a><span class="lineno"> 1843</span><span class="comment">             * cwist_reactor_post() mid-batch waited behind every remaining</span></div>
+<div class="line"><a id="l01844" name="l01844"></a><span class="lineno"> 1844</span><span class="comment">             * event&#39;s handler, even though the post itself costs nothing.</span></div>
+<div class="line"><a id="l01845" name="l01845"></a><span class="lineno"> 1845</span><span class="comment">             * CWIST_REACTOR_DRAIN_CHUNK bounds that wait to ~chunk callbacks</span></div>
+<div class="line"><a id="l01846" name="l01846"></a><span class="lineno"> 1846</span><span class="comment">             * so a foreign-thread completion&#39;s tail latency stops scaling</span></div>
+<div class="line"><a id="l01847" name="l01847"></a><span class="lineno"> 1847</span><span class="comment">             * with the same-wake batch size. 0 restores the legacy</span></div>
+<div class="line"><a id="l01848" name="l01848"></a><span class="lineno"> 1848</span><span class="comment">             * single-drain-at-top-of-round behavior. Not drained after the</span></div>
+<div class="line"><a id="l01849" name="l01849"></a><span class="lineno"> 1849</span><span class="comment">             * last event: the top-of-round drain covers it, mirroring the</span></div>
+<div class="line"><a id="l01850" name="l01850"></a><span class="lineno"> 1850</span><span class="comment">             * io_uring branch&#39;s head != tail guard. */</span></div>
+<div class="line"><a id="l01851" name="l01851"></a><span class="lineno"> 1851</span>            uint32_t drain_chunk = reactor_drain_chunk();</div>
+<div class="line"><a id="l01852" name="l01852"></a><span class="lineno"> 1852</span>            uint32_t since_drain = 0;</div>
+<div class="line"><a id="l01853" name="l01853"></a><span class="lineno"> 1853</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; n; i++) {</div>
+<div class="line"><a id="l01854" name="l01854"></a><span class="lineno"> 1854</span>                <span class="comment">/* Low bit set: an RX-mode fd (fd &lt;&lt; 1 | 1); ev_ctx slots are</span></div>
+<div class="line"><a id="l01855" name="l01855"></a><span class="lineno"> 1855</span><span class="comment">                 * at least 8-byte aligned and never carry it. */</span></div>
+<div class="line"><a id="l01856" name="l01856"></a><span class="lineno"> 1856</span>                <span class="keywordflow">if</span> (events[i].data.u64 &amp; 1u) {</div>
+<div class="line"><a id="l01857" name="l01857"></a><span class="lineno"> 1857</span>                    rx_epoll_event(reactor, (<span class="keywordtype">int</span>)(events[i].data.u64 &gt;&gt; 1));</div>
+<div class="line"><a id="l01858" name="l01858"></a><span class="lineno"> 1858</span>                    <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; i + 1 &lt; n) {</div>
+<div class="line"><a id="l01859" name="l01859"></a><span class="lineno"> 1859</span>                        since_drain = 0;</div>
+<div class="line"><a id="l01860" name="l01860"></a><span class="lineno"> 1860</span>                        reactor_drain_posts(reactor);</div>
+<div class="line"><a id="l01861" name="l01861"></a><span class="lineno"> 1861</span>                    }</div>
+<div class="line"><a id="l01862" name="l01862"></a><span class="lineno"> 1862</span>                    <span class="keywordflow">continue</span>;</div>
 <div class="line"><a id="l01863" name="l01863"></a><span class="lineno"> 1863</span>                }</div>
-<div class="line"><a id="l01864" name="l01864"></a><span class="lineno"> 1864</span>            }</div>
-<div class="line"><a id="l01865" name="l01865"></a><span class="lineno"> 1865</span>            <span class="keywordflow">if</span> (reactor-&gt;rx_ready_n &gt; 0) rx_epoll_drain_ready(reactor);</div>
-<div class="line"><a id="l01866" name="l01866"></a><span class="lineno"> 1866</span>        }</div>
-<div class="line"><a id="l01867" name="l01867"></a><span class="lineno"> 1867</span>    }</div>
-<div class="line"><a id="l01868" name="l01868"></a><span class="lineno"> 1868</span><span class="preprocessor">#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)</span></div>
-<div class="line"><a id="l01869" name="l01869"></a><span class="lineno"> 1869</span>    <span class="keyword">struct </span>kevent events[1024];</div>
-<div class="line"><a id="l01870" name="l01870"></a><span class="lineno"> 1870</span>    <span class="comment">/* Bounded like the epoll and io_uring waits: a shutdown requested</span></div>
-<div class="line"><a id="l01871" name="l01871"></a><span class="lineno"> 1871</span><span class="comment">     * without a signal (cwist_shutdown_request() from another thread) only</span></div>
-<div class="line"><a id="l01872" name="l01872"></a><span class="lineno"> 1872</span><span class="comment">     * clears g_cwist_running and closes the listen socket, which wakes</span></div>
-<div class="line"><a id="l01873" name="l01873"></a><span class="lineno"> 1873</span><span class="comment">     * no kevent, so the flag must be re-checked periodically. */</span></div>
-<div class="line"><a id="l01874" name="l01874"></a><span class="lineno"> 1874</span>    <span class="keywordflow">while</span> (reactor_running(reactor)) {</div>
-<div class="line"><a id="l01875" name="l01875"></a><span class="lineno"> 1875</span>        reactor_drain_posts(reactor);</div>
-<div class="line"><a id="l01876" name="l01876"></a><span class="lineno"> 1876</span>        reactor_run_timers(reactor);</div>
-<div class="line"><a id="l01877" name="l01877"></a><span class="lineno"> 1877</span>        <span class="keyword">const</span> uint64_t wait_ns = reactor_wait_ns(reactor);</div>
-<div class="line"><a id="l01878" name="l01878"></a><span class="lineno"> 1878</span>        <span class="keyword">const</span> <span class="keyword">struct </span>timespec idle_ts = {.tv_sec = (time_t)(wait_ns / 1000000000ull),</div>
-<div class="line"><a id="l01879" name="l01879"></a><span class="lineno"> 1879</span>                                         .tv_nsec = (long)(wait_ns % 1000000000ull)};</div>
-<div class="line"><a id="l01880" name="l01880"></a><span class="lineno"> 1880</span>        <span class="keywordtype">int</span> n = kevent(reactor-&gt;impl.kq_fd, NULL, 0, events, 1024, &amp;idle_ts);</div>
-<div class="line"><a id="l01881" name="l01881"></a><span class="lineno"> 1881</span>        <span class="keywordflow">if</span> (n &lt; 0) {</div>
-<div class="line"><a id="l01882" name="l01882"></a><span class="lineno"> 1882</span>            <span class="keywordflow">if</span> (errno == EINTR) <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01883" name="l01883"></a><span class="lineno"> 1883</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l01884" name="l01884"></a><span class="lineno"> 1884</span>        }</div>
-<div class="line"><a id="l01885" name="l01885"></a><span class="lineno"> 1885</span>        <span class="comment">/* Cooperative queuing, same cadence as the io_uring and epoll</span></div>
-<div class="line"><a id="l01886" name="l01886"></a><span class="lineno"> 1886</span><span class="comment">         * branches: kevent hands back up to 1024 events in one array and a</span></div>
-<div class="line"><a id="l01887" name="l01887"></a><span class="lineno"> 1887</span><span class="comment">         * foreign-thread completion posted via cwist_reactor_post() mid-batch</span></div>
-<div class="line"><a id="l01888" name="l01888"></a><span class="lineno"> 1888</span><span class="comment">         * must not wait behind every remaining event&#39;s handler.</span></div>
-<div class="line"><a id="l01889" name="l01889"></a><span class="lineno"> 1889</span><span class="comment">         * CWIST_REACTOR_DRAIN_CHUNK bounds that wait to ~chunk callbacks; 0</span></div>
-<div class="line"><a id="l01890" name="l01890"></a><span class="lineno"> 1890</span><span class="comment">         * restores the legacy single-drain-at-top-of-round behavior. Not</span></div>
-<div class="line"><a id="l01891" name="l01891"></a><span class="lineno"> 1891</span><span class="comment">         * drained after the last event: the top-of-round drain covers it. */</span></div>
-<div class="line"><a id="l01892" name="l01892"></a><span class="lineno"> 1892</span>        uint32_t drain_chunk = reactor_drain_chunk();</div>
-<div class="line"><a id="l01893" name="l01893"></a><span class="lineno"> 1893</span>        uint32_t since_drain = 0;</div>
-<div class="line"><a id="l01894" name="l01894"></a><span class="lineno"> 1894</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; n; i++) {</div>
-<div class="line"><a id="l01895" name="l01895"></a><span class="lineno"> 1895</span>            reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].udata;</div>
-<div class="line"><a id="l01896" name="l01896"></a><span class="lineno"> 1896</span>            <span class="keywordflow">if</span> (ev_ctx) {</div>
-<div class="line"><a id="l01897" name="l01897"></a><span class="lineno"> 1897</span>                reactor_ctx_invoke(ev_ctx);</div>
-<div class="line"><a id="l01898" name="l01898"></a><span class="lineno"> 1898</span>                free_reactor_ctx(reactor, ev_ctx);</div>
-<div class="line"><a id="l01899" name="l01899"></a><span class="lineno"> 1899</span>                <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; i + 1 &lt; n) {</div>
-<div class="line"><a id="l01900" name="l01900"></a><span class="lineno"> 1900</span>                    since_drain = 0;</div>
-<div class="line"><a id="l01901" name="l01901"></a><span class="lineno"> 1901</span>                    reactor_drain_posts(reactor);</div>
-<div class="line"><a id="l01902" name="l01902"></a><span class="lineno"> 1902</span>                }</div>
-<div class="line"><a id="l01903" name="l01903"></a><span class="lineno"> 1903</span>            }</div>
-<div class="line"><a id="l01904" name="l01904"></a><span class="lineno"> 1904</span>        }</div>
-<div class="line"><a id="l01905" name="l01905"></a><span class="lineno"> 1905</span>    }</div>
-<div class="line"><a id="l01906" name="l01906"></a><span class="lineno"> 1906</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l01907" name="l01907"></a><span class="lineno"> 1907</span>    t_run_reactor = NULL;</div>
-<div class="line"><a id="l01908" name="l01908"></a><span class="lineno"> 1908</span>}</div>
+<div class="line"><a id="l01864" name="l01864"></a><span class="lineno"> 1864</span>                reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].data.ptr;</div>
+<div class="line"><a id="l01865" name="l01865"></a><span class="lineno"> 1865</span>                <span class="keywordflow">if</span> (ev_ctx) {</div>
+<div class="line"><a id="l01866" name="l01866"></a><span class="lineno"> 1866</span>                    reactor_ctx_invoke(ev_ctx);</div>
+<div class="line"><a id="l01867" name="l01867"></a><span class="lineno"> 1867</span>                    free_reactor_ctx(reactor, ev_ctx);</div>
+<div class="line"><a id="l01868" name="l01868"></a><span class="lineno"> 1868</span>                    <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; i + 1 &lt; n) {</div>
+<div class="line"><a id="l01869" name="l01869"></a><span class="lineno"> 1869</span>                        since_drain = 0;</div>
+<div class="line"><a id="l01870" name="l01870"></a><span class="lineno"> 1870</span>                        reactor_drain_posts(reactor);</div>
+<div class="line"><a id="l01871" name="l01871"></a><span class="lineno"> 1871</span>                    }</div>
+<div class="line"><a id="l01872" name="l01872"></a><span class="lineno"> 1872</span>                }</div>
+<div class="line"><a id="l01873" name="l01873"></a><span class="lineno"> 1873</span>            }</div>
+<div class="line"><a id="l01874" name="l01874"></a><span class="lineno"> 1874</span>            <span class="keywordflow">if</span> (reactor-&gt;rx_ready_n &gt; 0) rx_epoll_drain_ready(reactor);</div>
+<div class="line"><a id="l01875" name="l01875"></a><span class="lineno"> 1875</span>        }</div>
+<div class="line"><a id="l01876" name="l01876"></a><span class="lineno"> 1876</span>    }</div>
+<div class="line"><a id="l01877" name="l01877"></a><span class="lineno"> 1877</span><span class="preprocessor">#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)</span></div>
+<div class="line"><a id="l01878" name="l01878"></a><span class="lineno"> 1878</span>    <span class="keyword">struct </span>kevent events[1024];</div>
+<div class="line"><a id="l01879" name="l01879"></a><span class="lineno"> 1879</span>    <span class="comment">/* Bounded like the epoll and io_uring waits: a shutdown requested</span></div>
+<div class="line"><a id="l01880" name="l01880"></a><span class="lineno"> 1880</span><span class="comment">     * without a signal (cwist_shutdown_request() from another thread) only</span></div>
+<div class="line"><a id="l01881" name="l01881"></a><span class="lineno"> 1881</span><span class="comment">     * clears g_cwist_running and closes the listen socket, which wakes</span></div>
+<div class="line"><a id="l01882" name="l01882"></a><span class="lineno"> 1882</span><span class="comment">     * no kevent, so the flag must be re-checked periodically. */</span></div>
+<div class="line"><a id="l01883" name="l01883"></a><span class="lineno"> 1883</span>    <span class="keywordflow">while</span> (reactor_running(reactor)) {</div>
+<div class="line"><a id="l01884" name="l01884"></a><span class="lineno"> 1884</span>        reactor_drain_posts(reactor);</div>
+<div class="line"><a id="l01885" name="l01885"></a><span class="lineno"> 1885</span>        reactor_run_timers(reactor);</div>
+<div class="line"><a id="l01886" name="l01886"></a><span class="lineno"> 1886</span>        <span class="keyword">const</span> uint64_t wait_ns = reactor_wait_ns(reactor);</div>
+<div class="line"><a id="l01887" name="l01887"></a><span class="lineno"> 1887</span>        <span class="keyword">const</span> <span class="keyword">struct </span>timespec idle_ts = {.tv_sec = (time_t)(wait_ns / 1000000000ull),</div>
+<div class="line"><a id="l01888" name="l01888"></a><span class="lineno"> 1888</span>                                         .tv_nsec = (long)(wait_ns % 1000000000ull)};</div>
+<div class="line"><a id="l01889" name="l01889"></a><span class="lineno"> 1889</span>        <span class="keywordtype">int</span> n = kevent(reactor-&gt;impl.kq_fd, NULL, 0, events, 1024, &amp;idle_ts);</div>
+<div class="line"><a id="l01890" name="l01890"></a><span class="lineno"> 1890</span>        <span class="keywordflow">if</span> (n &lt; 0) {</div>
+<div class="line"><a id="l01891" name="l01891"></a><span class="lineno"> 1891</span>            <span class="keywordflow">if</span> (errno == EINTR) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l01892" name="l01892"></a><span class="lineno"> 1892</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l01893" name="l01893"></a><span class="lineno"> 1893</span>        }</div>
+<div class="line"><a id="l01894" name="l01894"></a><span class="lineno"> 1894</span>        <span class="comment">/* Cooperative queuing, same cadence as the io_uring and epoll</span></div>
+<div class="line"><a id="l01895" name="l01895"></a><span class="lineno"> 1895</span><span class="comment">         * branches: kevent hands back up to 1024 events in one array and a</span></div>
+<div class="line"><a id="l01896" name="l01896"></a><span class="lineno"> 1896</span><span class="comment">         * foreign-thread completion posted via cwist_reactor_post() mid-batch</span></div>
+<div class="line"><a id="l01897" name="l01897"></a><span class="lineno"> 1897</span><span class="comment">         * must not wait behind every remaining event&#39;s handler.</span></div>
+<div class="line"><a id="l01898" name="l01898"></a><span class="lineno"> 1898</span><span class="comment">         * CWIST_REACTOR_DRAIN_CHUNK bounds that wait to ~chunk callbacks; 0</span></div>
+<div class="line"><a id="l01899" name="l01899"></a><span class="lineno"> 1899</span><span class="comment">         * restores the legacy single-drain-at-top-of-round behavior. Not</span></div>
+<div class="line"><a id="l01900" name="l01900"></a><span class="lineno"> 1900</span><span class="comment">         * drained after the last event: the top-of-round drain covers it. */</span></div>
+<div class="line"><a id="l01901" name="l01901"></a><span class="lineno"> 1901</span>        uint32_t drain_chunk = reactor_drain_chunk();</div>
+<div class="line"><a id="l01902" name="l01902"></a><span class="lineno"> 1902</span>        uint32_t since_drain = 0;</div>
+<div class="line"><a id="l01903" name="l01903"></a><span class="lineno"> 1903</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; n; i++) {</div>
+<div class="line"><a id="l01904" name="l01904"></a><span class="lineno"> 1904</span>            reactor_event_ctx_t *ev_ctx = (reactor_event_ctx_t *)events[i].udata;</div>
+<div class="line"><a id="l01905" name="l01905"></a><span class="lineno"> 1905</span>            <span class="keywordflow">if</span> (ev_ctx) {</div>
+<div class="line"><a id="l01906" name="l01906"></a><span class="lineno"> 1906</span>                reactor_ctx_invoke(ev_ctx);</div>
+<div class="line"><a id="l01907" name="l01907"></a><span class="lineno"> 1907</span>                free_reactor_ctx(reactor, ev_ctx);</div>
+<div class="line"><a id="l01908" name="l01908"></a><span class="lineno"> 1908</span>                <span class="keywordflow">if</span> (drain_chunk &amp;&amp; ++since_drain &gt;= drain_chunk &amp;&amp; i + 1 &lt; n) {</div>
+<div class="line"><a id="l01909" name="l01909"></a><span class="lineno"> 1909</span>                    since_drain = 0;</div>
+<div class="line"><a id="l01910" name="l01910"></a><span class="lineno"> 1910</span>                    reactor_drain_posts(reactor);</div>
+<div class="line"><a id="l01911" name="l01911"></a><span class="lineno"> 1911</span>                }</div>
+<div class="line"><a id="l01912" name="l01912"></a><span class="lineno"> 1912</span>            }</div>
+<div class="line"><a id="l01913" name="l01913"></a><span class="lineno"> 1913</span>        }</div>
+<div class="line"><a id="l01914" name="l01914"></a><span class="lineno"> 1914</span>    }</div>
+<div class="line"><a id="l01915" name="l01915"></a><span class="lineno"> 1915</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01916" name="l01916"></a><span class="lineno"> 1916</span>    t_run_reactor = NULL;</div>
+<div class="line"><a id="l01917" name="l01917"></a><span class="lineno"> 1917</span>}</div>
 </div>
-<div class="line"><a id="l01909" name="l01909"></a><span class="lineno"> 1909</span> </div>
-<div class="foldopen" id="foldopen01910" data-start="{" data-end="}">
-<div class="line"><a id="l01910" name="l01910"></a><span class="lineno"><a class="line" href="../../dc/d85/reactor_8h.html#a9df66b83bfa0785186eeb5d2f3f81b2a"> 1910</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d3/d99/reactor_8c.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a>(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor) {</div>
-<div class="line"><a id="l01911" name="l01911"></a><span class="lineno"> 1911</span>    <span class="keywordflow">if</span> (!reactor) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l01912" name="l01912"></a><span class="lineno"> 1912</span>    <span class="comment">/* Called from foreign threads (shutdown paths, embedders). */</span></div>
-<div class="line"><a id="l01913" name="l01913"></a><span class="lineno"> 1913</span>    __atomic_store_n(&amp;reactor-&gt;running, <span class="keyword">false</span>, __ATOMIC_RELEASE);</div>
-<div class="line"><a id="l01914" name="l01914"></a><span class="lineno"> 1914</span>    <span class="comment">/* A run thread parked in io_uring_enter(GETEVENTS) on an idle SQPOLL</span></div>
-<div class="line"><a id="l01915" name="l01915"></a><span class="lineno"> 1915</span><span class="comment">     * ring sleeps until a CQE arrives: the kernel ignores the enter</span></div>
-<div class="line"><a id="l01916" name="l01916"></a><span class="lineno"> 1916</span><span class="comment">     * timeout for SQPOLL rings, so with no pending SQEs the wait never</span></div>
-<div class="line"><a id="l01917" name="l01917"></a><span class="lineno"> 1917</span><span class="comment">     * returns and the pthread_join() in the pool destroy path hangs the</span></div>
-<div class="line"><a id="l01918" name="l01918"></a><span class="lineno"> 1918</span><span class="comment">     * process (observed as a worker child surviving SIGTERM until SIGKILL,</span></div>
-<div class="line"><a id="l01919" name="l01919"></a><span class="lineno"> 1919</span><span class="comment">     * wedging the supervisor&#39;s shutdown waitpid). Nudge the registered</span></div>
-<div class="line"><a id="l01920" name="l01920"></a><span class="lineno"> 1920</span><span class="comment">     * wake fd so the run thread re-checks its shutdown flags. */</span></div>
-<div class="line"><a id="l01921" name="l01921"></a><span class="lineno"> 1921</span>    <span class="keywordflow">if</span> (reactor-&gt;wake_wr &gt;= 0) {</div>
-<div class="line"><a id="l01922" name="l01922"></a><span class="lineno"> 1922</span>        uint64_t one = 1;</div>
-<div class="line"><a id="l01923" name="l01923"></a><span class="lineno"> 1923</span>        ssize_t ign = write(reactor-&gt;wake_wr, &amp;one, <span class="keyword">sizeof</span>(one));</div>
-<div class="line"><a id="l01924" name="l01924"></a><span class="lineno"> 1924</span>        (void)ign; <span class="comment">/* EAGAIN: a wake is already pending, which is fine. */</span></div>
-<div class="line"><a id="l01925" name="l01925"></a><span class="lineno"> 1925</span>    }</div>
-<div class="line"><a id="l01926" name="l01926"></a><span class="lineno"> 1926</span>}</div>
+<div class="line"><a id="l01918" name="l01918"></a><span class="lineno"> 1918</span> </div>
+<div class="foldopen" id="foldopen01919" data-start="{" data-end="}">
+<div class="line"><a id="l01919" name="l01919"></a><span class="lineno"><a class="line" href="../../dc/d85/reactor_8h.html#a9df66b83bfa0785186eeb5d2f3f81b2a"> 1919</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d3/d99/reactor_8c.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a>(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor) {</div>
+<div class="line"><a id="l01920" name="l01920"></a><span class="lineno"> 1920</span>    <span class="keywordflow">if</span> (!reactor) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l01921" name="l01921"></a><span class="lineno"> 1921</span>    <span class="comment">/* Called from foreign threads (shutdown paths, embedders). */</span></div>
+<div class="line"><a id="l01922" name="l01922"></a><span class="lineno"> 1922</span>    __atomic_store_n(&amp;reactor-&gt;running, <span class="keyword">false</span>, __ATOMIC_RELEASE);</div>
+<div class="line"><a id="l01923" name="l01923"></a><span class="lineno"> 1923</span>    <span class="comment">/* A run thread parked in io_uring_enter(GETEVENTS) on an idle SQPOLL</span></div>
+<div class="line"><a id="l01924" name="l01924"></a><span class="lineno"> 1924</span><span class="comment">     * ring sleeps until a CQE arrives: the kernel ignores the enter</span></div>
+<div class="line"><a id="l01925" name="l01925"></a><span class="lineno"> 1925</span><span class="comment">     * timeout for SQPOLL rings, so with no pending SQEs the wait never</span></div>
+<div class="line"><a id="l01926" name="l01926"></a><span class="lineno"> 1926</span><span class="comment">     * returns and the pthread_join() in the pool destroy path hangs the</span></div>
+<div class="line"><a id="l01927" name="l01927"></a><span class="lineno"> 1927</span><span class="comment">     * process (observed as a worker child surviving SIGTERM until SIGKILL,</span></div>
+<div class="line"><a id="l01928" name="l01928"></a><span class="lineno"> 1928</span><span class="comment">     * wedging the supervisor&#39;s shutdown waitpid). Nudge the registered</span></div>
+<div class="line"><a id="l01929" name="l01929"></a><span class="lineno"> 1929</span><span class="comment">     * wake fd so the run thread re-checks its shutdown flags. */</span></div>
+<div class="line"><a id="l01930" name="l01930"></a><span class="lineno"> 1930</span>    <span class="keywordflow">if</span> (reactor-&gt;wake_wr &gt;= 0) {</div>
+<div class="line"><a id="l01931" name="l01931"></a><span class="lineno"> 1931</span>        uint64_t one = 1;</div>
+<div class="line"><a id="l01932" name="l01932"></a><span class="lineno"> 1932</span>        ssize_t ign = write(reactor-&gt;wake_wr, &amp;one, <span class="keyword">sizeof</span>(one));</div>
+<div class="line"><a id="l01933" name="l01933"></a><span class="lineno"> 1933</span>        (void)ign; <span class="comment">/* EAGAIN: a wake is already pending, which is fine. */</span></div>
+<div class="line"><a id="l01934" name="l01934"></a><span class="lineno"> 1934</span>    }</div>
+<div class="line"><a id="l01935" name="l01935"></a><span class="lineno"> 1935</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8c_html_a083b2e840cc4afee2f08f66c46f4d64d"><div class="ttname"><a href="../../d9/d39/alloc_8c.html#a083b2e840cc4afee2f08f66c46f4d64d">__attribute__</a></div><div class="ttdeci">__attribute__((constructor))</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00064">alloc.c:64</a></div></div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
@@ -1981,7 +1990,7 @@ $(document).ready(function(){initNavTree('d3/d99/reactor_8c_source.html','../../
 <div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00017">alloc.c:17</a></div></div>
 <div class="ttc" id="aasync__debug_8h_html"><div class="ttname"><a href="../../d9/dcd/async__debug_8h.html">async_debug.h</a></div></div>
 <div class="ttc" id="ahttp3_8c_html_ab18d3d439e4a9c8d0f73e7166e8eb376"><div class="ttname"><a href="../../de/daf/http3_8c.html#ab18d3d439e4a9c8d0f73e7166e8eb376">MSG_DONTWAIT</a></div><div class="ttdeci">#define MSG_DONTWAIT</div><div class="ttdef"><b>Definition</b> <a href="../../de/daf/http3_8c_source.html#l00089">http3.c:89</a></div></div>
-<div class="ttc" id="aorm__socket_8c_html_ac337901f5606f0cf6f8e9867ef3fc1c4"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a></div><div class="ttdeci">#define SOCK_CLOEXEC</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00444">orm_socket.c:444</a></div></div>
+<div class="ttc" id="aorm__socket_8c_html_ac337901f5606f0cf6f8e9867ef3fc1c4"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a></div><div class="ttdeci">#define SOCK_CLOEXEC</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00489">orm_socket.c:489</a></div></div>
 <div class="ttc" id="aotel_8c_html_a233291193a02b9ae0ec3fe08ed2de03b"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a233291193a02b9ae0ec3fe08ed2de03b">batch</a></div><div class="ttdeci">size_t batch</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00057">otel.c:57</a></div></div>
 <div class="ttc" id="aotel_8c_html_a75844ce74940ef333d11ae090e07c9af"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a></div><div class="ttdeci">size_t head</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00060">otel.c:60</a></div></div>
 <div class="ttc" id="aotel_8c_html_a76d971a3c552bc58ba9f0d5fceae9806"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a></div><div class="ttdeci">size_t count</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00061">otel.c:61</a></div></div>
@@ -1994,10 +2003,10 @@ $(document).ready(function(){initNavTree('d3/d99/reactor_8c_source.html','../../
 <div class="ttc" id="areactor_8c_html_a7596f973cbd936b017e527e3ddde5808"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#a7596f973cbd936b017e527e3ddde5808">cwist_reactor_destroy</a></div><div class="ttdeci">void cwist_reactor_destroy(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01117">reactor.c:1117</a></div></div>
 <div class="ttc" id="areactor_8c_html_a88334ad6691e36e9b273b8318ffa0724"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#a88334ad6691e36e9b273b8318ffa0724">cwist_reactor_timer_cancel</a></div><div class="ttdeci">void cwist_reactor_timer_cancel(cwist_reactor_t *r, cwist_reactor_timer_t *timer)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00957">reactor.c:957</a></div></div>
 <div class="ttc" id="areactor_8c_html_a8e1a1b9f6e49aae5933a35ce4145a2e0"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#a8e1a1b9f6e49aae5933a35ce4145a2e0">reactor_slot_chunk_t</a></div><div class="ttdeci">struct reactor_slot_chunk reactor_slot_chunk_t</div></div>
-<div class="ttc" id="areactor_8c_html_a9df66b83bfa0785186eeb5d2f3f81b2a"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a></div><div class="ttdeci">void cwist_reactor_stop(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01910">reactor.c:1910</a></div></div>
+<div class="ttc" id="areactor_8c_html_a9df66b83bfa0785186eeb5d2f3f81b2a"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#a9df66b83bfa0785186eeb5d2f3f81b2a">cwist_reactor_stop</a></div><div class="ttdeci">void cwist_reactor_stop(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01919">reactor.c:1919</a></div></div>
 <div class="ttc" id="areactor_8c_html_a9ff56888792460aa778107dde4e91bbe"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#a9ff56888792460aa778107dde4e91bbe">cwist_reactor_create</a></div><div class="ttdeci">cwist_reactor_t * cwist_reactor_create(void)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01007">reactor.c:1007</a></div></div>
-<div class="ttc" id="areactor_8c_html_ab07ddcd7951f46911f013db77e2bbc96"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96">reactor_cpu_relax</a></div><div class="ttdeci">#define reactor_cpu_relax()</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01467">reactor.c:1467</a></div></div>
-<div class="ttc" id="areactor_8c_html_ac07bb3ce2393c0588f863eb97c4d6f5c"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a></div><div class="ttdeci">void cwist_reactor_run(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01588">reactor.c:1588</a></div></div>
+<div class="ttc" id="areactor_8c_html_ab07ddcd7951f46911f013db77e2bbc96"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#ab07ddcd7951f46911f013db77e2bbc96">reactor_cpu_relax</a></div><div class="ttdeci">#define reactor_cpu_relax()</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01476">reactor.c:1476</a></div></div>
+<div class="ttc" id="areactor_8c_html_ac07bb3ce2393c0588f863eb97c4d6f5c"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#ac07bb3ce2393c0588f863eb97c4d6f5c">cwist_reactor_run</a></div><div class="ttdeci">void cwist_reactor_run(cwist_reactor_t *reactor)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01597">reactor.c:1597</a></div></div>
 <div class="ttc" id="areactor_8c_html_ac41bb6897a1bfa0bf507bc50183f2311"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#ac41bb6897a1bfa0bf507bc50183f2311">cwist_reactor_mod</a></div><div class="ttdeci">bool cwist_reactor_mod(cwist_reactor_t *reactor, int fd, cwist_reactor_cb_t cb, const void *payload, size_t payload_size)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l01368">reactor.c:1368</a></div></div>
 <div class="ttc" id="areactor_8c_html_acb0608bc68f4668fdbacfc78606e55d4"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#acb0608bc68f4668fdbacfc78606e55d4">cwist_reactor_timer_armed</a></div><div class="ttdeci">bool cwist_reactor_timer_armed(const cwist_reactor_timer_t *timer)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00962">reactor.c:962</a></div></div>
 <div class="ttc" id="areactor_8c_html_aefb0dd23945bafb2f325dec2eac17f74"><div class="ttname"><a href="../../d3/d99/reactor_8c.html#aefb0dd23945bafb2f325dec2eac17f74">cwist_reactor_timer_arm</a></div><div class="ttdeci">bool cwist_reactor_timer_arm(cwist_reactor_t *r, cwist_reactor_timer_t *timer, uint64_t delay_us)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d99/reactor_8c_source.html#l00938">reactor.c:938</a></div></div>

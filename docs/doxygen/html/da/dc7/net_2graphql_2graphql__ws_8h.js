@@ -1,5 +1,6 @@
 var net_2graphql_2graphql__ws_8h =
 [
+    [ "CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS", "da/dc7/net_2graphql_2graphql__ws_8h.html#a1d6c69071e22320a374e13db3b302bf3", null ],
     [ "cwist_graphql_event_source_t", "da/dc7/net_2graphql_2graphql__ws_8h.html#a55ef23928941bd834de72d3592e69b25", null ],
     [ "cwist_graphql_subscribe_fn", "da/dc7/net_2graphql_2graphql__ws_8h.html#a30dcfcc30e864dcd038d6d237995f91b", null ],
     [ "cwist_graphql_ws_t", "da/dc7/net_2graphql_2graphql__ws_8h.html#a89a61c3d96d26a3e773fa73142be11c7", null ],
@@ -12,6 +13,7 @@ var net_2graphql_2graphql__ws_8h =
     [ "cwist_graphql_ws_attach_ex", "da/dc7/net_2graphql_2graphql__ws_8h.html#a8de4e8baedecce82834c218047361137", null ],
     [ "cwist_graphql_ws_create", "da/dc7/net_2graphql_2graphql__ws_8h.html#a7cfa54fa39ba52785ec9cef66c74edcf", null ],
     [ "cwist_graphql_ws_destroy", "da/dc7/net_2graphql_2graphql__ws_8h.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc", null ],
+    [ "cwist_graphql_ws_set_max_operations", "da/dc7/net_2graphql_2graphql__ws_8h.html#a4beb4576f06cd84e9c56d4b2a6013ad0", null ],
     [ "cwist_graphql_ws_upgrade", "da/dc7/net_2graphql_2graphql__ws_8h.html#a92cb6bc4a03e17d2e6b3fd6e80818a22", null ],
     [ "cwist_graphql_ws_upgrade_response", "da/dc7/net_2graphql_2graphql__ws_8h.html#a260f4cb7f9028e1545769f491f6ce92c", null ]
 ];

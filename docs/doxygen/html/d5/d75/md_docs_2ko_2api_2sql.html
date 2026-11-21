@@ -136,7 +136,7 @@ cwist_db_exec</h2>
 cwist_db_query</h2>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dae/core_2db_2sql_8h.html#a099cfcd65664bde1bdd00c161cf0032e">cwist_db_query</a>(<a class="code hl_struct" href="../../dd/d55/structcwist__db.html">cwist_db</a> *db, <span class="keyword">const</span> <span class="keywordtype">char</span> *sql, cJSON **result);</div>
 <div class="ttc" id="acore_2db_2sql_8h_html_a099cfcd65664bde1bdd00c161cf0032e"><div class="ttname"><a href="../../d0/dae/core_2db_2sql_8h.html#a099cfcd65664bde1bdd00c161cf0032e">cwist_db_query</a></div><div class="ttdeci">cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result)</div><div class="ttdoc">Execute a SQL query and collect every row into a cJSON array.</div><div class="ttdef"><b>Definition</b> <a href="../../d2/db5/db_8c_source.html#l00375">db.c:375</a></div></div>
-</div><!-- fragment --><p> SELECT 쿼리를 실행합니다. 성공하면 <code>result</code>에 객체들의 cJSON 배열이 채워지고, 검증이나 SQLite 실행이 실패하면 <code>NULL</code>로 재설정됩니다.</p>
+</div><!-- fragment --><p> SELECT 쿼리를 실행합니다. 성공하면 <code>result</code>에 객체들의 cJSON 배열이 채워지고, 검증이나 SQLite 실행이 실패하면 <code>NULL</code>로 재설정됩니다. NULL이 아닌 값은 SQLite 타입과 상관없이 모두 JSON 문자열(<code>"id":1</code>이 아니라 <code>"id":"1"</code>)이고, NULL은 JSON <code>null</code>입니다. 숫자는 직접 변환하거나 컬럼 타입을 유지하는 ORM을 쓰세요.</p>
 <p>핸들은 <code>cwist_app_use_db(app, "app.db");</code>로 프레임워크와 연동하세요. 그러면 들어오는 모든 <code><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></code>가 <code>req-&gt;db</code>에서 이 포인터를 노출합니다.</p>
 <h1><a class="anchor" id="autotoc_md511"></a>
 스키마 마이그레이션</h1>

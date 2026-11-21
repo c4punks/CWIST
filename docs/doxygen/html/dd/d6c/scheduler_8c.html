@@ -181,6 +181,8 @@ Macros</h2></td></tr>
 <tr class="separator:a3024ccd4a9af5109d24e6c57565d74a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af7b55ac300905012fb3b0824af3c3b14" id="r_af7b55ac300905012fb3b0824af3c3b14"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#af7b55ac300905012fb3b0824af3c3b14">CWIST_SCHEDULER_HEAP_INIT</a>&#160;&#160;&#160;16</td></tr>
 <tr class="separator:af7b55ac300905012fb3b0824af3c3b14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad09af33e639bd1278dea84b62c9aaf2e" id="r_ad09af33e639bd1278dea84b62c9aaf2e"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dd/d6c/scheduler_8c.html#ad09af33e639bd1278dea84b62c9aaf2e">SCHED_COND_CLOCK</a>&#160;&#160;&#160;CLOCK_REALTIME</td></tr>
+<tr class="separator:ad09af33e639bd1278dea84b62c9aaf2e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
@@ -241,6 +243,22 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="ad09af33e639bd1278dea84b62c9aaf2e" name="ad09af33e639bd1278dea84b62c9aaf2e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad09af33e639bd1278dea84b62c9aaf2e">&#9670;&#160;</a></span>SCHED_COND_CLOCK</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define SCHED_COND_CLOCK&#160;&#160;&#160;CLOCK_REALTIME</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00066">66</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+
+</div>
+</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ac55dd12761ee804a6a7c49d2782d9b47" name="ac55dd12761ee804a6a7c49d2782d9b47"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ac55dd12761ee804a6a7c49d2782d9b47">&#9670;&#160;</a></span>cwist_scheduler_cancel_pending()</h2>
@@ -279,7 +297,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of jobs cancelled. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00431">431</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00455">455</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -323,7 +341,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The new scheduler, or NULL on allocation or thread-creation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00265">265</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00289">289</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00228">cwist_io_queue_create()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00345">cwist_io_queue_destroy()</a>.</p>
 
@@ -357,7 +375,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00327">327</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00351">351</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00345">cwist_io_queue_destroy()</a>, and <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00333">cwist_io_queue_stop()</a>.</p>
 
@@ -392,7 +410,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Number of pending delayed jobs; 0 if <code>s</code> is NULL. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00414">414</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00438">438</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 </div>
 </div>
@@ -454,7 +472,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00380">380</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00404">404</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00277">cwist_io_queue_submit()</a>.</p>
 
@@ -512,7 +530,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00360">360</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d6c/scheduler_8c_source.html#l00384">384</a> of file <a class="el" href="../../dd/d6c/scheduler_8c_source.html">scheduler.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d1/de4/io__queue_8c_source.html#l00277">cwist_io_queue_submit()</a>.</p>
 

@@ -1,5 +1,10 @@
 var NAVTREEINDEX12 =
 {
+"d8/dca/struct____prim__cwist__error__t.html#a87db349a0d9e241c80d897c626d0550b":[97,0,0,7],
+"d8/dca/struct____prim__cwist__error__t.html#a9fa59264129d244c293b475c391a9e56":[97,0,0,3],
+"d8/dca/struct____prim__cwist__error__t.html#ac6d9bff35936a550a0ac6637094dbbb6":[97,0,0,1],
+"d8/dca/struct____prim__cwist__error__t.html#ace056f4cf1875a5ef27431ad7e9b1269":[97,0,0,2],
+"d8/deb/md_docs_2api_2json.html":[7],
 "d8/deb/md_docs_2api_2json.html#autotoc_md140":[7,0],
 "d8/deb/md_docs_2api_2json.html#autotoc_md141":[7,0,0],
 "d8/deb/md_docs_2api_2json.html#autotoc_md142":[7,0,1],
@@ -138,8 +143,8 @@ var NAVTREEINDEX12 =
 "d9/d90/structcwist__bdr__t.html#af4ae5dc1251aa2639322682200fe5f28":[97,0,6,5],
 "d9/d9a/mem_8h.html":[98,0,2,3,2,0,0,4],
 "d9/d9a/mem_8h_source.html":[98,0,2,3,2,0,0,4],
-"d9/d9b/simd__parser_8h.html":[98,0,2,2,3,29],
-"d9/d9b/simd__parser_8h_source.html":[98,0,2,2,3,29],
+"d9/d9b/simd__parser_8h.html":[98,0,2,2,3,30],
+"d9/d9b/simd__parser_8h_source.html":[98,0,2,2,3,30],
 "d9/da9/structcwist__otel__cfg__t.html":[97,0,77],
 "d9/da9/structcwist__otel__cfg__t.html#a2052d8b6d1727106ef49568e4a65b788":[97,0,77,2],
 "d9/da9/structcwist__otel__cfg__t.html#a6bc2edec40d80f955d5c9af84ce796d3":[97,0,77,1],
@@ -244,10 +249,5 @@ var NAVTREEINDEX12 =
 "d9/dab/net_2http_2http_8h.html#a826bf28e16a9f9513da471cd1e4ad841":[98,0,1,0,2,3,4,70],
 "d9/dab/net_2http_2http_8h.html#a86399c6e8c84db31a72ced47d4ab7b26":[98,0,1,0,2,3,4,7],
 "d9/dab/net_2http_2http_8h.html#a884fff00eb8188a3b2cde3fc02dc931c":[98,0,1,0,2,3,4,71],
-"d9/dab/net_2http_2http_8h.html#a89d1a241e43022d68253ad1590e85c93":[98,0,1,0,2,3,4,91],
-"d9/dab/net_2http_2http_8h.html#a8b09daf7dd857271cac1bccc2666d2cb":[98,0,1,0,2,3,4,46],
-"d9/dab/net_2http_2http_8h.html#a8bc51aa11f3b08db86b8e617786b2b9f":[98,0,1,0,2,3,4,94],
-"d9/dab/net_2http_2http_8h.html#a939d4efb593ff34f8976091ff098a078":[98,0,1,0,2,3,4,41],
-"d9/dab/net_2http_2http_8h.html#a942742061b88a385f4452f49b03fb4a1":[98,0,1,0,2,3,4,83],
-"d9/dab/net_2http_2http_8h.html#a95f102e9f7cb03e3f3fbe7742452096d":[98,0,1,0,2,3,4,61]
+"d9/dab/net_2http_2http_8h.html#a89d1a241e43022d68253ad1590e85c93":[98,0,1,0,2,3,4,91]
 };

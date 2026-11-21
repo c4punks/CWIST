@@ -1,5 +1,9 @@
 var NAVTREEINDEX10 =
 {
+"d6/de0/structcwist__file__t.html#aa3ac45f2b9ac20d97ee20cb0e71537e7":[97,0,25,6],
+"d6/de0/structcwist__file__t.html#ad3e53262315cab08ea1c7d0998488a5a":[97,0,25,4],
+"d6/de8/md_docs_2ko_2versioning.html":[75],
+"d6/de8/md_docs_2ko_2versioning.html#autotoc_md755":[75,0],
 "d6/de8/md_docs_2ko_2versioning.html#autotoc_md756":[75,1],
 "d6/de8/md_docs_2ko_2versioning.html#autotoc_md757":[75,2],
 "d6/de8/md_docs_2ko_2versioning.html#autotoc_md758":[75,3],
@@ -39,8 +43,9 @@ var NAVTREEINDEX10 =
 "d7/d38/graphql__ws_8c.html":[98,0,2,2,1,1],
 "d7/d38/graphql__ws_8c.html#a1d170e2b98b9bb2a22d7789eb0cfce5b":[98,0,2,2,1,1,13],
 "d7/d38/graphql__ws_8c.html#a22fd1b885d1ca8f1c6689d71dc6610e0":[98,0,2,2,1,1,11],
-"d7/d38/graphql__ws_8c.html#a260f4cb7f9028e1545769f491f6ce92c":[98,0,2,2,1,1,21],
+"d7/d38/graphql__ws_8c.html#a260f4cb7f9028e1545769f491f6ce92c":[98,0,2,2,1,1,22],
 "d7/d38/graphql__ws_8c.html#a4bd821fd1b3e33b5c8d4e03a7ac1c12b":[98,0,2,2,1,1,16],
+"d7/d38/graphql__ws_8c.html#a4beb4576f06cd84e9c56d4b2a6013ad0":[98,0,2,2,1,1,20],
 "d7/d38/graphql__ws_8c.html#a5f60416001094d518bee80c3bdc881ff":[98,0,2,2,1,1,6],
 "d7/d38/graphql__ws_8c.html#a5f9228eb38f6c46b370a3247f30edfd6":[98,0,2,2,1,1,2],
 "d7/d38/graphql__ws_8c.html#a7170a006e65284f9115c6e32e8280fc6":[98,0,2,2,1,1,15],
@@ -48,7 +53,7 @@ var NAVTREEINDEX10 =
 "d7/d38/graphql__ws_8c.html#a80d271e1cc72d94d8f5b7b22a4588236":[98,0,2,2,1,1,1],
 "d7/d38/graphql__ws_8c.html#a8b0510a302c350c07de6bef55384f43d":[98,0,2,2,1,1,10],
 "d7/d38/graphql__ws_8c.html#a8de4e8baedecce82834c218047361137":[98,0,2,2,1,1,17],
-"d7/d38/graphql__ws_8c.html#a92cb6bc4a03e17d2e6b3fd6e80818a22":[98,0,2,2,1,1,20],
+"d7/d38/graphql__ws_8c.html#a92cb6bc4a03e17d2e6b3fd6e80818a22":[98,0,2,2,1,1,21],
 "d7/d38/graphql__ws_8c.html#a9be7c474450f464e2160e8e57c3a24d5":[98,0,2,2,1,1,5],
 "d7/d38/graphql__ws_8c.html#aa30aba1917dea0d94356c11bb82792da":[98,0,2,2,1,1,9],
 "d7/d38/graphql__ws_8c.html#aa6b53348a4b6708e0dd9eb1497b77efc":[98,0,2,2,1,1,0],
@@ -244,10 +249,5 @@ var NAVTREEINDEX10 =
 "d7/dba/structcwist__fix__server__mem.html#abe40d549f052c7d81b2a70b8755fdb68":[97,0,26,4],
 "d7/dba/structcwist__fix__server__mem.html#abfb841caf5c116f658b3ab58122f018e":[97,0,26,10],
 "d7/dba/structcwist__fix__server__mem.html#acfd2e162da083d5b11c94002818397b0":[97,0,26,2],
-"d7/dba/structcwist__fix__server__mem.html#ae1ca4427cb3d45d4d3c9bf87d746b6cc":[97,0,26,8],
-"d7/dbc/structcwist__openapi__meta__t.html":[97,0,74],
-"d7/dbc/structcwist__openapi__meta__t.html#a040aaf9bcf12d7aca8719db7c8cc8839":[97,0,74,0],
-"d7/dbc/structcwist__openapi__meta__t.html#a217d838651be20dd568900e6a00d29a6":[97,0,74,3],
-"d7/dbc/structcwist__openapi__meta__t.html#a3af2f7f671bf32577693a680ffe55f2a":[97,0,74,1],
-"d7/dbc/structcwist__openapi__meta__t.html#a80c44e84bab46f78666fae1e525ec51a":[97,0,74,2]
+"d7/dba/structcwist__fix__server__mem.html#ae1ca4427cb3d45d4d3c9bf87d746b6cc":[97,0,26,8]
 };

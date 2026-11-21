@@ -958,234 +958,255 @@ $(document).ready(function(){initNavTree('d5/d7a/grpc__channel_8c_source.html','
 <div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span> </div>
 <div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_status_from_json(<span class="keyword">const</span> cJSON *item, uint32_t *bit) {</div>
 <div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>    <span class="keywordflow">if</span> (cJSON_IsNumber(item)) {</div>
-<div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>        <span class="keywordtype">int</span> code = (int)item-&gt;valuedouble;</div>
-<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span>        <span class="keywordflow">if</span> (code &lt; 0 || code &gt; 16) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>        *bit = <a class="code hl_define" href="../../d3/d4c/grpc__channel_8h.html#a9e238c05a957d4a5000c0b35b4c9e8bb">CWIST_GRPC_STATUS_BIT</a>(code);</div>
-<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>        <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>    }</div>
-<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>    <span class="keywordflow">if</span> (cJSON_IsString(item)) {</div>
-<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt;= 16; i++) {</div>
-<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>            <span class="keywordflow">if</span> (strcasecmp(item-&gt;valuestring, grpc_status_names[i]) == 0) {</div>
-<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>                *bit = <a class="code hl_define" href="../../d3/d4c/grpc__channel_8h.html#a9e238c05a957d4a5000c0b35b4c9e8bb">CWIST_GRPC_STATUS_BIT</a>(i);</div>
-<div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span>                <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span>            }</div>
-<div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>        }</div>
-<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>    }</div>
-<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>    <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>}</div>
-<div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span> </div>
-<div class="line"><a id="l01066" name="l01066"></a><span class="lineno"> 1066</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_json_duration_ms(<span class="keyword">const</span> cJSON *item, uint64_t *out_ms) {</div>
-<div class="line"><a id="l01067" name="l01067"></a><span class="lineno"> 1067</span>    <span class="keywordflow">if</span> (!cJSON_IsString(item)) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01068" name="l01068"></a><span class="lineno"> 1068</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *s = item-&gt;valuestring;</div>
-<div class="line"><a id="l01069" name="l01069"></a><span class="lineno"> 1069</span>    <span class="keywordtype">size_t</span> len = strlen(s);</div>
-<div class="line"><a id="l01070" name="l01070"></a><span class="lineno"> 1070</span>    <span class="keywordflow">if</span> (len &lt; 2 || s[len - 1] != <span class="charliteral">&#39;s&#39;</span>) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01071" name="l01071"></a><span class="lineno"> 1071</span>    <span class="keywordtype">char</span> *end = NULL;</div>
-<div class="line"><a id="l01072" name="l01072"></a><span class="lineno"> 1072</span>    <span class="keywordtype">double</span> v = strtod(s, &amp;end);</div>
-<div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span>    <span class="keywordflow">if</span> (end != s + len - 1 || v &lt;= 0) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01074" name="l01074"></a><span class="lineno"> 1074</span>    *out_ms = (uint64_t)(v * 1000.0 + 0.5);</div>
-<div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span>    <span class="keywordflow">if</span> (*out_ms == 0) *out_ms = 1;</div>
-<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span>}</div>
-<div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span> </div>
-<div class="line"><a id="l01090" name="l01090"></a><span class="lineno"> 1090</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_json_retry_policy(<span class="keyword">const</span> cJSON *obj, <a class="code hl_struct" href="../../d9/dd6/structcwist__grpc__retry__policy.html">cwist_grpc_retry_policy</a> *out) {</div>
-<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>    <span class="keyword">const</span> cJSON *max_attempts = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;maxAttempts&quot;</span>);</div>
-<div class="line"><a id="l01092" name="l01092"></a><span class="lineno"> 1092</span>    <span class="keyword">const</span> cJSON *initial = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;initialBackoff&quot;</span>);</div>
-<div class="line"><a id="l01093" name="l01093"></a><span class="lineno"> 1093</span>    <span class="keyword">const</span> cJSON *max = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;maxBackoff&quot;</span>);</div>
-<div class="line"><a id="l01094" name="l01094"></a><span class="lineno"> 1094</span>    <span class="keyword">const</span> cJSON *mult = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;backoffMultiplier&quot;</span>);</div>
-<div class="line"><a id="l01095" name="l01095"></a><span class="lineno"> 1095</span>    <span class="keyword">const</span> cJSON *codes = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;retryableStatusCodes&quot;</span>);</div>
-<div class="line"><a id="l01096" name="l01096"></a><span class="lineno"> 1096</span>    <span class="keywordflow">if</span> (!cJSON_IsNumber(max_attempts) || max_attempts-&gt;valuedouble &lt; 2 ||</div>
-<div class="line"><a id="l01097" name="l01097"></a><span class="lineno"> 1097</span>        max_attempts-&gt;valuedouble != (<span class="keywordtype">double</span>)(<span class="keywordtype">int</span>)max_attempts-&gt;valuedouble)</div>
-<div class="line"><a id="l01098" name="l01098"></a><span class="lineno"> 1098</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01099" name="l01099"></a><span class="lineno"> 1099</span>    uint64_t initial_ms, max_ms;</div>
-<div class="line"><a id="l01100" name="l01100"></a><span class="lineno"> 1100</span>    <span class="keywordflow">if</span> (grpc_json_duration_ms(initial, &amp;initial_ms) != 0 ||</div>
-<div class="line"><a id="l01101" name="l01101"></a><span class="lineno"> 1101</span>        grpc_json_duration_ms(max, &amp;max_ms) != 0)</div>
-<div class="line"><a id="l01102" name="l01102"></a><span class="lineno"> 1102</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01103" name="l01103"></a><span class="lineno"> 1103</span>    <span class="keywordflow">if</span> (!cJSON_IsNumber(mult) || mult-&gt;valuedouble &lt;= 0) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01104" name="l01104"></a><span class="lineno"> 1104</span>    <span class="keywordflow">if</span> (!cJSON_IsArray(codes) || cJSON_GetArraySize((cJSON *)codes) == 0) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01105" name="l01105"></a><span class="lineno"> 1105</span>    uint32_t mask = 0;</div>
-<div class="line"><a id="l01106" name="l01106"></a><span class="lineno"> 1106</span>    <span class="keyword">const</span> cJSON *code;</div>
-<div class="line"><a id="l01107" name="l01107"></a><span class="lineno"> 1107</span>    cJSON_ArrayForEach(code, codes) {</div>
-<div class="line"><a id="l01108" name="l01108"></a><span class="lineno"> 1108</span>        uint32_t bit;</div>
-<div class="line"><a id="l01109" name="l01109"></a><span class="lineno"> 1109</span>        <span class="keywordflow">if</span> (grpc_status_from_json(code, &amp;bit) != 0) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01110" name="l01110"></a><span class="lineno"> 1110</span>        mask |= bit;</div>
-<div class="line"><a id="l01111" name="l01111"></a><span class="lineno"> 1111</span>    }</div>
-<div class="line"><a id="l01112" name="l01112"></a><span class="lineno"> 1112</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a2489b5a997bedc84a3e62a7387edc286">max_attempts</a> = (uint32_t)max_attempts-&gt;valuedouble;</div>
-<div class="line"><a id="l01113" name="l01113"></a><span class="lineno"> 1113</span>    <span class="keywordflow">if</span> (out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a2489b5a997bedc84a3e62a7387edc286">max_attempts</a> &gt; <a class="code hl_define" href="../../d5/d7a/grpc__channel_8c.html#a89c2e60011a3508e34b6319cf3bcce1a">GRPC_CHANNEL_MAX_ATTEMPTS_CAP</a>)</div>
-<div class="line"><a id="l01114" name="l01114"></a><span class="lineno"> 1114</span>        out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a2489b5a997bedc84a3e62a7387edc286">max_attempts</a> = <a class="code hl_define" href="../../d5/d7a/grpc__channel_8c.html#a89c2e60011a3508e34b6319cf3bcce1a">GRPC_CHANNEL_MAX_ATTEMPTS_CAP</a>; <span class="comment">/* A6: no validation error */</span></div>
-<div class="line"><a id="l01115" name="l01115"></a><span class="lineno"> 1115</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a6ee5ca85c84e38c8f875062ded29cce3">initial_backoff_ms</a> = initial_ms;</div>
-<div class="line"><a id="l01116" name="l01116"></a><span class="lineno"> 1116</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#ac21c5fb850186f18f2712d2944fe7703">max_backoff_ms</a> = max_ms;</div>
-<div class="line"><a id="l01117" name="l01117"></a><span class="lineno"> 1117</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#ac055005a582c34446038b6c48fc4eb5b">backoff_multiplier</a> = mult-&gt;valuedouble;</div>
-<div class="line"><a id="l01118" name="l01118"></a><span class="lineno"> 1118</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a6250e382d43aefc0a7424e4816529264">retryable_status_mask</a> = mask;</div>
-<div class="line"><a id="l01119" name="l01119"></a><span class="lineno"> 1119</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01120" name="l01120"></a><span class="lineno"> 1120</span>}</div>
-<div class="line"><a id="l01121" name="l01121"></a><span class="lineno"> 1121</span> </div>
-<div class="line"><a id="l01123" name="l01123"></a><span class="lineno"> 1123</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_json_free_mc_list(grpc_method_config *list) {</div>
-<div class="line"><a id="l01124" name="l01124"></a><span class="lineno"> 1124</span>    <span class="keywordflow">while</span> (list) {</div>
-<div class="line"><a id="l01125" name="l01125"></a><span class="lineno"> 1125</span>        <a class="code hl_typedef" href="../../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d">grpc_method_config</a> *next = list-&gt;next;</div>
-<div class="line"><a id="l01126" name="l01126"></a><span class="lineno"> 1126</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(list-&gt;service);</div>
-<div class="line"><a id="l01127" name="l01127"></a><span class="lineno"> 1127</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(list-&gt;method);</div>
-<div class="line"><a id="l01128" name="l01128"></a><span class="lineno"> 1128</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(list);</div>
-<div class="line"><a id="l01129" name="l01129"></a><span class="lineno"> 1129</span>        list = next;</div>
-<div class="line"><a id="l01130" name="l01130"></a><span class="lineno"> 1130</span>    }</div>
-<div class="line"><a id="l01131" name="l01131"></a><span class="lineno"> 1131</span>}</div>
-<div class="line"><a id="l01132" name="l01132"></a><span class="lineno"> 1132</span> </div>
-<div class="foldopen" id="foldopen01144" data-start="{" data-end="}">
-<div class="line"><a id="l01144" name="l01144"></a><span class="lineno"><a class="line" href="../../d3/d4c/grpc__channel_8h.html#aa62426e4e63c9563ee4caeb58aa4563c"> 1144</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/d7a/grpc__channel_8c.html#afd315b1271d893051abaf72a06d7cfa0">cwist_grpc_channel_apply_service_config_json</a>(cwist_grpc_channel *ch, <span class="keyword">const</span> <span class="keywordtype">char</span> *json) {</div>
-<div class="line"><a id="l01145" name="l01145"></a><span class="lineno"> 1145</span>    <span class="keywordflow">if</span> (!ch || !json) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01146" name="l01146"></a><span class="lineno"> 1146</span>    cJSON *root = cJSON_Parse(json);</div>
-<div class="line"><a id="l01147" name="l01147"></a><span class="lineno"> 1147</span>    <span class="keywordflow">if</span> (!cJSON_IsObject(root)) {</div>
-<div class="line"><a id="l01148" name="l01148"></a><span class="lineno"> 1148</span>        cJSON_Delete(root);</div>
-<div class="line"><a id="l01149" name="l01149"></a><span class="lineno"> 1149</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01150" name="l01150"></a><span class="lineno"> 1150</span>    }</div>
-<div class="line"><a id="l01151" name="l01151"></a><span class="lineno"> 1151</span> </div>
-<div class="line"><a id="l01152" name="l01152"></a><span class="lineno"> 1152</span>    <span class="keywordtype">int</span> lb_set = 0;</div>
-<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>    <a class="code hl_enumeration" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588">cwist_grpc_lb_policy</a> lb = ch-&gt;lb;</div>
-<div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span>    <span class="keywordtype">int</span> throttle_set = 0;</div>
-<div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>    <a class="code hl_struct" href="../../d0/dae/structcwist__grpc__retry__throttle.html">cwist_grpc_retry_throttle</a> throttle;</div>
-<div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span>    <a class="code hl_typedef" href="../../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d">grpc_method_config</a> *mcs = NULL, **mcs_tail = &amp;mcs;</div>
+<div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>        <span class="comment">/* Range-check the double first: converting an out-of-range value</span></div>
+<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span><span class="comment">         * to int is undefined (C17 section 6.3.1.4). */</span></div>
+<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>        <span class="keywordflow">if</span> (!(item-&gt;valuedouble &gt;= 0 &amp;&amp; item-&gt;valuedouble &lt;= 16)) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>        <span class="keywordtype">int</span> code = (int)item-&gt;valuedouble;</div>
+<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>        <span class="keywordflow">if</span> ((<span class="keywordtype">double</span>)code != item-&gt;valuedouble) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>        *bit = <a class="code hl_define" href="../../d3/d4c/grpc__channel_8h.html#a9e238c05a957d4a5000c0b35b4c9e8bb">CWIST_GRPC_STATUS_BIT</a>(code);</div>
+<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span>        <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span>    }</div>
+<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>    <span class="keywordflow">if</span> (cJSON_IsString(item)) {</div>
+<div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt;= 16; i++) {</div>
+<div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span>            <span class="keywordflow">if</span> (strcasecmp(item-&gt;valuestring, grpc_status_names[i]) == 0) {</div>
+<div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>                *bit = <a class="code hl_define" href="../../d3/d4c/grpc__channel_8h.html#a9e238c05a957d4a5000c0b35b4c9e8bb">CWIST_GRPC_STATUS_BIT</a>(i);</div>
+<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>                <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span>            }</div>
+<div class="line"><a id="l01056" name="l01056"></a><span class="lineno"> 1056</span>        }</div>
+<div class="line"><a id="l01057" name="l01057"></a><span class="lineno"> 1057</span>    }</div>
+<div class="line"><a id="l01058" name="l01058"></a><span class="lineno"> 1058</span>    <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"> 1059</span>}</div>
+<div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span> </div>
+<div class="line"><a id="l01062" name="l01062"></a><span class="lineno"><a class="line" href="../../d5/d7a/grpc__channel_8c.html#a9c5b0b63a82d82ccf7dd7fab9555687f"> 1062</a></span><span class="preprocessor">#define GRPC_DURATION_MAX_SECONDS 315576000000ULL</span></div>
+<div class="line"><a id="l01063" name="l01063"></a><span class="lineno"> 1063</span> </div>
+<div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_json_duration_ms(<span class="keyword">const</span> cJSON *item, uint64_t *out_ms) {</div>
+<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>    <span class="keywordflow">if</span> (!cJSON_IsString(item) || !item-&gt;valuestring) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *p = item-&gt;valuestring;</div>
+<div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span>    uint64_t sec = 0;</div>
+<div class="line"><a id="l01079" name="l01079"></a><span class="lineno"> 1079</span>    <span class="keywordtype">size_t</span> int_digits = 0;</div>
+<div class="line"><a id="l01080" name="l01080"></a><span class="lineno"> 1080</span>    <span class="keywordflow">while</span> (*p &gt;= <span class="charliteral">&#39;0&#39;</span> &amp;&amp; *p &lt;= <span class="charliteral">&#39;9&#39;</span>) {</div>
+<div class="line"><a id="l01081" name="l01081"></a><span class="lineno"> 1081</span>        sec = sec * 10 + (uint64_t)(*p++ - <span class="charliteral">&#39;0&#39;</span>);</div>
+<div class="line"><a id="l01082" name="l01082"></a><span class="lineno"> 1082</span>        <span class="keywordflow">if</span> (sec &gt; <a class="code hl_define" href="../../d5/d7a/grpc__channel_8c.html#a9c5b0b63a82d82ccf7dd7fab9555687f">GRPC_DURATION_MAX_SECONDS</a>) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01083" name="l01083"></a><span class="lineno"> 1083</span>        int_digits++;</div>
+<div class="line"><a id="l01084" name="l01084"></a><span class="lineno"> 1084</span>    }</div>
+<div class="line"><a id="l01085" name="l01085"></a><span class="lineno"> 1085</span>    <span class="keywordflow">if</span> (int_digits == 0) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01086" name="l01086"></a><span class="lineno"> 1086</span>    uint64_t nanos = 0;</div>
+<div class="line"><a id="l01087" name="l01087"></a><span class="lineno"> 1087</span>    <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;.&#39;</span>) {</div>
+<div class="line"><a id="l01088" name="l01088"></a><span class="lineno"> 1088</span>        p++;</div>
+<div class="line"><a id="l01089" name="l01089"></a><span class="lineno"> 1089</span>        <span class="keywordtype">size_t</span> frac_digits = 0;</div>
+<div class="line"><a id="l01090" name="l01090"></a><span class="lineno"> 1090</span>        <span class="keywordflow">while</span> (*p &gt;= <span class="charliteral">&#39;0&#39;</span> &amp;&amp; *p &lt;= <span class="charliteral">&#39;9&#39;</span>) {</div>
+<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>            <span class="keywordflow">if</span> (++frac_digits &gt; 9) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01092" name="l01092"></a><span class="lineno"> 1092</span>            nanos = nanos * 10 + (uint64_t)(*p++ - <span class="charliteral">&#39;0&#39;</span>);</div>
+<div class="line"><a id="l01093" name="l01093"></a><span class="lineno"> 1093</span>        }</div>
+<div class="line"><a id="l01094" name="l01094"></a><span class="lineno"> 1094</span>        <span class="keywordflow">if</span> (frac_digits == 0) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01095" name="l01095"></a><span class="lineno"> 1095</span>        <span class="keywordflow">while</span> (frac_digits++ &lt; 9) nanos *= 10;</div>
+<div class="line"><a id="l01096" name="l01096"></a><span class="lineno"> 1096</span>    }</div>
+<div class="line"><a id="l01097" name="l01097"></a><span class="lineno"> 1097</span>    <span class="keywordflow">if</span> (p[0] != <span class="charliteral">&#39;s&#39;</span> || p[1] != <span class="charliteral">&#39;\0&#39;</span>) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01098" name="l01098"></a><span class="lineno"> 1098</span>    <span class="keywordflow">if</span> (sec == 0 &amp;&amp; nanos == 0) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01099" name="l01099"></a><span class="lineno"> 1099</span>    *out_ms = sec * 1000 + (nanos + 500000) / 1000000;</div>
+<div class="line"><a id="l01100" name="l01100"></a><span class="lineno"> 1100</span>    <span class="keywordflow">if</span> (*out_ms == 0) *out_ms = 1;</div>
+<div class="line"><a id="l01101" name="l01101"></a><span class="lineno"> 1101</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01102" name="l01102"></a><span class="lineno"> 1102</span>}</div>
+<div class="line"><a id="l01103" name="l01103"></a><span class="lineno"> 1103</span> </div>
+<div class="line"><a id="l01115" name="l01115"></a><span class="lineno"> 1115</span><span class="keyword">static</span> <span class="keywordtype">int</span> grpc_json_retry_policy(<span class="keyword">const</span> cJSON *obj, <a class="code hl_struct" href="../../d9/dd6/structcwist__grpc__retry__policy.html">cwist_grpc_retry_policy</a> *out) {</div>
+<div class="line"><a id="l01116" name="l01116"></a><span class="lineno"> 1116</span>    <span class="keyword">const</span> cJSON *max_attempts = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;maxAttempts&quot;</span>);</div>
+<div class="line"><a id="l01117" name="l01117"></a><span class="lineno"> 1117</span>    <span class="keyword">const</span> cJSON *initial = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;initialBackoff&quot;</span>);</div>
+<div class="line"><a id="l01118" name="l01118"></a><span class="lineno"> 1118</span>    <span class="keyword">const</span> cJSON *max = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;maxBackoff&quot;</span>);</div>
+<div class="line"><a id="l01119" name="l01119"></a><span class="lineno"> 1119</span>    <span class="keyword">const</span> cJSON *mult = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;backoffMultiplier&quot;</span>);</div>
+<div class="line"><a id="l01120" name="l01120"></a><span class="lineno"> 1120</span>    <span class="keyword">const</span> cJSON *codes = cJSON_GetObjectItemCaseSensitive(obj, <span class="stringliteral">&quot;retryableStatusCodes&quot;</span>);</div>
+<div class="line"><a id="l01121" name="l01121"></a><span class="lineno"> 1121</span>    <span class="keywordflow">if</span> (!cJSON_IsNumber(max_attempts) || max_attempts-&gt;valuedouble &lt; 2 ||</div>
+<div class="line"><a id="l01122" name="l01122"></a><span class="lineno"> 1122</span>        max_attempts-&gt;valuedouble != (<span class="keywordtype">double</span>)(<span class="keywordtype">int</span>)max_attempts-&gt;valuedouble)</div>
+<div class="line"><a id="l01123" name="l01123"></a><span class="lineno"> 1123</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01124" name="l01124"></a><span class="lineno"> 1124</span>    uint64_t initial_ms, max_ms;</div>
+<div class="line"><a id="l01125" name="l01125"></a><span class="lineno"> 1125</span>    <span class="keywordflow">if</span> (grpc_json_duration_ms(initial, &amp;initial_ms) != 0 ||</div>
+<div class="line"><a id="l01126" name="l01126"></a><span class="lineno"> 1126</span>        grpc_json_duration_ms(max, &amp;max_ms) != 0)</div>
+<div class="line"><a id="l01127" name="l01127"></a><span class="lineno"> 1127</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01128" name="l01128"></a><span class="lineno"> 1128</span>    <span class="keywordflow">if</span> (!cJSON_IsNumber(mult) || mult-&gt;valuedouble &lt;= 0) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01129" name="l01129"></a><span class="lineno"> 1129</span>    <span class="keywordflow">if</span> (!cJSON_IsArray(codes) || cJSON_GetArraySize((cJSON *)codes) == 0) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01130" name="l01130"></a><span class="lineno"> 1130</span>    uint32_t mask = 0;</div>
+<div class="line"><a id="l01131" name="l01131"></a><span class="lineno"> 1131</span>    <span class="keyword">const</span> cJSON *code;</div>
+<div class="line"><a id="l01132" name="l01132"></a><span class="lineno"> 1132</span>    cJSON_ArrayForEach(code, codes) {</div>
+<div class="line"><a id="l01133" name="l01133"></a><span class="lineno"> 1133</span>        uint32_t bit;</div>
+<div class="line"><a id="l01134" name="l01134"></a><span class="lineno"> 1134</span>        <span class="keywordflow">if</span> (grpc_status_from_json(code, &amp;bit) != 0) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01135" name="l01135"></a><span class="lineno"> 1135</span>        mask |= bit;</div>
+<div class="line"><a id="l01136" name="l01136"></a><span class="lineno"> 1136</span>    }</div>
+<div class="line"><a id="l01137" name="l01137"></a><span class="lineno"> 1137</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a2489b5a997bedc84a3e62a7387edc286">max_attempts</a> = (uint32_t)max_attempts-&gt;valuedouble;</div>
+<div class="line"><a id="l01138" name="l01138"></a><span class="lineno"> 1138</span>    <span class="keywordflow">if</span> (out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a2489b5a997bedc84a3e62a7387edc286">max_attempts</a> &gt; <a class="code hl_define" href="../../d5/d7a/grpc__channel_8c.html#a89c2e60011a3508e34b6319cf3bcce1a">GRPC_CHANNEL_MAX_ATTEMPTS_CAP</a>)</div>
+<div class="line"><a id="l01139" name="l01139"></a><span class="lineno"> 1139</span>        out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a2489b5a997bedc84a3e62a7387edc286">max_attempts</a> = <a class="code hl_define" href="../../d5/d7a/grpc__channel_8c.html#a89c2e60011a3508e34b6319cf3bcce1a">GRPC_CHANNEL_MAX_ATTEMPTS_CAP</a>; <span class="comment">/* A6: no validation error */</span></div>
+<div class="line"><a id="l01140" name="l01140"></a><span class="lineno"> 1140</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a6ee5ca85c84e38c8f875062ded29cce3">initial_backoff_ms</a> = initial_ms;</div>
+<div class="line"><a id="l01141" name="l01141"></a><span class="lineno"> 1141</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#ac21c5fb850186f18f2712d2944fe7703">max_backoff_ms</a> = max_ms;</div>
+<div class="line"><a id="l01142" name="l01142"></a><span class="lineno"> 1142</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#ac055005a582c34446038b6c48fc4eb5b">backoff_multiplier</a> = mult-&gt;valuedouble;</div>
+<div class="line"><a id="l01143" name="l01143"></a><span class="lineno"> 1143</span>    out-&gt;<a class="code hl_variable" href="../../d9/dd6/structcwist__grpc__retry__policy.html#a6250e382d43aefc0a7424e4816529264">retryable_status_mask</a> = mask;</div>
+<div class="line"><a id="l01144" name="l01144"></a><span class="lineno"> 1144</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01145" name="l01145"></a><span class="lineno"> 1145</span>}</div>
+<div class="line"><a id="l01146" name="l01146"></a><span class="lineno"> 1146</span> </div>
+<div class="line"><a id="l01148" name="l01148"></a><span class="lineno"> 1148</span><span class="keyword">static</span> <span class="keywordtype">void</span> grpc_json_free_mc_list(grpc_method_config *list) {</div>
+<div class="line"><a id="l01149" name="l01149"></a><span class="lineno"> 1149</span>    <span class="keywordflow">while</span> (list) {</div>
+<div class="line"><a id="l01150" name="l01150"></a><span class="lineno"> 1150</span>        <a class="code hl_typedef" href="../../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d">grpc_method_config</a> *next = list-&gt;next;</div>
+<div class="line"><a id="l01151" name="l01151"></a><span class="lineno"> 1151</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(list-&gt;service);</div>
+<div class="line"><a id="l01152" name="l01152"></a><span class="lineno"> 1152</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(list-&gt;method);</div>
+<div class="line"><a id="l01153" name="l01153"></a><span class="lineno"> 1153</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(list);</div>
+<div class="line"><a id="l01154" name="l01154"></a><span class="lineno"> 1154</span>        list = next;</div>
+<div class="line"><a id="l01155" name="l01155"></a><span class="lineno"> 1155</span>    }</div>
+<div class="line"><a id="l01156" name="l01156"></a><span class="lineno"> 1156</span>}</div>
 <div class="line"><a id="l01157" name="l01157"></a><span class="lineno"> 1157</span> </div>
-<div class="line"><a id="l01158" name="l01158"></a><span class="lineno"> 1158</span>    <span class="comment">/* loadBalancingConfig: [{&quot;round_robin&quot;:{}}, {&quot;pick_first&quot;:{}}] — the</span></div>
-<div class="line"><a id="l01159" name="l01159"></a><span class="lineno"> 1159</span><span class="comment">     * first supported policy wins (service_config.md). */</span></div>
-<div class="line"><a id="l01160" name="l01160"></a><span class="lineno"> 1160</span>    <span class="keyword">const</span> cJSON *lbc = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;loadBalancingConfig&quot;</span>);</div>
-<div class="line"><a id="l01161" name="l01161"></a><span class="lineno"> 1161</span>    <span class="keywordflow">if</span> (cJSON_IsArray(lbc)) {</div>
-<div class="line"><a id="l01162" name="l01162"></a><span class="lineno"> 1162</span>        <span class="keyword">const</span> cJSON *entry;</div>
-<div class="line"><a id="l01163" name="l01163"></a><span class="lineno"> 1163</span>        cJSON_ArrayForEach(entry, lbc) {</div>
-<div class="line"><a id="l01164" name="l01164"></a><span class="lineno"> 1164</span>            <span class="keywordflow">if</span> (!cJSON_IsObject(entry)) <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l01165" name="l01165"></a><span class="lineno"> 1165</span>            <span class="keywordflow">if</span> (cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;round_robin&quot;</span>)) {</div>
-<div class="line"><a id="l01166" name="l01166"></a><span class="lineno"> 1166</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4c843290d1b481794df5cdd6af67f9a2">CWIST_GRPC_LB_ROUND_ROBIN</a>;</div>
-<div class="line"><a id="l01167" name="l01167"></a><span class="lineno"> 1167</span>                lb_set = 1;</div>
-<div class="line"><a id="l01168" name="l01168"></a><span class="lineno"> 1168</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l01169" name="l01169"></a><span class="lineno"> 1169</span>            }</div>
-<div class="line"><a id="l01170" name="l01170"></a><span class="lineno"> 1170</span>            <span class="keywordflow">if</span> (cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;pick_first&quot;</span>)) {</div>
-<div class="line"><a id="l01171" name="l01171"></a><span class="lineno"> 1171</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4d7b2648003f1fd54fdee610ab0b257a">CWIST_GRPC_LB_PICK_FIRST</a>;</div>
-<div class="line"><a id="l01172" name="l01172"></a><span class="lineno"> 1172</span>                lb_set = 1;</div>
-<div class="line"><a id="l01173" name="l01173"></a><span class="lineno"> 1173</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l01174" name="l01174"></a><span class="lineno"> 1174</span>            }</div>
-<div class="line"><a id="l01175" name="l01175"></a><span class="lineno"> 1175</span>            <span class="comment">/* unsupported policy: try the next entry */</span></div>
-<div class="line"><a id="l01176" name="l01176"></a><span class="lineno"> 1176</span>        }</div>
-<div class="line"><a id="l01177" name="l01177"></a><span class="lineno"> 1177</span>    }</div>
-<div class="line"><a id="l01178" name="l01178"></a><span class="lineno"> 1178</span>    <span class="keywordflow">if</span> (!lb_set) {</div>
-<div class="line"><a id="l01179" name="l01179"></a><span class="lineno"> 1179</span>        <span class="comment">/* Deprecated loadBalancingPolicy string form. */</span></div>
-<div class="line"><a id="l01180" name="l01180"></a><span class="lineno"> 1180</span>        <span class="keyword">const</span> cJSON *lbp = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;loadBalancingPolicy&quot;</span>);</div>
-<div class="line"><a id="l01181" name="l01181"></a><span class="lineno"> 1181</span>        <span class="keywordflow">if</span> (cJSON_IsString(lbp)) {</div>
-<div class="line"><a id="l01182" name="l01182"></a><span class="lineno"> 1182</span>            <span class="keywordflow">if</span> (strcasecmp(lbp-&gt;valuestring, <span class="stringliteral">&quot;ROUND_ROBIN&quot;</span>) == 0) {</div>
-<div class="line"><a id="l01183" name="l01183"></a><span class="lineno"> 1183</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4c843290d1b481794df5cdd6af67f9a2">CWIST_GRPC_LB_ROUND_ROBIN</a>;</div>
-<div class="line"><a id="l01184" name="l01184"></a><span class="lineno"> 1184</span>                lb_set = 1;</div>
-<div class="line"><a id="l01185" name="l01185"></a><span class="lineno"> 1185</span>            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (strcasecmp(lbp-&gt;valuestring, <span class="stringliteral">&quot;PICK_FIRST&quot;</span>) == 0) {</div>
-<div class="line"><a id="l01186" name="l01186"></a><span class="lineno"> 1186</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4d7b2648003f1fd54fdee610ab0b257a">CWIST_GRPC_LB_PICK_FIRST</a>;</div>
-<div class="line"><a id="l01187" name="l01187"></a><span class="lineno"> 1187</span>                lb_set = 1;</div>
-<div class="line"><a id="l01188" name="l01188"></a><span class="lineno"> 1188</span>            }</div>
-<div class="line"><a id="l01189" name="l01189"></a><span class="lineno"> 1189</span>        }</div>
-<div class="line"><a id="l01190" name="l01190"></a><span class="lineno"> 1190</span>    }</div>
-<div class="line"><a id="l01191" name="l01191"></a><span class="lineno"> 1191</span> </div>
-<div class="line"><a id="l01192" name="l01192"></a><span class="lineno"> 1192</span>    <span class="keyword">const</span> cJSON *rt = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;retryThrottling&quot;</span>);</div>
-<div class="line"><a id="l01193" name="l01193"></a><span class="lineno"> 1193</span>    <span class="keywordflow">if</span> (rt) {</div>
-<div class="line"><a id="l01194" name="l01194"></a><span class="lineno"> 1194</span>        <span class="keyword">const</span> cJSON *max_tokens = cJSON_GetObjectItemCaseSensitive(rt, <span class="stringliteral">&quot;maxTokens&quot;</span>);</div>
-<div class="line"><a id="l01195" name="l01195"></a><span class="lineno"> 1195</span>        <span class="keyword">const</span> cJSON *ratio = cJSON_GetObjectItemCaseSensitive(rt, <span class="stringliteral">&quot;tokenRatio&quot;</span>);</div>
-<div class="line"><a id="l01196" name="l01196"></a><span class="lineno"> 1196</span>        <span class="keywordflow">if</span> (!cJSON_IsNumber(max_tokens) || max_tokens-&gt;valuedouble &lt;= 0 ||</div>
-<div class="line"><a id="l01197" name="l01197"></a><span class="lineno"> 1197</span>            max_tokens-&gt;valuedouble &gt; 1000 || !cJSON_IsNumber(ratio) || ratio-&gt;valuedouble &lt;= 0)</div>
-<div class="line"><a id="l01198" name="l01198"></a><span class="lineno"> 1198</span>            <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01199" name="l01199"></a><span class="lineno"> 1199</span>        throttle.<a class="code hl_variable" href="../../d0/dae/structcwist__grpc__retry__throttle.html#a1ff34a77780462b245389d3197dc4273">max_tokens</a> = max_tokens-&gt;valuedouble;</div>
-<div class="line"><a id="l01200" name="l01200"></a><span class="lineno"> 1200</span>        <span class="comment">/* A6: decimal places beyond 3 are ignored */</span></div>
-<div class="line"><a id="l01201" name="l01201"></a><span class="lineno"> 1201</span>        throttle.<a class="code hl_variable" href="../../d0/dae/structcwist__grpc__retry__throttle.html#a9ccf351b2fcba83cb0ac4e8350bd022a">token_ratio</a> = ((double)(<span class="keywordtype">int</span>)(ratio-&gt;valuedouble * 1000.0)) / 1000.0;</div>
-<div class="line"><a id="l01202" name="l01202"></a><span class="lineno"> 1202</span>        throttle_set = 1;</div>
-<div class="line"><a id="l01203" name="l01203"></a><span class="lineno"> 1203</span>    }</div>
-<div class="line"><a id="l01204" name="l01204"></a><span class="lineno"> 1204</span> </div>
-<div class="line"><a id="l01205" name="l01205"></a><span class="lineno"> 1205</span>    <span class="keyword">const</span> cJSON *mc_array = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;methodConfig&quot;</span>);</div>
-<div class="line"><a id="l01206" name="l01206"></a><span class="lineno"> 1206</span>    <span class="keywordflow">if</span> (mc_array &amp;&amp; !cJSON_IsArray(mc_array)) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01207" name="l01207"></a><span class="lineno"> 1207</span>    <span class="keywordflow">if</span> (cJSON_IsArray(mc_array)) {</div>
-<div class="line"><a id="l01208" name="l01208"></a><span class="lineno"> 1208</span>        <span class="keyword">const</span> cJSON *entry;</div>
-<div class="line"><a id="l01209" name="l01209"></a><span class="lineno"> 1209</span>        cJSON_ArrayForEach(entry, mc_array) {</div>
-<div class="line"><a id="l01210" name="l01210"></a><span class="lineno"> 1210</span>            <span class="keywordflow">if</span> (!cJSON_IsObject(entry)) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01211" name="l01211"></a><span class="lineno"> 1211</span>            <span class="keyword">const</span> cJSON *names = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;name&quot;</span>);</div>
-<div class="line"><a id="l01212" name="l01212"></a><span class="lineno"> 1212</span>            <span class="keywordflow">if</span> (!cJSON_IsArray(names) || cJSON_GetArraySize((cJSON *)names) == 0) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01213" name="l01213"></a><span class="lineno"> 1213</span> </div>
-<div class="line"><a id="l01214" name="l01214"></a><span class="lineno"> 1214</span>            <span class="keywordtype">int</span> has_policy = 0;</div>
-<div class="line"><a id="l01215" name="l01215"></a><span class="lineno"> 1215</span>            <a class="code hl_struct" href="../../d9/dd6/structcwist__grpc__retry__policy.html">cwist_grpc_retry_policy</a> policy;</div>
-<div class="line"><a id="l01216" name="l01216"></a><span class="lineno"> 1216</span>            <span class="keyword">const</span> cJSON *rp = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;retryPolicy&quot;</span>);</div>
-<div class="line"><a id="l01217" name="l01217"></a><span class="lineno"> 1217</span>            <span class="keyword">const</span> cJSON *hp = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;hedgingPolicy&quot;</span>);</div>
-<div class="line"><a id="l01218" name="l01218"></a><span class="lineno"> 1218</span>            <span class="keywordflow">if</span> (rp &amp;&amp; hp) <span class="keywordflow">goto</span> invalid; <span class="comment">/* A6: one policy per RPC, never both */</span></div>
-<div class="line"><a id="l01219" name="l01219"></a><span class="lineno"> 1219</span>            <span class="keywordflow">if</span> (rp) {</div>
-<div class="line"><a id="l01220" name="l01220"></a><span class="lineno"> 1220</span>                <span class="keywordflow">if</span> (grpc_json_retry_policy(rp, &amp;policy) != 0) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01221" name="l01221"></a><span class="lineno"> 1221</span>                has_policy = 1;</div>
-<div class="line"><a id="l01222" name="l01222"></a><span class="lineno"> 1222</span>            }</div>
-<div class="line"><a id="l01223" name="l01223"></a><span class="lineno"> 1223</span>            <span class="comment">/* hedgingPolicy is not implemented (as in gRPC C-core): the</span></div>
-<div class="line"><a id="l01224" name="l01224"></a><span class="lineno"> 1224</span><span class="comment">             * entry simply carries no retry policy. */</span></div>
-<div class="line"><a id="l01225" name="l01225"></a><span class="lineno"> 1225</span> </div>
-<div class="line"><a id="l01226" name="l01226"></a><span class="lineno"> 1226</span>            <span class="keywordtype">int</span> has_wfr = 0, wfr = 0;</div>
-<div class="line"><a id="l01227" name="l01227"></a><span class="lineno"> 1227</span>            <span class="keyword">const</span> cJSON *wfr_item = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;waitForReady&quot;</span>);</div>
-<div class="line"><a id="l01228" name="l01228"></a><span class="lineno"> 1228</span>            <span class="keywordflow">if</span> (wfr_item) {</div>
-<div class="line"><a id="l01229" name="l01229"></a><span class="lineno"> 1229</span>                <span class="keywordflow">if</span> (!cJSON_IsBool(wfr_item)) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01230" name="l01230"></a><span class="lineno"> 1230</span>                has_wfr = 1;</div>
-<div class="line"><a id="l01231" name="l01231"></a><span class="lineno"> 1231</span>                wfr = cJSON_IsTrue(wfr_item);</div>
-<div class="line"><a id="l01232" name="l01232"></a><span class="lineno"> 1232</span>            }</div>
-<div class="line"><a id="l01233" name="l01233"></a><span class="lineno"> 1233</span>            <span class="keywordtype">int</span> has_timeout = 0;</div>
-<div class="line"><a id="l01234" name="l01234"></a><span class="lineno"> 1234</span>            uint64_t timeout_ms = 0;</div>
-<div class="line"><a id="l01235" name="l01235"></a><span class="lineno"> 1235</span>            <span class="keyword">const</span> cJSON *timeout = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;timeout&quot;</span>);</div>
-<div class="line"><a id="l01236" name="l01236"></a><span class="lineno"> 1236</span>            <span class="keywordflow">if</span> (timeout) {</div>
-<div class="line"><a id="l01237" name="l01237"></a><span class="lineno"> 1237</span>                <span class="keywordflow">if</span> (grpc_json_duration_ms(timeout, &amp;timeout_ms) != 0) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01238" name="l01238"></a><span class="lineno"> 1238</span>                has_timeout = 1;</div>
-<div class="line"><a id="l01239" name="l01239"></a><span class="lineno"> 1239</span>            }</div>
-<div class="line"><a id="l01240" name="l01240"></a><span class="lineno"> 1240</span> </div>
-<div class="line"><a id="l01241" name="l01241"></a><span class="lineno"> 1241</span>            <span class="comment">/* One methodConfig entry per name; first match wins at lookup,</span></div>
-<div class="line"><a id="l01242" name="l01242"></a><span class="lineno"> 1242</span><span class="comment">             * so list order is preserved. */</span></div>
-<div class="line"><a id="l01243" name="l01243"></a><span class="lineno"> 1243</span>            <span class="keyword">const</span> cJSON *name;</div>
-<div class="line"><a id="l01244" name="l01244"></a><span class="lineno"> 1244</span>            cJSON_ArrayForEach(name, names) {</div>
-<div class="line"><a id="l01245" name="l01245"></a><span class="lineno"> 1245</span>                <span class="keywordflow">if</span> (!cJSON_IsObject(name)) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01246" name="l01246"></a><span class="lineno"> 1246</span>                <span class="keyword">const</span> cJSON *service = cJSON_GetObjectItemCaseSensitive(name, <span class="stringliteral">&quot;service&quot;</span>);</div>
-<div class="line"><a id="l01247" name="l01247"></a><span class="lineno"> 1247</span>                <span class="keyword">const</span> cJSON *method = cJSON_GetObjectItemCaseSensitive(name, <span class="stringliteral">&quot;method&quot;</span>);</div>
-<div class="line"><a id="l01248" name="l01248"></a><span class="lineno"> 1248</span>                <span class="keywordflow">if</span> (!cJSON_IsString(service)) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01249" name="l01249"></a><span class="lineno"> 1249</span>                <span class="keywordflow">if</span> (method &amp;&amp; !cJSON_IsString(method)) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01250" name="l01250"></a><span class="lineno"> 1250</span>                <a class="code hl_typedef" href="../../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d">grpc_method_config</a> *mc = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*mc));</div>
-<div class="line"><a id="l01251" name="l01251"></a><span class="lineno"> 1251</span>                <span class="keywordflow">if</span> (!mc) <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01252" name="l01252"></a><span class="lineno"> 1252</span>                memset(mc, 0, <span class="keyword">sizeof</span>(*mc));</div>
-<div class="line"><a id="l01253" name="l01253"></a><span class="lineno"> 1253</span>                mc-&gt;service = channel_strdup(service-&gt;valuestring);</div>
-<div class="line"><a id="l01254" name="l01254"></a><span class="lineno"> 1254</span>                mc-&gt;method = method ? channel_strdup(method-&gt;valuestring) : NULL;</div>
-<div class="line"><a id="l01255" name="l01255"></a><span class="lineno"> 1255</span>                <span class="keywordflow">if</span> (!mc-&gt;service || (method &amp;&amp; !mc-&gt;method)) {</div>
-<div class="line"><a id="l01256" name="l01256"></a><span class="lineno"> 1256</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(mc-&gt;service);</div>
-<div class="line"><a id="l01257" name="l01257"></a><span class="lineno"> 1257</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(mc-&gt;method);</div>
-<div class="line"><a id="l01258" name="l01258"></a><span class="lineno"> 1258</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(mc);</div>
-<div class="line"><a id="l01259" name="l01259"></a><span class="lineno"> 1259</span>                    <span class="keywordflow">goto</span> invalid;</div>
-<div class="line"><a id="l01260" name="l01260"></a><span class="lineno"> 1260</span>                }</div>
-<div class="line"><a id="l01261" name="l01261"></a><span class="lineno"> 1261</span>                mc-&gt;has_policy = has_policy;</div>
-<div class="line"><a id="l01262" name="l01262"></a><span class="lineno"> 1262</span>                mc-&gt;policy = policy;</div>
-<div class="line"><a id="l01263" name="l01263"></a><span class="lineno"> 1263</span>                mc-&gt;has_wfr = has_wfr;</div>
-<div class="line"><a id="l01264" name="l01264"></a><span class="lineno"> 1264</span>                mc-&gt;wait_for_ready = wfr;</div>
-<div class="line"><a id="l01265" name="l01265"></a><span class="lineno"> 1265</span>                mc-&gt;has_timeout = has_timeout;</div>
-<div class="line"><a id="l01266" name="l01266"></a><span class="lineno"> 1266</span>                mc-&gt;timeout_ms = timeout_ms;</div>
-<div class="line"><a id="l01267" name="l01267"></a><span class="lineno"> 1267</span>                *mcs_tail = mc;</div>
-<div class="line"><a id="l01268" name="l01268"></a><span class="lineno"> 1268</span>                mcs_tail = &amp;mc-&gt;next;</div>
-<div class="line"><a id="l01269" name="l01269"></a><span class="lineno"> 1269</span>            }</div>
-<div class="line"><a id="l01270" name="l01270"></a><span class="lineno"> 1270</span>        }</div>
-<div class="line"><a id="l01271" name="l01271"></a><span class="lineno"> 1271</span>    }</div>
-<div class="line"><a id="l01272" name="l01272"></a><span class="lineno"> 1272</span> </div>
-<div class="line"><a id="l01273" name="l01273"></a><span class="lineno"> 1273</span>    <span class="comment">/* Everything validated: swap it in. */</span></div>
-<div class="line"><a id="l01274" name="l01274"></a><span class="lineno"> 1274</span>    pthread_mutex_lock(&amp;ch-&gt;mu);</div>
-<div class="line"><a id="l01275" name="l01275"></a><span class="lineno"> 1275</span>    <span class="keywordflow">if</span> (lb_set) ch-&gt;lb = lb;</div>
-<div class="line"><a id="l01276" name="l01276"></a><span class="lineno"> 1276</span>    channel_free_mcs(ch);</div>
-<div class="line"><a id="l01277" name="l01277"></a><span class="lineno"> 1277</span>    ch-&gt;mcs = mcs;</div>
-<div class="line"><a id="l01278" name="l01278"></a><span class="lineno"> 1278</span>    <span class="keywordflow">if</span> (ch-&gt;lb == <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4c843290d1b481794df5cdd6af67f9a2">CWIST_GRPC_LB_ROUND_ROBIN</a>) {</div>
-<div class="line"><a id="l01279" name="l01279"></a><span class="lineno"> 1279</span>        <span class="comment">/* round_robin watches every subchannel (load-balancing.md): dial</span></div>
-<div class="line"><a id="l01280" name="l01280"></a><span class="lineno"> 1280</span><span class="comment">         * them all so the READY set rotates strictly. */</span></div>
-<div class="line"><a id="l01281" name="l01281"></a><span class="lineno"> 1281</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; ch-&gt;nsubs; i++) (<span class="keywordtype">void</span>)sub_ensure_connected(ch, &amp;ch-&gt;subs[i]);</div>
-<div class="line"><a id="l01282" name="l01282"></a><span class="lineno"> 1282</span>    }</div>
-<div class="line"><a id="l01283" name="l01283"></a><span class="lineno"> 1283</span>    pthread_mutex_unlock(&amp;ch-&gt;mu);</div>
-<div class="line"><a id="l01284" name="l01284"></a><span class="lineno"> 1284</span>    <span class="keywordflow">if</span> (throttle_set) {</div>
-<div class="line"><a id="l01285" name="l01285"></a><span class="lineno"> 1285</span>        pthread_mutex_lock(&amp;ch-&gt;tmu);</div>
-<div class="line"><a id="l01286" name="l01286"></a><span class="lineno"> 1286</span>        <span class="keywordtype">int</span> had = ch-&gt;has_throttle;</div>
-<div class="line"><a id="l01287" name="l01287"></a><span class="lineno"> 1287</span>        ch-&gt;throttle = throttle;</div>
-<div class="line"><a id="l01288" name="l01288"></a><span class="lineno"> 1288</span>        ch-&gt;has_throttle = 1;</div>
-<div class="line"><a id="l01289" name="l01289"></a><span class="lineno"> 1289</span>        <span class="keywordflow">if</span> (!had) ch-&gt;tokens = throttle.<a class="code hl_variable" href="../../d0/dae/structcwist__grpc__retry__throttle.html#a1ff34a77780462b245389d3197dc4273">max_tokens</a>;</div>
-<div class="line"><a id="l01290" name="l01290"></a><span class="lineno"> 1290</span>        pthread_mutex_unlock(&amp;ch-&gt;tmu);</div>
-<div class="line"><a id="l01291" name="l01291"></a><span class="lineno"> 1291</span>    }</div>
-<div class="line"><a id="l01292" name="l01292"></a><span class="lineno"> 1292</span>    cJSON_Delete(root);</div>
-<div class="line"><a id="l01293" name="l01293"></a><span class="lineno"> 1293</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l01294" name="l01294"></a><span class="lineno"> 1294</span> </div>
-<div class="line"><a id="l01295" name="l01295"></a><span class="lineno"> 1295</span>invalid:</div>
-<div class="line"><a id="l01296" name="l01296"></a><span class="lineno"> 1296</span>    grpc_json_free_mc_list(mcs);</div>
-<div class="line"><a id="l01297" name="l01297"></a><span class="lineno"> 1297</span>    cJSON_Delete(root);</div>
-<div class="line"><a id="l01298" name="l01298"></a><span class="lineno"> 1298</span>    <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l01299" name="l01299"></a><span class="lineno"> 1299</span>}</div>
+<div class="foldopen" id="foldopen01169" data-start="{" data-end="}">
+<div class="line"><a id="l01169" name="l01169"></a><span class="lineno"><a class="line" href="../../d3/d4c/grpc__channel_8h.html#aa62426e4e63c9563ee4caeb58aa4563c"> 1169</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/d7a/grpc__channel_8c.html#afd315b1271d893051abaf72a06d7cfa0">cwist_grpc_channel_apply_service_config_json</a>(cwist_grpc_channel *ch, <span class="keyword">const</span> <span class="keywordtype">char</span> *json) {</div>
+<div class="line"><a id="l01170" name="l01170"></a><span class="lineno"> 1170</span>    <span class="keywordflow">if</span> (!ch || !json) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01171" name="l01171"></a><span class="lineno"> 1171</span>    cJSON *root = cJSON_Parse(json);</div>
+<div class="line"><a id="l01172" name="l01172"></a><span class="lineno"> 1172</span>    <span class="keywordflow">if</span> (!cJSON_IsObject(root)) {</div>
+<div class="line"><a id="l01173" name="l01173"></a><span class="lineno"> 1173</span>        cJSON_Delete(root);</div>
+<div class="line"><a id="l01174" name="l01174"></a><span class="lineno"> 1174</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01175" name="l01175"></a><span class="lineno"> 1175</span>    }</div>
+<div class="line"><a id="l01176" name="l01176"></a><span class="lineno"> 1176</span> </div>
+<div class="line"><a id="l01177" name="l01177"></a><span class="lineno"> 1177</span>    <span class="keywordtype">int</span> lb_set = 0;</div>
+<div class="line"><a id="l01178" name="l01178"></a><span class="lineno"> 1178</span>    <a class="code hl_enumeration" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588">cwist_grpc_lb_policy</a> lb = ch-&gt;lb;</div>
+<div class="line"><a id="l01179" name="l01179"></a><span class="lineno"> 1179</span>    <span class="keywordtype">int</span> throttle_set = 0;</div>
+<div class="line"><a id="l01180" name="l01180"></a><span class="lineno"> 1180</span>    <a class="code hl_struct" href="../../d0/dae/structcwist__grpc__retry__throttle.html">cwist_grpc_retry_throttle</a> throttle;</div>
+<div class="line"><a id="l01181" name="l01181"></a><span class="lineno"> 1181</span>    <a class="code hl_typedef" href="../../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d">grpc_method_config</a> *mcs = NULL, **mcs_tail = &amp;mcs;</div>
+<div class="line"><a id="l01182" name="l01182"></a><span class="lineno"> 1182</span> </div>
+<div class="line"><a id="l01183" name="l01183"></a><span class="lineno"> 1183</span>    <span class="comment">/* loadBalancingConfig: [{&quot;round_robin&quot;:{}}, {&quot;pick_first&quot;:{}}] — the</span></div>
+<div class="line"><a id="l01184" name="l01184"></a><span class="lineno"> 1184</span><span class="comment">     * first supported policy wins (service_config.md). */</span></div>
+<div class="line"><a id="l01185" name="l01185"></a><span class="lineno"> 1185</span>    <span class="keyword">const</span> cJSON *lbc = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;loadBalancingConfig&quot;</span>);</div>
+<div class="line"><a id="l01186" name="l01186"></a><span class="lineno"> 1186</span>    <span class="keywordflow">if</span> (cJSON_IsArray(lbc)) {</div>
+<div class="line"><a id="l01187" name="l01187"></a><span class="lineno"> 1187</span>        <span class="keyword">const</span> cJSON *entry;</div>
+<div class="line"><a id="l01188" name="l01188"></a><span class="lineno"> 1188</span>        cJSON_ArrayForEach(entry, lbc) {</div>
+<div class="line"><a id="l01189" name="l01189"></a><span class="lineno"> 1189</span>            <span class="keywordflow">if</span> (!cJSON_IsObject(entry)) <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l01190" name="l01190"></a><span class="lineno"> 1190</span>            <span class="keywordflow">if</span> (cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;round_robin&quot;</span>)) {</div>
+<div class="line"><a id="l01191" name="l01191"></a><span class="lineno"> 1191</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4c843290d1b481794df5cdd6af67f9a2">CWIST_GRPC_LB_ROUND_ROBIN</a>;</div>
+<div class="line"><a id="l01192" name="l01192"></a><span class="lineno"> 1192</span>                lb_set = 1;</div>
+<div class="line"><a id="l01193" name="l01193"></a><span class="lineno"> 1193</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l01194" name="l01194"></a><span class="lineno"> 1194</span>            }</div>
+<div class="line"><a id="l01195" name="l01195"></a><span class="lineno"> 1195</span>            <span class="keywordflow">if</span> (cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;pick_first&quot;</span>)) {</div>
+<div class="line"><a id="l01196" name="l01196"></a><span class="lineno"> 1196</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4d7b2648003f1fd54fdee610ab0b257a">CWIST_GRPC_LB_PICK_FIRST</a>;</div>
+<div class="line"><a id="l01197" name="l01197"></a><span class="lineno"> 1197</span>                lb_set = 1;</div>
+<div class="line"><a id="l01198" name="l01198"></a><span class="lineno"> 1198</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l01199" name="l01199"></a><span class="lineno"> 1199</span>            }</div>
+<div class="line"><a id="l01200" name="l01200"></a><span class="lineno"> 1200</span>            <span class="comment">/* unsupported policy: try the next entry */</span></div>
+<div class="line"><a id="l01201" name="l01201"></a><span class="lineno"> 1201</span>        }</div>
+<div class="line"><a id="l01202" name="l01202"></a><span class="lineno"> 1202</span>    }</div>
+<div class="line"><a id="l01203" name="l01203"></a><span class="lineno"> 1203</span>    <span class="keywordflow">if</span> (!lb_set) {</div>
+<div class="line"><a id="l01204" name="l01204"></a><span class="lineno"> 1204</span>        <span class="comment">/* Deprecated loadBalancingPolicy string form. */</span></div>
+<div class="line"><a id="l01205" name="l01205"></a><span class="lineno"> 1205</span>        <span class="keyword">const</span> cJSON *lbp = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;loadBalancingPolicy&quot;</span>);</div>
+<div class="line"><a id="l01206" name="l01206"></a><span class="lineno"> 1206</span>        <span class="keywordflow">if</span> (cJSON_IsString(lbp)) {</div>
+<div class="line"><a id="l01207" name="l01207"></a><span class="lineno"> 1207</span>            <span class="keywordflow">if</span> (strcasecmp(lbp-&gt;valuestring, <span class="stringliteral">&quot;ROUND_ROBIN&quot;</span>) == 0) {</div>
+<div class="line"><a id="l01208" name="l01208"></a><span class="lineno"> 1208</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4c843290d1b481794df5cdd6af67f9a2">CWIST_GRPC_LB_ROUND_ROBIN</a>;</div>
+<div class="line"><a id="l01209" name="l01209"></a><span class="lineno"> 1209</span>                lb_set = 1;</div>
+<div class="line"><a id="l01210" name="l01210"></a><span class="lineno"> 1210</span>            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (strcasecmp(lbp-&gt;valuestring, <span class="stringliteral">&quot;PICK_FIRST&quot;</span>) == 0) {</div>
+<div class="line"><a id="l01211" name="l01211"></a><span class="lineno"> 1211</span>                lb = <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4d7b2648003f1fd54fdee610ab0b257a">CWIST_GRPC_LB_PICK_FIRST</a>;</div>
+<div class="line"><a id="l01212" name="l01212"></a><span class="lineno"> 1212</span>                lb_set = 1;</div>
+<div class="line"><a id="l01213" name="l01213"></a><span class="lineno"> 1213</span>            }</div>
+<div class="line"><a id="l01214" name="l01214"></a><span class="lineno"> 1214</span>        }</div>
+<div class="line"><a id="l01215" name="l01215"></a><span class="lineno"> 1215</span>    }</div>
+<div class="line"><a id="l01216" name="l01216"></a><span class="lineno"> 1216</span> </div>
+<div class="line"><a id="l01217" name="l01217"></a><span class="lineno"> 1217</span>    <span class="keyword">const</span> cJSON *rt = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;retryThrottling&quot;</span>);</div>
+<div class="line"><a id="l01218" name="l01218"></a><span class="lineno"> 1218</span>    <span class="keywordflow">if</span> (rt) {</div>
+<div class="line"><a id="l01219" name="l01219"></a><span class="lineno"> 1219</span>        <span class="keyword">const</span> cJSON *max_tokens = cJSON_GetObjectItemCaseSensitive(rt, <span class="stringliteral">&quot;maxTokens&quot;</span>);</div>
+<div class="line"><a id="l01220" name="l01220"></a><span class="lineno"> 1220</span>        <span class="keyword">const</span> cJSON *ratio = cJSON_GetObjectItemCaseSensitive(rt, <span class="stringliteral">&quot;tokenRatio&quot;</span>);</div>
+<div class="line"><a id="l01221" name="l01221"></a><span class="lineno"> 1221</span>        <span class="keywordflow">if</span> (!cJSON_IsNumber(max_tokens) || max_tokens-&gt;valuedouble &lt;= 0 ||</div>
+<div class="line"><a id="l01222" name="l01222"></a><span class="lineno"> 1222</span>            max_tokens-&gt;valuedouble &gt; 1000 || !cJSON_IsNumber(ratio) || ratio-&gt;valuedouble &lt;= 0)</div>
+<div class="line"><a id="l01223" name="l01223"></a><span class="lineno"> 1223</span>            <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01224" name="l01224"></a><span class="lineno"> 1224</span>        throttle.<a class="code hl_variable" href="../../d0/dae/structcwist__grpc__retry__throttle.html#a1ff34a77780462b245389d3197dc4273">max_tokens</a> = max_tokens-&gt;valuedouble;</div>
+<div class="line"><a id="l01225" name="l01225"></a><span class="lineno"> 1225</span>        <span class="comment">/* A6: decimal places beyond 3 are ignored */</span></div>
+<div class="line"><a id="l01226" name="l01226"></a><span class="lineno"> 1226</span>        throttle.<a class="code hl_variable" href="../../d0/dae/structcwist__grpc__retry__throttle.html#a9ccf351b2fcba83cb0ac4e8350bd022a">token_ratio</a> = ((double)(<span class="keywordtype">int</span>)(ratio-&gt;valuedouble * 1000.0)) / 1000.0;</div>
+<div class="line"><a id="l01227" name="l01227"></a><span class="lineno"> 1227</span>        throttle_set = 1;</div>
+<div class="line"><a id="l01228" name="l01228"></a><span class="lineno"> 1228</span>    }</div>
+<div class="line"><a id="l01229" name="l01229"></a><span class="lineno"> 1229</span> </div>
+<div class="line"><a id="l01230" name="l01230"></a><span class="lineno"> 1230</span>    <span class="keyword">const</span> cJSON *mc_array = cJSON_GetObjectItemCaseSensitive(root, <span class="stringliteral">&quot;methodConfig&quot;</span>);</div>
+<div class="line"><a id="l01231" name="l01231"></a><span class="lineno"> 1231</span>    <span class="keywordflow">if</span> (mc_array &amp;&amp; !cJSON_IsArray(mc_array)) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01232" name="l01232"></a><span class="lineno"> 1232</span>    <span class="keywordflow">if</span> (cJSON_IsArray(mc_array)) {</div>
+<div class="line"><a id="l01233" name="l01233"></a><span class="lineno"> 1233</span>        <span class="keyword">const</span> cJSON *entry;</div>
+<div class="line"><a id="l01234" name="l01234"></a><span class="lineno"> 1234</span>        cJSON_ArrayForEach(entry, mc_array) {</div>
+<div class="line"><a id="l01235" name="l01235"></a><span class="lineno"> 1235</span>            <span class="keywordflow">if</span> (!cJSON_IsObject(entry)) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01236" name="l01236"></a><span class="lineno"> 1236</span>            <span class="keyword">const</span> cJSON *names = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;name&quot;</span>);</div>
+<div class="line"><a id="l01237" name="l01237"></a><span class="lineno"> 1237</span>            <span class="keywordflow">if</span> (!cJSON_IsArray(names) || cJSON_GetArraySize((cJSON *)names) == 0) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01238" name="l01238"></a><span class="lineno"> 1238</span> </div>
+<div class="line"><a id="l01239" name="l01239"></a><span class="lineno"> 1239</span>            <span class="keywordtype">int</span> has_policy = 0;</div>
+<div class="line"><a id="l01240" name="l01240"></a><span class="lineno"> 1240</span>            <a class="code hl_struct" href="../../d9/dd6/structcwist__grpc__retry__policy.html">cwist_grpc_retry_policy</a> policy;</div>
+<div class="line"><a id="l01241" name="l01241"></a><span class="lineno"> 1241</span>            <span class="keyword">const</span> cJSON *rp = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;retryPolicy&quot;</span>);</div>
+<div class="line"><a id="l01242" name="l01242"></a><span class="lineno"> 1242</span>            <span class="keyword">const</span> cJSON *hp = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;hedgingPolicy&quot;</span>);</div>
+<div class="line"><a id="l01243" name="l01243"></a><span class="lineno"> 1243</span>            <span class="keywordflow">if</span> (rp &amp;&amp; hp) <span class="keywordflow">goto</span> invalid; <span class="comment">/* A6: one policy per RPC, never both */</span></div>
+<div class="line"><a id="l01244" name="l01244"></a><span class="lineno"> 1244</span>            <span class="keywordflow">if</span> (rp) {</div>
+<div class="line"><a id="l01245" name="l01245"></a><span class="lineno"> 1245</span>                <span class="keywordflow">if</span> (grpc_json_retry_policy(rp, &amp;policy) != 0) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01246" name="l01246"></a><span class="lineno"> 1246</span>                has_policy = 1;</div>
+<div class="line"><a id="l01247" name="l01247"></a><span class="lineno"> 1247</span>            }</div>
+<div class="line"><a id="l01248" name="l01248"></a><span class="lineno"> 1248</span>            <span class="comment">/* hedgingPolicy is not implemented (as in gRPC C-core): the</span></div>
+<div class="line"><a id="l01249" name="l01249"></a><span class="lineno"> 1249</span><span class="comment">             * entry simply carries no retry policy. */</span></div>
+<div class="line"><a id="l01250" name="l01250"></a><span class="lineno"> 1250</span> </div>
+<div class="line"><a id="l01251" name="l01251"></a><span class="lineno"> 1251</span>            <span class="keywordtype">int</span> has_wfr = 0, wfr = 0;</div>
+<div class="line"><a id="l01252" name="l01252"></a><span class="lineno"> 1252</span>            <span class="keyword">const</span> cJSON *wfr_item = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;waitForReady&quot;</span>);</div>
+<div class="line"><a id="l01253" name="l01253"></a><span class="lineno"> 1253</span>            <span class="keywordflow">if</span> (wfr_item) {</div>
+<div class="line"><a id="l01254" name="l01254"></a><span class="lineno"> 1254</span>                <span class="keywordflow">if</span> (!cJSON_IsBool(wfr_item)) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01255" name="l01255"></a><span class="lineno"> 1255</span>                has_wfr = 1;</div>
+<div class="line"><a id="l01256" name="l01256"></a><span class="lineno"> 1256</span>                wfr = cJSON_IsTrue(wfr_item);</div>
+<div class="line"><a id="l01257" name="l01257"></a><span class="lineno"> 1257</span>            }</div>
+<div class="line"><a id="l01258" name="l01258"></a><span class="lineno"> 1258</span>            <span class="keywordtype">int</span> has_timeout = 0;</div>
+<div class="line"><a id="l01259" name="l01259"></a><span class="lineno"> 1259</span>            uint64_t timeout_ms = 0;</div>
+<div class="line"><a id="l01260" name="l01260"></a><span class="lineno"> 1260</span>            <span class="keyword">const</span> cJSON *timeout = cJSON_GetObjectItemCaseSensitive(entry, <span class="stringliteral">&quot;timeout&quot;</span>);</div>
+<div class="line"><a id="l01261" name="l01261"></a><span class="lineno"> 1261</span>            <span class="keywordflow">if</span> (timeout) {</div>
+<div class="line"><a id="l01262" name="l01262"></a><span class="lineno"> 1262</span>                <span class="keywordflow">if</span> (grpc_json_duration_ms(timeout, &amp;timeout_ms) != 0) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01263" name="l01263"></a><span class="lineno"> 1263</span>                has_timeout = 1;</div>
+<div class="line"><a id="l01264" name="l01264"></a><span class="lineno"> 1264</span>            }</div>
+<div class="line"><a id="l01265" name="l01265"></a><span class="lineno"> 1265</span> </div>
+<div class="line"><a id="l01266" name="l01266"></a><span class="lineno"> 1266</span>            <span class="comment">/* One methodConfig entry per name; first match wins at lookup,</span></div>
+<div class="line"><a id="l01267" name="l01267"></a><span class="lineno"> 1267</span><span class="comment">             * so list order is preserved. */</span></div>
+<div class="line"><a id="l01268" name="l01268"></a><span class="lineno"> 1268</span>            <span class="keyword">const</span> cJSON *name;</div>
+<div class="line"><a id="l01269" name="l01269"></a><span class="lineno"> 1269</span>            cJSON_ArrayForEach(name, names) {</div>
+<div class="line"><a id="l01270" name="l01270"></a><span class="lineno"> 1270</span>                <span class="keywordflow">if</span> (!cJSON_IsObject(name)) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01271" name="l01271"></a><span class="lineno"> 1271</span>                <span class="keyword">const</span> cJSON *service = cJSON_GetObjectItemCaseSensitive(name, <span class="stringliteral">&quot;service&quot;</span>);</div>
+<div class="line"><a id="l01272" name="l01272"></a><span class="lineno"> 1272</span>                <span class="keyword">const</span> cJSON *method = cJSON_GetObjectItemCaseSensitive(name, <span class="stringliteral">&quot;method&quot;</span>);</div>
+<div class="line"><a id="l01273" name="l01273"></a><span class="lineno"> 1273</span>                <span class="keywordflow">if</span> (!cJSON_IsString(service)) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01274" name="l01274"></a><span class="lineno"> 1274</span>                <span class="keywordflow">if</span> (method &amp;&amp; !cJSON_IsString(method)) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01275" name="l01275"></a><span class="lineno"> 1275</span>                <a class="code hl_typedef" href="../../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d">grpc_method_config</a> *mc = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*mc));</div>
+<div class="line"><a id="l01276" name="l01276"></a><span class="lineno"> 1276</span>                <span class="keywordflow">if</span> (!mc) <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01277" name="l01277"></a><span class="lineno"> 1277</span>                memset(mc, 0, <span class="keyword">sizeof</span>(*mc));</div>
+<div class="line"><a id="l01278" name="l01278"></a><span class="lineno"> 1278</span>                mc-&gt;service = channel_strdup(service-&gt;valuestring);</div>
+<div class="line"><a id="l01279" name="l01279"></a><span class="lineno"> 1279</span>                mc-&gt;method = method ? channel_strdup(method-&gt;valuestring) : NULL;</div>
+<div class="line"><a id="l01280" name="l01280"></a><span class="lineno"> 1280</span>                <span class="keywordflow">if</span> (!mc-&gt;service || (method &amp;&amp; !mc-&gt;method)) {</div>
+<div class="line"><a id="l01281" name="l01281"></a><span class="lineno"> 1281</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(mc-&gt;service);</div>
+<div class="line"><a id="l01282" name="l01282"></a><span class="lineno"> 1282</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(mc-&gt;method);</div>
+<div class="line"><a id="l01283" name="l01283"></a><span class="lineno"> 1283</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(mc);</div>
+<div class="line"><a id="l01284" name="l01284"></a><span class="lineno"> 1284</span>                    <span class="keywordflow">goto</span> invalid;</div>
+<div class="line"><a id="l01285" name="l01285"></a><span class="lineno"> 1285</span>                }</div>
+<div class="line"><a id="l01286" name="l01286"></a><span class="lineno"> 1286</span>                mc-&gt;has_policy = has_policy;</div>
+<div class="line"><a id="l01287" name="l01287"></a><span class="lineno"> 1287</span>                mc-&gt;policy = policy;</div>
+<div class="line"><a id="l01288" name="l01288"></a><span class="lineno"> 1288</span>                mc-&gt;has_wfr = has_wfr;</div>
+<div class="line"><a id="l01289" name="l01289"></a><span class="lineno"> 1289</span>                mc-&gt;wait_for_ready = wfr;</div>
+<div class="line"><a id="l01290" name="l01290"></a><span class="lineno"> 1290</span>                mc-&gt;has_timeout = has_timeout;</div>
+<div class="line"><a id="l01291" name="l01291"></a><span class="lineno"> 1291</span>                mc-&gt;timeout_ms = timeout_ms;</div>
+<div class="line"><a id="l01292" name="l01292"></a><span class="lineno"> 1292</span>                *mcs_tail = mc;</div>
+<div class="line"><a id="l01293" name="l01293"></a><span class="lineno"> 1293</span>                mcs_tail = &amp;mc-&gt;next;</div>
+<div class="line"><a id="l01294" name="l01294"></a><span class="lineno"> 1294</span>            }</div>
+<div class="line"><a id="l01295" name="l01295"></a><span class="lineno"> 1295</span>        }</div>
+<div class="line"><a id="l01296" name="l01296"></a><span class="lineno"> 1296</span>    }</div>
+<div class="line"><a id="l01297" name="l01297"></a><span class="lineno"> 1297</span> </div>
+<div class="line"><a id="l01298" name="l01298"></a><span class="lineno"> 1298</span>    <span class="comment">/* Everything validated: swap it in. */</span></div>
+<div class="line"><a id="l01299" name="l01299"></a><span class="lineno"> 1299</span>    pthread_mutex_lock(&amp;ch-&gt;mu);</div>
+<div class="line"><a id="l01300" name="l01300"></a><span class="lineno"> 1300</span>    <span class="keywordflow">if</span> (lb_set) ch-&gt;lb = lb;</div>
+<div class="line"><a id="l01301" name="l01301"></a><span class="lineno"> 1301</span>    channel_free_mcs(ch);</div>
+<div class="line"><a id="l01302" name="l01302"></a><span class="lineno"> 1302</span>    ch-&gt;mcs = mcs;</div>
+<div class="line"><a id="l01303" name="l01303"></a><span class="lineno"> 1303</span>    <span class="keywordflow">if</span> (ch-&gt;lb == <a class="code hl_enumvalue" href="../../d3/d4c/grpc__channel_8h.html#af3256f43633b0a8ef770f648fb1d0588a4c843290d1b481794df5cdd6af67f9a2">CWIST_GRPC_LB_ROUND_ROBIN</a>) {</div>
+<div class="line"><a id="l01304" name="l01304"></a><span class="lineno"> 1304</span>        <span class="comment">/* round_robin watches every subchannel (load-balancing.md): dial</span></div>
+<div class="line"><a id="l01305" name="l01305"></a><span class="lineno"> 1305</span><span class="comment">         * them all so the READY set rotates strictly. */</span></div>
+<div class="line"><a id="l01306" name="l01306"></a><span class="lineno"> 1306</span>        <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; ch-&gt;nsubs; i++) (<span class="keywordtype">void</span>)sub_ensure_connected(ch, &amp;ch-&gt;subs[i]);</div>
+<div class="line"><a id="l01307" name="l01307"></a><span class="lineno"> 1307</span>    }</div>
+<div class="line"><a id="l01308" name="l01308"></a><span class="lineno"> 1308</span>    pthread_mutex_unlock(&amp;ch-&gt;mu);</div>
+<div class="line"><a id="l01309" name="l01309"></a><span class="lineno"> 1309</span>    <span class="keywordflow">if</span> (throttle_set) {</div>
+<div class="line"><a id="l01310" name="l01310"></a><span class="lineno"> 1310</span>        pthread_mutex_lock(&amp;ch-&gt;tmu);</div>
+<div class="line"><a id="l01311" name="l01311"></a><span class="lineno"> 1311</span>        <span class="keywordtype">int</span> had = ch-&gt;has_throttle;</div>
+<div class="line"><a id="l01312" name="l01312"></a><span class="lineno"> 1312</span>        ch-&gt;throttle = throttle;</div>
+<div class="line"><a id="l01313" name="l01313"></a><span class="lineno"> 1313</span>        ch-&gt;has_throttle = 1;</div>
+<div class="line"><a id="l01314" name="l01314"></a><span class="lineno"> 1314</span>        <span class="keywordflow">if</span> (!had) ch-&gt;tokens = throttle.<a class="code hl_variable" href="../../d0/dae/structcwist__grpc__retry__throttle.html#a1ff34a77780462b245389d3197dc4273">max_tokens</a>;</div>
+<div class="line"><a id="l01315" name="l01315"></a><span class="lineno"> 1315</span>        pthread_mutex_unlock(&amp;ch-&gt;tmu);</div>
+<div class="line"><a id="l01316" name="l01316"></a><span class="lineno"> 1316</span>    }</div>
+<div class="line"><a id="l01317" name="l01317"></a><span class="lineno"> 1317</span>    cJSON_Delete(root);</div>
+<div class="line"><a id="l01318" name="l01318"></a><span class="lineno"> 1318</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l01319" name="l01319"></a><span class="lineno"> 1319</span> </div>
+<div class="line"><a id="l01320" name="l01320"></a><span class="lineno"> 1320</span>invalid:</div>
+<div class="line"><a id="l01321" name="l01321"></a><span class="lineno"> 1321</span>    grpc_json_free_mc_list(mcs);</div>
+<div class="line"><a id="l01322" name="l01322"></a><span class="lineno"> 1322</span>    cJSON_Delete(root);</div>
+<div class="line"><a id="l01323" name="l01323"></a><span class="lineno"> 1323</span>    <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l01324" name="l01324"></a><span class="lineno"> 1324</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
@@ -1205,6 +1226,7 @@ $(document).ready(function(){initNavTree('d5/d7a/grpc__channel_8c_source.html','
 <div class="ttc" id="agrpc__channel_8c_html_a4e1790c7d3b8ad9aec71a4e76b1593a7"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#a4e1790c7d3b8ad9aec71a4e76b1593a7">GRPC_CHANNEL_DEFAULT_BUFFER_LIMIT</a></div><div class="ttdeci">#define GRPC_CHANNEL_DEFAULT_BUFFER_LIMIT</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00041">grpc_channel.c:41</a></div></div>
 <div class="ttc" id="agrpc__channel_8c_html_a767ff5d54faef95fa124691428ead71f"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#a767ff5d54faef95fa124691428ead71f">cwist_grpc_channel_unary</a></div><div class="ttdeci">cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char *method, const void *request, size_t request_len, uint64_t timeout_ms, uint8_t **response, size_t *response_len, char **status_message)</div><div class="ttdoc">Convenience blocking unary RPC: start, read one response, finish.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00700">grpc_channel.c:700</a></div></div>
 <div class="ttc" id="agrpc__channel_8c_html_a89c2e60011a3508e34b6319cf3bcce1a"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#a89c2e60011a3508e34b6319cf3bcce1a">GRPC_CHANNEL_MAX_ATTEMPTS_CAP</a></div><div class="ttdeci">#define GRPC_CHANNEL_MAX_ATTEMPTS_CAP</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00042">grpc_channel.c:42</a></div></div>
+<div class="ttc" id="agrpc__channel_8c_html_a9c5b0b63a82d82ccf7dd7fab9555687f"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#a9c5b0b63a82d82ccf7dd7fab9555687f">GRPC_DURATION_MAX_SECONDS</a></div><div class="ttdeci">#define GRPC_DURATION_MAX_SECONDS</div><div class="ttdoc">Largest Duration seconds value allowed by google.protobuf.Duration.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l01062">grpc_channel.c:1062</a></div></div>
 <div class="ttc" id="agrpc__channel_8c_html_aa6031a92596d84551a2f236ddba27249"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#aa6031a92596d84551a2f236ddba27249">GRPC_CHANNEL_CONN_BACKOFF_MAX_MS</a></div><div class="ttdeci">#define GRPC_CHANNEL_CONN_BACKOFF_MAX_MS</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00047">grpc_channel.c:47</a></div></div>
 <div class="ttc" id="agrpc__channel_8c_html_aa71b8fbaf45b3c74f7a0b634a5da007d"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d">grpc_method_config</a></div><div class="ttdeci">struct grpc_method_config grpc_method_config</div></div>
 <div class="ttc" id="agrpc__channel_8c_html_aaa22f45bd865840ddbb15a6746719dd7"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#aaa22f45bd865840ddbb15a6746719dd7">GRPC_CHANNEL_CONN_BACKOFF_INITIAL_MS</a></div><div class="ttdeci">#define GRPC_CHANNEL_CONN_BACKOFF_INITIAL_MS</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00045">grpc_channel.c:45</a></div></div>
@@ -1214,7 +1236,7 @@ $(document).ready(function(){initNavTree('d5/d7a/grpc__channel_8c_source.html','
 <div class="ttc" id="agrpc__channel_8c_html_ada5a8c48a823c7d12747c7c16444ed00"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#ada5a8c48a823c7d12747c7c16444ed00">GRPC_CHANNEL_MAX_ADDRS</a></div><div class="ttdeci">#define GRPC_CHANNEL_MAX_ADDRS</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00040">grpc_channel.c:40</a></div></div>
 <div class="ttc" id="agrpc__channel_8c_html_ae4c51dc3f0426cc6163911740512a340"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#ae4c51dc3f0426cc6163911740512a340">cwist_grpc_channel_call_recv</a></div><div class="ttdeci">int cwist_grpc_channel_call_recv(cwist_grpc_channel_call *cc, cwist_grpc_message *out)</div><div class="ttdoc">Receive the next response message of a channel call.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00624">grpc_channel.c:624</a></div></div>
 <div class="ttc" id="agrpc__channel_8c_html_aee6407857a16719e966eeb6df7500b39"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#aee6407857a16719e966eeb6df7500b39">GRPC_CHANNEL_CONN_BACKOFF_JITTER</a></div><div class="ttdeci">#define GRPC_CHANNEL_CONN_BACKOFF_JITTER</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l00048">grpc_channel.c:48</a></div></div>
-<div class="ttc" id="agrpc__channel_8c_html_afd315b1271d893051abaf72a06d7cfa0"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#afd315b1271d893051abaf72a06d7cfa0">cwist_grpc_channel_apply_service_config_json</a></div><div class="ttdeci">int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const char *json)</div><div class="ttdoc">Apply a JSON service config (doc/service_config.md subset, gRFC A6).</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l01144">grpc_channel.c:1144</a></div></div>
+<div class="ttc" id="agrpc__channel_8c_html_afd315b1271d893051abaf72a06d7cfa0"><div class="ttname"><a href="../../d5/d7a/grpc__channel_8c.html#afd315b1271d893051abaf72a06d7cfa0">cwist_grpc_channel_apply_service_config_json</a></div><div class="ttdeci">int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const char *json)</div><div class="ttdoc">Apply a JSON service config (doc/service_config.md subset, gRFC A6).</div><div class="ttdef"><b>Definition</b> <a href="../../d5/d7a/grpc__channel_8c_source.html#l01169">grpc_channel.c:1169</a></div></div>
 <div class="ttc" id="agrpc__channel_8h_html"><div class="ttname"><a href="../../d3/d4c/grpc__channel_8h.html">grpc_channel.h</a></div><div class="ttdoc">gRPC client channel: name resolution, client-side load balancing, and gRFC A6 retry policy on top of ...</div></div>
 <div class="ttc" id="agrpc__channel_8h_html_a2c289fbbb1bf041451e3c5662a3c9bb9"><div class="ttname"><a href="../../d3/d4c/grpc__channel_8h.html#a2c289fbbb1bf041451e3c5662a3c9bb9">cwist_grpc_channel_state</a></div><div class="ttdeci">cwist_grpc_channel_state</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d4c/grpc__channel_8h_source.html#l00035">grpc_channel.h:35</a></div></div>
 <div class="ttc" id="agrpc__channel_8h_html_a2c289fbbb1bf041451e3c5662a3c9bb9a1badd77fbae042da7c98b25c01329e45"><div class="ttname"><a href="../../d3/d4c/grpc__channel_8h.html#a2c289fbbb1bf041451e3c5662a3c9bb9a1badd77fbae042da7c98b25c01329e45">CWIST_GRPC_CHANNEL_IDLE</a></div><div class="ttdeci">@ CWIST_GRPC_CHANNEL_IDLE</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d4c/grpc__channel_8h_source.html#l00036">grpc_channel.h:36</a></div></div>

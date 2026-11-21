@@ -297,7 +297,7 @@ This graph shows which files directly or indirectly include this file:</div>
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a0a3ac416728cfa63e5320a391bc7a81c" id="r_a0a3ac416728cfa63e5320a391bc7a81c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d2a/waf_8h.html#a0a3ac416728cfa63e5320a391bc7a81c">cwist_mw_waf_lite</a> (void)</td></tr>
-<tr class="memdesc:a0a3ac416728cfa63e5320a391bc7a81c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Construct the WAF-lite middleware.  <br /></td></tr>
+<tr class="memdesc:a0a3ac416728cfa63e5320a391bc7a81c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Signature-based request screening middleware.  <br /></td></tr>
 <tr class="separator:a0a3ac416728cfa63e5320a391bc7a81c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad361d00460268f63acf33ec58d53fe14" id="r_ad361d00460268f63acf33ec58d53fe14"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d0/d2a/waf_8h.html#ad361d00460268f63acf33ec58d53fe14">cwist_waf_is_safe</a> (const char *input, size_t length)</td></tr>
 <tr class="memdesc:ad361d00460268f63acf33ec58d53fe14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check whether a byte string is free of hostile signatures.  <br /></td></tr>
@@ -327,10 +327,12 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Construct the WAF-lite middleware. </p>
+<p>Signature-based request screening middleware. </p>
+<p>Screens the decoded path and query, header names, URL-encoded form bodies, text bodies (text/x, JSON, XML, GraphQL, JavaScript, +json/+xml, or no Content-Type), and multipart part names, file names, and text fields. Opaque binary bodies (file contents, images, octet-stream, protobuf) are passed to the handler unscanned and are bounded by the body size limit instead. A rejected request gets 400.</p>
+<p>Signature-based request screening middleware.</p>
 <dl class="section return"><dt>Returns</dt><dd>A middleware function that screens each request with the signature-based WAF checks before invoking the next handler. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d6e/waf_8c_source.html#l00253">253</a> of file <a class="el" href="../../db/d6e/waf_8c_source.html">waf.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d6e/waf_8c_source.html#l00331">331</a> of file <a class="el" href="../../db/d6e/waf_8c_source.html">waf.c</a>.</p>
 
 </div>
 </div>
@@ -360,7 +362,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated, NUL-terminated escaped string that the caller owns and must free with cwist_free, or NULL if <code>input</code> is NULL, on allocation failure, or on size overflow. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d6e/waf_8c_source.html#l00139">139</a> of file <a class="el" href="../../db/d6e/waf_8c_source.html">waf.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d6e/waf_8c_source.html#l00140">140</a> of file <a class="el" href="../../db/d6e/waf_8c_source.html">waf.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>.</p>
 
@@ -403,9 +405,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if the input is safe, false if a signature or disallowed control byte is found. NULL input is considered safe. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/d6e/waf_8c_source.html#l00111">111</a> of file <a class="el" href="../../db/d6e/waf_8c_source.html">waf.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/d6e/waf_8c_source.html#l00112">112</a> of file <a class="el" href="../../db/d6e/waf_8c_source.html">waf.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/d6e/waf_8c_source.html#l00042">WAF_ALPHABET</a>.</p>
+<p class="reference">References <a class="el" href="../../db/d6e/waf_8c_source.html#l00043">WAF_ALPHABET</a>.</p>
 
 </div>
 </div>

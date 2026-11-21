@@ -1,7 +1,9 @@
 <map id="include/cwist/net/http/multipart.h" name="include/cwist/net/http/multipart.h">
-<area shape="rect" id="Node000001" title="RFC 7578 multipart/form&#45;data parser." alt="" coords="97,5,260,45"/>
+<area shape="rect" id="Node000001" title="RFC 7578 multipart/form&#45;data parser." alt="" coords="185,5,348,45"/>
 <area shape="rect" id="Node000002" href="$d3/d79/multipart_8c.html" title="RFC 7578 multipart/form&#45;data parser &#45; wrapper around multipart&#45;parser&#45;c." alt="" coords="5,93,176,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="149,57,106,95,102,91,145,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="213,53,118,96,116,91,211,48"/>
 <area shape="rect" id="Node000003" href="$df/d33/csrf_8c.html" title="Signed double&#45;submit CSRF protection." alt="" coords="200,93,333,119"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="212,53,255,91,252,95,209,57"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="269,59,269,93,264,93,264,59"/>
+<area shape="rect" id="Node000004" href="$db/d6e/waf_8c.html" title="Bounded, case&#45;insensitive WAF&#45;lite checks." alt="" coords="357,93,491,119"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="318,49,402,91,400,96,315,54"/>
 </map>

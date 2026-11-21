@@ -20,6 +20,7 @@ var graphql__ws_8c =
     [ "cwist_graphql_ws_attach_ex", "d7/d38/graphql__ws_8c.html#a8de4e8baedecce82834c218047361137", null ],
     [ "cwist_graphql_ws_create", "d7/d38/graphql__ws_8c.html#a7cfa54fa39ba52785ec9cef66c74edcf", null ],
     [ "cwist_graphql_ws_destroy", "d7/d38/graphql__ws_8c.html#ae5c0c9c88ab2c2c0ae6b1cb7a7cdbcfc", null ],
+    [ "cwist_graphql_ws_set_max_operations", "d7/d38/graphql__ws_8c.html#a4beb4576f06cd84e9c56d4b2a6013ad0", null ],
     [ "cwist_graphql_ws_upgrade", "d7/d38/graphql__ws_8c.html#a92cb6bc4a03e17d2e6b3fd6e80818a22", null ],
     [ "cwist_graphql_ws_upgrade_response", "d7/d38/graphql__ws_8c.html#a260f4cb7f9028e1545769f491f6ce92c", null ]
 ];

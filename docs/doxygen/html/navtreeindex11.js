@@ -1,5 +1,10 @@
 var NAVTREEINDEX11 =
 {
+"d7/dbc/structcwist__openapi__meta__t.html":[97,0,74],
+"d7/dbc/structcwist__openapi__meta__t.html#a040aaf9bcf12d7aca8719db7c8cc8839":[97,0,74,0],
+"d7/dbc/structcwist__openapi__meta__t.html#a217d838651be20dd568900e6a00d29a6":[97,0,74,3],
+"d7/dbc/structcwist__openapi__meta__t.html#a3af2f7f671bf32577693a680ffe55f2a":[97,0,74,1],
+"d7/dbc/structcwist__openapi__meta__t.html#a80c44e84bab46f78666fae1e525ec51a":[97,0,74,2],
 "d7/ddf/structcwist__json__builder.html":[97,0,55],
 "d7/ddf/structcwist__json__builder.html#a344bf2fc97ae0d2ea75d1f67300af8ce":[97,0,55,0],
 "d7/ddf/structcwist__json__builder.html#a71b8701fc8a846f3a8b1242ee0982dce":[97,0,55,1],
@@ -235,19 +240,14 @@ var NAVTREEINDEX11 =
 "d8/d99/sys__info_8c.html#a6e6850d97cd1c683dc5ddd4af5c11303":[98,0,2,4,9,2],
 "d8/d99/sys__info_8c.html#ad4c237dc6aa45fedcf25cdd3a69f45ce":[98,0,2,4,9,1],
 "d8/d99/sys__info_8c_source.html":[98,0,2,4,9],
-"d8/dad/sockopts_8h.html":[98,0,2,2,3,30],
-"d8/dad/sockopts_8h.html#a546e727db4f5d4420f59f7cc41c0e382":[98,0,2,2,3,30,0],
-"d8/dad/sockopts_8h_source.html":[98,0,2,2,3,30],
+"d8/dad/sockopts_8h.html":[98,0,2,2,3,31],
+"d8/dad/sockopts_8h.html#a546e727db4f5d4420f59f7cc41c0e382":[98,0,2,2,3,31,0],
+"d8/dad/sockopts_8h_source.html":[98,0,2,2,3,31],
 "d8/dca/struct____prim__cwist__error__t.html":[97,0,0],
 "d8/dca/struct____prim__cwist__error__t.html#a28bfdaaec9dcf6682e1b8e0eee96d664":[97,0,0,4],
 "d8/dca/struct____prim__cwist__error__t.html#a353915bc7ca09777310250478c5afca4":[97,0,0,8],
 "d8/dca/struct____prim__cwist__error__t.html#a3e0460f5fb0e30575473fc42bc530ee1":[97,0,0,6],
 "d8/dca/struct____prim__cwist__error__t.html#a4b42814c5b2380b0af9a27820a2ba8e2":[97,0,0,0],
 "d8/dca/struct____prim__cwist__error__t.html#a654ac79a2c8aa48e0de5f8f2c31cd845":[97,0,0,9],
-"d8/dca/struct____prim__cwist__error__t.html#a8294ea635aca29c6b3416b6546e02da3":[97,0,0,5],
-"d8/dca/struct____prim__cwist__error__t.html#a87db349a0d9e241c80d897c626d0550b":[97,0,0,7],
-"d8/dca/struct____prim__cwist__error__t.html#a9fa59264129d244c293b475c391a9e56":[97,0,0,3],
-"d8/dca/struct____prim__cwist__error__t.html#ac6d9bff35936a550a0ac6637094dbbb6":[97,0,0,1],
-"d8/dca/struct____prim__cwist__error__t.html#ace056f4cf1875a5ef27431ad7e9b1269":[97,0,0,2],
-"d8/deb/md_docs_2api_2json.html":[7]
+"d8/dca/struct____prim__cwist__error__t.html#a8294ea635aca29c6b3416b6546e02da3":[97,0,0,5]
 };

@@ -211,6 +211,8 @@ Macros</h2></td></tr>
 <tr class="separator:ad4004820393c389af718767c9fcfbad7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0aebef3490124bf4c387f2470b13b2fb" id="r_a0aebef3490124bf4c387f2470b13b2fb"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d48/db__sync_8c.html#a0aebef3490124bf4c387f2470b13b2fb">CWIST_DB_SYNC_MAX_BLOB_SIZE</a>&#160;&#160;&#160;((uint64_t)512 * 1024 * 1024)</td></tr>
 <tr class="separator:a0aebef3490124bf4c387f2470b13b2fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a22ae8bd74e5c46d8ea0c18cb766581a7" id="r_a22ae8bd74e5c46d8ea0c18cb766581a7"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d48/db__sync_8c.html#a22ae8bd74e5c46d8ea0c18cb766581a7">CWIST_DB_SYNC_HELLO_TIMEOUT_MS</a>&#160;&#160;&#160;5000</td></tr>
+<tr class="separator:a22ae8bd74e5c46d8ea0c18cb766581a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af26beceae66ffa7e65c0942e079c6b32" id="r_af26beceae66ffa7e65c0942e079c6b32"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d48/db__sync_8c.html#af26beceae66ffa7e65c0942e079c6b32">CWIST_DB_SYNC_TIMEOUT_SEC</a>&#160;&#160;&#160;30</td></tr>
 <tr class="separator:af26beceae66ffa7e65c0942e079c6b32"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9f55d0e90dc8cc6b2287312435cdde48" id="r_a9f55d0e90dc8cc6b2287312435cdde48"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d4/d48/db__sync_8c.html#a9f55d0e90dc8cc6b2287312435cdde48">MSG_NOSIGNAL</a>&#160;&#160;&#160;0</td></tr>
@@ -246,6 +248,22 @@ Functions</h2></td></tr>
 
 </div>
 </div>
+<a id="a22ae8bd74e5c46d8ea0c18cb766581a7" name="a22ae8bd74e5c46d8ea0c18cb766581a7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a22ae8bd74e5c46d8ea0c18cb766581a7">&#9670;&#160;</a></span>CWIST_DB_SYNC_HELLO_TIMEOUT_MS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CWIST_DB_SYNC_HELLO_TIMEOUT_MS&#160;&#160;&#160;5000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00042">42</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
+
+</div>
+</div>
 <a id="a0aebef3490124bf4c387f2470b13b2fb" name="a0aebef3490124bf4c387f2470b13b2fb"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a0aebef3490124bf4c387f2470b13b2fb">&#9670;&#160;</a></span>CWIST_DB_SYNC_MAX_BLOB_SIZE</h2>
 
@@ -274,7 +292,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00040">40</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00046">46</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
 
 </div>
 </div>
@@ -322,7 +340,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00043">43</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00049">49</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
 
 </div>
 </div>
@@ -385,9 +403,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_DB_SYNC_OK on success, or a protocol/network/crypto error code. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00291">291</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00299">299</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00238">cwist_db_crypt_open()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00028">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00035">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00036">CWIST_DB_SYNC_ERR_PROTO</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00037">CWIST_DB_SYNC_MAX_BLOB_SIZE</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_OK</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00040">CWIST_DB_SYNC_TIMEOUT_SEC</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00034">DB_SYNC_MAC_LEN</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00033">DB_SYNC_NONCE_LEN</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
+<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00238">cwist_db_crypt_open()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00028">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00035">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00036">CWIST_DB_SYNC_ERR_PROTO</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00037">CWIST_DB_SYNC_MAX_BLOB_SIZE</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_OK</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00046">CWIST_DB_SYNC_TIMEOUT_SEC</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00034">DB_SYNC_MAC_LEN</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00033">DB_SYNC_NONCE_LEN</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 </div>
 </div>
@@ -435,9 +453,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_DB_SYNC_OK on success, or a protocol/network/crypto error code. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00174">174</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00180">180</a> of file <a class="el" href="../../d4/d48/db__sync_8c_source.html">db_sync.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00105">cwist_db_crypt_seal()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00028">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00035">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00036">CWIST_DB_SYNC_ERR_PROTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_OK</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00040">CWIST_DB_SYNC_TIMEOUT_SEC</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00034">DB_SYNC_MAC_LEN</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00033">DB_SYNC_NONCE_LEN</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
+<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../dc/d64/db__crypt_8c_source.html#l00105">cwist_db_crypt_seal()</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00028">CWIST_DB_SYNC_DEFAULT_PORT</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00032">CWIST_DB_SYNC_ERR_ARGS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00034">CWIST_DB_SYNC_ERR_CRYPTO</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00035">CWIST_DB_SYNC_ERR_MEM</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00033">CWIST_DB_SYNC_ERR_NET</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00036">CWIST_DB_SYNC_ERR_PROTO</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00042">CWIST_DB_SYNC_HELLO_TIMEOUT_MS</a>, <a class="el" href="../../d6/dd4/db__sync_8h_source.html#l00031">CWIST_DB_SYNC_OK</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00046">CWIST_DB_SYNC_TIMEOUT_SEC</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00034">DB_SYNC_MAC_LEN</a>, <a class="el" href="../../d4/d48/db__sync_8c_source.html#l00033">DB_SYNC_NONCE_LEN</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 </div>
 </div>
