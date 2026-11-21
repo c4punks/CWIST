@@ -8,6 +8,7 @@ var grpc__channel_8c =
     [ "GRPC_CHANNEL_DEFAULT_BUFFER_LIMIT", "d5/d7a/grpc__channel_8c.html#a4e1790c7d3b8ad9aec71a4e76b1593a7", null ],
     [ "GRPC_CHANNEL_MAX_ADDRS", "d5/d7a/grpc__channel_8c.html#ada5a8c48a823c7d12747c7c16444ed00", null ],
     [ "GRPC_CHANNEL_MAX_ATTEMPTS_CAP", "d5/d7a/grpc__channel_8c.html#a89c2e60011a3508e34b6319cf3bcce1a", null ],
+    [ "GRPC_DURATION_MAX_SECONDS", "d5/d7a/grpc__channel_8c.html#a9c5b0b63a82d82ccf7dd7fab9555687f", null ],
     [ "cwist_grpc_subchannel", "d5/d7a/grpc__channel_8c.html#a4ad42a2ec731f2237092bb608a813ff5", null ],
     [ "grpc_method_config", "d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d", null ],
     [ "cwist_grpc_channel_apply_service_config_json", "d5/d7a/grpc__channel_8c.html#afd315b1271d893051abaf72a06d7cfa0", null ],

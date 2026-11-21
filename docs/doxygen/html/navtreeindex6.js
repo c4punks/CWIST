@@ -1,5 +1,6 @@
 var NAVTREEINDEX6 =
 {
+"d4/d57/websocket__async_8c.html#a165d9025b8d5feacc0653f12fff43ba3":[66,0,2,2,9,1,1],
 "d4/d57/websocket__async_8c.html#a25620353edaccff62b19c338b85c4311":[66,0,2,2,9,1,8],
 "d4/d57/websocket__async_8c.html#a3029917957e6cb47adc4d97dae14c7d7":[66,0,2,2,9,1,15],
 "d4/d57/websocket__async_8c.html#a369266c24eacffb87046522897a570d5":[66,0,2,2,9,1,0],
@@ -54,8 +55,8 @@ var NAVTREEINDEX6 =
 "d4/d9a/lwip_8h.html#ae69a6ce2322074574a3e2e3df229bf34":[66,0,1,0,4,6,0,12],
 "d4/d9a/lwip_8h.html#af90b0a575595f192c8024c626eccd62a":[66,0,1,0,4,6,0,10],
 "d4/d9a/lwip_8h_source.html":[66,0,1,0,4,6,0],
-"d4/da9/path__decode_8h.html":[66,0,2,2,3,26],
-"d4/da9/path__decode_8h_source.html":[66,0,2,2,3,26],
+"d4/da9/path__decode_8h.html":[66,0,2,2,3,27],
+"d4/da9/path__decode_8h_source.html":[66,0,2,2,3,27],
 "d4/db0/md_docs_2tutorials_2blog-crud.html":[58],
 "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md604":[58,0],
 "d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md605":[58,1],
@@ -248,6 +249,5 @@ var NAVTREEINDEX6 =
 "d5/d11/md_docs_2api_2sql.html#autotoc_md181":[11,0],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md182":[11,0,5],
 "d5/d11/md_docs_2api_2sql.html#autotoc_md183":[11,0,6],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md184":[11,0,7],
-"d5/d11/md_docs_2api_2sql.html#autotoc_md185":[11,0,8]
+"d5/d11/md_docs_2api_2sql.html#autotoc_md184":[11,0,7]
 };

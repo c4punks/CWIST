@@ -19,5 +19,6 @@ var searchData=
   ['grpc_5fclient_5fheader_5ftable_16',['GRPC_CLIENT_HEADER_TABLE',['../d4/d54/grpc__client_8c.html#a57dd4ba10e02923fd3291063363c97bc',1,'grpc_client.c']]],
   ['grpc_5fclient_5fmax_5fcontinuations_17',['GRPC_CLIENT_MAX_CONTINUATIONS',['../d4/d54/grpc__client_8c.html#aa57cfa43fa632f293b4281d71251c869',1,'grpc_client.c']]],
   ['grpc_5fclient_5fmax_5fheader_5fblock_18',['GRPC_CLIENT_MAX_HEADER_BLOCK',['../d4/d54/grpc__client_8c.html#a56e84851b712aa03ed380e75d24be700',1,'grpc_client.c']]],
-  ['grpc_5fclient_5fmax_5finbound_5fframe_19',['GRPC_CLIENT_MAX_INBOUND_FRAME',['../d4/d54/grpc__client_8c.html#a8899361a0975afa5a70c11fb4785da14',1,'grpc_client.c']]]
+  ['grpc_5fclient_5fmax_5finbound_5fframe_19',['GRPC_CLIENT_MAX_INBOUND_FRAME',['../d4/d54/grpc__client_8c.html#a8899361a0975afa5a70c11fb4785da14',1,'grpc_client.c']]],
+  ['grpc_5fduration_5fmax_5fseconds_20',['GRPC_DURATION_MAX_SECONDS',['../d5/d7a/grpc__channel_8c.html#a9c5b0b63a82d82ccf7dd7fab9555687f',1,'grpc_channel.c']]]
 ];

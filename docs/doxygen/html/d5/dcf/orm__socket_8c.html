@@ -129,61 +129,76 @@ $(document).ready(function(){initNavTree('d5/dcf/orm__socket_8c.html','../../');
 <code>#include &lt;sqlite3.h&gt;</code><br />
 <code>#include &lt;cjson/cJSON.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
+<code>#include &quot;<a class="el" href="../../de/d66/number__internal_8h_source.html">../utils/number_internal.h</a>&quot;</code><br />
+<code>#include &lt;math.h&gt;</code><br />
+<code>#include &lt;stdbool.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for orm_socket.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d3/d15/orm__socket_8c__incl.png" border="0" usemap="#asrc_2core_2orm_2orm__socket_8c" alt=""/></div>
 <map name="asrc_2core_2orm_2orm__socket_8c" id="asrc_2core_2orm_2orm__socket_8c">
-<area shape="rect" title="SQLite&#45;to&#45;socket bridge implementation." alt="" coords="744,5,937,31"/>
-<area shape="rect" href="../../d0/d11/orm__socket_8h.html" title=" " alt="" coords="52,79,200,119"/>
-<area shape="poly" title=" " alt="" coords="744,28,504,47,360,62,217,81,214,82,213,76,216,76,360,57,503,42,743,23"/>
-<area shape="rect" title=" " alt="" coords="15,328,85,353"/>
-<area shape="poly" title=" " alt="" coords="744,22,555,25,334,34,231,42,142,52,76,65,54,72,41,81,23,106,12,136,8,168,10,201,24,265,42,314,37,316,18,266,5,202,3,168,7,135,18,104,38,77,52,68,75,60,141,46,230,36,334,29,555,20,744,17"/>
-<area shape="rect" title=" " alt="" coords="269,328,380,353"/>
-<area shape="poly" title=" " alt="" coords="938,18,1100,22,1286,32,1445,49,1499,62,1529,77,1537,87,1539,99,1530,120,1495,152,1447,181,1389,206,1322,229,1166,266,994,294,817,314,649,328,394,340,394,335,649,323,816,309,993,289,1165,261,1321,224,1387,201,1445,176,1492,148,1525,117,1534,98,1532,90,1526,81,1497,67,1444,55,1285,38,1100,28,938,23"/>
-<area shape="rect" title=" " alt="" coords="426,86,493,111"/>
-<area shape="poly" title=" " alt="" coords="748,33,632,52,507,81,499,84,497,79,505,76,631,47,747,28"/>
-<area shape="rect" title=" " alt="" coords="517,86,588,111"/>
-<area shape="poly" title=" " alt="" coords="787,33,699,54,602,81,594,84,592,79,600,76,698,49,786,28"/>
-<area shape="rect" title=" " alt="" coords="612,86,683,111"/>
-<area shape="poly" title=" " alt="" coords="814,33,689,83,687,78,812,28"/>
-<area shape="rect" title=" " alt="" coords="707,86,782,111"/>
-<area shape="poly" title=" " alt="" coords="828,33,771,79,768,75,825,29"/>
-<area shape="rect" title=" " alt="" coords="807,86,875,111"/>
-<area shape="poly" title=" " alt="" coords="843,31,843,72,838,72,838,31"/>
-<area shape="rect" title=" " alt="" coords="899,86,961,111"/>
-<area shape="poly" title=" " alt="" coords="856,29,908,75,905,79,852,33"/>
-<area shape="rect" title=" " alt="" coords="985,86,1069,111"/>
-<area shape="poly" title=" " alt="" coords="869,28,989,78,987,83,867,33"/>
-<area shape="rect" title=" " alt="" coords="1093,86,1196,111"/>
-<area shape="poly" title=" " alt="" coords="891,28,1083,76,1096,80,1094,85,1081,81,889,33"/>
-<area shape="rect" title=" " alt="" coords="1220,86,1296,111"/>
-<area shape="poly" title=" " alt="" coords="938,27,1068,46,1209,76,1219,79,1217,84,1208,81,1067,51,937,32"/>
-<area shape="rect" title=" " alt="" coords="1320,86,1412,111"/>
-<area shape="poly" title=" " alt="" coords="938,24,1112,42,1211,57,1309,76,1323,79,1321,85,1308,81,1210,62,1111,47,937,29"/>
-<area shape="rect" title=" " alt="" coords="1436,86,1515,111"/>
-<area shape="poly" title=" " alt="" coords="938,19,1039,24,1162,35,1294,51,1425,76,1436,79,1435,84,1424,81,1294,57,1162,40,1039,30,937,24"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="229,86,402,111"/>
-<area shape="poly" title=" " alt="" coords="750,33,415,81,387,86,386,81,414,76,749,28"/>
-<area shape="rect" href="../../d6/d9b/orm_8h.html" title="Tiny ORM over a SQL socket stream." alt="" coords="45,167,205,192"/>
-<area shape="poly" title=" " alt="" coords="128,119,128,153,123,153,123,119"/>
-<area shape="rect" title=" " alt="" coords="162,328,245,353"/>
-<area shape="poly" title=" " alt="" coords="124,193,120,233,121,256,128,279,146,302,169,319,165,323,142,305,124,281,116,257,114,233,119,192"/>
-<area shape="poly" title=" " alt="" coords="117,194,84,241,69,280,58,315,53,314,64,278,80,239,113,191"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="139,240,281,280"/>
-<area shape="poly" title=" " alt="" coords="139,190,181,229,178,233,136,194"/>
-<area shape="poly" title=" " alt="" coords="202,190,251,207,274,221,295,238,308,256,317,275,325,314,320,315,312,277,303,258,291,242,271,225,249,212,200,195"/>
-<area shape="poly" title=" " alt="" coords="211,280,208,314,203,314,206,280"/>
-<area shape="poly" title=" " alt="" coords="173,282,87,324,85,320,171,278"/>
-<area shape="poly" title=" " alt="" coords="239,278,298,318,295,322,236,282"/>
-<area shape="rect" title=" " alt="" coords="407,247,482,273"/>
-<area shape="poly" title=" " alt="" coords="346,109,385,131,405,147,422,165,438,199,445,233,440,234,433,201,417,168,401,151,382,136,343,114"/>
-<area shape="rect" title=" " alt="" coords="482,167,623,192"/>
-<area shape="poly" title=" " alt="" coords="351,109,506,160,505,165,349,114"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="229,167,407,192"/>
-<area shape="poly" title=" " alt="" coords="319,111,320,153,315,153,313,112"/>
-<area shape="poly" title=" " alt="" coords="320,193,315,234,307,259,295,282,271,306,244,324,241,320,268,302,291,278,302,257,310,233,315,192"/>
-<area shape="poly" title=" " alt="" coords="338,190,416,238,413,242,335,194"/>
+<area shape="rect" title="SQLite&#45;to&#45;socket bridge implementation." alt="" coords="792,5,985,31"/>
+<area shape="rect" href="../../d0/d11/orm__socket_8h.html" title=" " alt="" coords="120,79,268,119"/>
+<area shape="poly" title=" " alt="" coords="792,29,563,49,290,81,282,83,281,77,290,76,562,43,792,23"/>
+<area shape="rect" title=" " alt="" coords="555,328,638,353"/>
+<area shape="poly" title=" " alt="" coords="986,16,1184,18,1418,26,1527,34,1622,44,1692,58,1716,67,1731,77,1749,105,1753,133,1746,162,1731,193,1706,230,1678,253,1644,268,1600,283,1516,303,1402,318,1270,329,1128,336,852,342,652,343,652,337,852,337,1127,330,1269,323,1402,312,1515,297,1599,277,1642,263,1675,248,1702,227,1726,191,1741,160,1748,132,1744,107,1727,81,1713,72,1690,63,1621,49,1527,39,1417,32,1183,23,986,22"/>
+<area shape="rect" title=" " alt="" coords="269,328,340,353"/>
+<area shape="poly" title=" " alt="" coords="792,24,685,29,568,39,463,56,422,67,391,81,365,103,345,130,330,162,319,195,308,261,306,314,301,314,303,261,314,194,325,160,340,128,361,99,389,76,420,62,462,50,568,33,685,23,791,18"/>
+<area shape="rect" title=" " alt="" coords="5,328,116,353"/>
+<area shape="poly" title=" " alt="" coords="792,23,609,28,395,37,209,55,144,67,109,81,87,105,71,133,61,165,55,198,53,263,59,314,53,314,48,263,50,198,55,164,66,131,82,102,106,76,143,61,208,49,395,32,609,22,792,18"/>
+<area shape="rect" title=" " alt="" coords="346,167,413,192"/>
+<area shape="poly" title=" " alt="" coords="792,24,693,28,585,38,490,55,453,67,426,81,411,96,400,115,386,154,381,152,395,113,407,93,423,77,451,62,489,50,585,33,692,23,792,18"/>
+<area shape="rect" title=" " alt="" coords="437,167,508,192"/>
+<area shape="poly" title=" " alt="" coords="792,28,577,48,486,63,456,72,440,80,433,97,435,116,444,136,455,154,451,157,439,138,430,118,427,96,436,77,454,67,485,58,576,43,792,23"/>
+<area shape="rect" title=" " alt="" coords="737,167,808,192"/>
+<area shape="poly" title=" " alt="" coords="792,29,742,47,720,61,702,80,695,98,702,117,718,140,740,157,736,161,714,144,697,120,690,98,697,77,716,57,739,42,791,24"/>
+<area shape="rect" title=" " alt="" coords="711,86,786,111"/>
+<area shape="poly" title=" " alt="" coords="869,33,783,82,780,77,867,29"/>
+<area shape="rect" title=" " alt="" coords="811,86,879,111"/>
+<area shape="poly" title=" " alt="" coords="884,32,860,75,856,73,880,30"/>
+<area shape="rect" title=" " alt="" coords="903,86,965,111"/>
+<area shape="poly" title=" " alt="" coords="898,30,923,73,918,75,893,32"/>
+<area shape="rect" title=" " alt="" coords="989,86,1073,111"/>
+<area shape="poly" title=" " alt="" coords="911,29,1000,77,997,82,908,33"/>
+<area shape="rect" title=" " alt="" coords="1097,86,1200,111"/>
+<area shape="poly" title=" " alt="" coords="927,28,1099,80,1097,85,926,33"/>
+<area shape="rect" title=" " alt="" coords="1224,86,1300,111"/>
+<area shape="poly" title=" " alt="" coords="973,28,1087,48,1212,76,1221,79,1220,84,1211,81,1086,53,972,33"/>
+<area shape="rect" title=" " alt="" coords="1324,86,1416,111"/>
+<area shape="poly" title=" " alt="" coords="986,26,1140,45,1312,76,1325,79,1324,85,1311,81,1139,50,985,31"/>
+<area shape="rect" title=" " alt="" coords="1440,86,1519,111"/>
+<area shape="poly" title=" " alt="" coords="986,20,1191,37,1311,53,1429,76,1440,79,1438,84,1428,81,1310,58,1191,42,985,26"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="1543,86,1717,111"/>
+<area shape="poly" title=" " alt="" coords="986,23,1234,42,1532,76,1562,81,1561,86,1531,81,1233,48,985,28"/>
+<area shape="rect" href="../../de/d66/number__internal_8h.html" title=" " alt="" coords="451,86,636,111"/>
+<area shape="poly" title=" " alt="" coords="839,33,607,86,606,80,838,28"/>
+<area shape="rect" title=" " alt="" coords="1792,86,1860,111"/>
+<area shape="poly" title=" " alt="" coords="985,20,1398,39,1615,55,1705,65,1773,76,1786,79,1784,84,1772,81,1704,70,1615,61,1397,45,985,25"/>
+<area shape="rect" href="../../d6/d9b/orm_8h.html" title="Tiny ORM over a SQL socket stream." alt="" coords="111,167,271,192"/>
+<area shape="poly" title=" " alt="" coords="196,119,195,153,190,153,191,119"/>
+<area shape="poly" title=" " alt="" coords="221,190,555,320,553,325,220,195"/>
+<area shape="poly" title=" " alt="" coords="208,190,231,212,255,238,279,277,297,314,292,316,274,280,251,242,227,215,204,194"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="99,240,241,280"/>
+<area shape="poly" title=" " alt="" coords="191,193,181,227,176,226,186,191"/>
+<area shape="poly" title=" " alt="" coords="158,194,121,213,103,226,88,242,78,259,71,278,64,314,59,313,66,276,73,256,84,238,99,222,118,209,155,190"/>
+<area shape="poly" title=" " alt="" coords="242,272,542,327,541,332,241,277"/>
+<area shape="poly" title=" " alt="" coords="204,278,274,319,272,323,201,282"/>
+<area shape="poly" title=" " alt="" coords="145,282,89,322,86,318,142,278"/>
+<area shape="rect" title=" " alt="" coords="1477,247,1551,273"/>
+<area shape="poly" title=" " alt="" coords="1600,114,1561,135,1543,150,1528,168,1517,200,1514,233,1509,233,1511,199,1524,165,1539,146,1558,131,1597,109"/>
+<area shape="rect" title=" " alt="" coords="1322,167,1463,192"/>
+<area shape="poly" title=" " alt="" coords="1596,114,1441,165,1439,160,1595,109"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="1538,167,1717,192"/>
+<area shape="poly" title=" " alt="" coords="1632,112,1631,153,1626,153,1627,111"/>
+<area shape="poly" title=" " alt="" coords="1626,194,1606,238,1588,263,1565,282,1543,291,1510,298,1415,311,1151,329,865,338,652,341,652,336,865,333,1151,323,1415,306,1509,293,1541,286,1562,278,1584,259,1601,236,1621,191"/>
+<area shape="poly" title=" " alt="" coords="1612,194,1543,242,1540,237,1609,190"/>
+<area shape="poly" title=" " alt="" coords="550,111,567,166,584,247,596,314,590,315,579,248,562,167,545,112"/>
+<area shape="poly" title=" " alt="" coords="545,112,540,150,533,173,522,194,482,238,435,275,388,304,346,325,344,320,385,299,432,270,478,234,517,190,528,171,535,149,540,111"/>
+<area shape="poly" title=" " alt="" coords="521,114,417,163,414,158,518,109"/>
+<area shape="poly" title=" " alt="" coords="535,113,494,158,490,155,531,110"/>
+<area shape="poly" title=" " alt="" coords="578,109,727,160,725,165,576,114"/>
+<area shape="rect" title=" " alt="" coords="635,167,713,192"/>
+<area shape="poly" title=" " alt="" coords="564,109,644,157,642,162,561,114"/>
 </map>
 </div>
 </div>
@@ -244,7 +259,7 @@ Functions</h2></td></tr>
 
 <p>Magic value placed at the start of every response. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00048">48</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00051">51</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
 </div>
 </div>
@@ -260,7 +275,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00444">444</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00489">489</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
 </div>
 </div>
@@ -292,9 +307,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The caller's socket fd, or -1 with errno set on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00481">481</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00526">526</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00456">cwist_orm_socketpair_cloexec()</a>, and <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01205">EINVAL</a>.</p>
+<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00501">cwist_orm_socketpair_cloexec()</a>, and <a class="el" href="../../d1/d88/http3__client_8c_source.html#l01228">EINVAL</a>.</p>
 
 </div>
 </div>
@@ -336,11 +351,11 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00456">456</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00501">501</a> of file <a class="el" href="../../d5/dcf/orm__socket_8c_source.html">orm_socket.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00444">SOCK_CLOEXEC</a>.</p>
+<p class="reference">References <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00489">SOCK_CLOEXEC</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00481">cwist_db_transfer_sqlite_to_socket()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d5/dcf/orm__socket_8c_source.html#l00526">cwist_db_transfer_sqlite_to_socket()</a>.</p>
 
 </div>
 </div>

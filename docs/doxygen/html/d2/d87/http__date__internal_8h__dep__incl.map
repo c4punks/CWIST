@@ -1,0 +1,7 @@
+<map id="src/net/http/http_date_internal.h" name="src/net/http/http_date_internal.h">
+<area shape="rect" id="Node000001" title="Locale&#45;independent day and month names for HTTP and log dates." alt="" coords="86,5,249,45"/>
+<area shape="rect" id="Node000002" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="5,93,143,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="136,56,90,95,86,91,133,52"/>
+<area shape="rect" id="Node000003" href="$d9/dc9/middleware_8c.html" title="Built&#45;in middleware implementations for request IDs, logging, rate limits, CORS, and JWT auth." alt="" coords="167,93,354,119"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="202,52,248,91,245,95,199,56"/>
+</map>

@@ -203,7 +203,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:a65cb03dd1203b4c1a33bf4aed3a6eb1b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load key/value pairs from the process environment into the config. Entries without '=' are skipped. If <code>prefix</code> is non-NULL and non-empty, only variables starting with the prefix are loaded; the prefix is kept in the stored key.  <br /></td></tr>
 <tr class="separator:a65cb03dd1203b4c1a33bf4aed3a6eb1b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a438170d182ee20247735b3869c7905bf" id="r_a438170d182ee20247735b3869c7905bf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d3/d95/config_8c.html#a438170d182ee20247735b3869c7905bf">cwist_config_load_file</a> (<a class="el" href="../../db/dcb/structcwist__config.html">cwist_config</a> *cfg, const char *path)</td></tr>
-<tr class="memdesc:a438170d182ee20247735b3869c7905bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load key/value pairs from a simple properties-style file. Each non-blank, non-comment line must be <code>key=value</code>. Leading/trailing whitespace around keys and values is trimmed, and a value wrapped in double quotes is unquoted. Lines starting with '#' and lines without '=' are skipped. If the file cannot be opened, nothing is loaded.  <br /></td></tr>
+<tr class="memdesc:a438170d182ee20247735b3869c7905bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load key/value pairs from a simple properties-style file. Each non-blank, non-comment line must be <code>key=value</code>. Leading/trailing whitespace around keys and values is trimmed, and a value wrapped in single or double quotes is unquoted (no escape processing). A leading <code>export</code> before the key is ignored, as in shell-style .env files. Lines starting with '#' and lines without '=' are skipped. If the file cannot be opened, nothing is loaded.  <br /></td></tr>
 <tr class="separator:a438170d182ee20247735b3869c7905bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -518,7 +518,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Load key/value pairs from a simple properties-style file. Each non-blank, non-comment line must be <code>key=value</code>. Leading/trailing whitespace around keys and values is trimmed, and a value wrapped in double quotes is unquoted. Lines starting with '#' and lines without '=' are skipped. If the file cannot be opened, nothing is loaded. </p>
+<p>Load key/value pairs from a simple properties-style file. Each non-blank, non-comment line must be <code>key=value</code>. Leading/trailing whitespace around keys and values is trimmed, and a value wrapped in single or double quotes is unquoted (no escape processing). A leading <code>export</code> before the key is ignored, as in shell-style .env files. Lines starting with '#' and lines without '=' are skipped. If the file cannot be opened, nothing is loaded. </p>
 <p>Load a configuration file.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
@@ -528,7 +528,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00193">193</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/d95/config_8c_source.html#l00194">194</a> of file <a class="el" href="../../d3/d95/config_8c_source.html">config.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d95/config_8c_source.html#l00073">cwist_config_set()</a>, and <a class="el" href="../../d7/d69/baremetal__compat_8h.html#aaf07c1bbc2aa081a54bdd66f0e152312">getline()</a>.</p>
 
@@ -581,7 +581,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../db/d16/config_8h_source.html#l00020">cwist_config::bucket_count</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00019">cwist_config::buckets</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00013">cwist_config_bucket::key</a>, <a class="el" href="../../db/d16/config_8h_source.html#l00015">cwist_config_bucket::next</a>, and <a class="el" href="../../db/d16/config_8h_source.html#l00014">cwist_config_bucket::value</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d3/d95/config_8c_source.html#l00166">cwist_config_load_env()</a>, and <a class="el" href="../../d3/d95/config_8c_source.html#l00193">cwist_config_load_file()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d3/d95/config_8c_source.html#l00166">cwist_config_load_env()</a>, and <a class="el" href="../../d3/d95/config_8c_source.html#l00194">cwist_config_load_file()</a>.</p>
 
 </div>
 </div>

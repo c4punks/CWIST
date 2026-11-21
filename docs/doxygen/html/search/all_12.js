@@ -81,12 +81,13 @@ var searchData=
   ['grpc_5fclient_5fmax_5fheader_5fblock_78',['GRPC_CLIENT_MAX_HEADER_BLOCK',['../d4/d54/grpc__client_8c.html#a56e84851b712aa03ed380e75d24be700',1,'grpc_client.c']]],
   ['grpc_5fclient_5fmax_5finbound_5fframe_79',['GRPC_CLIENT_MAX_INBOUND_FRAME',['../d4/d54/grpc__client_8c.html#a8899361a0975afa5a70c11fb4785da14',1,'grpc_client.c']]],
   ['grpc_5fclient_5fmsg_80',['grpc_client_msg',['../d4/d54/grpc__client_8c.html#a55e4abd6c928f0effa10064e632bf6f2',1,'grpc_client.c']]],
-  ['grpc_5fmethod_5fconfig_81',['grpc_method_config',['../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d',1,'grpc_channel.c']]],
-  ['grpc_5fqnode_82',['grpc_qnode',['../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d',1,'grpc.c']]],
-  ['grpc_5froute_5fview_83',['grpc_route_view',['../d9/dba/grpc_8c.html#a2832d700232e75b80ecf8501c8d3a878',1,'grpc.c']]],
-  ['grpc_5froutes_84',['grpc_routes',['../dc/da0/structcwist__app.html#afc9fa598fee9f0a01b9f94883436918c',1,'cwist_app']]],
-  ['grpc_5fstatus_5fmessage_2eh_85',['grpc_status_message.h',['../d8/d7c/grpc__status__message_8h.html',1,'']]],
-  ['guides_86',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md514',1,'']]],
-  ['gusuryak_209차_20쌍_87',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md446',1,'']]],
-  ['gusuryak_20order_209_20pair_88',['3. Historical table: the Gusuryak order-9 pair',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md540',1,'']]]
+  ['grpc_5fduration_5fmax_5fseconds_81',['GRPC_DURATION_MAX_SECONDS',['../d5/d7a/grpc__channel_8c.html#a9c5b0b63a82d82ccf7dd7fab9555687f',1,'grpc_channel.c']]],
+  ['grpc_5fmethod_5fconfig_82',['grpc_method_config',['../d5/d7a/grpc__channel_8c.html#aa71b8fbaf45b3c74f7a0b634a5da007d',1,'grpc_channel.c']]],
+  ['grpc_5fqnode_83',['grpc_qnode',['../d9/dba/grpc_8c.html#a772139c0354322e4d8ee3bdf8e7e562d',1,'grpc.c']]],
+  ['grpc_5froute_5fview_84',['grpc_route_view',['../d9/dba/grpc_8c.html#a2832d700232e75b80ecf8501c8d3a878',1,'grpc.c']]],
+  ['grpc_5froutes_85',['grpc_routes',['../dc/da0/structcwist__app.html#afc9fa598fee9f0a01b9f94883436918c',1,'cwist_app']]],
+  ['grpc_5fstatus_5fmessage_2eh_86',['grpc_status_message.h',['../d8/d7c/grpc__status__message_8h.html',1,'']]],
+  ['guides_87',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md514',1,'']]],
+  ['gusuryak_209차_20쌍_88',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md446',1,'']]],
+  ['gusuryak_20order_209_20pair_89',['3. Historical table: the Gusuryak order-9 pair',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md540',1,'']]]
 ];
