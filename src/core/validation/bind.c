@@ -196,6 +196,10 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
                 bind_add_error(r, key, "missing value for regex check");
                 return false;
             }
+            if (!rule->u.pattern) {
+                bind_add_error(r, key, "invalid regex pattern");
+                return false;
+            }
             regex_t re;
             int rc = regcomp(&re, rule->u.pattern, REG_EXTENDED);
             if (rc != 0) {
