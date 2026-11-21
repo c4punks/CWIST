@@ -104,6 +104,12 @@ static void test_oversized_blob_is_rejected_before_allocation(void) {
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 
+/* The client resets the connection while the server is still writing the
+ * snapshot; the server must report CWIST_DB_SYNC_ERR_NET instead of dying of
+ * SIGPIPE. The reset is sent only after the client has read the server nonce,
+ * so the server has certainly read the hello (an RST that arrives first
+ * discards the queued hello; issue #951), and the 16 MiB snapshot cannot fit
+ * in the socket buffers, so the server is still writing when the RST lands. */
 static void test_reset_peer_does_not_raise_sigpipe(void) {
     int port = 0;
     int listener = listener_on_loopback(&port);
@@ -114,7 +120,11 @@ static void test_reset_peer_does_not_raise_sigpipe(void) {
         signal(SIGPIPE, SIG_DFL);
         sqlite3 *db = NULL;
         sqlite3_open(":memory:", &db);
-        sqlite3_exec(db, "CREATE TABLE items (id INTEGER PRIMARY KEY);", NULL, NULL, NULL);
+        sqlite3_exec(db,
+                     "CREATE TABLE items (b BLOB);"
+                     "WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c WHERE x < 128)"
+                     " INSERT INTO items SELECT randomblob(131072) FROM c;",
+                     NULL, NULL, NULL);
         cwist_db_crypt_ctx_t ctx;
         memset(&ctx, 0x42, sizeof(ctx));
         int rc = cwist_db_sync_serve(db, &ctx, port);
@@ -129,6 +139,8 @@ static void test_reset_peer_does_not_raise_sigpipe(void) {
     for (int i = 0; i < 200; i++) {
         fd = socket(AF_INET, SOCK_STREAM, 0);
         assert(fd >= 0);
+        int small = 4096;
+        setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &small, sizeof(small));
         if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == 0) break;
         close(fd);
         fd = -1;
@@ -141,6 +153,13 @@ static void test_reset_peer_does_not_raise_sigpipe(void) {
     memset(&ctx, 0x42, sizeof(ctx));
     sync_mac(&ctx, "CWSY client", hello + 4, NULL, hello + 36);
     assert(write(fd, hello, sizeof(hello)) == (ssize_t)sizeof(hello));
+    unsigned char server_nonce[32];
+    size_t got = 0;
+    while (got < sizeof(server_nonce)) {
+        ssize_t n = read(fd, server_nonce + got, sizeof(server_nonce) - got);
+        assert(n > 0);
+        got += (size_t)n;
+    }
     struct linger reset = {.l_onoff = 1, .l_linger = 0};
     assert(setsockopt(fd, SOL_SOCKET, SO_LINGER, &reset, sizeof(reset)) == 0);
     close(fd);
