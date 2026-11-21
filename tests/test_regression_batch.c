@@ -4,6 +4,8 @@
  *        building, multipart parameters, cookie prefixes, request binding,
  *        header whitespace, number formatting, JWT
  *        segment encoding, healed DB inserts, and per-route middleware order.
+ *        Second batch: WAF body policy, test client multipart length and
+ *        cookie deletion, and locale-independent HTTP dates.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/app.h>
@@ -14,6 +16,8 @@
 #include <cwist/net/http/multipart.h>
 #include <cwist/net/http/mux.h>
 #include <cwist/net/http/query.h>
+#include <cwist/sys/app/test_client.h>
+#include <cwist/sys/app/waf.h>
 #ifdef CWIST_JWT
 #include <cwist/security/jwt/jwt.h>
 #endif
@@ -26,6 +30,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
+#include <time.h>
 
 static void noop_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
@@ -201,8 +207,151 @@ static void test_route_middleware_order(void) {
     printf("  route middleware order OK\n");
 }
 
+static size_t last_body_len;
+
+static void body_len_handler(cwist_http_request *req, cwist_http_response *res) {
+    last_body_len = req->body ? req->body->size : 0;
+    res->status_code = CWIST_HTTP_OK;
+}
+
+static void test_waf_body_policy(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app);
+    cwist_app_use(app, cwist_mw_waf_lite());
+    cwist_app_post(app, "/up", body_len_handler);
+    cwist_test_client *client = cwist_test_client_create(app);
+    assert(client);
+
+    /* A PNG header holds NUL and control bytes: binary uploads pass. */
+    static const char png[] = "\x89PNG\r\n\x1a\n\0\0\0\rIHDR\x01\x02";
+    cwist_http_response *res = cwist_test_client_post_multipart(
+        client, "/up", "file", "a.png", "image/png", png, sizeof(png) - 1);
+    assert(res && res->status_code == CWIST_HTTP_OK);
+    cwist_http_response_destroy(res);
+
+    cwist_test_client_request_options opts = {0};
+    opts.body = png;
+    opts.body_len = sizeof(png) - 1;
+    opts.content_type = "application/octet-stream";
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/up", &opts);
+    assert(res && res->status_code == CWIST_HTTP_OK);
+    cwist_http_response_destroy(res);
+
+    /* Text bodies, multipart file names and text fields are still screened. */
+    res = cwist_test_client_post_json(client, "/up", "{\"q\":\"1 union select 2\"}");
+    assert(res && res->status_code == CWIST_HTTP_BAD_REQUEST);
+    cwist_http_response_destroy(res);
+    res = cwist_test_client_post_multipart(client, "/up", "file", "<script>.png", "image/png",
+                                           png, sizeof(png) - 1);
+    assert(res && res->status_code == CWIST_HTTP_BAD_REQUEST);
+    cwist_http_response_destroy(res);
+    res = cwist_test_client_post_multipart(client, "/up", "note", "x.txt", "text/plain",
+                                           "fine", 4);
+    assert(res && res->status_code == CWIST_HTTP_OK);
+    cwist_http_response_destroy(res);
+    opts.body = "--B\r\nContent-Disposition: form-data; name=\"q\"\r\n\r\n"
+                "<script>alert(1)</script>\r\n--B--\r\n";
+    opts.body_len = 0;
+    opts.content_type = "multipart/form-data; boundary=B";
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/up", &opts);
+    assert(res && res->status_code == CWIST_HTTP_BAD_REQUEST);
+    cwist_http_response_destroy(res);
+
+    cwist_test_client_destroy(client);
+    cwist_app_destroy(app);
+    printf("  waf body policy OK\n");
+}
+
+static void test_client_multipart_length(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app);
+    cwist_app_post(app, "/up", body_len_handler);
+    cwist_test_client *client = cwist_test_client_create(app);
+    cwist_http_response *res =
+        cwist_test_client_post_multipart(client, "/up", "f", "a.txt", "text/plain", "hi", 2);
+    assert(res && res->status_code == CWIST_HTTP_OK);
+    cwist_http_response_destroy(res);
+    const char *boundary = "CWISTTestClientBoundary7MA4YWxkTrZu0gW";
+    size_t expected = strlen("--") + strlen(boundary) + 2 +
+                      strlen("Content-Disposition: form-data; name=\"f\"; filename=\"a.txt\"\r\n") +
+                      strlen("Content-Type: text/plain\r\n\r\n") + 2 + strlen("\r\n--") +
+                      strlen(boundary) + strlen("--\r\n");
+    assert(last_body_len == expected);
+    cwist_test_client_destroy(client);
+    cwist_app_destroy(app);
+    printf("  test client multipart length OK\n");
+}
+
+static void set_cookie_handler(cwist_http_request *req, cwist_http_response *res) {
+    const char *mode = req->path ? strrchr(req->path->data, '/') : NULL;
+    if (mode && strcmp(mode, "/login") == 0)
+        cwist_http_header_add(&res->headers, "Set-Cookie", "sid=abc; Path=/");
+    else if (mode && strcmp(mode, "/logout") == 0)
+        cwist_http_header_add(&res->headers, "Set-Cookie", "sid=; Path=/; Max-Age=0");
+    else if (mode && strcmp(mode, "/expire") == 0)
+        cwist_http_header_add(&res->headers, "Set-Cookie",
+                              "sid=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+    else if (mode && strcmp(mode, "/keep") == 0)
+        cwist_http_header_add(&res->headers, "Set-Cookie",
+                              "sid=new; Max-Age=60; Expires=Thu, 01 Jan 1970 00:00:00 GMT");
+    res->status_code = CWIST_HTTP_OK;
+}
+
+static void hit(cwist_test_client *client, const char *path) {
+    cwist_http_response *res = cwist_test_client_get(client, path);
+    assert(res && res->status_code == CWIST_HTTP_OK);
+    cwist_http_response_destroy(res);
+}
+
+static void test_client_cookie_deletion(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app);
+    cwist_app_get(app, "/c/login", set_cookie_handler);
+    cwist_app_get(app, "/c/logout", set_cookie_handler);
+    cwist_app_get(app, "/c/expire", set_cookie_handler);
+    cwist_app_get(app, "/c/keep", set_cookie_handler);
+    cwist_test_client *client = cwist_test_client_create(app);
+    hit(client, "/c/login");
+    assert(strcmp(cwist_test_client_get_cookie(client, "sid"), "abc") == 0);
+    hit(client, "/c/logout");
+    assert(cwist_test_client_get_cookie(client, "sid") == NULL);
+    hit(client, "/c/login");
+    hit(client, "/c/expire");
+    assert(cwist_test_client_get_cookie(client, "sid") == NULL);
+    /* Max-Age wins over a past Expires. */
+    hit(client, "/c/keep");
+    assert(strcmp(cwist_test_client_get_cookie(client, "sid"), "new") == 0);
+    cwist_test_client_destroy(client);
+    cwist_app_destroy(app);
+    printf("  test client cookie deletion OK\n");
+}
+
+static void test_http_date_locale(void) {
+    /* Use a non-English locale when the system has one; the result must not
+     * depend on it either way. */
+    const char *names[] = {"ko_KR.UTF-8", "de_DE.UTF-8", "fr_FR.UTF-8"};
+    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++)
+        if (setlocale(LC_ALL, names[i])) break;
+    char buf[64];
+    cwist_http_format_date((time_t)784111777, buf, sizeof(buf));
+    assert(strcmp(buf, "Sun, 06 Nov 1994 08:49:37 GMT") == 0);
+    assert(cwist_http_parse_date("Sun, 06 Nov 1994 08:49:37 GMT") == (time_t)784111777);
+    assert(cwist_http_parse_date("Sunday, 06-Nov-94 08:49:37 GMT") == (time_t)784111777);
+    assert(cwist_http_parse_date("Sun Nov  6 08:49:37 1994") == (time_t)784111777);
+    assert(cwist_http_parse_date("Thu, 01 Jan 1970 00:00:00 GMT") == 0);
+    assert(cwist_http_parse_date("Sun, 06 Nov 1994 08:49:37 PST") == (time_t)-1);
+    assert(cwist_http_parse_date("Sun, 06 Foo 1994 08:49:37 GMT") == (time_t)-1);
+    assert(cwist_http_parse_date("Sun, 06 Nov 1994 08:49:37 GMT junk") == (time_t)-1);
+    setlocale(LC_ALL, "C");
+    printf("  http date locale OK\n");
+}
+
 int main(void) {
     printf("test_regression_batch...\n");
+    test_waf_body_policy();
+    test_client_multipart_length();
+    test_client_cookie_deletion();
+    test_http_date_locale();
     test_url_for();
     test_multipart_quoted_param();
     test_cookie_prefix_without_options();

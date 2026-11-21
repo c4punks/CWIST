@@ -134,6 +134,7 @@ struct cwist_graphql_ws {
     cwist_graphql_schema_t *schema; /* not owned */
     gql_sub_field_t *subs;
     atomic_int refs;
+    _Atomic size_t max_ops; /* per connection; 0 means unlimited */
 };
 
 static void gql_ws_endpoint_ref(cwist_graphql_ws_t *gws) {
@@ -166,6 +167,7 @@ cwist_graphql_ws_t *cwist_graphql_ws_create(cwist_graphql_schema_t *schema) {
         gws->schema = schema;
         gws->subs = NULL;
         atomic_init(&gws->refs, 1);
+        atomic_init(&gws->max_ops, (size_t)CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS);
     }
     return gws;
 }
@@ -585,8 +587,11 @@ static void gql_ws_handle_subscribe(cwist_websocket_async *ws, gql_ws_conn_t *co
 
     pthread_mutex_lock(&g_broker_lock);
     bool duplicate = false;
+    size_t conn_ops = 0;
     for (gql_ws_op_t *op = g_broker_ops; op; op = op->next) {
-        if (op->conn == conn && strcmp(op->id, op_id) == 0) {
+        if (op->conn != conn) continue;
+        conn_ops++;
+        if (strcmp(op->id, op_id) == 0) {
             duplicate = true;
             break;
         }
@@ -596,6 +601,13 @@ static void gql_ws_handle_subscribe(cwist_websocket_async *ws, gql_ws_conn_t *co
         /* graphql-ws: a duplicate subscriber id is a connection-level
          * violation, not an operation-level one. */
         cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_DUPLICATE_ID);
+        return;
+    }
+    /* Only this connection's reactor thread adds operations for it, so the
+     * count cannot grow between this check and the insert below. */
+    size_t max_ops = atomic_load_explicit(&conn->gws->max_ops, memory_order_relaxed);
+    if (max_ops && conn_ops >= max_ops) {
+        gql_ws_send_error(ws, op_id, "Too many subscriptions on this connection");
         return;
     }
 

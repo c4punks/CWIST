@@ -395,6 +395,28 @@ int main(void) {
     publish_and_expect_next(fd, "default", "2", 3);
     printf("11. default topic subscription: ok\n");
 
+    /* 11b. The per-connection operation limit answers with `error` and keeps
+     *      the connection; "2" is already open, so 99 more reach the limit. */
+    for (int i = 0; i < CWIST_GRAPHQL_WS_DEFAULT_MAX_OPERATIONS - 1; i++) {
+        char msg[256];
+        snprintf(msg, sizeof(msg),
+                 "{\"id\":\"L%d\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+                 "counter(topic: \\\"t9\\\") }\"}}",
+                 i);
+        write_text(fd, msg);
+    }
+    write_text(fd, "{\"id\":\"over\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+                   "counter(topic: \\\"t9\\\") }\"}}");
+    {
+        cJSON *err = read_json_message(fd);
+        cJSON *type = cJSON_GetObjectItemCaseSensitive(err, "type");
+        assert(cJSON_IsString(type) && strcmp(type->valuestring, "error") == 0);
+        cJSON *id = cJSON_GetObjectItemCaseSensitive(err, "id");
+        assert(cJSON_IsString(id) && strcmp(id->valuestring, "over") == 0);
+        cJSON_Delete(err);
+    }
+    printf("11b. per-connection subscription limit -> error: ok\n");
+
     /* 12. Socket close tears the subscription down; later publishes find
      *     nothing. */
     {

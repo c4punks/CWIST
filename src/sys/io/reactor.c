@@ -1348,11 +1348,20 @@ static uint32_t reactor_drain_chunk(void) {
     int v = atomic_load_explicit(&cached, memory_order_relaxed);
     if (v < 0) {
         const char *s = getenv("CWIST_REACTOR_DRAIN_CHUNK");
+        v = 64;
         if (s) {
-            long parsed = strtol(s, NULL, 10);
-            v = (parsed >= 0 && parsed < INT_MAX) ? (int)parsed : 64;
-        } else {
-            v = 64;
+            /* Digits only: "abc" or "" must not read as 0, which would
+             * silently disable the drain. */
+            char *end = NULL;
+            errno = 0;
+            long parsed = strtol(s, &end, 10);
+            if (end != s && *end == '\0' && errno == 0 && s[0] >= '0' && s[0] <= '9' &&
+                parsed < INT_MAX) {
+                v = (int)parsed;
+            } else {
+                fprintf(stderr,
+                        "[CWIST] invalid CWIST_REACTOR_DRAIN_CHUNK value \"%s\"; using 64\n", s);
+            }
         }
         atomic_store_explicit(&cached, v, memory_order_relaxed);
     }

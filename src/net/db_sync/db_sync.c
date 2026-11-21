@@ -38,6 +38,12 @@ static const unsigned char SYNC_MAGIC[4] = {0x43, 0x57, 0x53, 0x59}; /* "CWSY" *
  * default to 512 MiB). */
 #define CWIST_DB_SYNC_MAX_BLOB_SIZE ((uint64_t)4 * 1024 * 1024 * 1024)
 #endif
+#ifndef CWIST_DB_SYNC_HELLO_TIMEOUT_MS
+/* Time one accepted client gets to send its hello before the next one is
+ * accepted, so a silent peer cannot hold the serve window. */
+#define CWIST_DB_SYNC_HELLO_TIMEOUT_MS 5000
+#endif
+
 #ifndef CWIST_DB_SYNC_TIMEOUT_SEC
 #define CWIST_DB_SYNC_TIMEOUT_SEC 30
 #endif
@@ -218,7 +224,7 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
         return CWIST_DB_SYNC_ERR_NET;
     }
 
-    if (listen(srv_fd, 1) < 0) {
+    if (listen(srv_fd, 8) < 0) {
         close(srv_fd);
         free(blob);
         return CWIST_DB_SYNC_ERR_NET;
@@ -238,7 +244,9 @@ int cwist_db_sync_serve(sqlite3 *db, const cwist_db_crypt_ctx_t *ctx, int port) 
         }
         unsigned char hello[4 + DB_SYNC_NONCE_LEN + DB_SYNC_MAC_LEN];
         unsigned char expected[DB_SYNC_MAC_LEN];
-        if (read_all(cli_fd, hello, sizeof(hello), deadline) == 0 &&
+        uint64_t hello_deadline = db_sync_now_ms() + CWIST_DB_SYNC_HELLO_TIMEOUT_MS;
+        if (hello_deadline > deadline) hello_deadline = deadline;
+        if (read_all(cli_fd, hello, sizeof(hello), hello_deadline) == 0 &&
             memcmp(hello, SYNC_MAGIC, 4) == 0) {
             memcpy(client_nonce, hello + 4, DB_SYNC_NONCE_LEN);
             if (db_sync_mac(ctx, "CWSY client", client_nonce, NULL, NULL, 0, expected) == 0 &&

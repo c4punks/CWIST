@@ -35,6 +35,7 @@
 #include <stdbool.h>
 #include <strings.h>
 #include <errno.h>
+#include "http_date_internal.h"
 #include <poll.h>
 #ifndef __wasi__
 #include <signal.h>
@@ -2165,7 +2166,7 @@ bool cwist_get_cached_date_header(char out_buf[36]) {
 #else
         gmtime_r(&now, &gmt);
 #endif
-        strftime(date_str, sizeof(date_str), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+        cwist_http_format_tm(&gmt, date_str, sizeof(date_str));
         cached_sec = now;
     }
     memcpy(out_buf, date_str, 30);
@@ -2235,28 +2236,75 @@ cwist_http_request *cwist_http_request_create(void) {
 void cwist_http_format_date(time_t t, char *buf, size_t len) {
     struct tm tm;
     gmtime_r(&t, &tm);
-    strftime(buf, len, "%a, %d %b %Y %H:%M:%S GMT", &tm);
+    cwist_http_format_tm(&tm, buf, len);
+}
+
+/** @brief Look up an English month abbreviation, ignoring case.
+ * @return Month 0..11, or -1 when @p name is not a month. */
+static int http_date_month(const char *name) {
+    for (int i = 0; i < 12; i++)
+        if (strcasecmp(name, cwist_http_month_names[i]) == 0) return i;
+    return -1;
+}
+
+/** @brief Check that a parsed weekday name is one of the English names.
+ * @param name Parsed name.
+ * @param full true for RFC 850 full names ("Sunday"), false for "Sun".
+ * @return true when @p name is a valid weekday name. */
+static bool http_date_weekday(const char *name, bool full) {
+    static const char *const full_names[] = {"Sunday",   "Monday", "Tuesday", "Wednesday",
+                                             "Thursday", "Friday", "Saturday"};
+    for (int i = 0; i < 7; i++)
+        if (strcasecmp(name, full ? full_names[i] : cwist_http_day_names[i]) == 0) return true;
+    return false;
 }
 
 /**
  * @brief Parse an HTTP-date string into a time_t.
+ *
+ * Accepts the three forms of RFC 9110 section 5.6.7 with English names,
+ * independent of the process locale: IMF-fixdate
+ * ("Sun, 06 Nov 1994 08:49:37 GMT"), RFC 850 ("Sunday, 06-Nov-94 08:49:37
+ * GMT"), and asctime ("Sun Nov  6 08:49:37 1994").
+ *
  * @param str HTTP-date string.
  * @return Parsed timestamp, or (time_t)-1 on failure.
  */
 time_t cwist_http_parse_date(const char *str) {
     if (!str) return (time_t)-1;
-    struct tm tm = {0};
-    const char *fmt = "%a, %d %b %Y %H:%M:%S %Z";
-    if (strptime(str, fmt, &tm) == NULL) {
-        // Try alternative formats
-        fmt = "%a, %d-%b-%y %H:%M:%S %Z";
-        if (strptime(str, fmt, &tm) == NULL) {
-            fmt = "%a %b %d %H:%M:%S %Y";
-            if (strptime(str, fmt, &tm) == NULL) {
-                return (time_t)-1;
-            }
-        }
+    char wday[12], mon[4], zone[4];
+    int day = 0, year = 0, hh = 0, mm = 0, ss = 0, used = -1;
+    if (sscanf(str, "%11[A-Za-z], %2d %3[A-Za-z] %4d %2d:%2d:%2d %3[A-Z]%n", wday, &day, mon,
+               &year, &hh, &mm, &ss, zone, &used) == 8 &&
+        str[used] == '\0' && strcmp(zone, "GMT") == 0 && http_date_weekday(wday, false)) {
+        /* IMF-fixdate */
+    } else if (used = -1,
+               sscanf(str, "%11[A-Za-z], %2d-%3[A-Za-z]-%2d %2d:%2d:%2d %3[A-Z]%n", wday, &day, mon,
+                      &year, &hh, &mm, &ss, zone, &used) == 8 &&
+                   str[used] == '\0' && strcmp(zone, "GMT") == 0 &&
+                   http_date_weekday(wday, true)) {
+        /* RFC 850: two-digit year; RFC 9110 reads years more than 50 years
+         * ahead as the past, which with a 1970 epoch means < 70 is 20xx. */
+        year += year < 70 ? 2000 : 1900;
+    } else if (used = -1,
+               sscanf(str, "%3[A-Za-z] %3[A-Za-z] %2d %2d:%2d:%2d %4d%n", wday, mon, &day, &hh,
+                      &mm, &ss, &year, &used) == 7 &&
+                   str[used] == '\0' && http_date_weekday(wday, false)) {
+        /* asctime */
+    } else {
+        return (time_t)-1;
     }
+    int month = http_date_month(mon);
+    if (month < 0 || day < 1 || day > 31 || year < 1970 || hh > 23 || mm > 59 || ss > 60 ||
+        hh < 0 || mm < 0 || ss < 0)
+        return (time_t)-1;
+    struct tm tm = {0};
+    tm.tm_year = year - 1900;
+    tm.tm_mon = month;
+    tm.tm_mday = day;
+    tm.tm_hour = hh;
+    tm.tm_min = mm;
+    tm.tm_sec = ss;
     return timegm(&tm);
 }
 

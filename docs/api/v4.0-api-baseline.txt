@@ -228,6 +228,9 @@ cwist_graphql_ws_add_subscription
 cwist_graphql_ws_attach
 cwist_graphql_ws_create
 cwist_graphql_ws_destroy
+cwist_graphql_ws_set_max_operations
+cwist_graphql_ws_upgrade
+cwist_graphql_ws_upgrade_response
 cwist_grpc_call_await_headers
 cwist_grpc_call_cancel
 cwist_grpc_call_committed
@@ -1011,6 +1014,9 @@ cwist_graphql_ws_add_subscription: bool (cwist_graphql_ws_t *, const char *, cwi
 cwist_graphql_ws_attach: bool (cwist_graphql_ws_t *, int, cwist_reactor_t *, const uint8_t *, size_t)
 cwist_graphql_ws_create: cwist_graphql_ws_t * (cwist_graphql_schema_t *)
 cwist_graphql_ws_destroy: void (cwist_graphql_ws_t *)
+cwist_graphql_ws_set_max_operations: void (cwist_graphql_ws_t *, size_t)
+cwist_graphql_ws_upgrade: bool (cwist_http_request *, int)
+cwist_graphql_ws_upgrade_response: bool (cwist_http_request *, cwist_http_response *)
 cwist_grpc_call_await_headers: int (cwist_grpc_call *)
 cwist_grpc_call_cancel: void (cwist_grpc_call *)
 cwist_grpc_call_committed: int (const cwist_grpc_call *)
