@@ -178,113 +178,123 @@ $(document).ready(function(){initNavTree('d2/d6b/reactor__rx_8h_source.html','..
 <div class="line"><a id="l00063" name="l00063"></a><span class="lineno">   63</span><span class="comment"> * must never let an RX arm for a new connection skip registration). */</span></div>
 <div class="line"><a id="l00064" name="l00064"></a><span class="lineno">   64</span><span class="keywordtype">void</span> cwist_reactor_fd_forget(<span class="keywordtype">int</span> fd);</div>
 <div class="line"><a id="l00065" name="l00065"></a><span class="lineno">   65</span> </div>
-<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="comment">/* Completion handler for tagged RECV SQEs.  conn is the untagged connection</span></div>
-<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span><span class="comment"> * pointer; res is the CQE result: byte count, 0 (EOF), -EAGAIN, or another</span></div>
-<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span><span class="comment"> * negative errno.  Invoked on the reactor owner thread while dispatching. */</span></div>
-<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a>)(<span class="keywordtype">void</span> *conn, <span class="keywordtype">int</span> res);</div>
-<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span> </div>
-<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span><span class="comment">/* Register the completion handler (idempotent; http.c sets it once per</span></div>
-<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span><span class="comment"> * worker reactor right after cwist_reactor_create). */</span></div>
-<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="keywordtype">void</span> cwist_reactor_set_rx_cb(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a> cb);</div>
-<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span> </div>
-<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span><span class="comment">/* Arm one IORING_OP_RECV on the reactor ring.  The SQE references</span></div>
-<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span><span class="comment"> * [buf, buf+len) and must stay valid until the completion arrives, so the</span></div>
-<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span><span class="comment"> * caller must not move or consume that buffer while the SQE is in flight.</span></div>
-<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="comment"> * At most one RECV per connection at a time.  When the latency probe is</span></div>
-<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span><span class="comment"> * enabled, *armed_ns (if non-NULL) receives the arm timestamp so the caller</span></div>
-<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span><span class="comment"> * can compute queue delay.  Run-thread calls during dispatch defer into the</span></div>
-<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span><span class="comment"> * existing SQE batch; other threads submit immediately so parked workers</span></div>
-<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="comment"> * wake.  Returns false when unsupported or on submission failure; the caller</span></div>
-<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="comment"> * then falls back to the legacy POLL path. */</span></div>
-<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="keywordtype">bool</span> cwist_reactor_recv_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> fd, <span class="keywordtype">void</span> *buf, <span class="keywordtype">unsigned</span> len, <span class="keywordtype">void</span> *conn,</div>
-<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span>                            uint64_t *armed_ns);</div>
-<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span> </div>
-<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span><span class="comment">/* Record one latency-probe sample (queue=true for queue_delay, false for</span></div>
-<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span><span class="comment"> * svc) on the reactor&#39;s probe histograms.  No-op unless the probe is</span></div>
-<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span><span class="comment"> * enabled; used by the RX path, whose dispatch bypasses the ev_ctx probe</span></div>
-<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span><span class="comment"> * wrapper in cwist_reactor_run. */</span></div>
-<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span><span class="keywordtype">void</span> cwist_reactor_probe_record(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">bool</span> queue, uint64_t sample_us);</div>
+<div class="line"><a id="l00066" name="l00066"></a><span class="lineno">   66</span><span class="comment">/* Give up reactor&#39;s RX ownership of fd.  Call on the reactor&#39;s run thread</span></div>
+<div class="line"><a id="l00067" name="l00067"></a><span class="lineno">   67</span><span class="comment"> * when the connection on fd closes, before control returns to the event</span></div>
+<div class="line"><a id="l00068" name="l00068"></a><span class="lineno">   68</span><span class="comment"> * loop, so a stale event for the closed socket is not handled against the</span></div>
+<div class="line"><a id="l00069" name="l00069"></a><span class="lineno">   69</span><span class="comment"> * slot of a new connection that reuses the fd number (issue #950). */</span></div>
+<div class="line"><a id="l00070" name="l00070"></a><span class="lineno">   70</span><span class="keywordtype">void</span> cwist_reactor_rx_release(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> fd);</div>
+<div class="line"><a id="l00071" name="l00071"></a><span class="lineno">   71</span> </div>
+<div class="line"><a id="l00072" name="l00072"></a><span class="lineno">   72</span><span class="comment">/* Completion handler for tagged RECV SQEs.  conn is the untagged connection</span></div>
+<div class="line"><a id="l00073" name="l00073"></a><span class="lineno">   73</span><span class="comment"> * pointer; res is the CQE result: byte count, 0 (EOF), -EAGAIN, or another</span></div>
+<div class="line"><a id="l00074" name="l00074"></a><span class="lineno">   74</span><span class="comment"> * negative errno.  Invoked on the reactor owner thread while dispatching. */</span></div>
+<div class="line"><a id="l00075" name="l00075"></a><span class="lineno">   75</span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a>)(<span class="keywordtype">void</span> *conn, <span class="keywordtype">int</span> res);</div>
+<div class="line"><a id="l00076" name="l00076"></a><span class="lineno">   76</span> </div>
+<div class="line"><a id="l00077" name="l00077"></a><span class="lineno">   77</span><span class="comment">/* Register the completion handler (idempotent; http.c sets it once per</span></div>
+<div class="line"><a id="l00078" name="l00078"></a><span class="lineno">   78</span><span class="comment"> * worker reactor right after cwist_reactor_create). */</span></div>
+<div class="line"><a id="l00079" name="l00079"></a><span class="lineno">   79</span><span class="keywordtype">void</span> cwist_reactor_set_rx_cb(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a> cb);</div>
+<div class="line"><a id="l00080" name="l00080"></a><span class="lineno">   80</span> </div>
+<div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span><span class="comment">/* Arm one IORING_OP_RECV on the reactor ring.  The SQE references</span></div>
+<div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span><span class="comment"> * [buf, buf+len) and must stay valid until the completion arrives, so the</span></div>
+<div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span><span class="comment"> * caller must not move or consume that buffer while the SQE is in flight.</span></div>
+<div class="line"><a id="l00084" name="l00084"></a><span class="lineno">   84</span><span class="comment"> * At most one RECV per connection at a time.  When the latency probe is</span></div>
+<div class="line"><a id="l00085" name="l00085"></a><span class="lineno">   85</span><span class="comment"> * enabled, *armed_ns (if non-NULL) receives the arm timestamp so the caller</span></div>
+<div class="line"><a id="l00086" name="l00086"></a><span class="lineno">   86</span><span class="comment"> * can compute queue delay.  Run-thread calls during dispatch defer into the</span></div>
+<div class="line"><a id="l00087" name="l00087"></a><span class="lineno">   87</span><span class="comment"> * existing SQE batch; other threads submit immediately so parked workers</span></div>
+<div class="line"><a id="l00088" name="l00088"></a><span class="lineno">   88</span><span class="comment"> * wake.  Returns false when unsupported or on submission failure; the caller</span></div>
+<div class="line"><a id="l00089" name="l00089"></a><span class="lineno">   89</span><span class="comment"> * then falls back to the legacy POLL path. */</span></div>
+<div class="line"><a id="l00090" name="l00090"></a><span class="lineno">   90</span><span class="keywordtype">bool</span> cwist_reactor_recv_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> fd, <span class="keywordtype">void</span> *buf, <span class="keywordtype">unsigned</span> len, <span class="keywordtype">void</span> *conn,</div>
+<div class="line"><a id="l00091" name="l00091"></a><span class="lineno">   91</span>                            uint64_t *armed_ns);</div>
 <div class="line"><a id="l00092" name="l00092"></a><span class="lineno">   92</span> </div>
-<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span><span class="comment">/* --- Multishot accept (issue #406) -----------------------------------------</span></div>
-<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span><span class="comment"> * The listen socket&#39;s accept can ride one IORING_OP_ACCEPT with</span></div>
-<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="comment"> * IORING_ACCEPT_MULTISHOT instead of a one-shot POLL + accept4 drain loop:</span></div>
-<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span><span class="comment"> * each completion IS an accepted connection (SOCK_CLOEXEC|SOCK_NONBLOCK</span></div>
-<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span><span class="comment"> * already set).  Accept slots tag bit 1 of user_data (the RX path uses bit</span></div>
-<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span><span class="comment"> * 0); both live outside the ev_ctx namespace, whose slots are malloc-aligned.</span></div>
-<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span><span class="comment"> *</span></div>
-<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span><span class="comment"> * The slot is persistent, unlike the one-shot ev_ctx slots: it survives</span></div>
-<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span><span class="comment"> * across completions until the multishot accept terminates (completion</span></div>
-<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span><span class="comment"> * without IORING_CQE_F_MORE) or the reactor is destroyed. */</span></div>
-<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span> </div>
-<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span><span class="comment">/* Completion handler for multishot accepts.  fd &gt;= 0 is a freshly accepted</span></div>
-<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span><span class="comment"> * socket (CLOEXEC+NONBLOCK set).  A negative fd is -errno and is delivered</span></div>
-<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span><span class="comment"> * exactly once, when the accept terminates: unsupported opcode on an old</span></div>
-<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span><span class="comment"> * kernel (-EINVAL), listener error, or teardown.  The caller should resume</span></div>
-<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span><span class="comment"> * the one-shot POLL accept loop; the reactor has already freed the slot when</span></div>
-<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span><span class="comment"> * the callback returns.  Runs on the reactor owner thread while dispatching. */</span></div>
-<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a>)(<span class="keywordtype">void</span> *ctx, <span class="keywordtype">int</span> fd);</div>
-<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span> </div>
-<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span><span class="comment">/* Arm one multishot accept on the reactor ring.  At most one per listen fd.</span></div>
-<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span><span class="comment"> * Returns false when this reactor has no io_uring ring (epoll fallback) or</span></div>
-<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span><span class="comment"> * CWIST_ACCEPT_URING=0; the caller then uses the one-shot POLL path.  Arm</span></div>
-<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span><span class="comment"> * before cwist_reactor_run() or from the run thread. */</span></div>
-<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span><span class="keywordtype">bool</span> cwist_reactor_accept_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> listen_fd, <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a> cb,</div>
-<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span>                              <span class="keywordtype">void</span> *ctx);</div>
-<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span> </div>
-<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span><span class="preprocessor">#else </span><span class="comment">/* !__linux__ */</span><span class="preprocessor"></span></div>
-<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span> </div>
-<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_rx_uring_env_enabled(<span class="keywordtype">void</span>) {</div>
-<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>}</div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_reactor_rx_supported(<span class="keyword">const</span> <a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor) {</div>
-<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>    (void)reactor;</div>
-<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>}</div>
-<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_reactor_fd_forget(<span class="keywordtype">int</span> fd) {</div>
-<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>    (void)fd;</div>
-<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span>}</div>
-<div class="line"><a id="l00131" name="l00131"></a><span class="lineno"><a class="line" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">  131</a></span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a>)(<span class="keywordtype">void</span> *conn, <span class="keywordtype">int</span> res);</div>
-<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_reactor_set_rx_cb(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a> cb) {</div>
-<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>    (void)reactor;</div>
-<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span>    (void)cb;</div>
-<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>}</div>
-<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_reactor_recv_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> fd, <span class="keywordtype">void</span> *buf, <span class="keywordtype">unsigned</span> len,</div>
-<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span>                                          <span class="keywordtype">void</span> *conn, uint64_t *armed_ns) {</div>
+<div class="line"><a id="l00093" name="l00093"></a><span class="lineno">   93</span><span class="comment">/* Record one latency-probe sample (queue=true for queue_delay, false for</span></div>
+<div class="line"><a id="l00094" name="l00094"></a><span class="lineno">   94</span><span class="comment"> * svc) on the reactor&#39;s probe histograms.  No-op unless the probe is</span></div>
+<div class="line"><a id="l00095" name="l00095"></a><span class="lineno">   95</span><span class="comment"> * enabled; used by the RX path, whose dispatch bypasses the ev_ctx probe</span></div>
+<div class="line"><a id="l00096" name="l00096"></a><span class="lineno">   96</span><span class="comment"> * wrapper in cwist_reactor_run. */</span></div>
+<div class="line"><a id="l00097" name="l00097"></a><span class="lineno">   97</span><span class="keywordtype">void</span> cwist_reactor_probe_record(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">bool</span> queue, uint64_t sample_us);</div>
+<div class="line"><a id="l00098" name="l00098"></a><span class="lineno">   98</span> </div>
+<div class="line"><a id="l00099" name="l00099"></a><span class="lineno">   99</span><span class="comment">/* --- Multishot accept (issue #406) -----------------------------------------</span></div>
+<div class="line"><a id="l00100" name="l00100"></a><span class="lineno">  100</span><span class="comment"> * The listen socket&#39;s accept can ride one IORING_OP_ACCEPT with</span></div>
+<div class="line"><a id="l00101" name="l00101"></a><span class="lineno">  101</span><span class="comment"> * IORING_ACCEPT_MULTISHOT instead of a one-shot POLL + accept4 drain loop:</span></div>
+<div class="line"><a id="l00102" name="l00102"></a><span class="lineno">  102</span><span class="comment"> * each completion IS an accepted connection (SOCK_CLOEXEC|SOCK_NONBLOCK</span></div>
+<div class="line"><a id="l00103" name="l00103"></a><span class="lineno">  103</span><span class="comment"> * already set).  Accept slots tag bit 1 of user_data (the RX path uses bit</span></div>
+<div class="line"><a id="l00104" name="l00104"></a><span class="lineno">  104</span><span class="comment"> * 0); both live outside the ev_ctx namespace, whose slots are malloc-aligned.</span></div>
+<div class="line"><a id="l00105" name="l00105"></a><span class="lineno">  105</span><span class="comment"> *</span></div>
+<div class="line"><a id="l00106" name="l00106"></a><span class="lineno">  106</span><span class="comment"> * The slot is persistent, unlike the one-shot ev_ctx slots: it survives</span></div>
+<div class="line"><a id="l00107" name="l00107"></a><span class="lineno">  107</span><span class="comment"> * across completions until the multishot accept terminates (completion</span></div>
+<div class="line"><a id="l00108" name="l00108"></a><span class="lineno">  108</span><span class="comment"> * without IORING_CQE_F_MORE) or the reactor is destroyed. */</span></div>
+<div class="line"><a id="l00109" name="l00109"></a><span class="lineno">  109</span> </div>
+<div class="line"><a id="l00110" name="l00110"></a><span class="lineno">  110</span><span class="comment">/* Completion handler for multishot accepts.  fd &gt;= 0 is a freshly accepted</span></div>
+<div class="line"><a id="l00111" name="l00111"></a><span class="lineno">  111</span><span class="comment"> * socket (CLOEXEC+NONBLOCK set).  A negative fd is -errno and is delivered</span></div>
+<div class="line"><a id="l00112" name="l00112"></a><span class="lineno">  112</span><span class="comment"> * exactly once, when the accept terminates: unsupported opcode on an old</span></div>
+<div class="line"><a id="l00113" name="l00113"></a><span class="lineno">  113</span><span class="comment"> * kernel (-EINVAL), listener error, or teardown.  The caller should resume</span></div>
+<div class="line"><a id="l00114" name="l00114"></a><span class="lineno">  114</span><span class="comment"> * the one-shot POLL accept loop; the reactor has already freed the slot when</span></div>
+<div class="line"><a id="l00115" name="l00115"></a><span class="lineno">  115</span><span class="comment"> * the callback returns.  Runs on the reactor owner thread while dispatching. */</span></div>
+<div class="line"><a id="l00116" name="l00116"></a><span class="lineno">  116</span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a>)(<span class="keywordtype">void</span> *ctx, <span class="keywordtype">int</span> fd);</div>
+<div class="line"><a id="l00117" name="l00117"></a><span class="lineno">  117</span> </div>
+<div class="line"><a id="l00118" name="l00118"></a><span class="lineno">  118</span><span class="comment">/* Arm one multishot accept on the reactor ring.  At most one per listen fd.</span></div>
+<div class="line"><a id="l00119" name="l00119"></a><span class="lineno">  119</span><span class="comment"> * Returns false when this reactor has no io_uring ring (epoll fallback) or</span></div>
+<div class="line"><a id="l00120" name="l00120"></a><span class="lineno">  120</span><span class="comment"> * CWIST_ACCEPT_URING=0; the caller then uses the one-shot POLL path.  Arm</span></div>
+<div class="line"><a id="l00121" name="l00121"></a><span class="lineno">  121</span><span class="comment"> * before cwist_reactor_run() or from the run thread. */</span></div>
+<div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span><span class="keywordtype">bool</span> cwist_reactor_accept_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> listen_fd, <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a> cb,</div>
+<div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>                              <span class="keywordtype">void</span> *ctx);</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span> </div>
+<div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span><span class="preprocessor">#else </span><span class="comment">/* !__linux__ */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
+<div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_rx_uring_env_enabled(<span class="keywordtype">void</span>) {</div>
+<div class="line"><a id="l00128" name="l00128"></a><span class="lineno">  128</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00129" name="l00129"></a><span class="lineno">  129</span>}</div>
+<div class="line"><a id="l00130" name="l00130"></a><span class="lineno">  130</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_reactor_rx_supported(<span class="keyword">const</span> <a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor) {</div>
+<div class="line"><a id="l00131" name="l00131"></a><span class="lineno">  131</span>    (void)reactor;</div>
+<div class="line"><a id="l00132" name="l00132"></a><span class="lineno">  132</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00133" name="l00133"></a><span class="lineno">  133</span>}</div>
+<div class="line"><a id="l00134" name="l00134"></a><span class="lineno">  134</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_reactor_fd_forget(<span class="keywordtype">int</span> fd) {</div>
+<div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>    (void)fd;</div>
+<div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>}</div>
+<div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_reactor_rx_release(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> fd) {</div>
 <div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>    (void)reactor;</div>
 <div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>    (void)fd;</div>
-<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>    (void)buf;</div>
-<div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>    (void)len;</div>
-<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span>    (void)conn;</div>
-<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>    (void)armed_ns;</div>
-<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>}</div>
+<div class="line"><a id="l00141" name="l00141"></a><span class="lineno"><a class="line" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">  141</a></span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a>)(<span class="keywordtype">void</span> *conn, <span class="keywordtype">int</span> res);</div>
+<div class="line"><a id="l00142" name="l00142"></a><span class="lineno">  142</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_reactor_set_rx_cb(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a> cb) {</div>
+<div class="line"><a id="l00143" name="l00143"></a><span class="lineno">  143</span>    (void)reactor;</div>
+<div class="line"><a id="l00144" name="l00144"></a><span class="lineno">  144</span>    (void)cb;</div>
 <div class="line"><a id="l00145" name="l00145"></a><span class="lineno">  145</span>}</div>
-<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_reactor_probe_record(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">bool</span> queue,</div>
-<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>                                              uint64_t sample_us) {</div>
+<div class="line"><a id="l00146" name="l00146"></a><span class="lineno">  146</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_reactor_recv_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> fd, <span class="keywordtype">void</span> *buf, <span class="keywordtype">unsigned</span> len,</div>
+<div class="line"><a id="l00147" name="l00147"></a><span class="lineno">  147</span>                                          <span class="keywordtype">void</span> *conn, uint64_t *armed_ns) {</div>
 <div class="line"><a id="l00148" name="l00148"></a><span class="lineno">  148</span>    (void)reactor;</div>
-<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    (void)queue;</div>
-<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    (void)sample_us;</div>
-<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>}</div>
-<div class="line"><a id="l00152" name="l00152"></a><span class="lineno"><a class="line" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">  152</a></span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a>)(<span class="keywordtype">void</span> *ctx, <span class="keywordtype">int</span> fd);</div>
-<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_reactor_accept_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> listen_fd,</div>
-<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>                                            <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a> cb, <span class="keywordtype">void</span> *ctx) {</div>
-<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>    (void)reactor;</div>
-<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span>    (void)listen_fd;</div>
-<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>    (void)cb;</div>
-<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    (void)ctx;</div>
-<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>}</div>
-<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span> </div>
-<div class="line"><a id="l00162" name="l00162"></a><span class="lineno">  162</span><span class="preprocessor">#endif </span><span class="comment">/* __linux__ */</span><span class="preprocessor"></span></div>
-<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span> </div>
-<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span><span class="preprocessor">#ifdef __cplusplus</span></div>
-<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>}</div>
-<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span> </div>
-<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span><span class="preprocessor">#endif </span><span class="comment">/* CWIST_SYS_IO_REACTOR_RX_H */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00149" name="l00149"></a><span class="lineno">  149</span>    (void)fd;</div>
+<div class="line"><a id="l00150" name="l00150"></a><span class="lineno">  150</span>    (void)buf;</div>
+<div class="line"><a id="l00151" name="l00151"></a><span class="lineno">  151</span>    (void)len;</div>
+<div class="line"><a id="l00152" name="l00152"></a><span class="lineno">  152</span>    (void)conn;</div>
+<div class="line"><a id="l00153" name="l00153"></a><span class="lineno">  153</span>    (void)armed_ns;</div>
+<div class="line"><a id="l00154" name="l00154"></a><span class="lineno">  154</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00155" name="l00155"></a><span class="lineno">  155</span>}</div>
+<div class="line"><a id="l00156" name="l00156"></a><span class="lineno">  156</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">void</span> cwist_reactor_probe_record(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">bool</span> queue,</div>
+<div class="line"><a id="l00157" name="l00157"></a><span class="lineno">  157</span>                                              uint64_t sample_us) {</div>
+<div class="line"><a id="l00158" name="l00158"></a><span class="lineno">  158</span>    (void)reactor;</div>
+<div class="line"><a id="l00159" name="l00159"></a><span class="lineno">  159</span>    (void)queue;</div>
+<div class="line"><a id="l00160" name="l00160"></a><span class="lineno">  160</span>    (void)sample_us;</div>
+<div class="line"><a id="l00161" name="l00161"></a><span class="lineno">  161</span>}</div>
+<div class="line"><a id="l00162" name="l00162"></a><span class="lineno"><a class="line" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">  162</a></span><span class="keyword">typedef</span> void (*<a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a>)(<span class="keywordtype">void</span> *ctx, <span class="keywordtype">int</span> fd);</div>
+<div class="line"><a id="l00163" name="l00163"></a><span class="lineno">  163</span><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keywordtype">bool</span> cwist_reactor_accept_arm(<a class="code hl_typedef" href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a> *reactor, <span class="keywordtype">int</span> listen_fd,</div>
+<div class="line"><a id="l00164" name="l00164"></a><span class="lineno">  164</span>                                            <a class="code hl_typedef" href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a> cb, <span class="keywordtype">void</span> *ctx) {</div>
+<div class="line"><a id="l00165" name="l00165"></a><span class="lineno">  165</span>    (void)reactor;</div>
+<div class="line"><a id="l00166" name="l00166"></a><span class="lineno">  166</span>    (void)listen_fd;</div>
+<div class="line"><a id="l00167" name="l00167"></a><span class="lineno">  167</span>    (void)cb;</div>
+<div class="line"><a id="l00168" name="l00168"></a><span class="lineno">  168</span>    (void)ctx;</div>
+<div class="line"><a id="l00169" name="l00169"></a><span class="lineno">  169</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00170" name="l00170"></a><span class="lineno">  170</span>}</div>
+<div class="line"><a id="l00171" name="l00171"></a><span class="lineno">  171</span> </div>
+<div class="line"><a id="l00172" name="l00172"></a><span class="lineno">  172</span><span class="preprocessor">#endif </span><span class="comment">/* __linux__ */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00173" name="l00173"></a><span class="lineno">  173</span> </div>
+<div class="line"><a id="l00174" name="l00174"></a><span class="lineno">  174</span><span class="preprocessor">#ifdef __cplusplus</span></div>
+<div class="line"><a id="l00175" name="l00175"></a><span class="lineno">  175</span>}</div>
+<div class="line"><a id="l00176" name="l00176"></a><span class="lineno">  176</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00177" name="l00177"></a><span class="lineno">  177</span> </div>
+<div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span><span class="preprocessor">#endif </span><span class="comment">/* CWIST_SYS_IO_REACTOR_RX_H */</span><span class="preprocessor"></span></div>
 <div class="ttc" id="areactor_8h_html"><div class="ttname"><a href="../../dc/d85/reactor_8h.html">reactor.h</a></div></div>
 <div class="ttc" id="areactor_8h_html_a255365d0eb6a437c8aa4cae182f3ee0d"><div class="ttname"><a href="../../dc/d85/reactor_8h.html#a255365d0eb6a437c8aa4cae182f3ee0d">cwist_reactor_t</a></div><div class="ttdeci">struct cwist_reactor cwist_reactor_t</div><div class="ttdef"><b>Definition</b> <a href="../../dc/d85/reactor_8h_source.html#l00014">reactor.h:14</a></div></div>
-<div class="ttc" id="areactor__rx_8h_html_aa0ff369796ed2d081cf5a74ec126549d"><div class="ttname"><a href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a></div><div class="ttdeci">void(* cwist_accept_cb_t)(void *ctx, int fd)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d6b/reactor__rx_8h_source.html#l00152">reactor_rx.h:152</a></div></div>
-<div class="ttc" id="areactor__rx_8h_html_af3ed9c839bed9b08ab1e23ea53ebf340"><div class="ttname"><a href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a></div><div class="ttdeci">void(* cwist_rx_cb_t)(void *conn, int res)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d6b/reactor__rx_8h_source.html#l00131">reactor_rx.h:131</a></div></div>
+<div class="ttc" id="areactor__rx_8h_html_aa0ff369796ed2d081cf5a74ec126549d"><div class="ttname"><a href="../../d2/d6b/reactor__rx_8h.html#aa0ff369796ed2d081cf5a74ec126549d">cwist_accept_cb_t</a></div><div class="ttdeci">void(* cwist_accept_cb_t)(void *ctx, int fd)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d6b/reactor__rx_8h_source.html#l00162">reactor_rx.h:162</a></div></div>
+<div class="ttc" id="areactor__rx_8h_html_af3ed9c839bed9b08ab1e23ea53ebf340"><div class="ttname"><a href="../../d2/d6b/reactor__rx_8h.html#af3ed9c839bed9b08ab1e23ea53ebf340">cwist_rx_cb_t</a></div><div class="ttdeci">void(* cwist_rx_cb_t)(void *conn, int res)</div><div class="ttdef"><b>Definition</b> <a href="../../d2/d6b/reactor__rx_8h_source.html#l00141">reactor_rx.h:141</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
