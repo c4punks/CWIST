@@ -473,8 +473,15 @@ static void test_metrics_exposition(void) {
         if (len && line[0] != '#') {
             const char *sp = memchr(line, ' ', len);
             assert(sp != NULL);
+            /* Built with memcpy: GCC 13 -Wformat-truncation reports a
+             * %.*s argument here as possibly null under -Werror. */
             char decl[160];
-            snprintf(decl, sizeof(decl), "# TYPE %.*s ", (int)(sp - line), line);
+            size_t name_len = (size_t)(sp - line);
+            assert(name_len + 9 < sizeof(decl));
+            memcpy(decl, "# TYPE ", 7);
+            memcpy(decl + 7, line, name_len);
+            decl[7 + name_len] = ' ';
+            decl[8 + name_len] = '\0';
             assert(strstr(text, decl) && strstr(text, decl) < line);
         }
         line += len + (nl ? 1 : 0);
