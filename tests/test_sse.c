@@ -1,4 +1,5 @@
 #include <cwist/net/http/sse.h>
+#include <cwist/core/sstring/sstring.h>
 #include <assert.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -83,6 +84,28 @@ int main(void) {
     cwist_http_request_destroy(req);
     close(pair[0]);
     close(pair[1]);
+    /* #956: live streams refuse TLS, HTTP/2 and HTTP/3 requests and write
+     * nothing to their socket. */
+    for (int kind = 0; kind < 3; kind++) {
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, pair) == 0);
+        req = cwist_http_request_create();
+        req->client_fd = pair[0];
+        int marker = 0;
+        if (kind == 0) req->https_conn = &marker;
+        if (kind == 1) {
+            req->stream_id = 1;
+            cwist_sstring_assign(req->version, "HTTP/2");
+        }
+        if (kind == 2) cwist_sstring_assign(req->version, "HTTP/3");
+        assert(cwist_sse_stream_open(req) == NULL);
+        assert(!req->upgraded);
+        char byte;
+        assert(recv(pair[1], &byte, 1, MSG_DONTWAIT) < 0);
+        req->https_conn = NULL;
+        cwist_http_request_destroy(req);
+        close(pair[0]);
+        close(pair[1]);
+    }
     puts("All SSE tests passed.");
     return 0;
 }

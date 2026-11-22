@@ -190,9 +190,11 @@ const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class
  *                     Treated as trusted, application-authored CSS and
  *                     emitted verbatim. '<' is rejected so the output can never
  *                     end an enclosing <style> element; '{' and '}' are
- *                     rejected to catch nested blocks. Nothing else is
- *                     checked: an unterminated comment or string can still
- *                     affect later rules, so do not pass untrusted input.
+ *                     rejected to catch nested blocks. An unterminated
+ *                     comment or string, a newline in a string and a
+ *                     trailing backslash are rejected so later rules stay
+ *                     intact. Nothing else is checked; do not pass untrusted
+ *                     input.
  * @return 0 on success, -1 on invalid arguments or allocation failure.
  */
 int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,

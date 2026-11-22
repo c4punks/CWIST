@@ -42,6 +42,114 @@ static cJSON *create_user_mutation(const cJSON *args, const cJSON *variables, vo
     return res;
 }
 
+static cJSON *secret_user_resolver(const cJSON *args, const cJSON *variables, void *ctx) {
+    (void)args;
+    (void)variables;
+    (void)ctx;
+    cJSON *u = cJSON_CreateObject();
+    cJSON_AddNumberToObject(u, "id", 7);
+    cJSON_AddStringToObject(u, "password_hash", "SECRET");
+    cJSON *friends = cJSON_CreateArray();
+    for (int i = 0; i < 2; i++) {
+        cJSON *f = cJSON_CreateObject();
+        cJSON_AddNumberToObject(f, "id", 100 + i);
+        cJSON_AddStringToObject(f, "password_hash", "FRIEND-SECRET");
+        cJSON_AddItemToArray(friends, f);
+    }
+    cJSON_AddItemToArray(friends, cJSON_CreateNull());
+    cJSON_AddItemToObject(u, "friends", friends);
+    cJSON_AddNullToObject(u, "manager");
+    return u;
+}
+
+static int root_id_calls;
+static cJSON *root_id_resolver(const cJSON *args, const cJSON *variables, void *ctx) {
+    (void)args;
+    (void)variables;
+    (void)ctx;
+    root_id_calls++;
+    return cJSON_CreateString("ROOT-ID");
+}
+
+static cJSON *echo_n_resolver(const cJSON *args, const cJSON *variables, void *ctx) {
+    (void)variables;
+    (void)ctx;
+    cJSON *n = args ? cJSON_GetObjectItemCaseSensitive(args, "n") : NULL;
+    return n ? cJSON_Duplicate(n, true) : cJSON_CreateNull();
+}
+
+/* Run @p query (a GraphQL document, JSON-escaped by the caller) and return
+ * the response text; the caller frees it with cwist_sstring_destroy(). */
+static cwist_sstring *run_query(cwist_graphql_schema_t *schema, const char *query) {
+    cJSON *request = cJSON_CreateObject();
+    assert(request != NULL);
+    cJSON_AddStringToObject(request, "query", query);
+    char *raw = cJSON_PrintUnformatted(request);
+    assert(raw != NULL);
+    cwist_sstring *out = NULL;
+    assert(cwist_graphql_execute(schema, raw, &out).error.err_i16 == 0);
+    free(raw);
+    cJSON_Delete(request);
+    assert(out != NULL);
+    return out;
+}
+
+/* #953, #954: nested selections return only the selected fields, read from
+ * the parent value, never from a same-named root resolver. */
+static void test_nested_selection(void) {
+    cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
+    assert(cwist_graphql_add_query(schema, "user", secret_user_resolver, NULL));
+    assert(cwist_graphql_add_query(schema, "id", root_id_resolver, NULL));
+
+    cwist_sstring *out = run_query(schema, "{ user { id } }");
+    assert(strcmp(out->data, "{\"data\":{\"user\":{\"id\":7}}}") == 0);
+    assert(root_id_calls == 0);
+    cwist_sstring_destroy(out);
+
+    out = run_query(schema, "{ user { uid: id friends { id } manager { id } } }");
+    assert(strcmp(out->data, "{\"data\":{\"user\":{\"uid\":7,\"friends\":[{\"id\":100},"
+                             "{\"id\":101},null],\"manager\":null}}}") == 0);
+    assert(!strstr(out->data, "SECRET"));
+    cwist_sstring_destroy(out);
+
+    /* Root fields still resolve at the root. */
+    out = run_query(schema, "{ id }");
+    assert(strstr(out->data, "\"id\":\"ROOT-ID\""));
+    assert(root_id_calls == 1);
+    cwist_sstring_destroy(out);
+    cwist_graphql_schema_destroy(schema);
+}
+
+/* #965: number arguments follow the GraphQL IntValue/FloatValue grammar. */
+static void test_number_arguments(void) {
+    cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
+    assert(cwist_graphql_add_query(schema, "echo", echo_n_resolver, NULL));
+    static const struct {
+        const char *arg;
+        const char *expect;
+    } ok[] = {{"0", "\"echo\":0"},       {"-12", "\"echo\":-12"},     {"1.5", "\"echo\":1.5"},
+              {"-0.25e2", "\"echo\":-25"}, {"1E+3", "\"echo\":1000"}, {"2e-1", "\"echo\":0.2"}};
+    for (size_t i = 0; i < sizeof(ok) / sizeof(ok[0]); i++) {
+        char q[64];
+        snprintf(q, sizeof(q), "{ echo(n: %s) }", ok[i].arg);
+        cwist_sstring *out = run_query(schema, q);
+        assert(strstr(out->data, ok[i].expect));
+        assert(!strstr(out->data, "errors"));
+        cwist_sstring_destroy(out);
+    }
+    static const char *const bad[] = {"0x1F", "012", "1e999", "-",     "1.",
+                                      ".5",   "1e",  "-inf",  "1.2.3", "1abc"};
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+        char q[64];
+        snprintf(q, sizeof(q), "{ echo(n: %s) }", bad[i]);
+        cwist_sstring *out = run_query(schema, q);
+        assert(strstr(out->data, "\"errors\""));
+        assert(!strstr(out->data, "\"echo\":"));
+        cwist_sstring_destroy(out);
+    }
+    cwist_graphql_schema_destroy(schema);
+}
+
 int main(void) {
     cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
     assert(schema);
@@ -225,6 +333,8 @@ int main(void) {
     cwist_sstring_destroy(out);
 
     cwist_graphql_schema_destroy(schema);
+    test_nested_selection();
+    test_number_arguments();
     puts("All GraphQL advanced tests passed successfully.");
     return 0;
 }

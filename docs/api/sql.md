@@ -9,6 +9,9 @@ Wrapper for SQLite3 database operations.
 cwist_error_t cwist_db_open(cwist_db **db, const char *path);
 ```
 Opens a connection to a SQLite database file.
+The connection waits up to 5000 ms for a lock (`sqlite3_busy_timeout`), the
+same as `cwist_db_pool`. `cwist_db_exec()` and `cwist_db_query()` do not
+change connection settings.
 
 ### `cwist_db_open_memory`
 ```c

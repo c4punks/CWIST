@@ -95,23 +95,27 @@ struct cwist_redis_pool {
 
 /* --- Socket helpers ----------------------------------------------------- */
 
-/** Open a blocking TCP connection to the Redis server.
- * @param host Server host name or IPv4 address.
- * @param port Server port.
- * @return Connected socket fd on success, -1 on resolution/connection failure. */
-static int redis_open_socket(const char *host, int port) {
-    struct addrinfo hints = {0}, *res = NULL;
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    char port_str[16];
-    snprintf(port_str, sizeof(port_str), "%d", port);
-    if (getaddrinfo(host, port_str, &hints, &res) != 0 || !res) return -1;
-
-    int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (fd < 0) {
-        freeaddrinfo(res);
+/** Apply the blocking-API socket timeouts (CWIST_REDIS_IO_TIMEOUT_MS) so
+ * legacy calls on a stalled server fail instead of waiting forever. Used for
+ * every socket, including ones reopened by redis_reconnect() (#968).
+ * @return 0 on success, -1 when a setsockopt() fails. */
+static int redis_set_io_timeouts(int fd) {
+    struct timeval timeout = {
+        .tv_sec = CWIST_REDIS_IO_TIMEOUT_MS / 1000,
+        .tv_usec = (CWIST_REDIS_IO_TIMEOUT_MS % 1000) * 1000,
+    };
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0 ||
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0)
         return -1;
-    }
+    return 0;
+}
+
+/** Connect a new blocking socket to one resolved address within
+ * CWIST_REDIS_CONNECT_TIMEOUT_MS.
+ * @return Connected socket fd with I/O timeouts set, or -1. */
+static int redis_connect_addr(const struct addrinfo *ai) {
+    int fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+    if (fd < 0) return -1;
 #ifdef SO_NOSIGPIPE
     int one = 1;
     (void)setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
@@ -119,10 +123,9 @@ static int redis_open_socket(const char *host, int port) {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
         close(fd);
-        freeaddrinfo(res);
         return -1;
     }
-    int rc = connect(fd, res->ai_addr, res->ai_addrlen);
+    int rc = connect(fd, ai->ai_addr, ai->ai_addrlen);
     if (rc != 0 && errno == EINPROGRESS) {
         struct pollfd pfd = {.fd = fd, .events = POLLOUT};
         do {
@@ -135,17 +138,32 @@ static int redis_open_socket(const char *host, int port) {
         else
             rc = -1;
     }
-    freeaddrinfo(res);
-    struct timeval timeout = {
-        .tv_sec = CWIST_REDIS_IO_TIMEOUT_MS / 1000,
-        .tv_usec = (CWIST_REDIS_IO_TIMEOUT_MS % 1000) * 1000,
-    };
-    if (rc != 0 || fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != 0 ||
-        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) != 0 ||
-        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) != 0) {
+    if (rc != 0 || fcntl(fd, F_SETFL, flags & ~O_NONBLOCK) != 0 || redis_set_io_timeouts(fd) != 0) {
         close(fd);
         return -1;
     }
+    return fd;
+}
+
+/** Open a blocking TCP connection to the Redis server.
+ * Resolves IPv4 and IPv6 (AF_UNSPEC) and tries each address in the order
+ * getaddrinfo() returns them, so IPv6 literals, AAAA-only names and hosts
+ * with a down first address all work (#967).
+ * @param host Server host name, IPv4 or IPv6 address.
+ * @param port Server port.
+ * @return Connected socket fd on success, -1 on resolution/connection failure. */
+static int redis_open_socket(const char *host, int port) {
+    struct addrinfo hints = {0}, *res = NULL;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%d", port);
+    if (getaddrinfo(host, port_str, &hints, &res) != 0 || !res) return -1;
+
+    int fd = -1;
+    for (const struct addrinfo *ai = res; ai && fd < 0; ai = ai->ai_next)
+        fd = redis_connect_addr(ai);
+    freeaddrinfo(res);
     return fd;
 }
 
@@ -426,7 +444,7 @@ static int redis_reconnect(const cwist_redis_pool_t *pool, cwist_redis_t *r, uin
         socklen_t sl = sizeof(soerr);
         if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &soerr, &sl) != 0 || soerr != 0) goto out;
     }
-    if (fcntl(fd, F_SETFL, flags) != 0) goto out;
+    if (fcntl(fd, F_SETFL, flags) != 0 || redis_set_io_timeouts(fd) != 0) goto out;
     r->fd = fd;
     r->recv_len = 0;
     return 0;
@@ -1192,7 +1210,8 @@ void cwist_redis_pool_destroy(cwist_redis_pool_t *pool) {
 
 /** Acquire an idle pool connection, blocking on the condition variable until
  * one becomes available. A slot whose socket was discarded by the timed API
- * is reconnected (blocking, to the cached peer) before it is handed out; if
+ * is reconnected (to the cached peer, within CWIST_REDIS_CONNECT_TIMEOUT_MS)
+ * before it is handed out; if
  * that fails the command fails on the closed handle as before.
  * @return A connection marked in-use; NULL only when @p pool is NULL. */
 static cwist_redis_t *redis_pool_acquire(cwist_redis_pool_t *pool) {
@@ -1204,7 +1223,10 @@ static cwist_redis_t *redis_pool_acquire(cwist_redis_pool_t *pool) {
                 pool->available[i] = false;
                 pthread_mutex_unlock(&pool->mtx);
                 cwist_redis_t *r = pool->conns[i];
-                if (r->fd < 0) (void)redis_reconnect(pool, r, UINT64_MAX);
+                if (r->fd < 0)
+                    (void)redis_reconnect(
+                        pool, r,
+                        redis_now_ns() + (uint64_t)CWIST_REDIS_CONNECT_TIMEOUT_MS * 1000000ULL);
                 return r;
             }
         }

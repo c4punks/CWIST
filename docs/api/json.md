@@ -12,6 +12,14 @@ cwist_json_builder *cwist_json_builder_create(void);
 ### `cwist_json_begin_object` / `cwist_json_end_object`
 Starts and ends a JSON object `{ ... }`.
 
+### `cwist_json_begin_object_key`
+```c
+void cwist_json_begin_object_key(cwist_json_builder *b, const char *key);
+```
+Starts a JSON object as the value of member `key` inside an object, written as
+`"key": {`. Close it with `cwist_json_end_object()`. A NULL `key` behaves like
+`cwist_json_begin_object()`.
+
 ### `cwist_json_add_string`
 Adds a key-value pair where the value is a string.
 ```c
@@ -49,6 +57,7 @@ Returns the constructed JSON string as a `const char *`.
 const char *cwist_json_get_raw(cwist_json_builder *b);
 ```
 - **Ownership:** The string is owned by the builder and remains valid until the builder is destroyed. Do NOT free this pointer.
+- **Failure:** Returns NULL if any earlier append failed (for example on allocation failure). The builder then ignores later calls, so truncated JSON is never returned.
 
 ### `cwist_json_builder_destroy`
 ```c

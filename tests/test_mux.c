@@ -12,6 +12,84 @@ void test_handler(cwist_http_request *req, cwist_http_response *res) {
     cwist_sstring_assign(res->body, "Handled!");
 }
 
+static const char *g_hit;
+static void h_static(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    (void)res;
+    g_hit = "static";
+}
+static void h_all(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    (void)res;
+    g_hit = "all";
+}
+static void h_first(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    (void)res;
+    g_hit = "first";
+}
+static void h_second(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    (void)res;
+    g_hit = "second";
+}
+static void h_users(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    (void)res;
+    g_hit = "users";
+}
+
+/* Serve @p path on @p router and return the handler that ran, or NULL. */
+static const char *serve(cwist_mux_router *router, cwist_http_method_t method, const char *path,
+                         int *status) {
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    req->method = method;
+    cwist_sstring_assign(req->path, path);
+    g_hit = NULL;
+    bool handled = cwist_mux_serve(router, req, res);
+    if (status) *status = handled ? (int)res->status_code : 0;
+    cwist_http_request_destroy(req);
+    cwist_http_response_destroy(res);
+    return g_hit;
+}
+
+/* #959: wildcards are tried longest prefix first; parametric routes in
+ * registration order. #960: one trailing slash is ignored by every kind. */
+static void test_route_order_and_trailing_slash(void) {
+    cwist_mux_router *router = cwist_mux_router_create();
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/static/*", h_static);
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/*", h_all);
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/a/:x", h_first);
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/:y/b", h_second);
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/users", h_users);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/static/app.js", NULL), "static") == 0);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/index.html", NULL), "all") == 0);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/a/b", NULL), "first") == 0);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/users", NULL), "users") == 0);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/users/", NULL), "users") == 0);
+    cwist_mux_router_destroy(router);
+
+    /* Registering the catch-all first gives the same result. */
+    router = cwist_mux_router_create();
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/*", h_all);
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/static/*", h_static);
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/users", h_users);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/static/app.js", NULL), "static") == 0);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/x", NULL), "all") == 0);
+    cwist_mux_router_destroy(router);
+
+    router = cwist_mux_router_create();
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/users", h_users);
+    int status = 0;
+    assert(serve(router, CWIST_HTTP_POST, "/users/", &status) == NULL);
+    assert(status == CWIST_HTTP_METHOD_NOT_ALLOWED);
+    assert(serve(router, CWIST_HTTP_GET, "/users/x", &status) == NULL && status == 0);
+    assert(cwist_mux_find_route(router, CWIST_HTTP_GET, "/users/") != NULL);
+    cwist_mux_router_destroy(router);
+    printf("4. Route order and trailing slash... PASSED\n");
+}
+
 int main() {
     printf("Running Mux & Query Tests...\n");
 
@@ -97,5 +175,6 @@ int main() {
     cwist_http_request_destroy(parsed_req);
     printf("PASSED\n");
 
+    test_route_order_and_trailing_slash();
     return 0;
 }

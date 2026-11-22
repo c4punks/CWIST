@@ -91,11 +91,12 @@ Attaches a declaration block body to a class, replacing any earlier one.
 Returns 0 on success, -1 on invalid input or allocation failure.
 
 Declarations are trusted, application-authored CSS and are emitted verbatim.
-Two characters are checked. `<` is rejected, so the generated stylesheet can
+A few things are checked. `<` is rejected, so the generated stylesheet can
 never end an enclosing `<style>` element. `{` and `}` are rejected to catch
-nested blocks. Nothing else is validated: an unterminated comment or string
-can still affect the rules after it. Do not build declarations from untrusted
-input.
+nested blocks. An unterminated comment or string, a newline inside a string,
+and a trailing backslash are rejected, so one declaration cannot swallow the
+rules after it. The CSS is not otherwise validated, so do not build
+declarations from untrusted input.
 
 ### `cwist_css_scope_generate_stylesheet`
 ```c
