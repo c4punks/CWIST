@@ -166,6 +166,9 @@ static const char *fetch(const char *path, const char *extra_headers, char *buf,
     }
     buf[used] = '\0';
     close(fd);
+    /* A body cut short of its Content-Length is a failed fetch, not a
+     * reply. */
+    if (body && want >= 0 && (long)(buf + used - body) < want) return NULL;
     return body;
 }
 
@@ -276,12 +279,20 @@ static bool run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
 
     /* 1. Cookie: alice teaches the path twice (enough to stabilize), bob
      *    must still get his own reply. */
-    for (int i = 0; i < 3; i++) fetch("/who", "Cookie: sid=alice\r\n", buf, sizeof(buf));
+    for (int i = 0; i < 3; i++) {
+        b = fetch("/who", "Cookie: sid=alice\r\n", buf, sizeof(buf));
+        CHECK(b && strcmp(b, "who=sid=alice") == 0, "Cookie: alice request %d got '%s'", i + 1,
+              b ? b : "(null)");
+    }
     b = fetch("/who", "Cookie: sid=bob\r\n", buf, sizeof(buf));
     CHECK(b && strcmp(b, "who=sid=bob") == 0, "Cookie: bob got '%s'", b ? b : "(null)");
 
     /* 2. Same with Authorization, and an anonymous caller after both. */
-    for (int i = 0; i < 3; i++) fetch("/who", "Authorization: Bearer A\r\n", buf, sizeof(buf));
+    for (int i = 0; i < 3; i++) {
+        b = fetch("/who", "Authorization: Bearer A\r\n", buf, sizeof(buf));
+        CHECK(b && strcmp(b, "who=Bearer A") == 0, "Authorization: A request %d got '%s'", i + 1,
+              b ? b : "(null)");
+    }
     b = fetch("/who", "Authorization: Bearer B\r\n", buf, sizeof(buf));
     CHECK(b && strcmp(b, "who=Bearer B") == 0, "Authorization: B got '%s'", b ? b : "(null)");
     b = fetch("/who", NULL, buf, sizeof(buf));
@@ -302,10 +313,12 @@ static bool run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
                 CHECK(false, "%s request %d failed or got '%s'", path, i + 1, b ? b : "(null)");
         }
         int n = hits(path);
+        CHECK(n >= 0, "%s count query failed", path);
         /* A lost request is reported above; only answered requests that
          * never reached the handler mean the reply came from the cache. */
-        CHECK(n == answered, "%s answered %d/5 requests but reached the handler %d times%s",
-              path, answered, n, n >= 0 && n < answered ? " (reply was cached)" : "");
+        if (n >= 0)
+            CHECK(n == answered, "%s answered %d/5 requests but reached the handler %d times%s",
+                  path, answered, n, n < answered ? " (reply was cached)" : "");
     }
 
     /* 4. Control: an ordinary slow GET is learned after two identical
@@ -317,7 +330,10 @@ static bool run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     }
     if (expect_learning) {
         int n = hits("/public");
-        CHECK(n >= 1 && n < 5, "/public reached the handler %d/5 times (expected cache hits)", n);
+        CHECK(n >= 0, "/public count query failed");
+        if (n >= 0)
+            CHECK(n >= 1 && n < 5, "/public reached the handler %d/5 times (expected cache hits)",
+                  n);
     }
 
 out:
