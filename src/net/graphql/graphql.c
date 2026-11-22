@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "../../core/utils/number_internal.h"
 
 typedef enum { GQL_OP_QUERY, GQL_OP_MUTATION } gql_op_type_t;
 
@@ -312,6 +313,37 @@ static const char *skip_ws_comments(const char *p) {
 }
 
 /**
+ * Length of an IntValue or FloatValue token at p (GraphQL October 2021,
+ * section 2.9.1 and 2.9.2), or 0 when p does not start a valid number:
+ * -?(0|[1-9][0-9]*)(.[0-9]+)?([eE][+-]?[0-9]+)?, not followed by a digit,
+ * '.' or a name character.
+ */
+static size_t gql_number_token(const char *p) {
+    const char *s = p;
+    if (*s == '-') s++;
+    if (*s == '0') {
+        s++;
+    } else if (*s >= '1' && *s <= '9') {
+        while (isdigit((unsigned char)*s)) s++;
+    } else {
+        return 0;
+    }
+    if (*s == '.') {
+        s++;
+        if (!isdigit((unsigned char)*s)) return 0;
+        while (isdigit((unsigned char)*s)) s++;
+    }
+    if (*s == 'e' || *s == 'E') {
+        s++;
+        if (*s == '+' || *s == '-') s++;
+        if (!isdigit((unsigned char)*s)) return 0;
+        while (isdigit((unsigned char)*s)) s++;
+    }
+    if (isdigit((unsigned char)*s) || *s == '.' || gql_name_char(*s, true)) return 0;
+    return (size_t)(s - p);
+}
+
+/**
  * @brief Parse GraphQL arguments: ( arg1: "val", arg2: 123, arg3: $varName )
  * @details Strings, numbers, booleans, null, and variable references are
  *          supported. Parse failures are appended to @p errors and leave
@@ -418,10 +450,25 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
             if (!val) val = cJSON_CreateNull();
             cwist_free(var_name);
         } else if (isdigit((unsigned char)*p) || *p == '-') {
-            char *endptr = NULL;
-            double num = strtod(p, &endptr);
-            val = cJSON_CreateNumber(num);
-            p = endptr;
+            size_t num_len = gql_number_token(p);
+            if (num_len == 0 || num_len > 64) {
+                gql_add_error(errors, "Invalid number in argument");
+                cwist_free(arg_name);
+                cJSON_Delete(args);
+                return p;
+            }
+            /* The IntValue/FloatValue grammar is the JSON number grammar, and
+             * cJSON parses numbers independently of the C locale. */
+            val = cJSON_ParseWithLength(p, num_len);
+            if (!val || !cJSON_IsNumber(val) ||
+                !cwist_number_double_is_finite(cJSON_GetNumberValue(val))) {
+                cJSON_Delete(val);
+                gql_add_error(errors, "Number in argument is out of range");
+                cwist_free(arg_name);
+                cJSON_Delete(args);
+                return p;
+            }
+            p += num_len;
         } else if (strncmp(p, "true", 4) == 0 && !gql_name_char(p[4], false)) {
             val = cJSON_CreateBool(true);
             p += 4;
@@ -585,10 +632,12 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
         p = parse_arguments(p, variables, &args, errors);
 
         cJSON *val = NULL;
-        graphql_field_t *f = gql_lookup(schema_fields, field_name);
+        /* Root resolvers answer only at the operation root. Below it a field
+         * is read from the object its parent returned (#954). */
+        graphql_field_t *f = parent_value ? NULL : gql_lookup(schema_fields, field_name);
         bool parent_has_field = parent_value && cJSON_HasObjectItem(parent_value, field_name);
         if (validate_only) {
-            if (!f && !parent_has_field && !parent_value) {
+            if (!f && !parent_value) {
                 size_t err_len = strlen(field_name) + 32;
                 char *err_buf = cwist_alloc(err_len);
                 if (err_buf) {
@@ -617,9 +666,50 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
 
         p = skip_ws_comments(p);
         if (*p == '{') {
+            /* The response holds only the selected fields, built from the
+             * resolved value; unselected members are never copied (#953). */
             if (cJSON_IsObject(val)) {
-                p = parse_selection_set(p, schema_fields, variables, val, errors, val, depth + 1,
-                                        validate_only);
+                cJSON *selected = cJSON_CreateObject();
+                if (selected) {
+                    p = parse_selection_set(p, schema_fields, variables, selected, errors, val,
+                                            depth + 1, validate_only);
+                } else {
+                    gql_add_error(errors, "Internal memory error building selection");
+                    p = skip_selection_set(p);
+                }
+                cJSON_Delete(val);
+                val = selected ? selected : cJSON_CreateNull();
+            } else if (cJSON_IsArray(val)) {
+                cJSON *list = cJSON_CreateArray();
+                const char *sel = p;
+                const char *end = skip_selection_set(p);
+                cJSON *item = NULL;
+                cJSON_ArrayForEach(item, val) {
+                    if (!list) break;
+                    cJSON *entry = NULL;
+                    if (cJSON_IsObject(item)) {
+                        entry = cJSON_CreateObject();
+                        if (entry)
+                            end = parse_selection_set(sel, schema_fields, variables, entry, errors,
+                                                      item, depth + 1, validate_only);
+                    } else if (cJSON_IsNull(item)) {
+                        entry = cJSON_CreateNull();
+                    } else {
+                        gql_add_error(errors, "Selection set cannot be applied to a scalar value");
+                        entry = cJSON_CreateNull();
+                    }
+                    if (!entry || !cJSON_AddItemToArray(list, entry)) {
+                        cJSON_Delete(entry);
+                        cJSON_Delete(list);
+                        list = NULL;
+                    }
+                }
+                if (!list) gql_add_error(errors, "Internal memory error building selection");
+                p = end;
+                cJSON_Delete(val);
+                val = list ? list : cJSON_CreateNull();
+            } else if (cJSON_IsNull(val)) {
+                p = skip_selection_set(p);
             } else {
                 gql_add_error(errors, "Selection set cannot be applied to a scalar value");
                 p = skip_selection_set(p);

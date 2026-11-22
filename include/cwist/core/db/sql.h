@@ -28,6 +28,8 @@ typedef struct cwist_db {
 /**
  * Connect to a database (or open file).
  * path: Path to SQLite file (or ":memory:")
+ * The connection gets a 5000 ms busy timeout (the same as cwist_db_pool).
+ * cwist_db_exec() and cwist_db_query() do not change connection settings.
  */
 cwist_error_t cwist_db_open(cwist_db **db, const char *path);
 

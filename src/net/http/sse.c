@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/http/sse.h>
+#include <cwist/sys/app/app.h>
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/sstring/sstring.h>
 #include <errno.h>
@@ -195,25 +196,50 @@ static int send_all(int fd, const char *data, size_t len) {
     return 0;
 }
 
+/* True when @p req arrived on a cleartext HTTP/1.x byte stream, the only
+ * transport a live stream can write to directly. On HTTPS client_fd is the
+ * TLS socket and on HTTP/2 or HTTP/3 it carries framed streams, so raw
+ * writes would corrupt the connection (#956). */
+static bool sse_req_is_plain_h1(const cwist_http_request *req) {
+    if (req->https_conn || req->h2_queue || req->stream_id != 0) return false;
+    if (req->app && req->app->use_ssl) return false;
+    if (req->version && req->version->data &&
+        (strncmp(req->version->data, "HTTP/2", 6) == 0 ||
+         strncmp(req->version->data, "HTTP/3", 6) == 0))
+        return false;
+    return true;
+}
+
 /** @brief Upgrade a request connection to a live SSE stream.
  *
  * Sends the SSE HTTP response headers and marks the request as upgraded,
  * transferring ownership of the connection to the returned stream (release
  * with cwist_sse_stream_close()).
  *
+ * Live streams write to the socket directly, so they are available only on
+ * cleartext HTTP/1.x connections. On HTTPS, HTTP/2 and HTTP/3 requests this
+ * returns NULL without writing anything, and the handler can answer with a
+ * buffered response instead (cwist_sse_response_init() and
+ * cwist_sse_response_event()).
+ *
  * @param req Request to upgrade; must not be NULL and must not already be
  *            upgraded.
- * @return New stream on success, NULL if the request is invalid or the
- *         headers could not be sent or the stream could not be allocated.
+ * @return New stream on success, NULL if the request is invalid, arrived over
+ *         TLS, HTTP/2 or HTTP/3, the headers could not be sent, or the stream
+ *         could not be allocated.
  */
 cwist_sse_stream_t *cwist_sse_stream_open(cwist_http_request *req) {
     static const char headers[] =
         "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\nX-Accel-Buffering: no\r\nConnection: keep-alive\r\n\r\n";
-    if (!req || req->client_fd < 0 || req->upgraded ||
-        send_all(req->client_fd, headers, sizeof(headers) - 1))
-        return NULL;
+    if (!req || req->client_fd < 0 || req->upgraded || !sse_req_is_plain_h1(req)) return NULL;
+    /* Allocate first: once the head is on the wire the request must be
+     * marked upgraded, or the app would write a second response after it. */
     cwist_sse_stream_t *stream = cwist_alloc(sizeof(*stream));
     if (!stream) return NULL;
+    if (send_all(req->client_fd, headers, sizeof(headers) - 1)) {
+        cwist_free(stream);
+        return NULL;
+    }
     stream->fd = req->client_fd;
     atomic_init(&stream->closed, 0);
     pthread_mutex_init(&stream->mutex, NULL);

@@ -498,8 +498,10 @@ int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t 
 }
 
 /** Base64url alphabet (no padding) used to encode random ICE credentials. */
-static const char b64url_chars[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+/* ice-char = ALPHA / DIGIT / "+" / "/" (RFC 8839 section 5.4). The base64url
+ * characters '-' and '_' are not ice-chars. */
+static const char ice_chars[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /** @brief Extract the sender's ufrag from the USERNAME attribute of a STUN message.
  *
@@ -542,8 +544,10 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
 
 /** @brief Generate random ICE ufrag/pwd credentials.
  *
- * Both strings are drawn from 24 bytes of CSPRNG output encoded with the
- * base64url alphabet (6 bits per character).
+ * Every character takes 6 bits from its own CSPRNG byte (64 divides 256, so
+ * the choice is uniform) over the ice-char alphabet: the 8-character ufrag
+ * carries 48 bits and the 32-character password 192 bits, above the 24 and
+ * 128 bits RFC 8445 section 5.3 requires. No byte is reused (#969).
  *
  * @param ufrag     Output buffer for the ufrag.
  * @param ufrag_cap Capacity of @p ufrag; up to 8 characters plus NUL are written.
@@ -552,16 +556,17 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
  * @note On random generation failure, outputs with nonzero capacity are empty.
  */
 void cwist_ice_random_creds(char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd_cap) {
-    uint8_t raw[24];
+    uint8_t raw[8 + 32];
     if (ufrag && ufrag_cap > 0) ufrag[0] = '\0';
     if (pwd && pwd_cap > 0) pwd[0] = '\0';
     if (!ufrag || !pwd || ufrag_cap == 0 || pwd_cap == 0 || RAND_bytes(raw, sizeof(raw)) != 1)
         return;
 
     size_t n = ufrag_cap - 1 < 8 ? ufrag_cap - 1 : 8;
-    for (size_t i = 0; i < n; i++) ufrag[i] = b64url_chars[raw[i] & 63];
+    for (size_t i = 0; i < n; i++) ufrag[i] = ice_chars[raw[i] & 63];
     ufrag[n] = '\0';
     size_t m = pwd_cap - 1 < 32 ? pwd_cap - 1 : 32;
-    for (size_t i = 0; i < m; i++) pwd[i] = b64url_chars[raw[8 + (i % 16)] & 63];
+    for (size_t i = 0; i < m; i++) pwd[i] = ice_chars[raw[8 + i] & 63];
     pwd[m] = '\0';
+    OPENSSL_cleanse(raw, sizeof(raw));
 }

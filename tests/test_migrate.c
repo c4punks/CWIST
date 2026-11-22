@@ -329,6 +329,38 @@ static void test_db_crypt_length_guards(void) {
  * Main
  * ---------------------------------------------------------------------- */
 
+/* #961: a migration numbered below the newest applied one still runs. */
+static void test_migrate_out_of_order(void) {
+    printf("Testing migrate up applies a lower missing version...\n");
+    sqlite3 *db = NULL;
+    assert(sqlite3_open(":memory:", &db) == SQLITE_OK);
+    const cwist_migration_t first[] = {
+        {1, "a", "CREATE TABLE a (x);", "DROP TABLE a;"},
+        {3, "c", "CREATE TABLE c (x);", "DROP TABLE c;"},
+    };
+    assert(cwist_migrate_up(db, first, 2) == CWIST_MIGRATE_OK);
+    const cwist_migration_t all[] = {
+        {1, "a", "CREATE TABLE a (x);", "DROP TABLE a;"},
+        {3, "c", "CREATE TABLE c (x);", "DROP TABLE c;"},
+        {2, "b", "CREATE TABLE b (x);", "DROP TABLE b;"},
+    };
+    assert(cwist_migrate_up(db, all, 3) == CWIST_MIGRATE_OK);
+    sqlite3_stmt *stmt = NULL;
+    assert(sqlite3_prepare_v2(db, "SELECT count(*) FROM sqlite_master WHERE name = 'b';", -1, &stmt,
+                              NULL) == SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) == 1);
+    sqlite3_finalize(stmt);
+    assert(sqlite3_prepare_v2(db, "SELECT count(*) FROM _cwist_migrations;", -1, &stmt, NULL) ==
+           SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) == 3);
+    sqlite3_finalize(stmt);
+    /* Running again is a no-op. */
+    assert(cwist_migrate_up(db, all, 3) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_version(db) == 3);
+    sqlite3_close(db);
+    printf("  Passed.\n");
+}
+
 int main(void) {
     printf("=== Migration tests ===\n");
     test_migrate_up_and_version();
@@ -338,6 +370,7 @@ int main(void) {
     test_migrate_down_steps_skip_irreversible();
     test_migrate_history_failure_rolls_back();
     test_migrate_extreme_versions();
+    test_migrate_out_of_order();
 
     printf("=== DB Crypt tests ===\n");
     test_db_crypt_roundtrip();

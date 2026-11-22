@@ -75,6 +75,9 @@ void cwist_session_delete(cwist_session_t *session, const char *key);
  *
  * The session middleware calls this automatically after the handler. If you
  * are not using the middleware, call it before sending the response.
+ * A session that was not modified (no set, delete or invalidate) writes no
+ * Set-Cookie. An invalidated session's cookie is removed with the same Path,
+ * HttpOnly, Secure and SameSite attributes it was issued with.
  */
 int cwist_session_commit(cwist_session_t *session, cwist_http_response *res);
 

@@ -6,6 +6,9 @@
  *        segment encoding, healed DB inserts, and per-route middleware order.
  *        Second batch: WAF body policy, test client multipart length and
  *        cookie deletion, and locale-independent HTTP dates.
+ *        Third batch: impossible HTTP dates, tagless HTML elements, sstring
+ *        appends after embedded NULs, CSS declaration checks, Prometheus
+ *        metric types, and per-statement DB settings.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/app.h>
@@ -18,6 +21,10 @@
 #include <cwist/net/http/query.h>
 #include <cwist/sys/app/test_client.h>
 #include <cwist/sys/app/waf.h>
+#include <cwist/core/html/builder.h>
+#include <cwist/core/html/css_composer.h>
+#include <cwist/core/sstring/sstring.h>
+#include <cwist/sys/metrics/metrics.h>
 #ifdef CWIST_JWT
 #include <cwist/security/jwt/jwt.h>
 #endif
@@ -346,6 +353,136 @@ static void test_http_date_locale(void) {
     printf("  http date locale OK\n");
 }
 
+/* #966: impossible calendar dates are rejected instead of normalized. */
+static void test_http_date_calendar(void) {
+    assert(cwist_http_parse_date("Tue, 31 Feb 2026 00:00:00 GMT") == (time_t)-1);
+    assert(cwist_http_parse_date("Sun, 29 Feb 2026 00:00:00 GMT") == (time_t)-1);
+    assert(cwist_http_parse_date("Thu, 31 Apr 2026 00:00:00 GMT") == (time_t)-1);
+    assert(cwist_http_parse_date("Sat, 29 Feb 1900 00:00:00 GMT") == (time_t)-1);
+    assert(cwist_http_parse_date("Thursday, 31-Jun-27 00:00:00 GMT") == (time_t)-1);
+    assert(cwist_http_parse_date("Mon Feb 30 00:00:00 2026") == (time_t)-1);
+    assert(cwist_http_parse_date("Thu, 29 Feb 2024 00:00:00 GMT") == (time_t)1709164800);
+    assert(cwist_http_parse_date("Tue, 29 Feb 2000 00:00:00 GMT") == (time_t)951782400);
+    assert(cwist_http_parse_date("Thu, 31 Dec 2026 23:59:59 GMT") == (time_t)1798761599);
+    printf("  http date calendar OK\n");
+}
+
+/* #964: a tagless element renders its text and then its children. */
+static void test_html_fragment_children(void) {
+    cwist_html_element_t *frag = cwist_html_element_create("");
+    assert(frag != NULL);
+    cwist_html_element_set_text(frag, "a&b");
+    cwist_html_element_t *p = cwist_html_element_create("p");
+    cwist_html_element_set_text(p, "hi");
+    cwist_html_element_add_child(frag, p);
+    cwist_html_element_t *em = cwist_html_element_create("em");
+    cwist_html_element_set_text(em, "x");
+    cwist_html_element_add_child(frag, em);
+    cwist_sstring *out = cwist_html_render(frag);
+    assert(out && strcmp(out->data, "a&amp;b<p>hi</p><em>x</em>") == 0);
+    cwist_sstring_destroy(out);
+    cwist_html_element_destroy(frag);
+    printf("  html fragment children OK\n");
+}
+
+/* #963: append and append_escaped keep bytes after an embedded NUL. */
+static void test_sstring_append_after_nul(void) {
+    cwist_sstring *s = cwist_sstring_create();
+    assert(s != NULL);
+    cwist_sstring_assign_len(s, "ab\0cd", 5);
+    cwist_sstring_append(s, "X");
+    assert(s->size == 6 && memcmp(s->data, "ab\0cdX", 7) == 0);
+    cwist_sstring_append_escaped(s, "<");
+    assert(s->size == 10 && memcmp(s->data, "ab\0cdX&lt;", 11) == 0);
+    cwist_sstring_rtrim(s);
+    assert(s->size == 10);
+    cwist_error_t err = cwist_sstring_change_size(s, 4, false);
+    cwist_error_dispose(&err);
+    assert(s->size == 10);
+    cwist_sstring_destroy(s);
+    printf("  sstring append after NUL OK\n");
+}
+
+/* #970: a declaration cannot leave a comment, string or escape open. */
+static void test_css_declaration_checks(void) {
+    cwist_css_scope scope;
+    cwist_css_scope_init(&scope, "t");
+    assert(cwist_css_scope_add_rule(&scope, "card", "color: red /*") == -1);
+    assert(cwist_css_scope_add_rule(&scope, "card", "color: red /* x * /") == -1);
+    assert(cwist_css_scope_add_rule(&scope, "card", "content: \"open") == -1);
+    assert(cwist_css_scope_add_rule(&scope, "card", "content: 'a\nb'") == -1);
+    assert(cwist_css_scope_add_rule(&scope, "card", "color: red\\") == -1);
+    assert(cwist_css_scope_add_rule(&scope, "card", "color: red; /* note */ margin: 0") == 0);
+    assert(cwist_css_scope_add_rule(&scope, "card", "content: \"a/*b\"; font: 'x\\'y'") == 0);
+    cwist_css_scope_destroy(&scope);
+    printf("  css declaration checks OK\n");
+}
+
+/* #971: pending SQEs are a gauge, each _count sample is declared, and
+ * values above 2^32 are not truncated. */
+static void test_metrics_exposition(void) {
+    cwist_metrics_registry_t *reg = cwist_metrics_registry();
+    assert(reg != NULL);
+    cwist_metrics_reset(reg);
+    cwist_metric_add(reg, CWIST_METRIC_REQUESTS_TOTAL, (uintmax_t)5000000000ULL);
+    char *text = cwist_metrics_render_prometheus(reg);
+    assert(text != NULL);
+    assert(strstr(text, "# TYPE cwist_io_uring_sqes_pending gauge\n"));
+    assert(strstr(text, "\ncwist_requests_total 5000000000.000\n"));
+    assert(strstr(text, "# TYPE cwist_requests_total_count counter\n"
+                        "cwist_requests_total_count 1\n"));
+    /* Every sample line belongs to a family declared just before it. */
+    for (const char *line = text; *line;) {
+        const char *nl = strchr(line, '\n');
+        size_t len = nl ? (size_t)(nl - line) : strlen(line);
+        if (len && line[0] != '#') {
+            const char *sp = memchr(line, ' ', len);
+            assert(sp != NULL);
+            char decl[160];
+            snprintf(decl, sizeof(decl), "# TYPE %.*s ", (int)(sp - line), line);
+            assert(strstr(text, decl) && strstr(text, decl) < line);
+        }
+        line += len + (nl ? 1 : 0);
+    }
+    free(text);
+    cwist_metrics_reset(reg);
+    printf("  metrics exposition OK\n");
+}
+
+#ifdef CWIST_DB
+/* #962: statements do not change connection settings. */
+static int pragma_int(cwist_db *db, const char *sql) {
+    sqlite3_stmt *st = NULL;
+    assert(sqlite3_prepare_v2(db->conn, sql, -1, &st, NULL) == SQLITE_OK);
+    assert(sqlite3_step(st) == SQLITE_ROW);
+    int v = sqlite3_column_int(st, 0);
+    sqlite3_finalize(st);
+    return v;
+}
+
+static void test_db_statement_settings(void) {
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err) && db);
+    cwist_error_dispose(&err);
+    int temp_store = pragma_int(db, "PRAGMA temp_store;");
+    int cache_spill = pragma_int(db, "PRAGMA cache_spill;");
+    err = cwist_db_exec(db, "CREATE TABLE a(x); CREATE TABLE b(x); CREATE TABLE c(x);");
+    cwist_error_dispose(&err);
+    cJSON *rows = NULL;
+    err = cwist_db_query(db,
+                         "SELECT * FROM a JOIN b ON a.x = b.x JOIN c ON b.x = c.x "
+                         "WHERE a.x = 1 AND b.x = 1 OR c.x = 2",
+                         &rows);
+    cwist_error_dispose(&err);
+    cJSON_Delete(rows);
+    assert(pragma_int(db, "PRAGMA temp_store;") == temp_store);
+    assert(pragma_int(db, "PRAGMA cache_spill;") == cache_spill);
+    cwist_db_close(db);
+    printf("  db statement settings OK\n");
+}
+#endif
+
 int main(void) {
     printf("test_regression_batch...\n");
     test_waf_body_policy();
@@ -364,6 +501,14 @@ int main(void) {
     test_db_insert_healed_numbers();
 #endif
     test_route_middleware_order();
+    test_http_date_calendar();
+    test_html_fragment_children();
+    test_sstring_append_after_nul();
+    test_css_declaration_checks();
+    test_metrics_exposition();
+#ifdef CWIST_DB
+    test_db_statement_settings();
+#endif
     printf("All regression batch tests passed.\n");
     return 0;
 }

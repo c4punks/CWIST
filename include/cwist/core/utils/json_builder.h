@@ -18,9 +18,12 @@
  * cwist_json_begin_object(jb);
  * cwist_json_add_string(jb, "message", "Hello");
  * cwist_json_add_int(jb, "code", 200);
+ * cwist_json_begin_array(jb, "tags");
+ * cwist_json_add_string(jb, NULL, "a");
+ * cwist_json_end_array(jb);
  * cwist_json_end_object(jb);
- * char *json = cwist_json_build(jb);
- * cwist_sstring *res = cwist_json_get_string(jb);
+ * const char *json = cwist_json_get_raw(jb); // NULL if an append failed
+ * // {"message":"Hello","code":200,"tags":["a"]}
  * cwist_json_builder_destroy(jb);
  * @endcode
  */
@@ -82,6 +85,8 @@ void cwist_json_add_null(cwist_json_builder *b, const char *key);
 
 /**
  * @brief Returns the raw string buffer. Invalidated on destroy.
+ * Returns NULL if any append failed (for example on allocation failure), so
+ * truncated JSON is never returned.
  */
 const char *cwist_json_get_raw(cwist_json_builder *b);
 

@@ -445,6 +445,11 @@ cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *u
     if (body && body_len > 0) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)body_len);
         curl_easy_setopt(curl, CURLOPT_COPYPOSTFIELDS, body);
+    } else if (strcmp(method_str, "POST") == 0) {
+        /* Without POSTFIELDS libcurl reads the POST body from its default
+         * read callback, which is stdin (#955). Send an empty body. */
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)0);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
     }
     if (strcmp(method_str, "GET") == 0 && body && body_len > 0)
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");

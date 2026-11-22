@@ -346,7 +346,66 @@ static void test_session_repeated_commit_revokes_every_cookie(void) {
     puts("[session] repeated commits revoke every cookie OK");
 }
 
+/* #958: an untouched session writes no cookie. #957: invalidating a
+ * __Host- session deletes it with the attributes it was issued with. */
+static void test_session_untouched_and_prefixed_logout(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    assert(cwist_app_use_session(app, "untouched-secret") == 0);
+
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_session_t *session = cwist_session_start(app, req, res);
+    assert(session != NULL);
+    assert(cwist_session_get(session, "anything") == NULL);
+    assert(cwist_session_commit(session, res) == 0);
+    assert(cwist_http_header_get(res->headers, "Set-Cookie") == NULL);
+    cwist_session_destroy(session);
+    req->session = NULL;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    app->use_ssl = true;
+    cwist_app_set_session_name(app, "__Host-session");
+    req = cwist_http_request_create();
+    res = cwist_http_response_create();
+    session = cwist_session_start(app, req, res);
+    assert(cwist_session_set(session, "user", "alice") == 0);
+    assert(cwist_session_commit(session, res) == 0);
+    assert(header_contains(res->headers, "Set-Cookie", "__Host-session="));
+    char issued[4096];
+    session_cookie_value(res, issued, sizeof(issued));
+    cwist_session_destroy(session);
+    req->session = NULL;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    req = cwist_http_request_create();
+    res = cwist_http_response_create();
+    char header[8192];
+    snprintf(header, sizeof(header), "__Host-session=%s", issued);
+    cwist_http_header_add(&req->headers, "Cookie", header);
+    session = cwist_session_start(app, req, res);
+    assert(session != NULL);
+    assert(cwist_session_get(session, "user") != NULL);
+    cwist_session_invalidate(session);
+    assert(cwist_session_commit(session, res) == 0);
+    const char *cleared = cwist_http_header_get(res->headers, "Set-Cookie");
+    assert(cleared != NULL);
+    assert(strncmp(cleared, "__Host-session=;", 16) == 0);
+    assert(strstr(cleared, "Max-Age=0") && strstr(cleared, "Path=/") &&
+           strstr(cleared, "Secure") && strstr(cleared, "HttpOnly"));
+    cwist_session_destroy(session);
+    req->session = NULL;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    app->use_ssl = false;
+    cwist_app_destroy(app);
+    printf("[session] untouched session and __Host- logout OK\n");
+}
+
 int main(void) {
+    test_session_untouched_and_prefixed_logout();
     test_session_repeated_commit_revokes_every_cookie();
     test_session_create_and_commit();
     test_session_round_trip();

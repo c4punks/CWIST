@@ -101,7 +101,11 @@ Writes the `200 OK` status line and the SSE headers to `req->client_fd` and
 sets `req->upgraded`. When the handler returns, the server sees `req->upgraded`,
 writes no response of its own, and does not keep the connection alive, so every
 event must be sent before the handler returns. Returns `NULL` if `req` is `NULL`, `req->client_fd` is negative,
-`req->upgraded` is already set, or the write fails.
+`req->upgraded` is already set, the request arrived over HTTPS, HTTP/2 or
+HTTP/3, or the write fails. Live streams write to the socket directly, so they
+work only on cleartext HTTP/1.x connections; on other transports nothing is
+written and the handler can send a buffered response with
+`cwist_sse_response_init()` instead.
 
 ### `cwist_sse_stream_send`
 ```c

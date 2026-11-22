@@ -40,7 +40,8 @@ typedef struct cwist_migration_t {
  *
  * Migrations are applied in ascending version order inside individual
  * transactions. On failure the transaction is rolled back and the function
- * returns the error code.
+ * returns the error code. Every version missing from the history table is
+ * applied, including one numbered below the newest applied version.
  *
  * @param db         Open SQLite3 handle.
  * @param migrations Array of migrations (need not be sorted; function sorts).

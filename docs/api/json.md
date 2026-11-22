@@ -49,6 +49,7 @@ Returns the constructed JSON string as a `const char *`.
 const char *cwist_json_get_raw(cwist_json_builder *b);
 ```
 - **Ownership:** The string is owned by the builder and remains valid until the builder is destroyed. Do NOT free this pointer.
+- **Failure:** Returns NULL if any earlier append failed (for example on allocation failure). The builder then ignores later calls, so truncated JSON is never returned.
 
 ### `cwist_json_builder_destroy`
 ```c

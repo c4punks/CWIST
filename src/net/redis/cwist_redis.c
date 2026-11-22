@@ -62,23 +62,12 @@ struct cwist_redis_pool {
 
 /* --- Socket helpers ----------------------------------------------------- */
 
-/** Open a blocking TCP connection to the Redis server.
- * @param host Server host name or IPv4 address.
- * @param port Server port.
- * @return Connected socket fd on success, -1 on resolution/connection failure. */
-static int redis_open_socket(const char *host, int port) {
-    struct addrinfo hints = {0}, *res = NULL;
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    char port_str[16];
-    snprintf(port_str, sizeof(port_str), "%d", port);
-    if (getaddrinfo(host, port_str, &hints, &res) != 0 || !res) return -1;
-
-    int fd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (fd < 0) {
-        freeaddrinfo(res);
-        return -1;
-    }
+/** Connect a new blocking socket to one resolved address within
+ * CWIST_REDIS_CONNECT_TIMEOUT_MS, with the blocking-API I/O timeouts set.
+ * @return Connected socket fd, or -1. */
+static int redis_connect_addr(const struct addrinfo *ai) {
+    int fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+    if (fd < 0) return -1;
 #ifdef SO_NOSIGPIPE
     int one = 1;
     (void)setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one));
@@ -86,10 +75,9 @@ static int redis_open_socket(const char *host, int port) {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags < 0 || fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
         close(fd);
-        freeaddrinfo(res);
         return -1;
     }
-    int rc = connect(fd, res->ai_addr, res->ai_addrlen);
+    int rc = connect(fd, ai->ai_addr, ai->ai_addrlen);
     if (rc != 0 && errno == EINPROGRESS) {
         struct pollfd pfd = {.fd = fd, .events = POLLOUT};
         do {
@@ -102,7 +90,6 @@ static int redis_open_socket(const char *host, int port) {
         else
             rc = -1;
     }
-    freeaddrinfo(res);
     struct timeval timeout = {
         .tv_sec = CWIST_REDIS_IO_TIMEOUT_MS / 1000,
         .tv_usec = (CWIST_REDIS_IO_TIMEOUT_MS % 1000) * 1000,
@@ -113,6 +100,28 @@ static int redis_open_socket(const char *host, int port) {
         close(fd);
         return -1;
     }
+    return fd;
+}
+
+/** Open a blocking TCP connection to the Redis server.
+ * Resolves IPv4 and IPv6 (AF_UNSPEC) and tries each address in the order
+ * getaddrinfo() returns them, so IPv6 literals, AAAA-only names and hosts
+ * with a down first address all work (#967).
+ * @param host Server host name, IPv4 or IPv6 address.
+ * @param port Server port.
+ * @return Connected socket fd on success, -1 on resolution/connection failure. */
+static int redis_open_socket(const char *host, int port) {
+    struct addrinfo hints = {0}, *res = NULL;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    char port_str[16];
+    snprintf(port_str, sizeof(port_str), "%d", port);
+    if (getaddrinfo(host, port_str, &hints, &res) != 0 || !res) return -1;
+
+    int fd = -1;
+    for (const struct addrinfo *ai = res; ai && fd < 0; ai = ai->ai_next)
+        fd = redis_connect_addr(ai);
+    freeaddrinfo(res);
     return fd;
 }
 

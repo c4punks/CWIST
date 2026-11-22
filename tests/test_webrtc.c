@@ -1,3 +1,4 @@
+#include <ctype.h>
 /** @file test_webrtc.c
  * @brief End-to-end WebRTC DataChannel tests over UDP loopback.
  *
@@ -321,6 +322,14 @@ static void unit_checks(void) {
         cwist_ice_random_creds(ufrag, sizeof(ufrag), pwd, sizeof(pwd));
         assert(strlen(ufrag) == 8);
         assert(strlen(pwd) == 32);
+        /* Every character is an ice-char, and the second half of the
+         * password is not a copy of the first (#969). Equal halves from
+         * independent bytes have probability 2^-96. */
+        for (size_t i = 0; i < 32; i++)
+            assert(isalnum((unsigned char)pwd[i]) || pwd[i] == '+' || pwd[i] == '/');
+        for (size_t i = 0; i < 8; i++)
+            assert(isalnum((unsigned char)ufrag[i]) || ufrag[i] == '+' || ufrag[i] == '/');
+        assert(memcmp(pwd, pwd + 16, 16) != 0);
 
         char zero_ufrag = 'u';
         char zero_pwd = 'p';
