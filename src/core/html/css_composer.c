@@ -433,18 +433,53 @@ const char *cwist_css_scope_class(cwist_css_scope *scope, const char *base_class
 }
 
 /**
+ * @brief Check that declaration text cannot escape its rule.
+ * @details Besides '{', '}' and '<', the text must not leave a comment, a
+ *          string or an escape open: an unterminated comment would swallow
+ *          the closing brace and every later rule (#970), and an open string
+ *          or trailing backslash would change how the rest is tokenized.
+ * @return true when the text is safe to place inside a rule block.
+ */
+static bool css_declarations_are_safe(const char *d) {
+    if (strpbrk(d, "{}<")) return false;
+    char quote = 0;
+    for (const char *p = d; *p; p++) {
+        if (*p == '\\') {
+            /* An escape needs a following character; an escaped newline is
+             * only valid inside a string, so reject it outside one. */
+            if (p[1] == '\0' || (!quote && (p[1] == '\n' || p[1] == '\r' || p[1] == '\f')))
+                return false;
+            p++;
+        } else if (quote) {
+            if (*p == quote)
+                quote = 0;
+            else if (*p == '\n' || *p == '\r' || *p == '\f')
+                return false; /* bad-string token */
+        } else if (*p == '"' || *p == '\'') {
+            quote = *p;
+        } else if (p[0] == '/' && p[1] == '*') {
+            const char *end = strstr(p + 2, "*/");
+            if (!end) return false;
+            p = end + 1;
+        }
+    }
+    return quote == 0;
+}
+
+/**
  * @brief Attach CSS declarations to a scoped class.
  * @param scope Scope to modify.
  * @param base_class Base class name; must be a valid CSS identifier.
  * @param declarations Declaration block text (e.g. "color: red;"). Must not
- *        contain '{', '}', or '<'.
+ *        contain '{', '}', or '<', an unterminated comment or string, or a
+ *        trailing backslash.
  * @retval 0 Declarations stored; any previous declarations are freed.
  * @retval -1 Invalid argument, unsafe declaration content, or allocation failure.
  */
 int cwist_css_scope_add_rule(cwist_css_scope *scope, const char *base_class,
                              const char *declarations) {
     if (!scope || !scope->suffix[0] || !is_css_ident(base_class) || !declarations) return -1;
-    if (strpbrk(declarations, "{}<")) return -1;
+    if (!css_declarations_are_safe(declarations)) return -1;
 
     char *copy = cwist_strdup(declarations);
     if (!copy) return -1;

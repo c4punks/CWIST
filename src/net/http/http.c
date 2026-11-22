@@ -2425,6 +2425,11 @@ time_t cwist_http_parse_date(const char *str) {
     if (month < 0 || day < 1 || day > 31 || year < 1970 || hh > 23 || mm > 59 || ss > 60 ||
         hh < 0 || mm < 0 || ss < 0)
         return (time_t)-1;
+    /* timegm() normalizes impossible dates ("31 Feb" becomes 3 March), so
+     * check the day against the month first (#966). */
+    static const int month_days[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    bool leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    if (day > month_days[month] + (month == 1 && leap ? 1 : 0)) return (time_t)-1;
     struct tm tm = {0};
     tm.tm_year = year - 1900;
     tm.tm_mon = month;

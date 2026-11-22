@@ -325,9 +325,13 @@ int main(void) {
             failures++;
             continue;
         }
-        char request[1024];
-        snprintf(request, sizeof(request), "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\n%s\r\n",
-                 conditional[i].headers);
+        /* Room for the fixed request line plus the whole header buffer; the
+         * precision bounds %s so GCC's -Wformat-truncation does not fire
+         * under WERROR=1. */
+        char request[sizeof(conditional[0].headers) + 64];
+        snprintf(request, sizeof(request),
+                 "GET /static/index.html HTTP/1.1\r\nHost: localhost\r\n%.*s\r\n",
+                 (int)sizeof(conditional[0].headers) - 1, conditional[i].headers);
         send_request(fd, request);
         read_response(fd, buf, sizeof(buf));
         if (!response_has_code(buf, conditional[i].status)) {

@@ -69,6 +69,11 @@ void user_handler(cwist_http_request *req, cwist_http_response *res) {
 cwist_app_get(app, "/users/:id", user_handler);
 ```
 
+매칭 순서: 정확한 경로가 먼저이고, 그다음 `:param` 라우트를 등록 순서대로, 마지막으로 `*`로
+끝나는 와일드카드 라우트를 접두사가 긴 것부터 시도합니다 (등록 순서와 관계없이 `/static/*`가
+`/*`보다 먼저 시도됩니다). 모든 종류의 라우트가 끝의 슬래시 하나를 무시하므로 `/users`는
+`/users/`에도 매칭됩니다.
+
 ### `cwist_app_get_ex` / `_post_ex` / `_put_ex` / `_delete_ex` / `_patch_ex`
 핸들러가 컨텍스트 포인터도 함께 받는 라우트를 등록합니다. 덕분에 전역 변수 없이 상태를 라우트에
 묶을 수 있습니다 (예: 언어 바인딩의 클로저). 매칭, `:param` 경로, 미들웨어, 모든 전송 계층은

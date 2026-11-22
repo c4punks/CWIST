@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (829) ==
+== functions (830) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -484,6 +484,7 @@ cwist_json_add_null
 cwist_json_add_string
 cwist_json_begin_array
 cwist_json_begin_object
+cwist_json_begin_object_key
 cwist_json_builder_create
 cwist_json_builder_destroy
 cwist_json_end_array
@@ -835,7 +836,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (830) ==
+== function signatures (831) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1316,6 +1317,7 @@ cwist_json_add_null: void (cwist_json_builder *, const char *)
 cwist_json_add_string: void (cwist_json_builder *, const char *, const char *)
 cwist_json_begin_array: void (cwist_json_builder *, const char *)
 cwist_json_begin_object: void (cwist_json_builder *)
+cwist_json_begin_object_key: void (cwist_json_builder *, const char *)
 cwist_json_builder_create: cwist_json_builder * (void)
 cwist_json_builder_destroy: void (cwist_json_builder *)
 cwist_json_end_array: void (cwist_json_builder *)

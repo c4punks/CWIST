@@ -352,6 +352,17 @@ int cwist_sstring_compare_sstring(cwist_sstring *left, const cwist_sstring *righ
 }
 
 /**
+ * @brief Length of the string's payload.
+ * @details A growable string's length is str->size, which counts embedded NUL
+ *          bytes written by assign_len()/append_len() (#963). A fixed string
+ *          uses size as its capacity, so its length is the C string length.
+ */
+static size_t sstring_content_len(const cwist_sstring *str) {
+    if (!str->data) return 0;
+    return str->is_fixed ? strlen(str->data) : str->size;
+}
+
+/**
  * @brief Trim leading ASCII whitespace from the string in place.
  * @param str String object to mutate.
  * @return ERR_SSTRING_OKAY on success, or ERR_SSTRING_NULL_STRING for invalid input.
@@ -361,7 +372,7 @@ cwist_error_t cwist_sstring_ltrim(cwist_sstring *str) {
     err.error.err_i8 = ERR_SSTRING_NULL_STRING;
     if (!str || !str->data) return err;
 
-    size_t len = strlen(str->data);
+    size_t len = sstring_content_len(str);
     size_t start = 0;
     while (start < len && isspace((unsigned char)str->data[start])) {
         start++;
@@ -397,7 +408,7 @@ cwist_error_t cwist_sstring_rtrim(cwist_sstring *str) {
     err.error.err_i8 = ERR_SSTRING_NULL_STRING;
     if (!str || !str->data) return err;
 
-    size_t len = strlen(str->data);
+    size_t len = sstring_content_len(str);
 
     if (len == 0) {
         err.error.err_i8 = ERR_SSTRING_OKAY;
@@ -457,7 +468,7 @@ cwist_error_t cwist_sstring_change_size(cwist_sstring *str, size_t new_size, boo
         return err;
     }
 
-    size_t current_len = str->data ? strlen(str->data) : 0;
+    size_t current_len = sstring_content_len(str);
 
     if (new_size < current_len && !blow_data) {
         err = make_error(CWIST_ERR_JSON);
@@ -600,23 +611,26 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
         return err;
     }
 
-    size_t current_len = str->data ? strlen(str->data) : 0;
+    size_t current_len = sstring_content_len(str);
     size_t append_len = strlen(data);
     size_t new_size = current_len + append_len;
 
-    cwist_error_t err = make_error(CWIST_ERR_JSON);
-    err.error.err_json = cJSON_CreateObject();
-
     if (str->is_fixed) {
         if (new_size > str->size) {
-            cJSON_AddStringToObject(err.error.err_json, "err",
-                                    "Cannot append: would exceed fixed size");
+            cwist_error_t err = make_error(CWIST_ERR_JSON);
+            err.error.err_json = cJSON_CreateObject();
+            if (err.error.err_json)
+                cJSON_AddStringToObject(err.error.err_json, "err",
+                                        "Cannot append: would exceed fixed size");
             return err;
         }
     } else {
         char *new_data = cwist_sstring_reserve(str, new_size, current_len);
         if (!new_data) {
-            cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
+            cwist_error_t err = make_error(CWIST_ERR_JSON);
+            err.error.err_json = cJSON_CreateObject();
+            if (err.error.err_json)
+                cJSON_AddStringToObject(err.error.err_json, "err", "Cannot append: memory full");
             return err;
         }
         str->data = new_data;
@@ -624,15 +638,13 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
         str->size = new_size;
     }
 
-    // Append logic
+    /* Copy at the payload end (not strcat) so embedded NUL bytes survive. */
     if (str->data) {
-        // If it was empty/null before, we need to make sure we don't strcat to garbage
-        if (current_len == 0) str->data[0] = '\0';
-        strcat(str->data, data);
+        memcpy(str->data + current_len, data, append_len);
+        str->data[new_size] = '\0';
     }
 
-    cJSON_Delete(err.error.err_json);
-    err = make_error(CWIST_ERR_INT8);
+    cwist_error_t err = make_error(CWIST_ERR_INT8);
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
 }
@@ -657,7 +669,7 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
         return err;
     }
 
-    size_t current_len = str->data ? strlen(str->data) : 0;
+    size_t current_len = sstring_content_len(str);
     size_t input_len = strlen(data);
     size_t new_size = current_len + (input_len * 6) + 1;
 

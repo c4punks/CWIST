@@ -134,6 +134,32 @@ int cwist_migrate_version(sqlite3 *db) {
 }
 
 /**
+ * @brief Check whether a version is recorded in the migration history.
+ * @param db SQLite connection to inspect.
+ * @param version Migration version to look up.
+ * @param found Receives 1 when the version was applied, 0 otherwise.
+ * @return CWIST_MIGRATE_OK, or CWIST_MIGRATE_ERR_SQL when the lookup fails.
+ */
+static int migrate_is_applied(sqlite3 *db, int version, int *found) {
+    sqlite3_stmt *chk = NULL;
+    *found = 0;
+    int rc = sqlite3_prepare_v2(db, "SELECT 1 FROM _cwist_migrations WHERE version = ?;", -1, &chk,
+                                NULL);
+    if (rc == SQLITE_OK) rc = sqlite3_bind_int(chk, 1, version);
+    if (rc == SQLITE_OK) {
+        rc = sqlite3_step(chk);
+        if (rc == SQLITE_ROW) {
+            *found = 1;
+            rc = SQLITE_OK;
+        } else if (rc == SQLITE_DONE) {
+            rc = SQLITE_OK;
+        }
+    }
+    sqlite3_finalize(chk);
+    return rc == SQLITE_OK ? CWIST_MIGRATE_OK : CWIST_MIGRATE_ERR_SQL;
+}
+
+/**
  * @brief Apply all pending up migrations after sorting them by version.
  * @param db SQLite connection to migrate.
  * @param migrations Caller-supplied migration array.
@@ -156,8 +182,20 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
     qsort(sorted, (size_t)count, sizeof(cwist_migration_t), migration_cmp_asc);
 
     for (int i = 0; i < count; i++) {
-        if (sorted[i].version <= current) continue;
         if (!sorted[i].up_sql) continue;
+        /* Compare against the recorded set, not only MAX(version): a
+         * migration numbered below the newest applied one (merged from
+         * another branch, or a hotfix) is still pending (#961). */
+        if (sorted[i].version <= current) {
+            int found = 0;
+            if (migrate_is_applied(db, sorted[i].version, &found) != CWIST_MIGRATE_OK) {
+                cwist_free(sorted);
+                return CWIST_MIGRATE_ERR_SQL;
+            }
+            if (found) continue;
+            fprintf(stderr, "[migrate] applying v%d out of order (newest applied is v%d)\n",
+                    sorted[i].version, current);
+        }
 
         int rc = migrate_exec_sql(db, sorted[i].up_sql, sorted[i].version, sorted[i].name, 1, "up");
         if (rc != CWIST_MIGRATE_OK) {
@@ -200,24 +238,11 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
         if (sorted[i].version > current) continue;
 
         /* Check it's actually in the history table. */
-        sqlite3_stmt *chk = NULL;
         int found = 0;
-        int rc = sqlite3_prepare_v2(db, "SELECT 1 FROM _cwist_migrations WHERE version = ?;", -1,
-                                    &chk, NULL);
-        if (rc == SQLITE_OK) rc = sqlite3_bind_int(chk, 1, sorted[i].version);
-        if (rc == SQLITE_OK) {
-            rc = sqlite3_step(chk);
-            if (rc == SQLITE_ROW) {
-                found = 1;
-                rc = SQLITE_OK;
-            } else if (rc == SQLITE_DONE) {
-                rc = SQLITE_OK;
-            }
-        }
-        sqlite3_finalize(chk);
-        if (rc != SQLITE_OK) {
+        int rc = migrate_is_applied(db, sorted[i].version, &found);
+        if (rc != CWIST_MIGRATE_OK) {
             cwist_free(sorted);
-            return CWIST_MIGRATE_ERR_SQL;
+            return rc;
         }
         if (!found) continue;
 

@@ -24,7 +24,8 @@ cwist_error_t cwist_sse_response_event(cwist_http_response *res, const char *eve
 cwist_error_t cwist_sse_response_comment(cwist_http_response *res, const char *comment);
 cwist_error_t cwist_sse_response_write(cwist_http_response *res, const cwist_sse_event_t *event);
 
-/** Writes SSE response headers immediately and sets req->upgraded. */
+/** Writes SSE response headers immediately and sets req->upgraded. Cleartext
+ *  HTTP/1.x only: returns NULL on HTTPS, HTTP/2 and HTTP/3 requests. */
 cwist_sse_stream_t *cwist_sse_stream_open(cwist_http_request *req);
 cwist_error_t cwist_sse_stream_send(cwist_sse_stream_t *stream, const char *event, const char *id,
                                     int retry_ms, const char *data);

@@ -12,6 +12,13 @@ cwist_json_builder *cwist_json_builder_create(void);
 ### `cwist_json_begin_object` / `cwist_json_end_object`
 JSON 객체 `{ ... }`를 시작하고 끝냅니다.
 
+### `cwist_json_begin_object_key`
+```c
+void cwist_json_begin_object_key(cwist_json_builder *b, const char *key);
+```
+객체 안에서 멤버 `key`의 값으로 JSON 객체를 시작하며 `"key": {` 형태로 씁니다. 닫을 때는
+`cwist_json_end_object()`를 씁니다. `key`가 NULL이면 `cwist_json_begin_object()`와 같습니다.
+
 ### `cwist_json_add_string`
 값이 문자열인 키-값 쌍을 추가합니다.
 ```c
@@ -49,6 +56,7 @@ void cwist_json_end_array(cwist_json_builder *b);
 const char *cwist_json_get_raw(cwist_json_builder *b);
 ```
 - **소유권:** 문자열은 빌더가 소유하며 빌더가 파괴될 때까지 유효합니다. 이 포인터를 해제하지 마세요.
+- **실패:** 앞선 추가 중 하나라도 실패하면 (예: 할당 실패) NULL을 반환합니다. 그 뒤 빌더는 이후 호출을 무시하므로 잘린 JSON을 반환하지 않습니다.
 
 ### `cwist_json_builder_destroy`
 ```c

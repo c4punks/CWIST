@@ -641,10 +641,21 @@ void cwist_http_async_disown_session(cwist_session_t *session) {
 
 int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     if (!session || !res) return -1;
-    if (!session->modified && session->loaded) return 0;
+    /* A session that was never set, deleted from or invalidated writes no
+     * cookie, so untouched responses stay cacheable and anonymous clients
+     * are not handed a session (#958). */
+    if (!session->modified) return 0;
 
     if (session->invalidated) {
-        int rc = cwist_cookie_delete(res, session->app->session_name);
+        /* Delete with the attributes the cookie was set with. A __Host- or
+         * __Secure- name needs Secure, and some browsers keep a cookie whose
+         * deletion does not match its Path/Secure attributes (#957). */
+        cwist_cookie_options del = {0};
+        del.path = "/";
+        del.http_only = true;
+        del.secure = session->app->use_ssl;
+        del.same_site = "Lax";
+        int rc = cwist_cookie_delete_ex(res, session->app->session_name, &del);
         if (rc == 0) {
             session->modified = false;
             session->loaded = false;

@@ -78,9 +78,29 @@ int getaddrinfo(const char *node, const char *service, const struct addrinfo *hi
     return g_real_gai(node, service, hints, res);
 }
 
+/* setsockopt() interposer: counts I/O timeouts installed on client sockets
+ * (#968: reconnected sockets must get them too). */
+typedef int (*setsockopt_fn)(int, int, int, const void *, socklen_t);
+static setsockopt_fn g_real_setsockopt;
+static atomic_int g_rcvtimeo_calls;
+
+int setsockopt(int fd, int level, int name, const void *val, socklen_t len) {
+    if (level == SOL_SOCKET && name == SO_RCVTIMEO && val && len == sizeof(struct timeval)) {
+        const struct timeval *tv = val;
+        if (tv->tv_sec || tv->tv_usec) atomic_fetch_add(&g_rcvtimeo_calls, 1);
+    }
+    if (!g_real_setsockopt) {
+        errno = ENOSYS;
+        return -1;
+    }
+    return g_real_setsockopt(fd, level, name, val, len);
+}
+
 static void dns_init(void) {
     void *sym = dlsym(RTLD_NEXT, "getaddrinfo");
     memcpy(&g_real_gai, &sym, sizeof(g_real_gai));
+    sym = dlsym(RTLD_NEXT, "setsockopt");
+    memcpy(&g_real_setsockopt, &sym, sizeof(g_real_setsockopt));
     sym = dlsym(RTLD_NEXT, "pipe");
     memcpy(&g_real_pipe, &sym, sizeof(g_real_pipe));
 }
@@ -393,28 +413,48 @@ static void *srv_accept(void *arg) {
     return NULL;
 }
 
-static fake_server *server_start(void) {
+/* Start a fake peer on the loopback address of @p family, or return NULL
+ * when that family is unavailable (IPv6 disabled). */
+static fake_server *server_start_family(int family) {
     fake_server *s = calloc(1, sizeof(*s));
     pthread_mutex_init(&s->mu, NULL);
-    s->listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+    s->listen_fd = socket(family, SOCK_STREAM, 0);
     int one = 1;
     setsockopt(s->listen_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-    struct sockaddr_in sa = {0};
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    sa.sin_port = 0;
-    if (bind(s->listen_fd, (struct sockaddr *)&sa, sizeof(sa)) != 0 ||
+    struct sockaddr_storage ss = {0};
+    socklen_t sl;
+    if (family == AF_INET6) {
+        struct sockaddr_in6 *sa6 = (struct sockaddr_in6 *)&ss;
+        sa6->sin6_family = AF_INET6;
+        sa6->sin6_addr = in6addr_loopback;
+        sl = sizeof(*sa6);
+    } else {
+        struct sockaddr_in *sa = (struct sockaddr_in *)&ss;
+        sa->sin_family = AF_INET;
+        sa->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        sl = sizeof(*sa);
+    }
+    if (s->listen_fd < 0 || bind(s->listen_fd, (struct sockaddr *)&ss, sl) != 0 ||
         listen(s->listen_fd, 64) != 0) {
+        if (family == AF_INET6) {
+            if (s->listen_fd >= 0) close(s->listen_fd);
+            pthread_mutex_destroy(&s->mu);
+            free(s);
+            return NULL;
+        }
         perror("fake server");
         exit(2);
     }
-    socklen_t sl = sizeof(sa);
-    getsockname(s->listen_fd, (struct sockaddr *)&sa, &sl);
-    s->port = ntohs(sa.sin_port);
+    sl = sizeof(ss);
+    getsockname(s->listen_fd, (struct sockaddr *)&ss, &sl);
+    s->port = ntohs(family == AF_INET6 ? ((struct sockaddr_in6 *)&ss)->sin6_port
+                                       : ((struct sockaddr_in *)&ss)->sin_port);
     s->listener_open = true;
     pthread_create(&s->accept_thread, NULL, srv_accept, s);
     return s;
 }
+
+static fake_server *server_start(void) { return server_start_family(AF_INET); }
 
 static void server_close_listener(fake_server *s) {
     if (!s->listener_open) return;
@@ -1124,6 +1164,43 @@ static const char *g_filter;
     } while (0)
 
 /* Optional argv[1]: run only tests whose name contains it. */
+/* #968: a reconnected pool socket gets the same I/O timeouts as the first. */
+static void test_reconnect_keeps_io_timeouts(void) {
+    fake_server *s = server_start();
+    atomic_store(&g_rcvtimeo_calls, 0);
+    cwist_redis_pool_t *p = cwist_redis_pool_create("127.0.0.1", s->port, 1);
+    CHECK(p != NULL);
+    CHECK(atomic_load(&g_rcvtimeo_calls) == 1);
+    cwist_redis_reply_t *r = NULL;
+    CHECK(CMD(p, 1000, &r, "REPLYCLOSE", "r1") == 0);
+    reply_drop(r);
+    sleep_ms(50);
+    CHECK(echo_ok(p, "again"));
+    CHECK(atomic_load(&s->accepted) == 2);
+    CHECK(atomic_load(&g_rcvtimeo_calls) == 2);
+    cwist_redis_pool_destroy(p);
+    server_stop(s);
+}
+
+/* #967: IPv6 literals connect (the resolver used to ask for IPv4 only). */
+static void test_ipv6_peer(void) {
+    fake_server *s = server_start_family(AF_INET6);
+    if (!s) {
+        fprintf(stderr, "  IPv6 loopback unavailable; skipped\n");
+        return;
+    }
+    cwist_redis_pool_t *p = cwist_redis_pool_create("::1", s->port, 1);
+    CHECK(p != NULL);
+    if (p) {
+        CHECK(echo_ok(p, "v6"));
+        cwist_redis_pool_destroy(p);
+    }
+    cwist_redis_t *c = cwist_redis_connect("::1", s->port);
+    CHECK(c != NULL);
+    if (c) cwist_redis_close(c);
+    server_stop(s);
+}
+
 int main(int argc, char **argv) {
     g_filter = argc > 1 ? argv[1] : NULL;
     signal(SIGPIPE, SIG_DFL);
@@ -1141,6 +1218,8 @@ int main(int argc, char **argv) {
     RUN(test_no_wake_pipe_deadline);
     RUN(test_reconnect_cached_peer);
     RUN(test_reconnect_refused_is_bounded);
+    RUN(test_reconnect_keeps_io_timeouts);
+    RUN(test_ipv6_peer);
     RUN(test_unsolicited_bytes_never_leak);
     RUN(test_malformed_replies);
     RUN(test_inherited_pool_rejected);

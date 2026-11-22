@@ -69,6 +69,11 @@ void user_handler(cwist_http_request *req, cwist_http_response *res) {
 cwist_app_get(app, "/users/:id", user_handler);
 ```
 
+Matching order: exact paths first, then `:param` routes in registration order,
+then wildcard routes ending in `*`, longest prefix first (`/static/*` is tried
+before `/*` whatever order they were registered in). Every kind of route
+ignores one trailing slash, so `/users` also matches `/users/`.
+
 ### `cwist_app_get_ex` / `_post_ex` / `_put_ex` / `_delete_ex` / `_patch_ex`
 Register a route whose handler also receives a context pointer, so state can
 be bound to a route without globals (for example a closure from a language
