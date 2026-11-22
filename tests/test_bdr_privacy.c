@@ -166,6 +166,7 @@ static const char *fetch(const char *path, const char *extra_headers, char *buf,
     }
     buf[used] = '\0';
     close(fd);
+    if (body && want >= 0 && (long)(buf + used - body) < want) return NULL;
     return body;
 }
 
@@ -266,12 +267,20 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
 
     /* 1. Cookie: alice teaches the path twice (enough to stabilize), bob
      *    must still get his own reply. */
-    for (int i = 0; i < 3; i++) fetch("/who", "Cookie: sid=alice\r\n", buf, sizeof(buf));
+    for (int i = 0; i < 3; i++) {
+        b = fetch("/who", "Cookie: sid=alice\r\n", buf, sizeof(buf));
+        CHECK(b && strcmp(b, "who=sid=alice") == 0, "Cookie: alice fetch %d got '%s'", i + 1,
+              b ? b : "(null)");
+    }
     b = fetch("/who", "Cookie: sid=bob\r\n", buf, sizeof(buf));
     CHECK(b && strcmp(b, "who=sid=bob") == 0, "Cookie: bob got '%s'", b ? b : "(null)");
 
     /* 2. Same with Authorization, and an anonymous caller after both. */
-    for (int i = 0; i < 3; i++) fetch("/who", "Authorization: Bearer A\r\n", buf, sizeof(buf));
+    for (int i = 0; i < 3; i++) {
+        b = fetch("/who", "Authorization: Bearer A\r\n", buf, sizeof(buf));
+        CHECK(b && strcmp(b, "who=Bearer A") == 0, "Authorization: A fetch %d got '%s'", i + 1,
+              b ? b : "(null)");
+    }
     b = fetch("/who", "Authorization: Bearer B\r\n", buf, sizeof(buf));
     CHECK(b && strcmp(b, "who=Bearer B") == 0, "Authorization: B got '%s'", b ? b : "(null)");
     b = fetch("/who", NULL, buf, sizeof(buf));
@@ -282,9 +291,17 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     static const int slots[] = {H_SETCOOKIE, H_PRIVATE, H_NOSTORE, H_NOCACHE, H_FAST};
     for (size_t s = 0; s < sizeof(slots) / sizeof(slots[0]); s++) {
         const char *path = g_paths[slots[s]];
-        for (int i = 0; i < 5; i++) fetch(path, NULL, buf, sizeof(buf));
+        int ok = 0;
+        for (int i = 0; i < 5; i++) {
+            b = fetch(path, NULL, buf, sizeof(buf));
+            CHECK(b != NULL, "%s fetch %d/5 failed", path, i + 1);
+            if (b) ok++;
+        }
         int n = hits(path);
-        CHECK(n == 5, "%s reached the handler %d/5 times (reply was cached)", path, n);
+        CHECK(n >= 0, "%s count query failed", path);
+        if (n >= 0) {
+            CHECK(n == ok, "%s reached the handler %d/%d times (reply was cached)", path, n, ok);
+        }
     }
 
     /* 4. Control: an ordinary slow GET is learned after two identical
@@ -296,7 +313,10 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     }
     if (expect_learning) {
         int n = hits("/public");
-        CHECK(n >= 1 && n < 5, "/public reached the handler %d/5 times (expected cache hits)", n);
+        CHECK(n >= 0, "/public count query failed");
+        if (n >= 0) {
+            CHECK(n >= 1 && n < 5, "/public reached the handler %d/5 times (expected cache hits)", n);
+        }
     }
 
 out:
