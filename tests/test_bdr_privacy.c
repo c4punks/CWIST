@@ -214,7 +214,9 @@ static int reserve_test_port(void) {
     return rc == 0 ? ntohs(addr.sin6_port) : -1;
 }
 
-static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
+/* Runs one row. Returns false only when the server exited before it came up
+ * (its port was taken), so the caller can retry the row on another port. */
+static bool run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     char mode[256];
     size_t used = (size_t)snprintf(mode, sizeof(mode), "run %llu:", (unsigned long long)run);
     const char *values[KNOB_COUNT];
@@ -234,7 +236,7 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     pid_t pid = fork();
     if (pid < 0) {
         failures++;
-        return;
+        return true;
     }
     if (pid == 0) {
         for (uint32_t k = 0; k < KNOB_COUNT; k++) setenv(k_knobs[k].name, values[k], 1);
@@ -259,6 +261,8 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     const char *b = NULL;
     for (int i = 0; i < 50 && !b; i++) {
         sleep_ms(100);
+        int status = 0;
+        if (waitpid(pid, &status, WNOHANG) == pid) return false; /* bind failed */
         b = fetch("/count?p=/who", NULL, buf, sizeof(buf));
     }
     CHECK(b != NULL, "server did not come up");
@@ -280,11 +284,22 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     /* 3. Responses that set a cookie or forbid shared caching, and a handler
      *    under the latency threshold: every request must reach the handler. */
     static const int slots[] = {H_SETCOOKIE, H_PRIVATE, H_NOSTORE, H_NOCACHE, H_FAST};
+    static const char *const bodies[] = {"welcome", "per-user", "per-user", "per-user", "fast"};
     for (size_t s = 0; s < sizeof(slots) / sizeof(slots[0]); s++) {
         const char *path = g_paths[slots[s]];
-        for (int i = 0; i < 5; i++) fetch(path, NULL, buf, sizeof(buf));
+        int answered = 0;
+        for (int i = 0; i < 5; i++) {
+            b = fetch(path, NULL, buf, sizeof(buf));
+            if (b && strcmp(b, bodies[s]) == 0)
+                answered++;
+            else
+                CHECK(false, "%s request %d failed or got '%s'", path, i + 1, b ? b : "(null)");
+        }
         int n = hits(path);
-        CHECK(n == 5, "%s reached the handler %d/5 times (reply was cached)", path, n);
+        /* A lost request is reported above; only answered requests that
+         * never reached the handler mean the reply came from the cache. */
+        CHECK(n == answered, "%s answered %d/5 requests but reached the handler %d times%s",
+              path, answered, n, n >= 0 && n < answered ? " (reply was cached)" : "");
     }
 
     /* 4. Control: an ordinary slow GET is learned after two identical
@@ -304,6 +319,7 @@ out:
     int status = 0;
     waitpid(pid, &status, 0);
     if (failures == failures_before) printf("Passed BDR privacy checks (%s)\n", mode);
+    return true;
 }
 
 int main(void) {
@@ -317,12 +333,17 @@ int main(void) {
     }
     uint64_t runs = cwist_latin_oa_runs(oa);
     for (uint64_t run = 0; run < runs; run++) {
-        int port = reserve_test_port();
-        if (port < 0) {
-            failures++;
-            break;
+        bool done = false;
+        for (int attempt = 0; attempt < 5 && !done; attempt++) {
+            int port = reserve_test_port();
+            if (port < 0) break;
+            done = run_row(oa, run, port);
         }
-        run_row(oa, run, port);
+        if (!done) {
+            fprintf(stderr, "FAIL [run %llu] server could not bind a free port\n",
+                    (unsigned long long)run);
+            failures++;
+        }
     }
     cwist_latin_family_destroy(oa);
     if (failures) {
