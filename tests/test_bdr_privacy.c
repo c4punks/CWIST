@@ -166,6 +166,8 @@ static const char *fetch(const char *path, const char *extra_headers, char *buf,
     }
     buf[used] = '\0';
     close(fd);
+    /* A body cut short of its Content-Length is a failed fetch, not a
+     * reply. */
     if (body && want >= 0 && (long)(buf + used - body) < want) return NULL;
     return body;
 }
@@ -215,7 +217,9 @@ static int reserve_test_port(void) {
     return rc == 0 ? ntohs(addr.sin6_port) : -1;
 }
 
-static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
+/* Runs one row. Returns false only when the server exited before it came up
+ * (its port was taken), so the caller can retry the row on another port. */
+static bool run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     char mode[256];
     size_t used = (size_t)snprintf(mode, sizeof(mode), "run %llu:", (unsigned long long)run);
     const char *values[KNOB_COUNT];
@@ -235,12 +239,18 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     pid_t pid = fork();
     if (pid < 0) {
         failures++;
-        return;
+        return true;
     }
     if (pid == 0) {
         for (uint32_t k = 0; k < KNOB_COUNT; k++) setenv(k_knobs[k].name, values[k], 1);
         /* Worker processes would each keep their own cache and counters. */
         setenv("CWIST_WORKERS", "1", 1);
+        /* With SO_REUSEPORT (the default) a second CWIST server that picked
+         * the same port, such as another test binary running in parallel,
+         * would share it, and some requests would reach that server's
+         * handlers (#975). Without it the bind fails and the row is retried
+         * on another port. */
+        setenv("CWIST_REUSEPORT", "0", 1);
         cwist_app *app = cwist_app_create();
         if (!app) _exit(1);
         cwist_app_get(app, "/who", who_handler);
@@ -260,6 +270,8 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     const char *b = NULL;
     for (int i = 0; i < 50 && !b; i++) {
         sleep_ms(100);
+        int status = 0;
+        if (waitpid(pid, &status, WNOHANG) == pid) return false; /* bind failed */
         b = fetch("/count?p=/who", NULL, buf, sizeof(buf));
     }
     CHECK(b != NULL, "server did not come up");
@@ -269,7 +281,7 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
      *    must still get his own reply. */
     for (int i = 0; i < 3; i++) {
         b = fetch("/who", "Cookie: sid=alice\r\n", buf, sizeof(buf));
-        CHECK(b && strcmp(b, "who=sid=alice") == 0, "Cookie: alice fetch %d got '%s'", i + 1,
+        CHECK(b && strcmp(b, "who=sid=alice") == 0, "Cookie: alice request %d got '%s'", i + 1,
               b ? b : "(null)");
     }
     b = fetch("/who", "Cookie: sid=bob\r\n", buf, sizeof(buf));
@@ -278,7 +290,7 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     /* 2. Same with Authorization, and an anonymous caller after both. */
     for (int i = 0; i < 3; i++) {
         b = fetch("/who", "Authorization: Bearer A\r\n", buf, sizeof(buf));
-        CHECK(b && strcmp(b, "who=Bearer A") == 0, "Authorization: A fetch %d got '%s'", i + 1,
+        CHECK(b && strcmp(b, "who=Bearer A") == 0, "Authorization: A request %d got '%s'", i + 1,
               b ? b : "(null)");
     }
     b = fetch("/who", "Authorization: Bearer B\r\n", buf, sizeof(buf));
@@ -289,19 +301,24 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     /* 3. Responses that set a cookie or forbid shared caching, and a handler
      *    under the latency threshold: every request must reach the handler. */
     static const int slots[] = {H_SETCOOKIE, H_PRIVATE, H_NOSTORE, H_NOCACHE, H_FAST};
+    static const char *const bodies[] = {"welcome", "per-user", "per-user", "per-user", "fast"};
     for (size_t s = 0; s < sizeof(slots) / sizeof(slots[0]); s++) {
         const char *path = g_paths[slots[s]];
-        int ok = 0;
+        int answered = 0;
         for (int i = 0; i < 5; i++) {
             b = fetch(path, NULL, buf, sizeof(buf));
-            CHECK(b != NULL, "%s fetch %d/5 failed", path, i + 1);
-            if (b) ok++;
+            if (b && strcmp(b, bodies[s]) == 0)
+                answered++;
+            else
+                CHECK(false, "%s request %d failed or got '%s'", path, i + 1, b ? b : "(null)");
         }
         int n = hits(path);
         CHECK(n >= 0, "%s count query failed", path);
-        if (n >= 0) {
-            CHECK(n == ok, "%s reached the handler %d/%d times (reply was cached)", path, n, ok);
-        }
+        /* A lost request is reported above; only answered requests that
+         * never reached the handler mean the reply came from the cache. */
+        if (n >= 0)
+            CHECK(n == answered, "%s answered %d/5 requests but reached the handler %d times%s",
+                  path, answered, n, n < answered ? " (reply was cached)" : "");
     }
 
     /* 4. Control: an ordinary slow GET is learned after two identical
@@ -314,9 +331,9 @@ static void run_row(const cwist_latin_family_t *oa, uint64_t run, int port) {
     if (expect_learning) {
         int n = hits("/public");
         CHECK(n >= 0, "/public count query failed");
-        if (n >= 0) {
-            CHECK(n >= 1 && n < 5, "/public reached the handler %d/5 times (expected cache hits)", n);
-        }
+        if (n >= 0)
+            CHECK(n >= 1 && n < 5, "/public reached the handler %d/5 times (expected cache hits)",
+                  n);
     }
 
 out:
@@ -324,6 +341,7 @@ out:
     int status = 0;
     waitpid(pid, &status, 0);
     if (failures == failures_before) printf("Passed BDR privacy checks (%s)\n", mode);
+    return true;
 }
 
 int main(void) {
@@ -337,12 +355,17 @@ int main(void) {
     }
     uint64_t runs = cwist_latin_oa_runs(oa);
     for (uint64_t run = 0; run < runs; run++) {
-        int port = reserve_test_port();
-        if (port < 0) {
-            failures++;
-            break;
+        bool done = false;
+        for (int attempt = 0; attempt < 5 && !done; attempt++) {
+            int port = reserve_test_port();
+            if (port < 0) break;
+            done = run_row(oa, run, port);
         }
-        run_row(oa, run, port);
+        if (!done) {
+            fprintf(stderr, "FAIL [run %llu] server could not bind a free port\n",
+                    (unsigned long long)run);
+            failures++;
+        }
     }
     cwist_latin_family_destroy(oa);
     if (failures) {
