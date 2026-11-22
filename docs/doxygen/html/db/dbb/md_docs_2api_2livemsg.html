@@ -108,10 +108,10 @@ $(document).ready(function(){initNavTree('db/dbb/md_docs_2api_2livemsg.html','..
   <div class="headertitle"><div class="title">Live message runtime (experimental)</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p><a class="anchor" id="autotoc_md151"></a> <code>cwist_livemsg</code> runs whole-message application callbacks over either WebSocket or WebRTC DataChannel. The transport, codec, framing, optional SDP signaling, and non-blocking sends belong to the runtime; the application supplies <code>process()</code> and <code>respond()</code>.</p>
+<div class="textblock"><p><a class="anchor" id="autotoc_md152"></a> <code>cwist_livemsg</code> runs whole-message application callbacks over either WebSocket or WebRTC DataChannel. The transport, codec, framing, optional SDP signaling, and non-blocking sends belong to the runtime; the application supplies <code>process()</code> and <code>respond()</code>.</p>
 <p><em>Header:</em> <code>&lt;<a class="el" href="../../d3/d4f/livemsg_8h.html" title="Experimental message runtime over WebSocket and WebRTC DataChannel.">cwist/livemsg.h</a>&gt;</code></p>
 <p>The API is experimental in v4.x. It does not change the v4.0 API guarantee.</p>
-<h1><a class="anchor" id="autotoc_md152"></a>
+<h1><a class="anchor" id="autotoc_md153"></a>
 Minimal server</h1>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="../../d3/d4f/livemsg_8h.html">cwist/livemsg.h</a>&gt;</span></div>
 <div class="line"> </div>
@@ -154,7 +154,7 @@ Minimal server</h1>
 <div class="ttc" id="astructcwist__livemsg__config_html_a910018d5c96bb78c17063da2d2fe6b87"><div class="ttname"><a href="../../d4/dba/structcwist__livemsg__config.html#a910018d5c96bb78c17063da2d2fe6b87">cwist_livemsg_config::port</a></div><div class="ttdeci">uint16_t port</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d4f/livemsg_8h_source.html#l00046">livemsg.h:46</a></div></div>
 <div class="ttc" id="astructcwist__livemsg__config_html_ac95d4e7d3cc25cefef8e40e8340a9435"><div class="ttname"><a href="../../d4/dba/structcwist__livemsg__config.html#ac95d4e7d3cc25cefef8e40e8340a9435">cwist_livemsg_config::respond</a></div><div class="ttdeci">int(* respond)(cwist_livemsg_peer *peer, void *result, cwist_livemsg_reply *reply, void *user_data)</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d4f/livemsg_8h_source.html#l00053">livemsg.h:53</a></div></div>
 </div><!-- fragment --><p>Build and run <code>example/livemsg-websocket/livemsg-websocket</code>, then connect a WebSocket client to <code>ws://localhost:8080/</code>. JSON messages are parsed and echoed. <code>example/livemsg-webrtc/livemsg-webrtc</code> uses the same callbacks, accepts SDP at <code>POST <a href="http://localhost:8080/signal">http://localhost:8080/signal</a></code>, and uses UDP port 9000 for ICE/DTLS/SCTP. The request and response bodies for signaling use <code>application/sdp</code>.</p>
-<h1><a class="anchor" id="autotoc_md153"></a>
+<h1><a class="anchor" id="autotoc_md154"></a>
 Configuration</h1>
 <p>Call <code><a class="el" href="../../d3/d4f/livemsg_8h.html#aa2736967604dc59cd72afb865917f78c">cwist_livemsg_config_init()</a></code> before setting callbacks and ports. It sets <code>ws_path</code> to <code>/</code> and, for WebRTC, <code>signaling_path</code> to <code>/signal</code>. Set <code>signaling_path</code> to <code>NULL</code> to disable the built-in HTTP endpoint. The default <code>port</code> and <code>udp_port</code> are zero; applications should select explicit ports, except when an ephemeral WebRTC UDP port is intentional.</p>
 <p><code>transport</code> is a bitmask for forward compatibility. Version 1 accepts exactly one of:</p>
@@ -164,7 +164,7 @@ Configuration</h1>
 </ul>
 <p>Selecting both or an unknown transport fails with <code>-ENOTSUP</code> through the serve wrappers. <code>create()</code> returns <code>NULL</code> and sets <code>errno</code> instead. Both callbacks are required. <code>RAW</code> and <code>JSON</code> are the built-in codecs. Protobuf and FlatBuffers applications use <code>RAW</code> with their own serializers, including <code>cwist_pb_*</code> for Protobuf. Rooms and simultaneous transports are outside v1.</p>
 <p><code><a class="el" href="../../d3/d4f/livemsg_8h.html#a54009b3ae1ae950d406d1b68242848c5">cwist_livemsg_run()</a></code> always uses one C1M worker process. It does not inherit <code>CWIST_WORKERS</code>; forked workers cannot share WebRTC ICE/DTLS state.</p>
-<h1><a class="anchor" id="autotoc_md154"></a>
+<h1><a class="anchor" id="autotoc_md155"></a>
 Message and result ownership</h1>
 <p>For each incoming message the runtime creates a 512 KiB-class arena, copies the wire bytes into it, and keeps that arena through <code>process()</code> and <code>respond()</code>. It destroys the arena and response buffer immediately after the callback sequence. There is no application free callback.</p>
 <ul>
@@ -176,7 +176,7 @@ Message and result ownership</h1>
 <li>Input, results, arena allocations, and the reply handle must not escape the callback sequence.</li>
 </ul>
 <p>Returning <code>CWIST_LIVEMSG_NO_REPLY</code> from either callback, or returning success with an empty response buffer, sends no packet. Other nonzero callback results also suppress the response and leave the session available for later messages.</p>
-<h1><a class="anchor" id="autotoc_md155"></a>
+<h1><a class="anchor" id="autotoc_md156"></a>
 Replies, push, and backpressure</h1>
 <p><code><a class="el" href="../../d3/d4f/livemsg_8h.html#aa7f09032eb37ceec7cce02d954ad7054">cwist_livemsg_reply_write()</a></code> grows the opaque response buffer. JSON responses are text messages; raw responses are binary messages.</p>
 <p><code><a class="el" href="../../d3/d4f/livemsg_8h.html#a11b168723cec0b52cee50ac6dee4d3f8">cwist_livemsg_send_raw()</a></code> and <code><a class="el" href="../../d3/d4f/livemsg_8h.html#a18f90ffecfeeda294fe2486f29a05f80">cwist_livemsg_send_json()</a></code> also support server-initiated push. Use <code><a class="el" href="../../d3/d4f/livemsg_8h.html#a361583598ec99a997e910d43332041de">cwist_livemsg_peer_ctx()</a></code> with <code><a class="el" href="../../d3/d4f/livemsg_8h.html#a9363ea86d445930167a1502f1d756d9a">cwist_livemsg_foreach_peer()</a></code> to visit all peers for broadcast. A peer pointer is valid only until its <code>on_disconnect()</code> returns; do not retain it. Calls that touch peers or iterate the peer list must run on that transport's reactor thread. WebRTC sends have the underlying thread-safe queue, but the v1 peer lifetime contract is intentionally reactor-scoped.</p>
@@ -186,7 +186,7 @@ Replies, push, and backpressure</h1>
 <li>Maximum queued outgoing bytes per WebSocket peer: 4 MiB. DataChannels on one WebRTC connection share that connection's 4 MiB queue. A full queue returns <code>-EAGAIN</code> immediately; the reactor never waits for a slow consumer.</li>
 </ul>
 <p>Argument and state errors use <code>-EINVAL</code> or <code>-ENOTSUP</code>; allocation and transport failures use <code>-ENOMEM</code> or <code>-EIO</code>.</p>
-<h1><a class="anchor" id="autotoc_md156"></a>
+<h1><a class="anchor" id="autotoc_md157"></a>
 External signaling and embedding</h1>
 <p>The one-line serve functions are sufficient for built-in signaling. Applications that already exchange SDP elsewhere can use the lifecycle API:</p>
 <div class="fragment"><div class="line"><a class="code hl_struct" href="../../d4/dba/structcwist__livemsg__config.html">cwist_livemsg_config</a> config;</div>
@@ -213,7 +213,7 @@ External signaling and embedding</h1>
 <div class="ttc" id="astructcwist__livemsg__config_html_afc2e24407ad86a3ed8b36da35456a4c5"><div class="ttname"><a href="../../d4/dba/structcwist__livemsg__config.html#afc2e24407ad86a3ed8b36da35456a4c5">cwist_livemsg_config::udp_port</a></div><div class="ttdeci">uint16_t udp_port</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d4f/livemsg_8h_source.html#l00047">livemsg.h:47</a></div></div>
 <div class="ttc" id="astructcwist__livemsg__config_html_afe2fd9188a0d29472cc83f7e110404cd"><div class="ttname"><a href="../../d4/dba/structcwist__livemsg__config.html#afe2fd9188a0d29472cc83f7e110404cd">cwist_livemsg_config::signaling_path</a></div><div class="ttdeci">const char * signaling_path</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d4f/livemsg_8h_source.html#l00049">livemsg.h:49</a></div></div>
 </div><!-- fragment --><p><code>answer_sdp_out</code> is allocated with <code><a class="el" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096" title="Allocate zeroed memory tracked by libttak.">cwist_alloc()</a></code> and must be released with <code><a class="el" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306" title="Free memory obtained via cwist_alloc/cwist_strdup/etc.">cwist_free()</a></code>. Creating the context starts its WebRTC reactor, so offers can be processed before <code><a class="el" href="../../d3/d4f/livemsg_8h.html#a54009b3ae1ae950d406d1b68242848c5">cwist_livemsg_run()</a></code>. Destroy the context only after its run loop has returned and external users have stopped submitting offers.</p>
-<h1><a class="anchor" id="autotoc_md157"></a>
+<h1><a class="anchor" id="autotoc_md158"></a>
 Validation</h1>
 <p><code>make test_livemsg</code> exercises real WebSocket servers with concurrent clients, RAW and JSON echo, no-reply behavior, arena results, push, broadcast, message limits, and send-queue saturation. <code>make test_livemsg_webrtc</code> drives external SDP signaling and a real ICE/DTLS/SCTP loopback channel, including push, a 200000-byte echo, and disconnect cleanup. Both tests run under the project's sanitizer configurations. </p>
 </div></div><!-- contents -->

@@ -1,5 +1,5 @@
 <map id="src/core/db/db.c" name="src/core/db/db.c">
-<area shape="rect" id="Node000001" title="SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing." alt="" coords="885,5,1009,31"/>
+<area shape="rect" id="Node000001" title="SQLite convenience wrappers for query execution and JSON healing." alt="" coords="885,5,1009,31"/>
 <area shape="rect" id="Node000002" href="$d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="187,79,329,104"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="885,28,343,84,343,79,885,23"/>
 <area shape="rect" id="Node000003" title=" " alt="" coords="5,159,84,185"/>

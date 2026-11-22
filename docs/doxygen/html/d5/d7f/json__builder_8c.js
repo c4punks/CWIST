@@ -6,6 +6,7 @@ var json__builder_8c =
     [ "cwist_json_add_string", "d5/d7f/json__builder_8c.html#a2acb8de34cc2e48ea4b4fe45fd7b74b7", null ],
     [ "cwist_json_begin_array", "d5/d7f/json__builder_8c.html#ae6897f9fe2ef632c9872e005f6d24546", null ],
     [ "cwist_json_begin_object", "d5/d7f/json__builder_8c.html#a49cc54211811685e921b8f399044ca2f", null ],
+    [ "cwist_json_begin_object_key", "d5/d7f/json__builder_8c.html#af06d409fc2eece4e6c8061e5c288529a", null ],
     [ "cwist_json_builder_create", "d5/d7f/json__builder_8c.html#abc5bd58d0eb39778e6f35b3a3b37a9aa", null ],
     [ "cwist_json_builder_destroy", "d5/d7f/json__builder_8c.html#aab53471747464d76028ea4641e26925c", null ],
     [ "cwist_json_end_array", "d5/d7f/json__builder_8c.html#afc15f6448f7ac87b93f7a2d1b469603b", null ],

@@ -12,7 +12,7 @@
 <area shape="poly" id="edge52_Node000001_Node000086" title=" " alt="" coords="7598,49,7711,98,7709,103,7595,53"/>
 <area shape="rect" id="Node000087" href="$df/dcd/async__gc_8h.html" title=" " alt="" coords="7162,101,7334,126"/>
 <area shape="poly" id="edge53_Node000001_Node000087" title=" " alt="" coords="7465,52,7288,103,7286,98,7463,47"/>
-<area shape="rect" id="Node000003" href="$d2/db5/db_8c.html" title="SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing." alt="" coords="3634,189,3758,214"/>
+<area shape="rect" id="Node000003" href="$d2/db5/db_8c.html" title="SQLite convenience wrappers for query execution and JSON healing." alt="" coords="3634,189,3758,214"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="3814,142,3719,191,3717,186,3812,137"/>
 <area shape="rect" id="Node000004" href="$d7/da4/migrate_8c.html" title="Schema migration helpers for applying and rolling back ordered SQL revisions." alt="" coords="3782,189,3940,214"/>
 <area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="3864,147,3864,188,3858,188,3858,147"/>

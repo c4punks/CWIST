@@ -1,5 +1,6 @@
 var db_8c =
 [
+    [ "CWIST_DB_BUSY_TIMEOUT_MS", "d2/db5/db_8c.html#a95141e725f3d6149cd68d8d9a1eb8abc", null ],
     [ "cwist_db_close", "d2/db5/db_8c.html#ab4a9734e8c141ac9d393ed46b8b00207", null ],
     [ "cwist_db_exec", "d2/db5/db_8c.html#a288718ee11fca08882b9b419954a9902", null ],
     [ "cwist_db_insert_healed", "d2/db5/db_8c.html#ab681c7d7de88a836c782b5279cc1966b", null ],

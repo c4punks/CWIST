@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['복사_0',['덧붙이기 / 복사',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md368',1,'']]]
+  ['복사_0',['덧붙이기 / 복사',['../d3/d38/md_docs_2ko_2api-quickref.html#autotoc_md369',1,'']]]
 ];

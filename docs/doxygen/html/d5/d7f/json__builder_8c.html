@@ -116,6 +116,7 @@ $(document).ready(function(){initNavTree('d5/d7f/json__builder_8c.html','../../'
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html">cwist/core/utils/json_builder.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html">cwist/core/sstring/sstring.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html">cwist/sys/err/cwist_err.h</a>&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
@@ -124,40 +125,41 @@ Include dependency graph for json_builder.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d5/d13/json__builder_8c__incl.png" border="0" usemap="#asrc_2core_2utils_2json__builder_8c" alt=""/></div>
 <map name="asrc_2core_2utils_2json__builder_8c" id="asrc_2core_2utils_2json__builder_8c">
-<area shape="rect" title="Incremental JSON emission helpers backed by cwist_sstring." alt="" coords="243,5,379,45"/>
-<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h.html" title="Simple JSON string builder utility." alt="" coords="293,93,444,133"/>
-<area shape="poly" title=" " alt="" coords="326,44,351,80,346,83,322,47"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="191,181,327,221"/>
-<area shape="poly" title=" " alt="" coords="304,46,283,94,266,168,261,167,278,93,299,44"/>
-<area shape="rect" title=" " alt="" coords="5,277,76,302"/>
-<area shape="poly" title=" " alt="" coords="279,48,245,69,210,95,164,140,122,187,59,267,55,264,117,184,160,136,207,91,242,65,276,43"/>
-<area shape="rect" title=" " alt="" coords="100,277,171,302"/>
-<area shape="poly" title=" " alt="" coords="294,47,239,105,209,143,182,183,160,225,146,264,141,262,156,223,177,180,205,140,235,102,290,44"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="469,101,642,126"/>
-<area shape="poly" title=" " alt="" coords="366,43,511,94,509,99,364,48"/>
-<area shape="rect" title=" " alt="" coords="666,101,733,126"/>
-<area shape="poly" title=" " alt="" coords="380,33,509,55,655,91,662,93,661,98,653,96,508,61,379,39"/>
-<area shape="poly" title=" " alt="" coords="346,136,296,175,293,171,343,132"/>
-<area shape="rect" title=" " alt="" coords="375,357,458,383"/>
-<area shape="poly" title=" " alt="" coords="375,133,414,343,409,344,370,134"/>
-<area shape="poly" title=" " alt="" coords="212,224,88,272,83,274,81,269,86,267,210,219"/>
-<area shape="poly" title=" " alt="" coords="233,224,165,271,162,267,230,219"/>
-<area shape="poly" title=" " alt="" coords="291,219,321,241,351,267,382,306,406,344,401,346,378,309,347,271,318,245,288,224"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="195,269,337,309"/>
-<area shape="poly" title=" " alt="" coords="263,221,266,255,261,256,258,222"/>
-<area shape="poly" title=" " alt="" coords="303,307,383,348,381,353,301,312"/>
-<area shape="rect" title=" " alt="" coords="127,357,197,383"/>
-<area shape="poly" title=" " alt="" coords="242,312,190,351,187,347,239,307"/>
-<area shape="rect" title=" " alt="" coords="221,357,332,383"/>
-<area shape="poly" title=" " alt="" coords="271,309,276,343,271,344,266,310"/>
-<area shape="rect" title=" " alt="" coords="578,277,653,302"/>
-<area shape="poly" title=" " alt="" coords="587,124,625,145,643,161,656,180,662,203,658,226,649,248,636,267,632,264,644,246,653,225,657,203,652,182,639,165,622,150,585,128"/>
-<area shape="rect" title=" " alt="" coords="717,189,858,214"/>
-<area shape="poly" title=" " alt="" coords="588,124,744,181,742,186,586,129"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="463,189,642,214"/>
-<area shape="poly" title=" " alt="" coords="558,126,556,174,551,174,552,126"/>
-<area shape="poly" title=" " alt="" coords="545,216,437,348,433,345,541,212"/>
-<area shape="poly" title=" " alt="" coords="563,213,601,264,596,267,559,216"/>
+<area shape="rect" title="Incremental JSON emission helpers backed by cwist_sstring." alt="" coords="326,5,462,45"/>
+<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h.html" title="Simple JSON string builder utility." alt="" coords="5,93,156,133"/>
+<area shape="poly" title=" " alt="" coords="326,48,163,92,162,87,325,43"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="221,181,357,221"/>
+<area shape="poly" title=" " alt="" coords="385,47,309,171,305,168,380,44"/>
+<area shape="rect" title=" " alt="" coords="148,277,219,302"/>
+<area shape="poly" title=" " alt="" coords="362,48,326,71,285,102,244,139,211,183,194,224,187,263,182,262,189,222,206,180,241,136,281,98,323,66,359,43"/>
+<area shape="rect" title=" " alt="" coords="295,277,365,302"/>
+<area shape="poly" title=" " alt="" coords="397,46,392,124,384,173,371,222,349,267,344,264,366,220,379,172,386,123,391,45"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="389,269,532,309"/>
+<area shape="poly" title=" " alt="" coords="401,45,455,255,450,257,396,46"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="482,101,655,126"/>
+<area shape="poly" title=" " alt="" coords="434,43,534,92,532,97,431,48"/>
+<area shape="rect" title=" " alt="" coords="679,101,746,126"/>
+<area shape="poly" title=" " alt="" coords="463,38,561,60,668,91,675,93,673,98,667,96,559,65,462,43"/>
+<area shape="poly" title=" " alt="" coords="127,131,231,174,229,179,125,136"/>
+<area shape="rect" title=" " alt="" coords="266,357,349,383"/>
+<area shape="poly" title=" " alt="" coords="83,133,85,170,93,216,109,265,122,288,137,307,163,328,192,343,253,360,252,366,190,348,160,333,133,311,117,290,104,267,88,218,80,170,78,134"/>
+<area shape="poly" title=" " alt="" coords="267,224,210,270,207,266,264,220"/>
+<area shape="poly" title=" " alt="" coords="300,220,321,263,316,265,295,223"/>
+<area shape="poly" title=" " alt="" coords="287,222,282,262,285,309,297,344,292,346,279,310,277,262,282,221"/>
+<area shape="poly" title=" " alt="" coords="328,219,412,261,410,266,325,224"/>
+<area shape="poly" title=" " alt="" coords="425,312,343,353,341,349,423,307"/>
+<area shape="rect" title=" " alt="" coords="399,357,469,383"/>
+<area shape="poly" title=" " alt="" coords="457,310,445,345,440,343,452,309"/>
+<area shape="rect" title=" " alt="" coords="493,357,604,383"/>
+<area shape="poly" title=" " alt="" coords="484,308,527,346,523,350,480,312"/>
+<area shape="rect" title=" " alt="" coords="615,277,690,302"/>
+<area shape="poly" title=" " alt="" coords="558,128,541,147,526,170,518,196,518,208,523,220,539,239,558,254,603,274,601,279,556,258,535,243,518,223,513,209,512,195,521,168,537,144,554,125"/>
+<area shape="rect" title=" " alt="" coords="533,189,674,214"/>
+<area shape="poly" title=" " alt="" coords="576,125,596,174,591,176,571,127"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="698,189,877,214"/>
+<area shape="poly" title=" " alt="" coords="599,124,746,181,744,186,597,129"/>
+<area shape="poly" title=" " alt="" coords="784,215,755,263,732,290,703,312,363,363,362,358,701,307,728,286,751,260,780,213"/>
+<area shape="poly" title=" " alt="" coords="771,216,684,272,681,267,768,212"/>
 </map>
 </div>
 </div>
@@ -174,6 +176,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a49cc54211811685e921b8f399044ca2f" id="r_a49cc54211811685e921b8f399044ca2f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a49cc54211811685e921b8f399044ca2f">cwist_json_begin_object</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:a49cc54211811685e921b8f399044ca2f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Begin a JSON object in the current builder context.  <br /></td></tr>
 <tr class="separator:a49cc54211811685e921b8f399044ca2f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af06d409fc2eece4e6c8061e5c288529a" id="r_af06d409fc2eece4e6c8061e5c288529a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#af06d409fc2eece4e6c8061e5c288529a">cwist_json_begin_object_key</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b, const char *key)</td></tr>
+<tr class="memdesc:af06d409fc2eece4e6c8061e5c288529a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Begin a JSON object as the value of an object member.  <br /></td></tr>
+<tr class="separator:af06d409fc2eece4e6c8061e5c288529a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5e8aaa71594a0a6f5f202c4a895012dd" id="r_a5e8aaa71594a0a6f5f202c4a895012dd"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d5/d7f/json__builder_8c.html#a5e8aaa71594a0a6f5f202c4a895012dd">cwist_json_end_object</a> (<a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *b)</td></tr>
 <tr class="memdesc:a5e8aaa71594a0a6f5f202c4a895012dd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Close the current JSON object.  <br /></td></tr>
 <tr class="separator:a5e8aaa71594a0a6f5f202c4a895012dd"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -247,9 +252,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00226">226</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00262">262</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 
@@ -298,9 +303,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00210">210</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00246">246</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -340,9 +345,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00239">239</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00275">275</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -389,9 +394,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00192">192</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00228">228</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 
@@ -433,9 +438,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00164">164</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00200">200</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 
@@ -466,11 +471,53 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00142">142</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00164">164</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
+
+</div>
+</div>
+<a id="af06d409fc2eece4e6c8061e5c288529a" name="af06d409fc2eece4e6c8061e5c288529a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af06d409fc2eece4e6c8061e5c288529a">&#9670;&#160;</a></span>cwist_json_begin_object_key()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void cwist_json_begin_object_key </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d7/ddf/structcwist__json__builder.html">cwist_json_builder</a> *&#160;</td>
+          <td class="paramname"><em>b</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>key</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Begin a JSON object as the value of an object member. </p>
+<p>Begin a JSON object as the value of member <code>key</code> (inside an object). A NULL key begins a bare object, like <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h.html#a49cc54211811685e921b8f399044ca2f" title="Begin a JSON object.">cwist_json_begin_object()</a>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">b</td><td>Builder to update. NULL is ignored. </td></tr>
+    <tr><td class="paramname">key</td><td>Member name, or NULL to begin a bare object (same as <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h.html#a49cc54211811685e921b8f399044ca2f" title="Begin a JSON object.">cwist_json_begin_object()</a>). </td></tr>
+  </table>
+  </dd>
+</dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00177">177</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 </div>
 </div>
@@ -495,9 +542,9 @@ Functions</h2></td></tr>
 <p>The builder keeps only a minimal amount of state: the backing string buffer and whether the next value must be prefixed with a comma.</p>
 <dl class="section return"><dt>Returns</dt><dd>Newly allocated builder, or NULL when allocation fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00021">21</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00022">22</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00832">cwist_sstring_create()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00844">cwist_sstring_create()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 
@@ -528,9 +575,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00037">37</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00038">38</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00853">cwist_sstring_destroy()</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../dd/d79/sstring_8c_source.html#l00865">cwist_sstring_destroy()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 
@@ -561,9 +608,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00180">180</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00216">216</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 
@@ -594,9 +641,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00153">153</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00189">189</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00589">cwist_sstring_append()</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00030">cwist_json_builder::needs_comma</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00033">cwist_json_builder::needs_comma</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 
@@ -620,17 +667,18 @@ Functions</h2></td></tr>
 
 <p>Expose the builder's raw character buffer. </p>
 <p>Returns the raw string buffer. Invalidated on destroy.</p>
+<p>Returns the raw string buffer. Invalidated on destroy. Returns NULL if any append failed (for example on allocation failure), so truncated JSON is never returned.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">b</td><td>Builder whose buffer should be observed. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>Null-terminated JSON text, or NULL when the builder is invalid. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>Null-terminated JSON text, or NULL when the builder is invalid or an append failed (the output would have been truncated). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00252">252</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00289">289</a> of file <a class="el" href="../../d5/d7f/json__builder_8c_source.html">json_builder.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00029">cwist_json_builder::buffer</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/dc7/core_2utils_2json__builder_8h_source.html#l00032">cwist_json_builder::buffer</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../da/d6c/healthz_8c_source.html#l00166">cwist_app_healthz()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
 

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['기능_0',['LibTTAK 메모리 기능',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md435',1,'']]],
-  ['기본_1',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md468',1,'']]],
-  ['기본_20원칙_2',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md467',1,'']]]
+  ['기능_0',['LibTTAK 메모리 기능',['../d3/d19/md_docs_2ko_2REFERENCE.html#autotoc_md436',1,'']]],
+  ['기본_1',['2. 2자리 시퀀스 (기본)',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md469',1,'']]],
+  ['기본_20원칙_2',['1. 기본 원칙',['../d6/de8/md_docs_2ko_2versioning.html#autotoc_md468',1,'']]]
 ];

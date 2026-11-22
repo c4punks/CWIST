@@ -1,5 +1,6 @@
 var metrics_8c =
 [
+    [ "METRIC_FMT", "db/d59/metrics_8c.html#a23c587d83be06c4bcb0afe992d87df3a", null ],
     [ "cwist_metric_add", "db/d59/metrics_8c.html#ae8d3af96e5a2b32ac01758f4de95b6a7", null ],
     [ "cwist_metric_inc", "db/d59/metrics_8c.html#a883fbccc5d50d9fb9d8d866572df0d95", null ],
     [ "cwist_metric_load", "db/d59/metrics_8c.html#a08aec9731329393e01f2e0f8e5b05582", null ],
