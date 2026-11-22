@@ -420,7 +420,7 @@ void cwist_mux_group_destroy(cwist_mux_group *group) {
  * @brief Register a method/path handler on the router, prefixed by the group's prefix.
  * @param group Group supplying the path prefix and target router.
  * @param method HTTP method to match.
- * @param path Route path relative to the group prefix; the two are concatenated verbatim.
+ * @param path Route path relative to the group prefix; the two are joined with exactly one '/'.
  * @param handler Callback to invoke for a matching request.
  * @note Invalid arguments (NULL group, router, path, or handler) are silently ignored,
  *       as is an allocation failure while building the full path.
@@ -428,13 +428,24 @@ void cwist_mux_group_destroy(cwist_mux_group *group) {
 void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path,
                             cwist_http_handler_func handler) {
     if (!group || !group->router || !path || !handler) return;
+    /* Join with exactly one '/': "/api/" + "/users" and "/api" + "users"
+     * both give "/api/users". Joining verbatim produced "/api//users" or
+     * "/apiusers", which no request can reach (#983). */
     size_t prefix_len = strlen(group->prefix);
+    while (prefix_len > 0 && group->prefix[prefix_len - 1] == '/') prefix_len--;
+    while (*path == '/') path++;
     size_t path_len = strlen(path);
-    char *full_path CWIST_DEFER_FREE = (char *)cwist_alloc(prefix_len + path_len + 1);
+    /* Optional leading '/', the prefix, one separator, the path, NUL. */
+    char *full_path CWIST_DEFER_FREE = (char *)cwist_alloc(prefix_len + path_len + 3);
     if (!full_path) return;
-    memcpy(full_path, group->prefix, prefix_len);
-    memcpy(full_path + prefix_len, path, path_len);
-    full_path[prefix_len + path_len] = '\0';
+    size_t pos = 0;
+    if (prefix_len > 0 && group->prefix[0] != '/') full_path[pos++] = '/';
+    memcpy(full_path + pos, group->prefix, prefix_len);
+    pos += prefix_len;
+    full_path[pos++] = '/';
+    memcpy(full_path + pos, path, path_len);
+    pos += path_len;
+    full_path[pos] = '\0';
     cwist_mux_handle(group->router, method, full_path, handler);
 }
 

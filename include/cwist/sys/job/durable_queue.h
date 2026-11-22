@@ -73,8 +73,12 @@ cwist_job_queue_t *cwist_job_queue_create_redis(cwist_redis_t *conn,
  * @brief Create a durable queue over an existing NATS connection.
  *
  * Requires a JetStream-enabled server. Ensures the job stream and a durable
- * pull consumer exist. Takes no ownership of @p nats; the connection must
- * outlive the queue.
+ * pull consumer exist. Characters outside [A-Za-z0-9_-] in the queue name
+ * become '_' in the stream name; the stream records the original name, and
+ * creation fails (NULL) when the stream already belongs to another queue,
+ * for example "orders.v1" after "orders_v1", or a queue named "x_DEAD" next
+ * to queue "x". Takes no ownership of @p nats; the connection must outlive
+ * the queue.
  */
 cwist_job_queue_t *cwist_job_queue_create_nats(cwist_nats_t *nats,
                                                const cwist_job_queue_opts_t *opts);

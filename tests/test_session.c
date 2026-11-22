@@ -211,7 +211,25 @@ static void test_session_large_round_trip(void) {
     assert(app != NULL);
     assert(cwist_app_use_session(app, "large-session-secret") == 0);
 
-    size_t len = 5000;
+    /* #998: a session cookie larger than browsers keep is refused. */
+    {
+        char *huge = malloc(5001);
+        assert(huge != NULL);
+        memset(huge, 'x', 5000);
+        huge[5000] = '\0';
+        cwist_http_request *hreq = cwist_http_request_create();
+        cwist_http_response *hres = cwist_http_response_create();
+        cwist_session_t *hs = cwist_session_start(app, hreq, hres);
+        assert(hs != NULL);
+        assert(cwist_session_set(hs, "large", huge) == 0);
+        assert(cwist_session_commit(hs, hres) == -1);
+        assert(cwist_http_header_get(hres->headers, "Set-Cookie") == NULL);
+        free(huge);
+        cwist_http_response_destroy(hres);
+        cwist_http_request_destroy(hreq);
+    }
+
+    size_t len = 2500;
     char *large = malloc(len + 1);
     assert(large != NULL);
     for (size_t i = 0; i < len; i++) large[i] = (char)('a' + i % 26);

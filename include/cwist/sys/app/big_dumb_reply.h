@@ -112,8 +112,8 @@ typedef struct cwist_bdr_t {
     bdr_entry_t *retired_entries;    ///< Tombstoned entries, freed at destroy
 
     /// Fallback disk database mode.
-    struct sqlite3 *disk_db;   ///< Disk DB handle for low-RAM mode
-    _Atomic bool is_disk_mode; ///< True if fallback is active
+    struct sqlite3 *disk_db;   ///< Unused (kept for layout); always NULL
+    _Atomic bool is_disk_mode; ///< Unused (kept for layout); always false
 } cwist_bdr_t;
 
 /**

@@ -121,7 +121,8 @@ as a full page load; with a fragment-swapping client the same handler returns
 only the part that changes.
 
 A request is a fragment request when it carries `HX-Request: true` (htmx), except
-for htmx history restores (`HX-History-Restore-Request: true`), or a non-empty
+for htmx history restores (`HX-History-Restore-Request: true`) and boosted
+navigation (`HX-Boosted: true`), which ask for the full page, or a non-empty
 `Turbo-Frame` header (Hotwire Turbo frames). Neither library is required or
 bundled.
 
@@ -143,7 +144,7 @@ Fragment requests get `content` alone. Other requests get a full document,
 starting with `<!DOCTYPE html>`: `content` passed as the single child of the
 `layout` component, or `content` itself when `layout` is NULL. Both answers get
 `Content-Type: text/html; charset=utf-8` and `Vary: HX-Request,
-HX-History-Restore-Request, HX-Target, Turbo-Frame`, so HTTP caches keep the two
+HX-Boosted, HX-History-Restore-Request, HX-Target, Turbo-Frame`, so HTTP caches keep the two
 representations apart. The in-process reply cache (Big Dumb Reply) does not
 learn responses that carry `Vary`, for the same reason. The status code is left
 as the handler set it.
@@ -350,7 +351,10 @@ cwist_html_element_t *el = cwist_html_component_instantiate(card, &props, &body,
 cwist_sstring *html = cwist_html_render(el);             /* <div class="card-8827595f">... */
 cwist_sstring *style = cwist_css_scope_generate_stylesheet(&css);
 /* .card-8827595f { padding: 1rem; border-radius: 8px; } */
+cwist_html_element_t *style_el = cwist_html_element_create("style");
+cwist_html_element_set_text(style_el, style->data); /* raw text: not escaped */
 
+cwist_html_element_destroy(style_el);
 cwist_sstring_destroy(style);
 cwist_sstring_destroy(html);
 cwist_html_element_destroy(el);

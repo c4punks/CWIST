@@ -406,67 +406,34 @@ static bool bdr_trim_oldest(cwist_bdr_t *bdr, time_t now) {
 }
 
 /**
- * @brief Spill the in-RAM cache to a SQLite fallback database when RAM is critical.
+ * @brief Drop the cached replies when available RAM is critical.
  *
- * When free RAM drops below the 64 MiB threshold, copies every stable entry's
- * blob into "cwist_bdr_fallback.db", retires all live entries, and flips the
- * cache into disk mode so subsequent reads miss and writes go to SQLite.
- * No-op in the WASM build and once disk mode is already active.  Must be
- * called with the janitor lock held.
+ * When available RAM drops below the 64 MiB threshold, retires every live
+ * entry so its memory is reclaimed; the cache keeps working and relearns
+ * replies afterwards. Must be called with the janitor lock held.
  *
  * @param bdr Cache instance.
  */
 static void bdr_check_ram(cwist_bdr_t *bdr) {
-#ifdef __EMSCRIPTEN__
-    /* No SQLite disk fallback in the WASM core; the in-RAM cache stands alone. */
-    (void)bdr;
-    return;
-#else
-    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_relaxed)) return;
-
-    if (cwist_is_ram_critical(CWIST_MIB(64))) {
-        printf("[BDR] Low RAM. Switching to Disk Cache.\n");
-        if (sqlite3_open("cwist_bdr_fallback.db", &bdr->disk_db) == SQLITE_OK) {
-            char *err = NULL;
-            sqlite3_exec(bdr->disk_db,
-                         "CREATE TABLE IF NOT EXISTS bdr (hash INTEGER PRIMARY KEY, blob BLOB);",
-                         NULL, NULL, &err);
-            if (err) sqlite3_free(err);
-
-            sqlite3_exec(bdr->disk_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
-            for (size_t i = 0; i < bdr->bucket_count; i++) {
-                bdr_entry_t *curr = atomic_load_explicit(&bdr->buckets[i], memory_order_acquire);
-                while (curr) {
-                    bdr_entry_t *next = atomic_load_explicit(&curr->next, memory_order_acquire);
-                    if (!atomic_load_explicit(&curr->retired, memory_order_relaxed) &&
-                        atomic_load_explicit(&curr->is_stable, memory_order_relaxed)) {
-                        bdr_blob_t *blob = atomic_load_explicit(&curr->blob, memory_order_acquire);
-                        if (blob) {
-                            sqlite3_stmt *stmt;
-                            sqlite3_prepare_v2(bdr->disk_db,
-                                               "INSERT INTO bdr (hash, blob) VALUES (?, ?);", -1,
-                                               &stmt, NULL);
-                            sqlite3_bind_int64(stmt, 1, curr->request_hash);
-                            sqlite3_bind_blob(stmt, 2, blob->data, (int)blob->len, SQLITE_STATIC);
-                            sqlite3_step(stmt);
-                            sqlite3_finalize(stmt);
-                        }
-                    }
-                    if (!atomic_load_explicit(&curr->retired, memory_order_relaxed)) {
-                        atomic_store_explicit(&curr->retired, true, memory_order_release);
-                        bdr_entry_publish(bdr, curr, NULL);
-                        curr->retire_next = bdr->retired_entries;
-                        bdr->retired_entries = curr;
-                    }
-                    curr = next;
-                }
-                atomic_store_explicit(&bdr->buckets[i], NULL, memory_order_release);
+    /* Low RAM: drop every cached reply and keep serving from RAM as entries
+     * are learned again. The former "disk mode" wrote each reply to
+     * cwist_bdr_fallback.db in the working directory but never read it, so
+     * the cache stopped serving for good while the file grew (#991). */
+    if (!cwist_is_ram_critical(CWIST_MIB(64))) return;
+    for (size_t i = 0; i < bdr->bucket_count; i++) {
+        bdr_entry_t *curr = atomic_load_explicit(&bdr->buckets[i], memory_order_acquire);
+        while (curr) {
+            bdr_entry_t *next = atomic_load_explicit(&curr->next, memory_order_acquire);
+            if (!atomic_load_explicit(&curr->retired, memory_order_relaxed)) {
+                atomic_store_explicit(&curr->retired, true, memory_order_release);
+                bdr_entry_publish(bdr, curr, NULL);
+                curr->retire_next = bdr->retired_entries;
+                bdr->retired_entries = curr;
             }
-            sqlite3_exec(bdr->disk_db, "COMMIT;", NULL, NULL, NULL);
-            atomic_store_explicit(&bdr->is_disk_mode, true, memory_order_release);
+            curr = next;
         }
+        atomic_store_explicit(&bdr->buckets[i], NULL, memory_order_release);
     }
-#endif
 }
 
 /**
@@ -775,28 +742,6 @@ void *cwist_bdr_copy_get(cwist_bdr_t *bdr, const char *method, const char *path,
 
 /* --- Learn path (lock-free) ------------------------------------------------ */
 
-/**
- * @brief Write a reply into the SQLite fallback database (disk mode).
- *
- * Must be called only while the cache is in disk mode; takes the context
- * mutex for the duration of the statement.
- *
- * @param bdr Cache instance (disk_db must be open).
- * @param req_h Precomputed request hash (primary key).
- * @param data Response bytes.
- * @param len Length of @p data in bytes.
- */
-static void cwist_bdr_put_disk(cwist_bdr_t *bdr, uint64_t req_h, const void *data, size_t len) {
-    pthread_mutex_lock(&bdr->lock);
-    sqlite3_stmt *stmt;
-    sqlite3_prepare_v2(bdr->disk_db, "INSERT OR REPLACE INTO bdr (hash, blob) VALUES (?, ?);", -1,
-                       &stmt, NULL);
-    sqlite3_bind_int64(stmt, 1, (sqlite3_int64)req_h);
-    sqlite3_bind_blob(stmt, 2, data, (int)len, SQLITE_STATIC);
-    sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
-    pthread_mutex_unlock(&bdr->lock);
-}
 
 /**
  * @brief Learn a reply observation into the cache (lock-free fast path).
@@ -820,10 +765,6 @@ void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const
     uint64_t req_h = bdr_hash(method, path);
     uint64_t res_h = bdr_hash_data(data, len);
 
-    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
-        cwist_bdr_put_disk(bdr, req_h, data, len);
-        return;
-    }
 
     bdr_entry_t *entry = bdr_find_or_insert(bdr, req_h);
     if (!entry) return;
@@ -881,10 +822,6 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
 
     uint64_t req_h = bdr_hash(method, path);
 
-    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
-        cwist_bdr_put_disk(bdr, req_h, data, len);
-        return;
-    }
 
     bdr_entry_t *entry = bdr_find_or_insert(bdr, req_h);
     if (!entry) return;
@@ -926,10 +863,6 @@ void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const cha
 
     uint64_t req_h = bdr_hash(method, path);
 
-    if (atomic_load_explicit(&bdr->is_disk_mode, memory_order_acquire)) {
-        cwist_bdr_put_disk(bdr, req_h, data, len);
-        return;
-    }
 
     bdr_entry_t *entry = bdr_find_or_insert(bdr, req_h);
     if (!entry) return;

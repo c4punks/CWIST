@@ -26,6 +26,10 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+
+/* Largest name=value a browser keeps (RFC 6265 section 6.1 minimum, and the
+ * limit Chrome and Firefox enforce). */
+#define CWIST_SESSION_MAX_COOKIE_BYTES 4096
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -698,6 +702,15 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     cwist_free(payload_b64);
     cwist_free(sig_b64);
     if (!cookie_value) return -1;
+    /* Browsers silently drop a cookie whose name and value exceed 4096
+     * bytes, so the session would be lost on the next request (#998). */
+    if (strlen(session->app->session_name) + 1 + strlen(cookie_value) >
+        CWIST_SESSION_MAX_COOKIE_BYTES) {
+        fprintf(stderr, "[CWIST] session cookie too large (%zu bytes); not sent\n",
+                strlen(cookie_value));
+        cwist_free(cookie_value);
+        return -1;
+    }
 
     session_revocation *revocation = session->revocation;
     bool fresh = revocation == NULL;

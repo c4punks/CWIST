@@ -646,17 +646,37 @@ static char *jq_sanitize(const char *name) {
  * @brief Create the JetStream stream if it does not already exist (file storage).
  * @retval 0 on success (already present or created); CWIST_FAILURE otherwise.
  */
-static cwist_error_t jq_nats_ensure_stream(jq_nats_t *ns, const char *stream, const char *subject) {
+static cwist_error_t jq_nats_ensure_stream(jq_nats_t *ns, const char *stream, const char *subject,
+                                           const char *owner) {
     jsErrCode jerr = 0;
     jsStreamInfo *si = NULL;
     if (js_GetStreamInfo(&si, ns->js, stream, NULL, &jerr) == NATS_OK) {
+        /* Queue names are sanitized into stream names, so different names
+         * ("orders.v1", "orders_v1") or a name ending in "_DEAD" can land on
+         * a stream that belongs to another queue. Refuse a stream recorded for
+         * a different queue, or one that does not carry this queue's subject
+         * (#996). Streams created before the owner was recorded have no
+         * description and are only checked by subject. */
+        bool ok = si && si->Config;
+        if (ok && si->Config->Description && si->Config->Description[0] &&
+            strcmp(si->Config->Description, owner) != 0)
+            ok = false;
+        if (ok) {
+            bool has_subject = false;
+            for (int i = 0; i < si->Config->SubjectsLen; i++) {
+                if (si->Config->Subjects[i] && strcmp(si->Config->Subjects[i], subject) == 0)
+                    has_subject = true;
+            }
+            ok = has_subject;
+        }
         jsStreamInfo_Destroy(si);
-        return jq_err(0);
+        return jq_err(ok ? 0 : CWIST_FAILURE);
     }
     const char *subjects[] = {subject};
     jsStreamConfig cfg;
     memset(&cfg, 0, sizeof(cfg));
     cfg.Name = stream;
+    cfg.Description = owner;
     cfg.Subjects = subjects;
     cfg.SubjectsLen = 1;
     cfg.Storage = js_FileStorage;
@@ -709,9 +729,19 @@ cwist_job_queue_t *cwist_job_queue_create_nats(cwist_nats_t *nats,
         cwist_free(consumer);
         goto fail;
     }
-    cwist_error_t serr = jq_nats_ensure_stream(ns, base, ns->subject);
-    if (cwist_error_is_ok(&serr))
-        serr = jq_nats_ensure_stream(ns, ns->dead_stream, ns->dead_subject);
+    size_t owner_len = strlen(q->name) + 32;
+    char *owner = cwist_alloc(owner_len);
+    char *dead_owner = cwist_alloc(owner_len);
+    cwist_error_t serr = jq_err(CWIST_FAILURE);
+    if (owner && dead_owner) {
+        snprintf(owner, owner_len, "cwist job queue %s", q->name);
+        snprintf(dead_owner, owner_len, "cwist job queue %s (dead letters)", q->name);
+        serr = jq_nats_ensure_stream(ns, base, ns->subject, owner);
+        if (cwist_error_is_ok(&serr))
+            serr = jq_nats_ensure_stream(ns, ns->dead_stream, ns->dead_subject, dead_owner);
+    }
+    cwist_free(owner);
+    cwist_free(dead_owner);
     if (!cwist_error_is_ok(&serr)) {
         cwist_free(base);
         cwist_free(consumer);

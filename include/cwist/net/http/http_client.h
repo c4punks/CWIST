@@ -4,8 +4,8 @@
  *
  * Provides a CWIST-native wrapper around libcurl for synchronous
  * HTTP requests.  Supports connection reuse, Alt-Svc upgrade to HTTP/3,
- * redirects, cookies, and TLS via the system libcurl (linked against
- * BoringSSL + nghttp2).
+ * redirects, and TLS via the system libcurl (linked against
+ * BoringSSL + nghttp2). No cookie jar is kept between requests.
  */
 
 #ifndef __CWIST_HTTP_CLIENT_H__
@@ -22,8 +22,10 @@ extern "C" {
 /**
  * @brief Opaque HTTP client handle.
  *
- * Internally holds a libcurl multi handle for connection reuse
- * and a share handle for DNS/cookie/SSL session caching.
+ * Internally holds one libcurl easy handle, reused across requests for
+ * connection and TLS session reuse. Requests on one client are serialized,
+ * so a client may be shared between threads; create one client per thread
+ * for parallel transfers.
  */
 typedef struct cwist_http_client cwist_http_client;
 

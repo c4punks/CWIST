@@ -313,6 +313,11 @@ static void csrf_handler(cwist_http_request *req, cwist_http_response *res,
  */
 cwist_middleware_func cwist_mw_csrf(cwist_app *app) {
     (void)app;
+    /* Create the fallback signing key now, during setup and before worker
+     * processes fork, so every worker signs and checks tokens with the same
+     * key. Created lazily, each worker had its own key and rejected the
+     * others' tokens (#987). */
+    pthread_once(&csrf_fallback_once, csrf_fallback_init);
     return csrf_handler;
 }
 /**

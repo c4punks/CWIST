@@ -78,6 +78,9 @@ void cwist_session_delete(cwist_session_t *session, const char *key);
  * A session that was not modified (no set, delete or invalidate) writes no
  * Set-Cookie. An invalidated session's cookie is removed with the same Path,
  * HttpOnly, Secure and SameSite attributes it was issued with.
+ * Returns -1 without setting a cookie when the signed session would make the
+ * cookie's name and value exceed 4096 bytes, which browsers silently drop;
+ * keep large data server-side and store only a reference in the session.
  */
 int cwist_session_commit(cwist_session_t *session, cwist_http_response *res);
 

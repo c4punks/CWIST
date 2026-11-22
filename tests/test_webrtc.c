@@ -422,9 +422,10 @@ static void unit_checks(void) {
         char answer[4096];
         assert(cwist_sdp_write_answer_for_offer(answer, sizeof(answer), "CC", "localu",
                                                 "localpassword", &info, "127.0.0.1", 5000) == 0);
-        assert(strstr(answer, "a=group:BUNDLE audio video data\r\n") != NULL);
-        char *audio = strstr(answer, "m=audio 0 RTP/AVP 0\r\n");
-        char *video = strstr(answer, "m=video 0 RTP/AVP 99\r\n");
+        /* Rejected sections stay out of BUNDLE and carry c= (#993). */
+        assert(strstr(answer, "a=group:BUNDLE data\r\n") != NULL);
+        char *audio = strstr(answer, "m=audio 0 RTP/AVP 0\r\nc=IN IP4 0.0.0.0\r\n");
+        char *video = strstr(answer, "m=video 0 RTP/AVP 99\r\nc=IN IP4 0.0.0.0\r\n");
         char *data = strstr(answer, "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n");
         assert(audio && video && data && audio < video && video < data);
         assert(strstr(answer, "a=setup:active\r\n") != NULL);
