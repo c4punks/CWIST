@@ -18,9 +18,12 @@
  * cwist_json_begin_object(jb);
  * cwist_json_add_string(jb, "message", "Hello");
  * cwist_json_add_int(jb, "code", 200);
+ * cwist_json_begin_object_key(jb, "user");
+ * cwist_json_add_string(jb, "name", "alice");
  * cwist_json_end_object(jb);
- * char *json = cwist_json_build(jb);
- * cwist_sstring *res = cwist_json_get_string(jb);
+ * cwist_json_end_object(jb);
+ * const char *json = cwist_json_get_raw(jb); // NULL if an append failed
+ * // {"message":"Hello","code":200,"user":{"name":"alice"}}
  * cwist_json_builder_destroy(jb);
  * @endcode
  */
@@ -44,6 +47,12 @@ void cwist_json_builder_destroy(cwist_json_builder *b);
  * @brief Begin a JSON object.
  */
 void cwist_json_begin_object(cwist_json_builder *b);
+
+/**
+ * @brief Begin a JSON object as the value of member @p key (inside an
+ * object). A NULL key begins a bare object, like cwist_json_begin_object().
+ */
+void cwist_json_begin_object_key(cwist_json_builder *b, const char *key);
 
 /**
  * @brief End a JSON object.
@@ -82,6 +91,8 @@ void cwist_json_add_null(cwist_json_builder *b, const char *key);
 
 /**
  * @brief Returns the raw string buffer. Invalidated on destroy.
+ * Returns NULL if any append failed (for example on allocation failure), so
+ * truncated JSON is never returned.
  */
 const char *cwist_json_get_raw(cwist_json_builder *b);
 

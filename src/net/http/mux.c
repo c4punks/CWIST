@@ -183,11 +183,20 @@ void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, cons
     route->is_wildcard = (path_len > 0 && path[path_len - 1] == '*');
 
     if (route->is_wildcard) {
-        route->param_next = router->wildcard_routes;
-        router->wildcard_routes = route;
+        /* Most specific first: a longer literal prefix is tried before a
+         * shorter one, so "/static/<star>" wins over "/<star>" whatever the
+         * registration order. Equal prefixes keep registration order (#959). */
+        cwist_mux_route **link = &router->wildcard_routes;
+        while (*link && (*link)->path && (*link)->path->data &&
+               strlen((*link)->path->data) >= path_len)
+            link = &(*link)->param_next;
+        route->param_next = *link;
+        *link = route;
     } else if (route->is_parametric) {
-        route->param_next = router->param_routes;
-        router->param_routes = route;
+        /* Registration order, like cwist_app_use() and per-route middleware. */
+        cwist_mux_route **link = &router->param_routes;
+        while (*link) link = &(*link)->param_next;
+        *link = route;
     } else {
         cwist_mux_signature signature = cwist_mux_signature_from_path(method, path);
         route->signature_hi = signature.hi;
@@ -259,6 +268,21 @@ static bool match_parametric_route(const char *route_tmpl, const char *req_path,
 
     if (params) cwist_query_map_destroy(params);
     return false;
+}
+
+/**
+ * @brief Compare a static route path with a request path.
+ * @details One trailing '/' is ignored on either side (but "/" itself stays
+ *          the root), the same rule match_parametric_route() applies, so
+ *          "/users" matches "/users/" exactly like "/users/:id" matches
+ *          "/users/5/" (#960).
+ */
+static bool mux_static_path_eq(const char *route_path, const char *req_path) {
+    size_t a = strlen(route_path);
+    size_t b = strlen(req_path);
+    if (a > 1 && route_path[a - 1] == '/') a--;
+    if (b > 1 && req_path[b - 1] == '/') b--;
+    return a == b && memcmp(route_path, req_path, a) == 0;
 }
 
 /**
@@ -339,7 +363,7 @@ cwist_mux_route *cwist_mux_find_route(cwist_mux_router *router, cwist_http_metho
     while (curr) {
         if (curr->method == method && curr->signature_hi == signature.hi &&
             curr->signature_lo == signature.lo && curr->path && curr->path->data &&
-            strcmp(curr->path->data, path) == 0) {
+            mux_static_path_eq(curr->path->data, path)) {
             return curr;
         }
         curr = curr->bucket_next;
@@ -454,7 +478,7 @@ static bool mux_serve_method(cwist_mux_router *router, cwist_http_request *req,
     while (curr) {
         if (curr->method == method && curr->signature_hi == signature.hi &&
             curr->signature_lo == signature.lo && curr->path && curr->path->data &&
-            strcmp(curr->path->data, path) == 0) {
+            mux_static_path_eq(curr->path->data, path)) {
             if (curr->middleware) {
                 run_middleware_chain(curr->middleware, req, res, curr->handler);
             } else {
@@ -510,7 +534,7 @@ static bool mux_method_not_allowed(cwist_mux_router *router, const char *path,
                          ? match_wildcard_route(route->path->data, path)
                          : route->is_parametric
                                ? match_parametric_route(route->path->data, path, NULL)
-                               : strcmp(route->path->data, path) == 0;
+                               : mux_static_path_eq(route->path->data, path);
         if (match) allowed[route->method] = true;
     }
     if (allowed[CWIST_HTTP_GET]) allowed[CWIST_HTTP_HEAD] = true;

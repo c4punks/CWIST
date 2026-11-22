@@ -93,8 +93,10 @@ cwist_sse_stream_t *cwist_sse_stream_open(cwist_http_request *req);
 `200 OK` 상태 줄과 SSE 헤더를 `req->client_fd`에 쓰고 `req->upgraded`를 설정합니다.
 핸들러가 반환하면 서버는 `req->upgraded`를 보고 자체 응답을 쓰지 않으며 연결을 유지하지도
 않으므로, 모든 이벤트는 핸들러가 반환하기 전에 보내야 합니다. `req`가 `NULL`이거나,
-`req->client_fd`가 음수이거나, `req->upgraded`가 이미 설정되어 있거나, 쓰기에 실패하면
-`NULL`을 반환합니다.
+`req->client_fd`가 음수이거나, `req->upgraded`가 이미 설정되어 있거나, 요청이 HTTPS,
+HTTP/2 또는 HTTP/3로 들어왔거나, 쓰기에 실패하면 `NULL`을 반환합니다. 라이브 스트림은
+소켓에 직접 쓰므로 평문 HTTP/1.x 연결에서만 동작합니다. 다른 전송에서는 아무것도 쓰지
+않으며, 핸들러는 `cwist_sse_response_init()`으로 버퍼링된 응답을 보낼 수 있습니다.
 
 ### `cwist_sse_stream_send`
 ```c

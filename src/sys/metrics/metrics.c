@@ -27,7 +27,7 @@ struct cwist_metrics_registry {
 static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
     [CWIST_METRIC_URING_SQES_PENDING] = {.name = "cwist_io_uring_sqes_pending",
                                          .help = "Active io_uring SQEs waiting for kernel pickup",
-                                         .type = CWIST_METRIC_COUNTER},
+                                         .type = CWIST_METRIC_GAUGE},
     [CWIST_METRIC_URING_BUFFERS_ACTIVE] = {.name = "cwist_io_uring_buffers_active",
                                            .help = "In-flight fixed buffers in io_uring pool",
                                            .type = CWIST_METRIC_GAUGE},
@@ -288,6 +288,32 @@ static const char *type_str(cwist_metric_type_t t) {
     }
 }
 
+/* One metric family plus its update count. The count is its own counter
+ * family with HELP/TYPE lines, so strict parsers do not see an undeclared
+ * sample. Numbers are formatted by metric_u2s(): casting to unsigned long
+ * wrapped the milli-unit raw value on wasm32 and 32-bit ARM, and %ju is not
+ * available in every embedded printf (newlib-nano) (#971). */
+#define METRIC_FMT                                                                                 \
+    "# HELP %s %s\n"                                                                               \
+    "# TYPE %s %s\n"                                                                               \
+    "%s %s%s.%s\n"                                                                                 \
+    "# HELP %s_count Number of updates to %s\n"                                                    \
+    "# TYPE %s_count counter\n"                                                                    \
+    "%s_count %s\n\n"
+
+/** Format @p v in decimal, zero-padded to at least @p min_digits. */
+static const char *metric_u2s(uintmax_t v, int min_digits, char out[24]) {
+    char *p = out + 23;
+    *p = '\0';
+    int n = 0;
+    do {
+        *--p = (char)('0' + (int)(v % 10));
+        v /= 10;
+        n++;
+    } while ((v || n < min_digits) && p > out);
+    return p;
+}
+
 /**
  * @brief Render the full registry in Prometheus text exposition format.
  *
@@ -335,14 +361,14 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
             fraction = magnitude % 1000;
         }
 
+        char whole_buf[24], fraction_buf[24], cnt_buf[24];
+        const char *whole_s = metric_u2s(whole, 1, whole_buf);
+        const char *fraction_s = metric_u2s(fraction, 3, fraction_buf);
+        const char *cnt_s = metric_u2s(cnt, 1, cnt_buf);
         int need =
             snprintf(NULL, 0,
-                     "# HELP %s %s\n"
-                     "# TYPE %s %s\n"
-                     "%s %s%lu.%03lu\n"
-                     "%s_count %lu\n\n",
-                     m->name, m->help, m->name, type_str(m->type), m->name, sign,
-                     (unsigned long)whole, (unsigned long)fraction, m->name, (unsigned long)cnt);
+                     METRIC_FMT, m->name, m->help, m->name, type_str(m->type), m->name, sign,
+                     whole_s, fraction_s, m->name, m->name, m->name, m->name, cnt_s);
         if (need < 0) {
             free(buf);
             return NULL;
@@ -363,12 +389,8 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
 
         int written =
             snprintf(buf + len, cap - len,
-                     "# HELP %s %s\n"
-                     "# TYPE %s %s\n"
-                     "%s %s%lu.%03lu\n"
-                     "%s_count %lu\n\n",
-                     m->name, m->help, m->name, type_str(m->type), m->name, sign,
-                     (unsigned long)whole, (unsigned long)fraction, m->name, (unsigned long)cnt);
+                     METRIC_FMT, m->name, m->help, m->name, type_str(m->type), m->name, sign,
+                     whole_s, fraction_s, m->name, m->name, m->name, m->name, cnt_s);
         if (written < 0 || (size_t)written >= cap - len) {
             free(buf);
             return NULL;

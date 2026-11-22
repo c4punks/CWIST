@@ -312,6 +312,22 @@ static void test_post(cwist_http_client *client, const char *base) {
     static char large[LARGE_POST_LEN];
     for (size_t i = 0; i < sizeof(large); i++) large[i] = (char)('a' + (i * 31) % 26);
     post_and_expect_echo(client, url, large, sizeof(large));
+
+    /* #955: a POST without a body sends an empty body; libcurl must not
+     * fall back to reading the process's stdin. */
+    int fds[2];
+    int saved_stdin = dup(STDIN_FILENO);
+    if (saved_stdin >= 0 && pipe(fds) == 0) {
+        static const char secret[] = "SECRET-FROM-STDIN\n";
+        CHECK(write(fds[1], secret, sizeof(secret) - 1) == (ssize_t)(sizeof(secret) - 1),
+              "POST: pipe write failed");
+        close(fds[1]);
+        dup2(fds[0], STDIN_FILENO);
+        close(fds[0]);
+        post_and_expect_echo(client, url, "", 0);
+        dup2(saved_stdin, STDIN_FILENO);
+    }
+    if (saved_stdin >= 0) close(saved_stdin);
     report(before, "POST body reaches the handler");
 }
 

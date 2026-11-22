@@ -9,6 +9,8 @@ SQLite3 데이터베이스 작업을 위한 래퍼입니다.
 cwist_error_t cwist_db_open(cwist_db **db, const char *path);
 ```
 SQLite 데이터베이스 파일에 연결합니다.
+연결은 잠금을 최대 5000 ms 기다립니다 (`sqlite3_busy_timeout`). `cwist_db_pool`과 같은
+값입니다. `cwist_db_exec()`와 `cwist_db_query()`는 연결 설정을 바꾸지 않습니다.
 
 ### `cwist_db_open_memory`
 ```c
