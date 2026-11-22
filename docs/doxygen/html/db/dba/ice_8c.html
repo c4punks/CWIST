@@ -514,7 +514,7 @@ Functions</h2></td></tr>
 
 <p>Generate random ICE ufrag/pwd credentials. </p>
 <p>Generate random ICE credentials (ice-chars only).</p>
-<p>Both strings are drawn from 24 bytes of CSPRNG output encoded with the base64url alphabet (6 bits per character).</p>
+<p>Every character takes 6 bits from its own CSPRNG byte (64 divides 256, so the choice is uniform) over the ice-char alphabet: the 8-character ufrag carries 48 bits and the 32-character password 192 bits, above the 24 and 128 bits RFC 8445 section 5.3 requires. No byte is reused (#969).</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">ufrag</td><td>Output buffer for the ufrag. </td></tr>
@@ -526,9 +526,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>On random generation failure, outputs with nonzero capacity are empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00555">555</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00559">559</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
+<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00016">OPENSSL_cleanse</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 </div>
 </div>
@@ -720,7 +720,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00519">519</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00521">521</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00105">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>.</p>
 
@@ -853,7 +853,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_MAGIC</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00519">cwist_ice_stun_get_remote_ufrag()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00114">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00486">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00232">cwist_ice_stun_validate_request()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00521">cwist_ice_stun_get_remote_ufrag()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00114">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00486">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00232">cwist_ice_stun_validate_request()</a>.</p>
 
 </div>
 </div>

@@ -106,12 +106,13 @@ $(document).ready(function(){initNavTree('d2/db5/db_8c.html','../../'); initResi
 
 <div class="header">
   <div class="summary">
+<a href="#define-members">Macros</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">db.c File Reference</div></div>
 </div><!--header-->
 <div class="contents">
 
-<p>SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing.  
+<p>SQLite convenience wrappers for query execution and JSON healing.  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html">cwist/core/db/sql.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../db/dd3/json__heal_8h_source.html">cwist/core/utils/json_heal.h</a>&gt;</code><br />
@@ -130,7 +131,7 @@ Include dependency graph for db.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d8/d64/db_8c__incl.png" border="0" usemap="#asrc_2core_2db_2db_8c" alt=""/></div>
 <map name="asrc_2core_2db_2db_8c" id="asrc_2core_2db_2db_8c">
-<area shape="rect" title="SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing." alt="" coords="885,5,1009,31"/>
+<area shape="rect" title="SQLite convenience wrappers for query execution and JSON healing." alt="" coords="885,5,1009,31"/>
 <area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="187,79,329,104"/>
 <area shape="poly" title=" " alt="" coords="885,28,343,84,343,79,885,23"/>
 <area shape="rect" title=" " alt="" coords="5,159,84,185"/>
@@ -192,6 +193,11 @@ Include dependency graph for db.c:</div>
 </div>
 <p><a href="../../d2/db5/db_8c_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="define-members" name="define-members"></a>
+Macros</h2></td></tr>
+<tr class="memitem:a95141e725f3d6149cd68d8d9a1eb8abc" id="r_a95141e725f3d6149cd68d8d9a1eb8abc"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/db5/db_8c.html#a95141e725f3d6149cd68d8d9a1eb8abc">CWIST_DB_BUSY_TIMEOUT_MS</a>&#160;&#160;&#160;5000</td></tr>
+<tr class="separator:a95141e725f3d6149cd68d8d9a1eb8abc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a0e82c15c6fae4fef553c0f17bf985cb9" id="r_a0e82c15c6fae4fef553c0f17bf985cb9"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/db5/db_8c.html#a0e82c15c6fae4fef553c0f17bf985cb9">cwist_db_open</a> (<a class="el" href="../../dd/d55/structcwist__db.html">cwist_db</a> **db, const char *path)</td></tr>
@@ -220,10 +226,27 @@ Functions</h2></td></tr>
 <tr class="separator:a92762ac589b199e85fadb7553d6fc71d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>SQLite convenience wrappers plus lightweight heuristics for query execution and JSON healing. </p>
+<div class="textblock"><p>SQLite convenience wrappers for query execution and JSON healing. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
-</div><h2 class="groupheader">Function Documentation</h2>
+</div><h2 class="groupheader">Macro Definition Documentation</h2>
+<a id="a95141e725f3d6149cd68d8d9a1eb8abc" name="a95141e725f3d6149cd68d8d9a1eb8abc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a95141e725f3d6149cd68d8d9a1eb8abc">&#9670;&#160;</a></span>CWIST_DB_BUSY_TIMEOUT_MS</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">#define CWIST_DB_BUSY_TIMEOUT_MS&#160;&#160;&#160;5000</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00023">23</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Function Documentation</h2>
 <a id="ab4a9734e8c141ac9d393ed46b8b00207" name="ab4a9734e8c141ac9d393ed46b8b00207"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab4a9734e8c141ac9d393ed46b8b00207">&#9670;&#160;</a></span>cwist_db_close()</h2>
 
@@ -249,7 +272,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00296">296</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00190">190</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -294,11 +317,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00313">313</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00207">207</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d2/db5/db_8c_source.html#l00524">cwist_db_insert_healed()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00270">cwist_db_pool_exec()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d2/db5/db_8c_source.html#l00414">cwist_db_insert_healed()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00270">cwist_db_pool_exec()</a>.</p>
 
 </div>
 </div>
@@ -360,9 +383,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00524">524</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00414">414</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00313">cwist_db_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00570">cwist_heal_result_free()</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00495">cwist_json_heal()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00121">cwist_zod_parse()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00155">cwist_zod_print_errors()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00112">cwist_heal_result::json</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00099">cwist_heal_config::schema</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00098">cwist_heal_config::threshold</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00207">cwist_db_exec()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00570">cwist_heal_result_free()</a>, <a class="el" href="../../d1/d8b/json__heal_8c_source.html#l00495">cwist_json_heal()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00121">cwist_zod_parse()</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00155">cwist_zod_print_errors()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00112">cwist_heal_result::json</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00099">cwist_heal_config::schema</a>, <a class="el" href="../../db/dd3/json__heal_8h_source.html#l00098">cwist_heal_config::threshold</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
 
 </div>
 </div>
@@ -403,9 +426,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00155">155</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00048">48</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d2/db5/db_8c_source.html#l00023">CWIST_DB_BUSY_TIMEOUT_MS</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01922">cwist_app_use_db()</a>, and <a class="el" href="../../d4/de5/pool_8c_source.html#l00095">cwist_db_pool_create()</a>.</p>
 
@@ -462,7 +485,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00199">199</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00093">93</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
@@ -512,11 +535,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00375">375</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00267">267</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d4/de5/pool_8c_source.html#l00284">cwist_db_pool_query()</a>, and <a class="el" href="../../d2/db5/db_8c_source.html#l00594">cwist_db_query_strict()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d4/de5/pool_8c_source.html#l00284">cwist_db_pool_query()</a>, and <a class="el" href="../../d2/db5/db_8c_source.html#l00484">cwist_db_query_strict()</a>.</p>
 
 </div>
 </div>
@@ -571,9 +594,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or validation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00594">594</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00484">484</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00375">cwist_db_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00037">CWIST_ERR_JSON</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00074">cwist_zod_validate()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00073">cwist_error_t::errtype</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
+<p class="reference">References <a class="el" href="../../d2/db5/db_8c_source.html#l00267">cwist_db_query()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00037">CWIST_ERR_JSON</a>, <a class="el" href="../../d7/d92/zod_8c_source.html#l00074">cwist_zod_validate()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00073">cwist_error_t::errtype</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../dc/d6e/zod_8h_source.html#l00048">cwist_zod_result::valid</a>.</p>
 
 </div>
 </div>
@@ -620,7 +643,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Tagged CWIST error describing success or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00258">258</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d2/db5/db_8c_source.html#l00152">152</a> of file <a class="el" href="../../d2/db5/db_8c_source.html">db.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d0/dae/core_2db_2sql_8h_source.html#l00022">cwist_db::conn</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 

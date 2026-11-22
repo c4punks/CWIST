@@ -654,150 +654,161 @@ $(document).ready(function(){initNavTree('de/d67/session_8c_source.html','../../
 <div class="foldopen" id="foldopen00642" data-start="{" data-end="}">
 <div class="line"><a id="l00642" name="l00642"></a><span class="lineno"><a class="line" href="../../da/d46/session_8h.html#aec4cfd2c6d88d909fa13822880cc6574">  642</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../de/d67/session_8c.html#aec4cfd2c6d88d909fa13822880cc6574">cwist_session_commit</a>(<a class="code hl_typedef" href="../../da/d46/session_8h.html#a578ec805a8d2da4a130e5a795ee052fa">cwist_session_t</a> *session, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>
 <div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    <span class="keywordflow">if</span> (!session || !res) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    <span class="keywordflow">if</span> (!session-&gt;modified &amp;&amp; session-&gt;loaded) <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span> </div>
-<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>    <span class="keywordflow">if</span> (session-&gt;invalidated) {</div>
-<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>        <span class="keywordtype">int</span> rc = <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#af0cbca640a3104b61278dd2d9a6b91d0">cwist_cookie_delete</a>(res, session-&gt;app-&gt;session_name);</div>
-<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>        <span class="keywordflow">if</span> (rc == 0) {</div>
-<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>            session-&gt;modified = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>            session-&gt;loaded = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>        }</div>
-<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>        <span class="keywordflow">return</span> rc;</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>    }</div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span> </div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>    <span class="keywordflow">if</span> (!session-&gt;session_id) session-&gt;session_id = generate_secret(16);</div>
-<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>    <span class="keywordflow">if</span> (!session-&gt;session_id) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span> </div>
-<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>    json_ctx_t ctx;</div>
-<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>    ctx.json = cJSON_CreateObject();</div>
-<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>    <span class="keywordflow">if</span> (!ctx.json) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>    time_t expires_at = time(NULL) + session-&gt;app-&gt;session_max_age;</div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>    <span class="keywordflow">if</span> (!cJSON_AddNumberToObject(ctx.json, <span class="stringliteral">&quot;__cwist_exp&quot;</span>, (<span class="keywordtype">double</span>)expires_at) ||</div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>        !cJSON_AddStringToObject(ctx.json, <span class="stringliteral">&quot;__cwist_jti&quot;</span>, session-&gt;session_id)) {</div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>        cJSON_Delete(ctx.json);</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    }</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    <a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#a85cc4d59947227a4cf09f7eff2727246">cwist_query_map_foreach</a>(session-&gt;data, add_to_json, &amp;ctx);</div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    <span class="keywordtype">char</span> *raw = cJSON_PrintUnformatted(ctx.json);</div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    cJSON_Delete(ctx.json);</div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>    <span class="keywordflow">if</span> (!raw) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span> </div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>    <span class="keywordtype">char</span> *payload_b64 = session_base64_encode((<span class="keyword">const</span> uint8_t *)raw, strlen(raw));</div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    free(raw);</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>    <span class="keywordflow">if</span> (!payload_b64) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>    <span class="keywordflow">if</span> (strlen(payload_b64) &gt; 8192) {</div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>    }</div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span> </div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>    uint8_t sig[32];</div>
-<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>    <span class="keywordflow">if</span> (!session_hmac_sha256(session-&gt;app-&gt;session_secret, strlen(session-&gt;app-&gt;session_secret),</div>
-<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>                             payload_b64, strlen(payload_b64), sig)) {</div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
-<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>    }</div>
-<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>    <span class="keywordtype">char</span> *sig_b64 = session_base64_encode(sig, <span class="keyword">sizeof</span>(sig));</div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>    <span class="keywordflow">if</span> (!sig_b64) {</div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>    }</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span> </div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>    <span class="keywordtype">size_t</span> cookie_len = strlen(payload_b64) + strlen(sig_b64) + 1;</div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    <span class="keywordtype">char</span> *cookie_value = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(cookie_len + 1);</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>    <span class="keywordflow">if</span> (cookie_value) snprintf(cookie_value, cookie_len + 1, <span class="stringliteral">&quot;%s.%s&quot;</span>, payload_b64, sig_b64);</div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
-<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(sig_b64);</div>
-<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>    <span class="keywordflow">if</span> (!cookie_value) <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span> </div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>    <a class="code hl_typedef" href="../../de/d67/session_8c.html#ad1675f04454ddeb6f84896c7efbb2653">session_revocation</a> *revocation = session-&gt;revocation;</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>    <span class="keywordtype">bool</span> fresh = revocation == NULL;</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>    <span class="keywordflow">if</span> (fresh) revocation = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*revocation));</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>    <span class="keywordtype">char</span> *signature_copy = revocation ? <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(strstr(cookie_value, <span class="stringliteral">&quot;.&quot;</span>) + 1) : NULL;</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>    <span class="keywordtype">char</span> *id_copy =</div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>        revocation &amp;&amp; !revocation-&gt;session_id ? <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(session-&gt;session_id) : NULL;</div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>    <span class="keywordflow">if</span> (!revocation || !signature_copy || (!revocation-&gt;session_id &amp;&amp; !id_copy)) {</div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>        <span class="keywordflow">if</span> (fresh) <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(revocation);</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(signature_copy);</div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(id_copy);</div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(cookie_value);</div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    }</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    <span class="keywordflow">if</span> (fresh) {</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>        revocation-&gt;app = session-&gt;app;</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>        revocation-&gt;next = NULL;</div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    }</div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span> </div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    <a class="code hl_struct" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> opts = {0};</div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a479ff309f54d7fb09f207ce931fdd6e4">path</a> = <span class="stringliteral">&quot;/&quot;</span>;</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a2c4a34204f19c0f94789f5ccbc257890">max_age_seconds</a> = session-&gt;app-&gt;session_max_age;</div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#ab0b5e91e7c6e7e8a9bb26666872ed551">http_only</a> = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a4cead1a554a718df4476ac30c22b51ed">secure</a> = session-&gt;app-&gt;use_ssl;</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#adb82f6607a952bd8372f96833e4d7770">same_site</a> = <span class="stringliteral">&quot;Lax&quot;</span>;</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span> </div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>    <span class="keywordtype">int</span> rc = <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#aba587adb658090bcc0cc8ae7840aa4c3">cwist_cookie_set</a>(res, session-&gt;app-&gt;session_name, cookie_value, &amp;opts);</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(cookie_value);</div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>    <span class="keywordflow">if</span> (rc != 0) {</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>        <span class="keywordflow">if</span> (fresh) <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(revocation);</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(signature_copy);</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(id_copy);</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>        <span class="keywordflow">return</span> rc;</div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>    }</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span> </div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>    <span class="keywordflow">if</span> (fresh) {</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>        session-&gt;revocation = revocation;</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>        <a class="code hl_function" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(revocation);</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(revocation-&gt;signature);</div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    }</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>    revocation-&gt;signature = signature_copy;</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>    <a class="code hl_function" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(signature_copy);</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    <span class="keywordflow">if</span> (id_copy) {</div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>        revocation-&gt;session_id = id_copy;</div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>        <a class="code hl_function" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(id_copy);</div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>    }</div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    revocation-&gt;expires_at = expires_at;</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>    session-&gt;modified = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>    session-&gt;loaded = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>}</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>    <span class="comment">/* A session that was never set, deleted from or invalidated writes no</span></div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span><span class="comment">     * cookie, so untouched responses stay cacheable and anonymous clients</span></div>
+<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span><span class="comment">     * are not handed a session (#958). */</span></div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>    <span class="keywordflow">if</span> (!session-&gt;modified) <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span> </div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>    <span class="keywordflow">if</span> (session-&gt;invalidated) {</div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>        <span class="comment">/* Delete with the attributes the cookie was set with. A __Host- or</span></div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span><span class="comment">         * __Secure- name needs Secure, and some browsers keep a cookie whose</span></div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span><span class="comment">         * deletion does not match its Path/Secure attributes (#957). */</span></div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>        <a class="code hl_struct" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> del = {0};</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>        del.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a479ff309f54d7fb09f207ce931fdd6e4">path</a> = <span class="stringliteral">&quot;/&quot;</span>;</div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>        del.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#ab0b5e91e7c6e7e8a9bb26666872ed551">http_only</a> = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>        del.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a4cead1a554a718df4476ac30c22b51ed">secure</a> = session-&gt;app-&gt;use_ssl;</div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>        del.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#adb82f6607a952bd8372f96833e4d7770">same_site</a> = <span class="stringliteral">&quot;Lax&quot;</span>;</div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>        <span class="keywordtype">int</span> rc = <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#acd8160f24191b2ab6349a3948fc8f4dd">cwist_cookie_delete_ex</a>(res, session-&gt;app-&gt;session_name, &amp;del);</div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>        <span class="keywordflow">if</span> (rc == 0) {</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>            session-&gt;modified = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>            session-&gt;loaded = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>        }</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>        <span class="keywordflow">return</span> rc;</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    }</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span> </div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    <span class="keywordflow">if</span> (!session-&gt;session_id) session-&gt;session_id = generate_secret(16);</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>    <span class="keywordflow">if</span> (!session-&gt;session_id) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span> </div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    json_ctx_t ctx;</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>    ctx.json = cJSON_CreateObject();</div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    <span class="keywordflow">if</span> (!ctx.json) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>    time_t expires_at = time(NULL) + session-&gt;app-&gt;session_max_age;</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    <span class="keywordflow">if</span> (!cJSON_AddNumberToObject(ctx.json, <span class="stringliteral">&quot;__cwist_exp&quot;</span>, (<span class="keywordtype">double</span>)expires_at) ||</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>        !cJSON_AddStringToObject(ctx.json, <span class="stringliteral">&quot;__cwist_jti&quot;</span>, session-&gt;session_id)) {</div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>        cJSON_Delete(ctx.json);</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>    }</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>    <a class="code hl_function" href="../../d1/d7a/net_2http_2query_8h.html#a85cc4d59947227a4cf09f7eff2727246">cwist_query_map_foreach</a>(session-&gt;data, add_to_json, &amp;ctx);</div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>    <span class="keywordtype">char</span> *raw = cJSON_PrintUnformatted(ctx.json);</div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>    cJSON_Delete(ctx.json);</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>    <span class="keywordflow">if</span> (!raw) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span> </div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>    <span class="keywordtype">char</span> *payload_b64 = session_base64_encode((<span class="keyword">const</span> uint8_t *)raw, strlen(raw));</div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>    free(raw);</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>    <span class="keywordflow">if</span> (!payload_b64) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>    <span class="keywordflow">if</span> (strlen(payload_b64) &gt; 8192) {</div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    }</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span> </div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    uint8_t sig[32];</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>    <span class="keywordflow">if</span> (!session_hmac_sha256(session-&gt;app-&gt;session_secret, strlen(session-&gt;app-&gt;session_secret),</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>                             payload_b64, strlen(payload_b64), sig)) {</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    }</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>    <span class="keywordtype">char</span> *sig_b64 = session_base64_encode(sig, <span class="keyword">sizeof</span>(sig));</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>    <span class="keywordflow">if</span> (!sig_b64) {</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>    }</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span> </div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>    <span class="keywordtype">size_t</span> cookie_len = strlen(payload_b64) + strlen(sig_b64) + 1;</div>
+<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>    <span class="keywordtype">char</span> *cookie_value = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(cookie_len + 1);</div>
+<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>    <span class="keywordflow">if</span> (cookie_value) snprintf(cookie_value, cookie_len + 1, <span class="stringliteral">&quot;%s.%s&quot;</span>, payload_b64, sig_b64);</div>
+<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(payload_b64);</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(sig_b64);</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>    <span class="keywordflow">if</span> (!cookie_value) <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span> </div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    <a class="code hl_typedef" href="../../de/d67/session_8c.html#ad1675f04454ddeb6f84896c7efbb2653">session_revocation</a> *revocation = session-&gt;revocation;</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    <span class="keywordtype">bool</span> fresh = revocation == NULL;</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    <span class="keywordflow">if</span> (fresh) revocation = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*revocation));</div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    <span class="keywordtype">char</span> *signature_copy = revocation ? <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(strstr(cookie_value, <span class="stringliteral">&quot;.&quot;</span>) + 1) : NULL;</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    <span class="keywordtype">char</span> *id_copy =</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>        revocation &amp;&amp; !revocation-&gt;session_id ? <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(session-&gt;session_id) : NULL;</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    <span class="keywordflow">if</span> (!revocation || !signature_copy || (!revocation-&gt;session_id &amp;&amp; !id_copy)) {</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>        <span class="keywordflow">if</span> (fresh) <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(revocation);</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(signature_copy);</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(id_copy);</div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(cookie_value);</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>    }</div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>    <span class="keywordflow">if</span> (fresh) {</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>        revocation-&gt;app = session-&gt;app;</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>        revocation-&gt;next = NULL;</div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>    }</div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span> </div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>    <a class="code hl_struct" href="../../db/d11/structcwist__cookie__options.html">cwist_cookie_options</a> opts = {0};</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a479ff309f54d7fb09f207ce931fdd6e4">path</a> = <span class="stringliteral">&quot;/&quot;</span>;</div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a2c4a34204f19c0f94789f5ccbc257890">max_age_seconds</a> = session-&gt;app-&gt;session_max_age;</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#ab0b5e91e7c6e7e8a9bb26666872ed551">http_only</a> = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#a4cead1a554a718df4476ac30c22b51ed">secure</a> = session-&gt;app-&gt;use_ssl;</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>    opts.<a class="code hl_variable" href="../../db/d11/structcwist__cookie__options.html#adb82f6607a952bd8372f96833e4d7770">same_site</a> = <span class="stringliteral">&quot;Lax&quot;</span>;</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span> </div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    <span class="keywordtype">int</span> rc = <a class="code hl_function" href="../../d5/dfd/cookie_8h.html#aba587adb658090bcc0cc8ae7840aa4c3">cwist_cookie_set</a>(res, session-&gt;app-&gt;session_name, cookie_value, &amp;opts);</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(cookie_value);</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    <span class="keywordflow">if</span> (rc != 0) {</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>        <span class="keywordflow">if</span> (fresh) <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(revocation);</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(signature_copy);</div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(id_copy);</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        <span class="keywordflow">return</span> rc;</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>    }</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span> </div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>    <span class="keywordflow">if</span> (fresh) {</div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>        session-&gt;revocation = revocation;</div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>        <a class="code hl_function" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(revocation);</div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(revocation-&gt;signature);</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>    }</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>    revocation-&gt;signature = signature_copy;</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>    <a class="code hl_function" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(signature_copy);</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    <span class="keywordflow">if</span> (id_copy) {</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>        revocation-&gt;session_id = id_copy;</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>        <a class="code hl_function" href="../../d0/daa/gc_8h.html#a28b862cd5828d70bdb18dfad374d97ef">cwist_gc_scope_disown</a>(id_copy);</div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    }</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    revocation-&gt;expires_at = expires_at;</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    session-&gt;modified = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    session-&gt;loaded = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>}</div>
 </div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span> </div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span><span class="comment">/* Middleware ------------------------------------------------------------- */</span></div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span> </div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_session_complete(cwist_async *a, <span class="keywordtype">void</span> *ctx) {</div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    (void)ctx;</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    <a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req = <a class="code hl_function" href="../../db/d84/async_8c.html#aef1150eb6431bb47eeb147aca0a495c2">cwist_async_request</a>(a);</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    <span class="keywordflow">if</span> (req &amp;&amp; req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>) {</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>        <a class="code hl_function" href="../../de/d67/session_8c.html#aec4cfd2c6d88d909fa13822880cc6574">cwist_session_commit</a>(req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>, <a class="code hl_function" href="../../db/d84/async_8c.html#acf1eea5a89dceeb6c9d19f373eed67a7">cwist_async_final_response</a>(a));</div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    }</div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>}</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span> </div>
-<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_mw_session_handler(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res,</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>                                     <a class="code hl_typedef" href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a> next) {</div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>    <a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app = req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a747dd16054b62bfb37a209af22349812">app</a>;</div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>    <span class="keywordflow">if</span> (!app) {</div>
-<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>        next(req, res);</div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>    }</div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>    <a class="code hl_function" href="../../de/d67/session_8c.html#a46e962fb0b670b3d5a8e7097031faa6c">cwist_session_start</a>(app, req, res);</div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>    next(req, res);</div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a566f936ffa5db743344af9e792fb70f5">cwist_async_res_deferred</a>(res)) {</div>
-<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>        <a class="code hl_function" href="../../db/d84/async_8c.html#aaf7173d1b3172f53203758f40d39fbd7">cwist_async_add_completion_hook</a>(res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#aba9a54d6190af36db7ffcd4a9bf6d77a">async</a>, cwist_session_complete, NULL);</div>
-<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>    }</div>
-<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    <span class="keywordflow">if</span> (req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>) {</div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>        <a class="code hl_function" href="../../de/d67/session_8c.html#aec4cfd2c6d88d909fa13822880cc6574">cwist_session_commit</a>(req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>, res);</div>
-<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    }</div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>}</div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span> </div>
-<div class="foldopen" id="foldopen00794" data-start="{" data-end="}">
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno"><a class="line" href="../../da/d46/session_8h.html#ab4fd33e60fddf092c58740c9f8b7ff81">  794</a></span><a class="code hl_typedef" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a> <a class="code hl_function" href="../../de/d67/session_8c.html#ab4fd33e60fddf092c58740c9f8b7ff81">cwist_mw_session</a>(<a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app) {</div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>    <span class="keywordflow">if</span> (app &amp;&amp; !app-&gt;<a class="code hl_variable" href="../../dc/da0/structcwist__app.html#a534eb66bc7f12204a0a8f435036c7e04">session_secret</a>) {</div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>        <a class="code hl_function" href="../../de/d67/session_8c.html#a9f8fd9c6e980714514acd87f9cf82e0c">cwist_app_use_session</a>(app, NULL);</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>    }</div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>    <a class="code hl_define" href="../../da/dec/core_2macros_8h.html#a244569c77892a46876dbec6200c13813">CWIST_UNUSED</a>(app);</div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>    <span class="keywordflow">return</span> cwist_mw_session_handler;</div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>}</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span> </div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span><span class="comment">/* Middleware ------------------------------------------------------------- */</span></div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span> </div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_session_complete(cwist_async *a, <span class="keywordtype">void</span> *ctx) {</div>
+<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>    (void)ctx;</div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>    <a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req = <a class="code hl_function" href="../../db/d84/async_8c.html#aef1150eb6431bb47eeb147aca0a495c2">cwist_async_request</a>(a);</div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>    <span class="keywordflow">if</span> (req &amp;&amp; req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>) {</div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>        <a class="code hl_function" href="../../de/d67/session_8c.html#aec4cfd2c6d88d909fa13822880cc6574">cwist_session_commit</a>(req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>, <a class="code hl_function" href="../../db/d84/async_8c.html#acf1eea5a89dceeb6c9d19f373eed67a7">cwist_async_final_response</a>(a));</div>
+<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>    }</div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>}</div>
+<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span> </div>
+<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span><span class="keyword">static</span> <span class="keywordtype">void</span> cwist_mw_session_handler(<a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res,</div>
+<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>                                     <a class="code hl_typedef" href="../../d0/d77/sys_2app_2app_8h.html#a2a3910c6b268a4a04e17075671a4c28c">cwist_handler_func</a> next) {</div>
+<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    <a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app = req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a747dd16054b62bfb37a209af22349812">app</a>;</div>
+<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>    <span class="keywordflow">if</span> (!app) {</div>
+<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>        next(req, res);</div>
+<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>    }</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>    <a class="code hl_function" href="../../de/d67/session_8c.html#a46e962fb0b670b3d5a8e7097031faa6c">cwist_session_start</a>(app, req, res);</div>
+<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>    next(req, res);</div>
+<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d6/d73/async__internal_8h.html#a566f936ffa5db743344af9e792fb70f5">cwist_async_res_deferred</a>(res)) {</div>
+<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>        <a class="code hl_function" href="../../db/d84/async_8c.html#aaf7173d1b3172f53203758f40d39fbd7">cwist_async_add_completion_hook</a>(res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#aba9a54d6190af36db7ffcd4a9bf6d77a">async</a>, cwist_session_complete, NULL);</div>
+<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>    }</div>
+<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    <span class="keywordflow">if</span> (req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>) {</div>
+<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>        <a class="code hl_function" href="../../de/d67/session_8c.html#aec4cfd2c6d88d909fa13822880cc6574">cwist_session_commit</a>(req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e">session</a>, res);</div>
+<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>    }</div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>}</div>
+<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span> </div>
+<div class="foldopen" id="foldopen00805" data-start="{" data-end="}">
+<div class="line"><a id="l00805" name="l00805"></a><span class="lineno"><a class="line" href="../../da/d46/session_8h.html#ab4fd33e60fddf092c58740c9f8b7ff81">  805</a></span><a class="code hl_typedef" href="../../d0/d77/sys_2app_2app_8h.html#ab61e763134014868b93ec963af056f91">cwist_middleware_func</a> <a class="code hl_function" href="../../de/d67/session_8c.html#ab4fd33e60fddf092c58740c9f8b7ff81">cwist_mw_session</a>(<a class="code hl_struct" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app) {</div>
+<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>    <span class="keywordflow">if</span> (app &amp;&amp; !app-&gt;<a class="code hl_variable" href="../../dc/da0/structcwist__app.html#a534eb66bc7f12204a0a8f435036c7e04">session_secret</a>) {</div>
+<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>        <a class="code hl_function" href="../../de/d67/session_8c.html#a9f8fd9c6e980714514acd87f9cf82e0c">cwist_app_use_session</a>(app, NULL);</div>
+<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>    }</div>
+<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>    <a class="code hl_define" href="../../da/dec/core_2macros_8h.html#a244569c77892a46876dbec6200c13813">CWIST_UNUSED</a>(app);</div>
+<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>    <span class="keywordflow">return</span> cwist_mw_session_handler;</div>
+<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
@@ -814,7 +825,7 @@ $(document).ready(function(){initNavTree('de/d67/session_8c_source.html','../../
 <div class="ttc" id="acookie_8h_html"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html">cookie.h</a></div><div class="ttdoc">HTTP cookie parsing and construction helpers.</div></div>
 <div class="ttc" id="acookie_8h_html_a9305cd705685dd014d6d8d1a9277fd11"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#a9305cd705685dd014d6d8d1a9277fd11">cwist_cookie_get</a></div><div class="ttdeci">const char * cwist_cookie_get(cwist_query_map *map, const char *name)</div><div class="ttdoc">Get a cookie value by name from a parsed map.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00124">cookie.c:124</a></div></div>
 <div class="ttc" id="acookie_8h_html_aba587adb658090bcc0cc8ae7840aa4c3"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#aba587adb658090bcc0cc8ae7840aa4c3">cwist_cookie_set</a></div><div class="ttdeci">int cwist_cookie_set(cwist_http_response *res, const char *name, const char *value, const cwist_cookie_options *opts)</div><div class="ttdoc">Add a Set-Cookie header to the response.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00193">cookie.c:193</a></div></div>
-<div class="ttc" id="acookie_8h_html_af0cbca640a3104b61278dd2d9a6b91d0"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#af0cbca640a3104b61278dd2d9a6b91d0">cwist_cookie_delete</a></div><div class="ttdeci">int cwist_cookie_delete(cwist_http_response *res, const char *name)</div><div class="ttdoc">Add a Set-Cookie header that deletes a cookie.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00250">cookie.c:250</a></div></div>
+<div class="ttc" id="acookie_8h_html_acd8160f24191b2ab6349a3948fc8f4dd"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#acd8160f24191b2ab6349a3948fc8f4dd">cwist_cookie_delete_ex</a></div><div class="ttdeci">int cwist_cookie_delete_ex(cwist_http_response *res, const char *name, const cwist_cookie_options *opts)</div><div class="ttdoc">Delete a cookie using its original path, domain, and security attributes.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00229">cookie.c:229</a></div></div>
 <div class="ttc" id="acookie_8h_html_affe5d5d5278e31c936fb16a3777edfc1"><div class="ttname"><a href="../../d5/dfd/cookie_8h.html#affe5d5d5278e31c936fb16a3777edfc1">cwist_cookie_parse</a></div><div class="ttdeci">void cwist_cookie_parse(cwist_query_map *map, const char *header)</div><div class="ttdoc">Parse a Cookie header value into a query-style map.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d49/cookie_8c_source.html#l00082">cookie.c:82</a></div></div>
 <div class="ttc" id="acore_2macros_8h_html_a244569c77892a46876dbec6200c13813"><div class="ttname"><a href="../../da/dec/core_2macros_8h.html#a244569c77892a46876dbec6200c13813">CWIST_UNUSED</a></div><div class="ttdeci">#define CWIST_UNUSED(x)</div><div class="ttdoc">Mark an intentionally unused variable to silence compiler warnings.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dec/core_2macros_8h_source.html#l00023">macros.h:23</a></div></div>
 <div class="ttc" id="acrypto_8h_html"><div class="ttname"><a href="../../da/da0/crypto_8h.html">crypto.h</a></div><div class="ttdoc">mbedTLS TLS backend: OPENSSL_cleanse / CRYPTO_memcmp.</div></div>
@@ -845,7 +856,7 @@ $(document).ready(function(){initNavTree('de/d67/session_8c_source.html','../../
 <div class="ttc" id="asession_8c_html_a9f8fd9c6e980714514acd87f9cf82e0c"><div class="ttname"><a href="../../de/d67/session_8c.html#a9f8fd9c6e980714514acd87f9cf82e0c">cwist_app_use_session</a></div><div class="ttdeci">int cwist_app_use_session(cwist_app *app, const char *secret)</div><div class="ttdoc">Enable signed session cookies for an app. Installs or replaces the app's session secret....</div><div class="ttdef"><b>Definition</b> <a href="../../de/d67/session_8c_source.html#l00261">session.c:261</a></div></div>
 <div class="ttc" id="asession_8c_html_aa2370fb1ec237c20caa71fcc0b0c7dd0"><div class="ttname"><a href="../../de/d67/session_8c.html#aa2370fb1ec237c20caa71fcc0b0c7dd0">cwist_session_get</a></div><div class="ttdeci">const char * cwist_session_get(cwist_session_t *session, const char *key)</div><div class="ttdoc">Get a session value by key.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d67/session_8c_source.html#l00565">session.c:565</a></div></div>
 <div class="ttc" id="asession_8c_html_ab08aea4f39df5d52d745973cf2aca6ab"><div class="ttname"><a href="../../de/d67/session_8c.html#ab08aea4f39df5d52d745973cf2aca6ab">cwist_session_set</a></div><div class="ttdeci">int cwist_session_set(cwist_session_t *session, const char *key, const char *value)</div><div class="ttdoc">Set a session value; NULL value stores an empty string. Marks the session as modified so it is writte...</div><div class="ttdef"><b>Definition</b> <a href="../../de/d67/session_8c_source.html#l00579">session.c:579</a></div></div>
-<div class="ttc" id="asession_8c_html_ab4fd33e60fddf092c58740c9f8b7ff81"><div class="ttname"><a href="../../de/d67/session_8c.html#ab4fd33e60fddf092c58740c9f8b7ff81">cwist_mw_session</a></div><div class="ttdeci">cwist_middleware_func cwist_mw_session(cwist_app *app)</div><div class="ttdoc">Create the session middleware for an app. Ensures the app has a session secret, generating a random o...</div><div class="ttdef"><b>Definition</b> <a href="../../de/d67/session_8c_source.html#l00794">session.c:794</a></div></div>
+<div class="ttc" id="asession_8c_html_ab4fd33e60fddf092c58740c9f8b7ff81"><div class="ttname"><a href="../../de/d67/session_8c.html#ab4fd33e60fddf092c58740c9f8b7ff81">cwist_mw_session</a></div><div class="ttdeci">cwist_middleware_func cwist_mw_session(cwist_app *app)</div><div class="ttdoc">Create the session middleware for an app. Ensures the app has a session secret, generating a random o...</div><div class="ttdef"><b>Definition</b> <a href="../../de/d67/session_8c_source.html#l00805">session.c:805</a></div></div>
 <div class="ttc" id="asession_8c_html_ac8f6a4d841ccaf1660eb0e49b9cdf21b"><div class="ttname"><a href="../../de/d67/session_8c.html#ac8f6a4d841ccaf1660eb0e49b9cdf21b">CWIST_SESSION_DEFAULT_MAX_AGE</a></div><div class="ttdeci">#define CWIST_SESSION_DEFAULT_MAX_AGE</div><div class="ttdef"><b>Definition</b> <a href="../../de/d67/session_8c_source.html#l00040">session.c:40</a></div></div>
 <div class="ttc" id="asession_8c_html_ad1675f04454ddeb6f84896c7efbb2653"><div class="ttname"><a href="../../de/d67/session_8c.html#ad1675f04454ddeb6f84896c7efbb2653">session_revocation</a></div><div class="ttdeci">struct session_revocation session_revocation</div></div>
 <div class="ttc" id="asession_8c_html_add2f4b7d3f0e2b4cce6e0042951f43a3"><div class="ttname"><a href="../../de/d67/session_8c.html#add2f4b7d3f0e2b4cce6e0042951f43a3">cwist_session_destroy</a></div><div class="ttdeci">void cwist_session_destroy(cwist_session_t *session)</div><div class="ttdoc">Free a session and its data. Safe to call with NULL.</div><div class="ttdef"><b>Definition</b> <a href="../../de/d67/session_8c_source.html#l00623">session.c:623</a></div></div>
