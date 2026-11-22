@@ -14,6 +14,7 @@
 #include "app_route_internal.h"
 /* Application headers (external) */
 #include <cwist/sys/app/app.h>
+#include <cwist/net/http/session.h>
 #include <cwist/sys/app/config.h>
 #include <cwist/sys/app/logger.h>
 #include <cwist/sys/app/shutdown.h>
@@ -463,6 +464,9 @@ static bool cwist_prepare_static(cwist_app *app, cwist_http_request *req,
 static void cwist_static_handler(cwist_http_request *req, cwist_http_response *res);
 static void cwist_multiport_destroy_owned_subapps(cwist_app *root);
 static void cwist_multiport_unlink_app(cwist_app *app);
+#if defined(CWIST_PLATFORM_HOSTED)
+static cwist_app *cwist_multiport_root_of(cwist_app *app);
+#endif
 static void cwist_multiport_h3_copy_tunables(cwist_http3_context *dst,
                                              const cwist_http3_context *src);
 
@@ -2054,6 +2058,14 @@ cwist_error_t cwist_app_use_db_pool(cwist_app *app, const char *db_path, size_t 
 
 cwist_db_pool_t *cwist_app_get_db_pool(cwist_app *app) {
     if (!app) return NULL;
+    /* A detached multiport sub-app uses (but does not own) its root's pool
+     * (#999). */
+#if defined(CWIST_PLATFORM_HOSTED)
+    if (!app->db_pool) {
+        cwist_app *root = cwist_multiport_root_of(app);
+        if (root) return (cwist_db_pool_t *)root->db_pool;
+    }
+#endif
     return (cwist_db_pool_t *)app->db_pool;
 }
 
@@ -2085,6 +2097,12 @@ cwist_error_t cwist_app_use_redis(cwist_app *app, const char *host, int port, si
 
 cwist_redis_pool_t *cwist_app_get_redis_pool(cwist_app *app) {
     if (!app) return NULL;
+#if defined(CWIST_PLATFORM_HOSTED)
+    if (!app->redis_pool) {
+        cwist_app *root = cwist_multiport_root_of(app);
+        if (root) return (cwist_redis_pool_t *)root->redis_pool;
+    }
+#endif
     return (cwist_redis_pool_t *)app->redis_pool;
 }
 
@@ -4062,6 +4080,19 @@ cwist_multiport_t cwist_create_multiport_from_array(const unsigned short *ports,
 }
 
 /**
+ * @brief The root app of a detached multiport sub-app, or NULL.
+ * @param app App to look up.
+ */
+static cwist_app *cwist_multiport_root_of(cwist_app *app) {
+    for (cwist_multiport_group *group = g_cwist_multiport_groups; group; group = group->next) {
+        for (cwist_multiport_slot *slot = group->slots; slot; slot = slot->next) {
+            if (slot->detached && slot->app == app) return group->root;
+        }
+    }
+    return NULL;
+}
+
+/**
  * @brief Find the multiport group attached to a root app.
  * @param root Root application pointer.
  * @return Existing group, or NULL when none exists.
@@ -4387,6 +4418,13 @@ static cwist_app *cwist_app_clone_for_multiport(cwist_app *src) {
     if (src->db_path && !src->nuke_enabled) {
         cwist_app_use_db(dst, src->db_path);
     }
+    /* The cloned session middleware reads its settings from req->app, so a
+     * detached port needs the root's secret, cookie name and max age, or it
+     * generates its own secret and rejects the root's sessions (#999). The
+     * DB and Redis pools are reached through the root by the getters. */
+    if (src->session_secret) cwist_app_use_session(dst, src->session_secret);
+    if (src->session_name) cwist_app_set_session_name(dst, src->session_name);
+    if (src->session_max_age > 0) cwist_app_set_session_max_age(dst, src->session_max_age);
     cwist_app_refresh_https_request_handler(dst);
     return dst;
 }

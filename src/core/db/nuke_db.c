@@ -525,25 +525,43 @@ unsigned char *cwist_nuke_serialize(sqlite3_int64 *out_size) {
 }
 
 /**
- * @brief Replace the in-memory NUKE database with serialized contents.
+ * @brief Replace the NUKE database contents with a serialized image.
+ *
+ * The image is loaded into a scratch in-memory connection and copied into
+ * the database file (and then the in-memory mirror) with the backup API.
+ * Deserializing straight into the file connection, as before, replaced its
+ * "main" database with a memory image, so nothing reached the file again
+ * (#990).
+ *
  * @param data Serialized database buffer; ownership transfers to SQLite, which
- *             frees it on close (SQLITE_DESERIALIZE_FREEONCLOSE).
+ *             frees it (SQLITE_DESERIALIZE_FREEONCLOSE), on success and failure.
  * @param data_len Length of @p data in bytes.
- * @return 0 on success, or -1 on invalid arguments or when running in disk mode.
+ * @return 0 on success, or -1 on invalid arguments or failure.
  */
 int cwist_nuke_deserialize(unsigned char *data, sqlite3_int64 data_len) {
     if (!data || data_len <= 0) return -1;
 
-    pthread_mutex_lock(&g_nuke_lock);
-
-    if (!g_nuke.disk_db) {
-        pthread_mutex_unlock(&g_nuke_lock);
+    sqlite3 *scratch = NULL;
+    if (sqlite3_open(":memory:", &scratch) != SQLITE_OK) {
+        sqlite3_close(scratch);
+        sqlite3_free(data);
+        return -1;
+    }
+    int rc = sqlite3_deserialize(scratch, "main", data, data_len, data_len,
+                                 SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_RESIZEABLE);
+    if (rc != SQLITE_OK) {
+        sqlite3_close(scratch);
         return -1;
     }
 
-    int rc = sqlite3_deserialize(g_nuke.disk_db, "main", data, data_len, data_len,
-                                 SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_RESIZEABLE);
-    if (rc == SQLITE_OK && g_nuke.mem_db) rc = nuke_backup(g_nuke.mem_db, g_nuke.disk_db);
+    pthread_mutex_lock(&g_nuke_lock);
+    int result = -1;
+    if (g_nuke.disk_db && nuke_backup(g_nuke.disk_db, scratch) == 0) {
+        result = 0;
+        if (g_nuke.mem_db && !g_nuke.is_disk_mode && nuke_backup(g_nuke.mem_db, g_nuke.disk_db) != 0)
+            result = -1;
+    }
     pthread_mutex_unlock(&g_nuke_lock);
-    return (rc == SQLITE_OK) ? 0 : -1;
+    sqlite3_close(scratch);
+    return result;
 }
