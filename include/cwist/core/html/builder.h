@@ -57,6 +57,11 @@ void cwist_html_element_add_class(cwist_html_element_t *el, const char *class_na
 
 /**
  * @brief Set inner text.
+ *
+ * The text is HTML-escaped when rendered, except inside <script> and
+ * <style>, whose text is emitted as is (browsers do not decode entities
+ * there) with any "</script" or "</style" turned into "<\/..." so it cannot
+ * end the element.
  */
 void cwist_html_element_set_text(cwist_html_element_t *el, const char *text);
 

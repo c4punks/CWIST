@@ -288,40 +288,121 @@ static cwist_sstring *apply_filter(const char *value, const char *filter) {
             if (s <= e) cwist_sstring_append_len(out, s, (size_t)(e - s + 1));
         }
     } else if (strcmp(filter, "length") == 0 || strcmp(filter, "len") == 0) {
+        /* Code points, not bytes: UTF-8 continuation bytes are not counted
+         * (#986). Arrays and objects are counted in apply_filters(). */
+        size_t count = 0;
+        for (const unsigned char *c = (const unsigned char *)(value ? value : ""); *c; c++)
+            if ((*c & 0xC0) != 0x80) count++;
         char length[64];
-        snprintf(length, sizeof(length), "%zu", value ? strlen(value) : 0);
+        snprintf(length, sizeof(length), "%zu", count);
         cwist_sstring_append(out, length);
-    } else if (strncmp(filter, "default", 7) == 0) {
-        const char *lp = strchr(filter, '(');
-        const char *rp = strrchr(filter, ')');
-        if (value && *value) {
-            cwist_sstring_append(out, value);
-        } else if (lp && rp && rp > lp) {
-            cwist_sstring_append_len(out, lp + 1, (size_t)(rp - lp - 1));
-        }
     } else if (value) {
         cwist_sstring_append(out, value);
     }
     return out;
 }
 
-static cwist_sstring *apply_filters(const char *value, char *filters) {
-    if (!value) return NULL;
+/**
+ * @brief Split the next filter off a chain at a '|' outside quotes.
+ * @return The filter (trimmed, NUL-terminated in place), or NULL at the end.
+ */
+static char *next_filter(char **cursor) {
+    char *p = *cursor;
+    if (!p) return NULL;
+    while (isspace((unsigned char)*p) || *p == '|') p++;
+    if (!*p) {
+        *cursor = NULL;
+        return NULL;
+    }
+    char *start = p;
+    char quote = 0;
+    for (; *p; p++) {
+        if (quote) {
+            if (*p == quote) quote = 0;
+        } else if (*p == '"' || *p == '\'') {
+            quote = *p;
+        } else if (*p == '|') {
+            break;
+        }
+    }
+    *cursor = *p ? p + 1 : NULL;
+    *p = '\0';
+    char *end = p;
+    while (end > start && isspace((unsigned char)end[-1])) *--end = '\0';
+    return start;
+}
+
+/**
+ * @brief Argument of default(...): a quoted string literal (quotes removed)
+ *        or, for compatibility, the bare text between the parentheses.
+ * @return true when @p filter is a well-formed default(...) call.
+ */
+static bool default_argument(const char *filter, const char **arg, size_t *arg_len) {
+    if (strncmp(filter, "default", 7) != 0) return false;
+    const char *lp = filter + 7;
+    while (isspace((unsigned char)*lp)) lp++;
+    if (*lp != '(') return false;
+    const char *rp = strrchr(lp, ')');
+    if (!rp) return false;
+    const char *s = lp + 1;
+    const char *e = rp;
+    while (s < e && isspace((unsigned char)*s)) s++;
+    while (e > s && isspace((unsigned char)e[-1])) e--;
+    if (e - s >= 2 && (*s == '"' || *s == '\'') && e[-1] == *s) {
+        s++;
+        e--;
+    }
+    *arg = s;
+    *arg_len = (size_t)(e - s);
+    return true;
+}
+
+/**
+ * @brief Apply a filter chain to a variable.
+ * @param value Scalar text of the variable, or NULL when it is missing, null,
+ *              an array or an object.
+ * @param node  The variable's JSON node (NULL when missing); lets length
+ *              count array and object members.
+ * @param filters Filter chain after the first '|' (modified in place), or NULL.
+ * @return Rendered text, or NULL when there is nothing to print.
+ */
+static cwist_sstring *apply_filters(const char *value, const cJSON *node, char *filters) {
+    bool have = value != NULL;
     cwist_sstring *current = cwist_sstring_create();
     if (!current) return NULL;
-    cwist_sstring_append(current, value);
+    cwist_sstring_append(current, value ? value : "");
 
     bool autoescape = true;
     bool escaped = false;
-    char *saveptr = NULL;
-    char *filter = filters ? strtok_r(filters, "|", &saveptr) : NULL;
-    while (filter) {
-        while (isspace((unsigned char)*filter)) filter++;
-        char *end = filter + strlen(filter);
-        while (end > filter && isspace((unsigned char)end[-1])) *--end = '\0';
+    bool first = true;
+    char *cursor = filters;
+    char *filter;
+    while ((filter = next_filter(&cursor)) != NULL) {
+        const char *arg = NULL;
+        size_t arg_len = 0;
         if (strcmp(filter, "safe") == 0 || strcmp(filter, "raw") == 0) {
             autoescape = false;
-        } else if (*filter) {
+        } else if (default_argument(filter, &arg, &arg_len)) {
+            /* Applies to a missing variable as well as an empty one (#985). */
+            if (!have || !current->data || !current->data[0]) {
+                cwist_sstring_destroy(current);
+                current = cwist_sstring_create();
+                if (!current) return NULL;
+                cwist_sstring_assign(current, "");
+                cwist_sstring_append_len(current, arg, arg_len);
+                have = true;
+            }
+        } else if (first && (strcmp(filter, "length") == 0 || strcmp(filter, "len") == 0) &&
+                   (cJSON_IsArray(node) || cJSON_IsObject(node) || !have)) {
+            /* Item count for arrays and objects, 0 for a missing value (#986). */
+            char length[64];
+            snprintf(length, sizeof(length), "%d", node ? cJSON_GetArraySize(node) : 0);
+            cwist_sstring_destroy(current);
+            current = cwist_sstring_create();
+            if (!current) return NULL;
+            cwist_sstring_assign(current, length);
+            have = true;
+        } else if (have) {
             cwist_sstring *next = apply_filter(current->data, filter);
             if (!next) {
                 cwist_sstring_destroy(current);
@@ -333,7 +414,11 @@ static cwist_sstring *apply_filters(const char *value, char *filters) {
              * on markup, and escaping it again would print "&amp;lt;". */
             if (strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0) escaped = true;
         }
-        filter = strtok_r(NULL, "|", &saveptr);
+        first = false;
+    }
+    if (!have) {
+        cwist_sstring_destroy(current);
+        return NULL;
     }
     if (autoescape && !escaped) {
         cwist_sstring *next = cwist_sstring_create();
@@ -407,6 +492,17 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
     }
 
     cwist_sstring *output = cwist_sstring_create();
+    /* Start from "" so an empty render still returns a NUL-terminated
+     * buffer instead of data == NULL (#984). */
+    if (output) {
+        cwist_error_t init_err = cwist_sstring_assign(output, "");
+        bool init_ok = cwist_error_is_ok(&init_err);
+        cwist_error_dispose(&init_err);
+        if (!init_ok || !output->data) {
+            cwist_sstring_destroy(output);
+            output = NULL;
+        }
+    }
     if (!output) {
         template_report_error(source, *template_str, CWIST_TEMPLATE_ERROR_NO_MEMORY);
         return NULL;
@@ -469,8 +565,8 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 const cJSON *value = get_value_from_context(context, trimmed_var);
                 char num_str[64] = {0};
                 const char *raw = value ? json_scalar_text(value, num_str, sizeof(num_str)) : NULL;
-                if (raw) {
-                    cwist_sstring *filtered = apply_filters(raw, filter);
+                if (raw || filter) {
+                    cwist_sstring *filtered = apply_filters(raw, value, filter);
                     if (filtered) {
                         cwist_sstring_append(output, filtered->data);
                         cwist_sstring_destroy(filtered);

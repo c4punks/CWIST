@@ -9,6 +9,10 @@
  *        Third batch: impossible HTTP dates, tagless HTML elements, sstring
  *        appends after embedded NULs, CSS declaration checks, keyed JSON
  *        objects, Prometheus metric types, and per-statement DB settings.
+ *        Fourth batch: JSON heal renames, Redis argument errors, template
+ *        empty output and filters, CSRF keys across workers, htmx boosted
+ *        requests, NukeDB deserialize, raw text elements, test client cookie
+ *        paths, and multiport sub-app settings.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/app.h>
@@ -26,6 +30,19 @@
 #include <cwist/core/sstring/sstring.h>
 #include <cwist/core/utils/json_builder.h>
 #include <cwist/sys/metrics/metrics.h>
+#include <cwist/core/utils/json_heal.h>
+#include <cwist/core/template/template.h>
+#include <cwist/net/http/html_response.h>
+#include <cwist/net/redis/cwist_redis.h>
+#include <cwist/sys/app/csrf.h>
+#include <cwist/net/http/session.h>
+#include <cwist/sys/sys_info.h>
+#ifdef CWIST_DB
+#include <cwist/core/db/nuke_db.h>
+#include <sqlite3.h>
+#endif
+#include <sys/wait.h>
+#include <unistd.h>
 #ifdef CWIST_JWT
 #include <cwist/security/jwt/jwt.h>
 #endif
@@ -525,6 +542,268 @@ static void test_db_statement_settings(void) {
 }
 #endif
 
+/* #980: a fuzzy rename does not read the freed key. */
+static void test_json_heal_fuzzy_rename(void) {
+    static const cwist_schema_field_t fields[] = {{"user_id", {NULL}, CWIST_FIELD_INT, true}};
+    static const cwist_schema_t schema = {fields, 1};
+    cJSON *obj = cJSON_Parse("{\"userid\": 7}");
+    assert(obj != NULL);
+    char log[256] = {0};
+    assert(cwist_json_schema_align(obj, &schema, log, sizeof(log)) == 1);
+    assert(cJSON_GetObjectItemCaseSensitive(obj, "user_id") != NULL);
+    assert(cJSON_GetObjectItemCaseSensitive(obj, "userid") == NULL);
+    assert(strstr(log, "'userid'") != NULL);
+    cJSON_Delete(obj);
+    printf("  json heal fuzzy rename OK\n");
+}
+
+/* #982: invalid Redis arguments are errors, and outputs are cleared. */
+static void test_redis_invalid_arguments(void) {
+    char *out = (char *)0x1;
+    cwist_error_t e = cwist_redis_get(NULL, "k", &out);
+    assert(!cwist_error_is_ok(&e) && out == NULL);
+    e = cwist_redis_expire(NULL, "k", 10);
+    assert(!cwist_error_is_ok(&e));
+    e = cwist_redis_set(NULL, "k", "v");
+    assert(!cwist_error_is_ok(&e));
+    e = cwist_redis_pool_setex(NULL, "k", "v", 10);
+    assert(!cwist_error_is_ok(&e));
+    printf("  redis invalid arguments OK\n");
+}
+
+static char *render(const char *tpl, const char *ctx_json) {
+    cJSON *ctx = cJSON_Parse(ctx_json);
+    cwist_sstring *out = cwist_template_render(tpl, ctx);
+    cJSON_Delete(ctx);
+    assert(out != NULL && out->data != NULL);
+    char *copy = strdup(out->data);
+    cwist_sstring_destroy(out);
+    return copy;
+}
+
+#define EXPECT_RENDER(tpl, ctx, want)                                                              \
+    do {                                                                                           \
+        char *got_ = render((tpl), (ctx));                                                         \
+        if (strcmp(got_, (want)) != 0) fprintf(stderr, "%s => [%s], want [%s]\n", tpl, got_, want); \
+        assert(strcmp(got_, (want)) == 0);                                                         \
+        free(got_);                                                                                \
+    } while (0)
+
+/* #984, #985, #986: empty output, default() and length. */
+static void test_template_filters(void) {
+    EXPECT_RENDER("", "{}", "");
+    EXPECT_RENDER("{% if f %}x{% endif %}", "{\"f\":false}", "");
+    EXPECT_RENDER("{# c #}", "{}", "");
+    EXPECT_RENDER("{{ missing | default(\"N/A\") }}", "{}", "N/A");
+    EXPECT_RENDER("{{ name | default(\"N/A\") }}", "{\"name\":\"\"}", "N/A");
+    EXPECT_RENDER("{{ name | default('N/A') }}", "{\"name\":\"bob\"}", "bob");
+    EXPECT_RENDER("{{ missing | default(\"x|y\") }}", "{}", "x|y");
+    EXPECT_RENDER("{{ missing | default(\"a<b\") | upper }}", "{}", "A&lt;B");
+    EXPECT_RENDER("{{ items | length }}", "{\"items\":[1,2,3]}", "3");
+    EXPECT_RENDER("{{ obj | length }}", "{\"obj\":{\"a\":1}}", "1");
+    EXPECT_RENDER("{{ s | length }}", "{\"s\":\"h\\u00e9llo\"}", "5");
+    EXPECT_RENDER("{{ missing | length }}", "{}", "0");
+    EXPECT_RENDER("{{ missing | upper }}", "{}", "");
+    printf("  template filters OK\n");
+}
+
+/* #987: a token issued by one worker is accepted by another. */
+static void test_csrf_across_workers(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    cwist_app_use(app, cwist_mw_csrf(app)); /* no session secret */
+    cwist_app_get(app, "/form", noop_handler);
+    cwist_app_post(app, "/form", noop_handler);
+    int fds[2];
+    assert(pipe(fds) == 0);
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        cwist_test_client *c = cwist_test_client_create(app);
+        cwist_http_response *r = cwist_test_client_get(c, "/form");
+        const char *tok = cwist_test_client_get_cookie(c, "csrf_token");
+        ssize_t w = tok ? write(fds[1], tok, strlen(tok)) : 0;
+        (void)w;
+        _exit(r && tok ? 0 : 1);
+    }
+    close(fds[1]);
+    char token[256] = {0};
+    ssize_t n = read(fds[0], token, sizeof(token) - 1);
+    close(fds[0]);
+    int status = 0;
+    waitpid(pid, &status, 0);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 0 && n > 0);
+    cwist_test_client *c = cwist_test_client_create(app);
+    cwist_test_client_kv hdr = {"X-CSRF-Token", token};
+    cwist_test_client_kv cookie = {"csrf_token", token};
+    cwist_test_client_request_options opts = {0};
+    opts.headers = &hdr;
+    opts.header_count = 1;
+    opts.cookies = &cookie;
+    opts.cookie_count = 1;
+    cwist_http_response *r = cwist_test_client_request_ex(c, CWIST_HTTP_POST, "/form", &opts);
+    assert(r && r->status_code != CWIST_HTTP_FORBIDDEN);
+    cwist_http_response_destroy(r);
+    cwist_test_client_destroy(c);
+    cwist_app_destroy(app);
+    printf("  csrf across workers OK\n");
+}
+
+/* #988: htmx boosted navigation asks for the full page. */
+static void test_htmx_boosted(void) {
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_header_add(&req->headers, "HX-Request", "true");
+    assert(cwist_http_request_wants_fragment(req));
+    cwist_http_header_add(&req->headers, "HX-Boosted", "true");
+    assert(!cwist_http_request_wants_fragment(req));
+    assert(strstr(CWIST_HTML_FRAGMENT_VARY, "HX-Boosted") != NULL);
+    cwist_http_request_destroy(req);
+    printf("  htmx boosted OK\n");
+}
+
+/* #994: script and style text is raw, and cannot close the element. */
+static void test_raw_text_elements(void) {
+    cwist_html_element_t *st = cwist_html_element_create("style");
+    cwist_html_element_set_text(st, ".a > .b { content: \"x\" }");
+    cwist_html_element_t *js = cwist_html_element_create("script");
+    cwist_html_element_set_text(js, "if (a < b && c) { s = '</SCRIPT>'; }");
+    cwist_html_element_t *p = cwist_html_element_create("p");
+    cwist_html_element_set_text(p, "a < b");
+    cwist_sstring *o1 = cwist_html_render(st), *o2 = cwist_html_render(js), *o3 = cwist_html_render(p);
+    assert(strcmp(o1->data, "<style>.a > .b { content: \"x\" }</style>") == 0);
+    assert(strcmp(o2->data, "<script>if (a < b && c) { s = '<\\/SCRIPT>'; }</script>") == 0);
+    assert(strcmp(o3->data, "<p>a &lt; b</p>") == 0);
+    cwist_sstring_destroy(o1);
+    cwist_sstring_destroy(o2);
+    cwist_sstring_destroy(o3);
+    cwist_html_element_destroy(st);
+    cwist_html_element_destroy(js);
+    cwist_html_element_destroy(p);
+    printf("  raw text elements OK\n");
+}
+
+static void set_path_cookies(cwist_http_request *req, cwist_http_response *res) {
+    (void)req;
+    cwist_http_header_add(&res->headers, "Set-Cookie", "admin=1; Path=/admin");
+    cwist_http_header_add(&res->headers, "Set-Cookie", "site=1; Path=/");
+    cwist_http_header_add(&res->headers, "Set-Cookie", "here=1");
+}
+
+static char seen_cookie[512];
+static void echo_cookie(cwist_http_request *req, cwist_http_response *res) {
+    (void)res;
+    const char *c = cwist_http_header_get(req->headers, "Cookie");
+    snprintf(seen_cookie, sizeof(seen_cookie), "%s", c ? c : "");
+}
+
+/* #995: the test client sends a cookie only to matching paths. */
+static void test_client_cookie_paths(void) {
+    cwist_app *app = cwist_app_create();
+    cwist_app_get(app, "/app/login", set_path_cookies);
+    cwist_app_get(app, "/admin/x", echo_cookie);
+    cwist_app_get(app, "/public", echo_cookie);
+    cwist_app_get(app, "/app/page", echo_cookie);
+    cwist_test_client *c = cwist_test_client_create(app);
+    cwist_http_response_destroy(cwist_test_client_get(c, "/app/login"));
+    cwist_http_response_destroy(cwist_test_client_get(c, "/public"));
+    assert(strstr(seen_cookie, "site=1") && !strstr(seen_cookie, "admin=1") &&
+           !strstr(seen_cookie, "here=1"));
+    cwist_http_response_destroy(cwist_test_client_get(c, "/admin/x"));
+    assert(strstr(seen_cookie, "admin=1") && strstr(seen_cookie, "site=1"));
+    cwist_http_response_destroy(cwist_test_client_get(c, "/app/page"));
+    assert(strstr(seen_cookie, "here=1") && !strstr(seen_cookie, "admin=1"));
+    cwist_test_client_destroy(c);
+    cwist_app_destroy(app);
+    printf("  test client cookie paths OK\n");
+}
+
+/* #999: a detached multiport sub-app keeps the session settings and pools. */
+static void test_multiport_subapp_settings(void) {
+    cwist_app *app = cwist_app_create();
+    assert(cwist_app_use_session(app, "multiport-secret") == 0);
+    cwist_app_set_session_name(app, "mp_sid");
+    cwist_app_set_session_max_age(app, 123);
+#ifdef CWIST_DB
+    cwist_error_t perr = cwist_app_use_db_pool(app, ":memory:", 2);
+    assert(cwist_error_is_ok(&perr));
+#endif
+    cwist_app *sub = cwist_multiport_get_app(&app, 18099);
+    assert(sub != NULL);
+    assert(sub->session_secret && strcmp(sub->session_secret, "multiport-secret") == 0);
+    assert(sub->session_name && strcmp(sub->session_name, "mp_sid") == 0);
+    assert(sub->session_max_age == 123);
+#ifdef CWIST_DB
+    assert(cwist_app_get_db_pool(sub) == cwist_app_get_db_pool(app));
+    assert(cwist_app_get_db_pool(sub) != NULL);
+#endif
+    cwist_app_destroy(app);
+    printf("  multiport sub-app settings OK\n");
+}
+
+#ifdef CWIST_DB
+static int count_rows(sqlite3 *d) {
+    sqlite3_stmt *st = NULL;
+    int n = -1;
+    if (sqlite3_prepare_v2(d, "SELECT count(*) FROM t", -1, &st, NULL) == SQLITE_OK &&
+        sqlite3_step(st) == SQLITE_ROW)
+        n = sqlite3_column_int(st, 0);
+    sqlite3_finalize(st);
+    return n;
+}
+
+static int file_rows(const char *path) {
+    sqlite3 *d = NULL;
+    sqlite3_open(path, &d);
+    int n = count_rows(d);
+    sqlite3_close(d);
+    return n;
+}
+
+/* #990: a deserialized image is written to the file and stays persistent. */
+static void test_nuke_deserialize_persists(void) {
+    char path[] = "/tmp/cwist_nuke_deser_XXXXXX";
+    int fd = mkstemp(path);
+    assert(fd >= 0);
+    close(fd);
+    unlink(path);
+    sqlite3 *d = NULL;
+    sqlite3_open(path, &d);
+    sqlite3_exec(d, "CREATE TABLE t(x); INSERT INTO t VALUES(1);", 0, 0, 0);
+    sqlite3_close(d);
+    sqlite3 *src = NULL;
+    sqlite3_open(":memory:", &src);
+    sqlite3_exec(src, "CREATE TABLE t(x); INSERT INTO t VALUES(10),(11),(12),(13),(14);", 0, 0, 0);
+    sqlite3_int64 sz = 0;
+    unsigned char *img = sqlite3_serialize(src, "main", &sz, 0);
+    sqlite3_close(src);
+    assert(img && sz > 0);
+    assert(cwist_nuke_init(path, 0) == 0);
+    assert(cwist_nuke_deserialize(img, sz) == 0);
+    assert(count_rows(cwist_nuke_get_db()) == 5);
+    assert(file_rows(path) == 5);
+    sqlite3_exec(cwist_nuke_get_db(), "INSERT INTO t VALUES(99);", 0, 0, 0);
+    cwist_nuke_close();
+    assert(file_rows(path) == 6);
+    unlink(path);
+    char wal[64];
+    snprintf(wal, sizeof(wal), "%s-wal", path);
+    unlink(wal);
+    snprintf(wal, sizeof(wal), "%s-shm", path);
+    unlink(wal);
+    printf("  nuke deserialize persists OK\n");
+}
+#endif
+
+/* #992: available RAM includes reclaimable page cache. */
+static void test_available_ram(void) {
+    uint64_t avail = cwist_get_available_ram();
+#ifdef __linux__
+    assert(avail > 0);
+#endif
+    (void)avail;
+    printf("  available ram OK\n");
+}
+
 int main(void) {
     printf("test_regression_batch...\n");
     test_waf_body_policy();
@@ -553,6 +832,18 @@ int main(void) {
 #ifdef CWIST_DB
     test_db_statement_settings();
 #endif
+    test_json_heal_fuzzy_rename();
+    test_redis_invalid_arguments();
+    test_template_filters();
+    test_csrf_across_workers();
+    test_htmx_boosted();
+    test_raw_text_elements();
+    test_client_cookie_paths();
+    test_multiport_subapp_settings();
+#ifdef CWIST_DB
+    test_nuke_deserialize_persists();
+#endif
+    test_available_ram();
     printf("All regression batch tests passed.\n");
     return 0;
 }

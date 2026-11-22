@@ -106,8 +106,8 @@ cwist_sstring *cwist_css_scope_generate_stylesheet(const cwist_css_scope *scope)
 있습니다. 클라이언트 쪽 스크립트가 없으면 모든 링크와 폼이 전체 페이지 로드로 동작하고, 프래그먼트를
 교체하는 클라이언트가 있으면 같은 핸들러가 바뀌는 부분만 반환합니다.
 
-요청이 `HX-Request: true`(htmx)를 담고 있으면(htmx 기록 복원
-`HX-History-Restore-Request: true`는 제외), 또는 비어 있지 않은 `Turbo-Frame` 헤더(Hotwire Turbo
+요청이 `HX-Request: true`(htmx)를 담고 있으면(전체 페이지를 요청하는 htmx 기록 복원
+`HX-History-Restore-Request: true`와 부스트 탐색 `HX-Boosted: true`는 제외), 또는 비어 있지 않은 `Turbo-Frame` 헤더(Hotwire Turbo
 프레임)가 있으면 프래그먼트 요청입니다. 두 라이브러리 모두 필요하지 않으며 함께 들어 있지도
 않습니다.
 
@@ -127,7 +127,7 @@ int cwist_http_response_set_view(const cwist_http_request *req, cwist_http_respo
 프래그먼트 요청은 `content`만 받습니다. 다른 요청은 `<!DOCTYPE html>`로 시작하는 전체 문서를
 받습니다. `content`를 `layout` 컴포넌트의 유일한 자식으로 넘긴 것, 또는 `layout`이 NULL이면
 `content` 자체입니다. 두 응답 모두 `Content-Type: text/html; charset=utf-8`과 `Vary: HX-Request,
-HX-History-Restore-Request, HX-Target, Turbo-Frame`을 받으므로, HTTP 캐시가 두 표현을 구분해
+HX-Boosted, HX-History-Restore-Request, HX-Target, Turbo-Frame`을 받으므로, HTTP 캐시가 두 표현을 구분해
 둡니다. 같은 이유로 프로세스 내 응답 캐시(Big Dumb Reply)는 `Vary`가 있는 응답을 학습하지
 않습니다. 상태 코드는 핸들러가 설정한 그대로 둡니다.
 
@@ -317,7 +317,10 @@ cwist_html_element_t *el = cwist_html_component_instantiate(card, &props, &body,
 cwist_sstring *html = cwist_html_render(el);             /* <div class="card-8827595f">... */
 cwist_sstring *style = cwist_css_scope_generate_stylesheet(&css);
 /* .card-8827595f { padding: 1rem; border-radius: 8px; } */
+cwist_html_element_t *style_el = cwist_html_element_create("style");
+cwist_html_element_set_text(style_el, style->data); /* 원시 텍스트: 이스케이프하지 않음 */
 
+cwist_html_element_destroy(style_el);
 cwist_sstring_destroy(style);
 cwist_sstring_destroy(html);
 cwist_html_element_destroy(el);

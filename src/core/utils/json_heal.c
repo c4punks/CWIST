@@ -390,11 +390,14 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
         if (strcmp(found_as, fd->name) != 0) {
             cJSON *clone = cJSON_Duplicate(item, 1);
             if (clone) {
-                cJSON_DeleteItemFromObjectCaseSensitive(obj, (char *)found_as);
-                cJSON_AddItemToObject(obj, fd->name, clone);
-                item = clone;
+                /* Format the log line first: for a fuzzy match found_as is
+                 * the matched item's own key, which the delete frees (#980). */
                 char msg[128];
                 snprintf(msg, sizeof(msg), "[L2] '%s'→'%s'; ", found_as, fd->name);
+                cJSON_DetachItemViaPointer(obj, item);
+                cJSON_Delete(item);
+                cJSON_AddItemToObject(obj, fd->name, clone);
+                item = clone;
                 log_append(log, log_sz, msg);
                 changes++;
             }

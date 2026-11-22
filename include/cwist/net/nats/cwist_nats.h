@@ -45,6 +45,10 @@ void cwist_nats_dispatch(cwist_nats_t *nats);
 
 /**
  * @brief Disconnect and destroy the NATS handle.
+ *
+ * Waits until an in-flight message callback has returned, so the callback
+ * never runs after this function returns. Do not call it from inside the
+ * message callback.
  */
 void cwist_nats_destroy(cwist_nats_t *nats);
 

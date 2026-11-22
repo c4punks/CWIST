@@ -10,6 +10,7 @@
 #include "curl_global.h"
 #include "http_client_file.h"
 
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,6 +175,9 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
 
 struct cwist_http_client {
     CURL *curl;
+    /* Serializes requests: one libcurl easy handle must never be used by two
+     * threads at once (#997). */
+    pthread_mutex_t lock;
     int follow_redirects;
     int timeout_ms;
     char *ca_bundle;
@@ -203,6 +207,12 @@ cwist_http_client *cwist_http_client_create(void) {
 
     client->curl = curl_easy_init();
     if (!client->curl) {
+        cwist_free(client);
+        cwist_curl_global_release();
+        return NULL;
+    }
+    if (pthread_mutex_init(&client->lock, NULL) != 0) {
+        curl_easy_cleanup(client->curl);
         cwist_free(client);
         cwist_curl_global_release();
         return NULL;
@@ -242,6 +252,7 @@ void cwist_http_client_destroy(cwist_http_client *client) {
     cwist_free(client->ca_bundle);
     cwist_free(client->altsvc_db);
     cwist_free(client->file_root);
+    pthread_mutex_destroy(&client->lock);
     cwist_free(client);
     cwist_curl_global_release();
 }
@@ -252,10 +263,17 @@ void cwist_http_client_destroy(cwist_http_client *client) {
  * @param client client handle.
  * @param follow non-zero to follow redirects, 0 to disable.
  */
-void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follow) {
+static void cwist_http_client_set_follow_redirects_locked(cwist_http_client *client, int follow) {
     if (!client) return;
     client->follow_redirects = follow;
     curl_easy_setopt(client->curl, CURLOPT_FOLLOWLOCATION, follow ? 1L : 0L);
+}
+
+void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follow) {
+    if (!client) return;
+    pthread_mutex_lock(&client->lock);
+    cwist_http_client_set_follow_redirects_locked(client, follow);
+    pthread_mutex_unlock(&client->lock);
 }
 
 /**
@@ -264,13 +282,20 @@ void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follo
  * @param client     client handle.
  * @param timeout_ms timeout in milliseconds (applied to the whole transfer).
  */
-void cwist_http_client_set_timeout_ms(cwist_http_client *client, int timeout_ms) {
+static void cwist_http_client_set_timeout_ms_locked(cwist_http_client *client, int timeout_ms) {
     if (!client) return;
     client->timeout_ms = timeout_ms;
     curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
 }
 
-int cwist_http_client_set_file_root(cwist_http_client *client, const char *root_dir) {
+void cwist_http_client_set_timeout_ms(cwist_http_client *client, int timeout_ms) {
+    if (!client) return;
+    pthread_mutex_lock(&client->lock);
+    cwist_http_client_set_timeout_ms_locked(client, timeout_ms);
+    pthread_mutex_unlock(&client->lock);
+}
+
+static int cwist_http_client_set_file_root_locked(cwist_http_client *client, const char *root_dir) {
     if (!client) return -1;
     if (!root_dir) {
         cwist_free(client->file_root);
@@ -292,6 +317,14 @@ int cwist_http_client_set_file_root(cwist_http_client *client, const char *root_
 #endif
 }
 
+int cwist_http_client_set_file_root(cwist_http_client *client, const char *root_dir) {
+    if (!client) return -1;
+    pthread_mutex_lock(&client->lock);
+    int rc = cwist_http_client_set_file_root_locked(client, root_dir);
+    pthread_mutex_unlock(&client->lock);
+    return rc;
+}
+
 /**
  * @brief Set the path to a custom CA certificate bundle for TLS verification.
  *
@@ -301,13 +334,20 @@ int cwist_http_client_set_file_root(cwist_http_client *client, const char *root_
  * @param client client handle.
  * @param path   filesystem path to the CA bundle, or NULL.
  */
-void cwist_http_client_set_ca_bundle(cwist_http_client *client, const char *path) {
+static void cwist_http_client_set_ca_bundle_locked(cwist_http_client *client, const char *path) {
     if (!client) return;
     char *copy = path ? cwist_strdup(path) : NULL;
     if (path && !copy) return;
     cwist_free(client->ca_bundle);
     client->ca_bundle = copy;
     curl_easy_setopt(client->curl, CURLOPT_CAINFO, client->ca_bundle);
+}
+
+void cwist_http_client_set_ca_bundle(cwist_http_client *client, const char *path) {
+    if (!client) return;
+    pthread_mutex_lock(&client->lock);
+    cwist_http_client_set_ca_bundle_locked(client, path);
+    pthread_mutex_unlock(&client->lock);
 }
 
 /**
@@ -322,9 +362,11 @@ void cwist_http_client_set_ca_bundle(cwist_http_client *client, const char *path
  */
 void cwist_http_client_enable_altsvc(cwist_http_client *client, int enabled) {
     if (!client) return;
+    pthread_mutex_lock(&client->lock);
     client->altsvc_enabled = enabled;
     curl_easy_setopt(client->curl, CURLOPT_ALTSVC_CTRL,
                      enabled ? (long)(CURLALTSVC_H1 | CURLALTSVC_H2 | CURLALTSVC_H3) : 0L);
+    pthread_mutex_unlock(&client->lock);
 }
 
 /**
@@ -335,13 +377,20 @@ void cwist_http_client_enable_altsvc(cwist_http_client *client, int enabled) {
  * @param client client handle.
  * @param path   path to the alt-svc cache file, or NULL.
  */
-void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path) {
+static void cwist_http_client_set_altsvc_db_locked(cwist_http_client *client, const char *path) {
     if (!client) return;
     char *copy = path ? cwist_strdup(path) : NULL;
     if (path && !copy) return;
     cwist_free(client->altsvc_db);
     client->altsvc_db = copy;
     curl_easy_setopt(client->curl, CURLOPT_ALTSVC, client->altsvc_db);
+}
+
+void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path) {
+    if (!client) return;
+    pthread_mutex_lock(&client->lock);
+    cwist_http_client_set_altsvc_db_locked(client, path);
+    pthread_mutex_unlock(&client->lock);
 }
 
 /* ------------------------------------------------------------------ */
@@ -358,8 +407,9 @@ void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path
  * downgrade to HTTP/1.1. On success a cwist_http_response is allocated and
  * stored in *out_response (caller must free it with
  * cwist_http_response_free); *out_response is always set to NULL before
- * the transfer starts. The client is not thread-safe; concurrent requests
- * require separate handles.
+ * the transfer starts. Requests on one client are serialized (the client
+ * owns a single libcurl easy handle), so a client may be shared by threads;
+ * use one client per thread for parallel transfers.
  *
  * @param client       client handle.
  * @param url          request URL.
@@ -371,10 +421,33 @@ void cwist_http_client_set_altsvc_db(cwist_http_client *client, const char *path
  * @return cwist_error_t with err_i16 set to 0 on success, -1 on failure
  *         (invalid arguments, curl transfer error, or allocation failure).
  */
+static cwist_error_t http_client_request_locked(cwist_http_client *client, const char *url,
+                                                cwist_http_method_t method,
+                                                cwist_http_header_node *headers, const char *body,
+                                                size_t body_len,
+                                                cwist_http_response **out_response);
+
 cwist_error_t cwist_http_client_request(cwist_http_client *client, const char *url,
                                         cwist_http_method_t method, cwist_http_header_node *headers,
                                         const char *body, size_t body_len,
                                         cwist_http_response **out_response) {
+    if (!client) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = -1;
+        return err;
+    }
+    pthread_mutex_lock(&client->lock);
+    cwist_error_t err =
+        http_client_request_locked(client, url, method, headers, body, body_len, out_response);
+    pthread_mutex_unlock(&client->lock);
+    return err;
+}
+
+static cwist_error_t http_client_request_locked(cwist_http_client *client, const char *url,
+                                                cwist_http_method_t method,
+                                                cwist_http_header_node *headers, const char *body,
+                                                size_t body_len,
+                                                cwist_http_response **out_response) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!client || !client->curl || !url || !out_response) {
         err.error.err_i16 = -1;

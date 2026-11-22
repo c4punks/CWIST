@@ -4,6 +4,7 @@
 #include <cjson/cJSON.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
 #include "../utils/number_internal.h"
 
@@ -177,6 +178,36 @@ static bool is_void_element(const char *tag) {
 }
 
 /**
+ * @brief Whether `tag` is a raw text element (script, style): browsers do not
+ *        decode character references inside it, so its text must not be
+ *        HTML-escaped (#994).
+ */
+static bool is_raw_text_element(const char *tag) {
+    return strcasecmp(tag, "script") == 0 || strcasecmp(tag, "style") == 0;
+}
+
+/**
+ * @brief Append raw element text, keeping it from closing the element early.
+ *
+ * Text is copied verbatim except that "</" followed by the element's own tag
+ * name (any case) becomes "<\/", which is the same text in JavaScript strings
+ * and CSS but no longer an end tag to the HTML parser.
+ */
+static void append_raw_text(cwist_sstring *out, const char *text, const char *tag) {
+    size_t tag_len = strlen(tag);
+    const char *start = text;
+    for (const char *p = text; *p; p++) {
+        if (p[0] == '<' && p[1] == '/' && strncasecmp(p + 2, tag, tag_len) == 0) {
+            cwist_sstring_append_len(out, start, (size_t)(p - start));
+            cwist_sstring_append(out, "<\\/");
+            start = p + 2;
+            p++;
+        }
+    }
+    cwist_sstring_append(out, start);
+}
+
+/**
  * @brief Serialise a node and its descendants into an output buffer.
  * @param el Current element being rendered.
  * @param out Destination buffer that receives generated markup.
@@ -216,7 +247,10 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
         if (is_void_element(el->tag->data)) return;
 
         if (el->inner_text && el->inner_text->data) {
-            cwist_sstring_append_escaped(out, el->inner_text->data);
+            if (is_raw_text_element(el->tag->data))
+                append_raw_text(out, el->inner_text->data, el->tag->data);
+            else
+                cwist_sstring_append_escaped(out, el->inner_text->data);
         }
 
         if (el->children) {

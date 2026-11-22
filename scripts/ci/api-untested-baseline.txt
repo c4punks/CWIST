@@ -4,7 +4,6 @@ cwist_accept_socket
 cwist_app_configure_bdr
 cwist_app_enable_metrics
 cwist_app_get_db
-cwist_app_get_db_pool
 cwist_app_get_redis_pool
 cwist_app_http_handler
 cwist_app_multiport
@@ -12,7 +11,6 @@ cwist_app_register_error_handler
 cwist_app_set_max_memspace
 cwist_app_static_with_cache
 cwist_app_use_db
-cwist_app_use_db_pool
 cwist_app_use_ech
 cwist_app_use_http2
 cwist_app_use_nuke_db
@@ -31,7 +29,6 @@ cwist_gc_auto_rotated
 cwist_gc_raw
 cwist_gc_rotate
 cwist_gc_shutdown
-cwist_get_available_ram
 cwist_graphql_serve
 cwist_grpc_call_await_headers
 cwist_grpc_call_cancel
@@ -84,19 +81,14 @@ cwist_https_server_loop
 cwist_io_uring_sqpoll_send
 cwist_is_ram_critical
 cwist_job_id
-cwist_json_schema_align
 cwist_log_init
 cwist_log_write
 cwist_malloc_shim
 cwist_metric_observe
-cwist_mux_group_create
-cwist_mux_group_destroy
-cwist_mux_group_handle
 cwist_nats_dispatch
 cwist_nats_native
 cwist_nats_publish_string
 cwist_nats_subscribe
-cwist_nuke_deserialize
 cwist_nuke_serialize
 cwist_nuke_signal_handler
 cwist_nuke_sync
@@ -105,9 +97,7 @@ cwist_reactor_del
 cwist_reactor_mod
 cwist_redis_auth
 cwist_redis_command
-cwist_redis_expire
 cwist_redis_pool_publish
-cwist_redis_pool_setex
 cwist_redis_publish
 cwist_redis_select
 cwist_redis_subscribe

@@ -154,18 +154,22 @@ int cwist_sdp_write_answer_for_offer(char *out, size_t cap, const char *fingerpr
     unsigned long long session_id;
     if (RAND_bytes((unsigned char *)&session_id, sizeof(session_id)) != 1) return -1;
 
+    /* Only the accepted data section is bundled: an m-section rejected in
+     * the answer (port 0) must not be in its BUNDLE group (RFC 8843 section
+     * 7.3.3), and libwebrtc refuses such an answer (#993). */
     char bundle[CWIST_SDP_MAX_SECTIONS * 20];
     bundle[0] = '\0';
     for (size_t i = 0; i < offer->section_count; i++) {
+        if (!offer->sections[i].is_data) continue;
         char fallback[sizeof(size_t) * 3 + 1];
         const char *mid = offer->sections[i].mid;
         if (!mid[0]) {
             snprintf(fallback, sizeof(fallback), "%zu", i);
             mid = fallback;
         }
-        size_t used = strlen(bundle);
-        if (sdp_append(bundle, sizeof(bundle), &used, "%s%s", used ? " " : "", mid) < 0)
-            return -1;
+        size_t used = 0;
+        if (sdp_append(bundle, sizeof(bundle), &used, "%s", mid) < 0) return -1;
+        break;
     }
 
     size_t off = 0;
@@ -201,8 +205,8 @@ int cwist_sdp_write_answer_for_offer(char *out, size_t cap, const char *fingerpr
                            mid, ufrag, pwd, fingerprint, setup, host, (unsigned)port) < 0)
                 return -1;
             accepted++;
-        } else if (sdp_append(out, cap, &off, "m=%s 0 %s %s\r\na=mid:%s\r\n", section->media,
-                              section->proto, section->fmt, mid) < 0) {
+        } else if (sdp_append(out, cap, &off, "m=%s 0 %s %s\r\nc=IN IP4 0.0.0.0\r\na=mid:%s\r\n",
+                              section->media, section->proto, section->fmt, mid) < 0) {
             return -1;
         }
     }

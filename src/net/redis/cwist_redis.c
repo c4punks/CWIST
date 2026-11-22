@@ -93,6 +93,15 @@ struct cwist_redis_pool {
     size_t timed_waiters;
 };
 
+/** Build a failed CWIST_ERR_INT16 result carrying @p code (a negative errno).
+ * A bare make_error(CWIST_ERR_INT16) has err_i16 == 0, which reads as success
+ * (#982). */
+static cwist_error_t redis_fail(int16_t code) {
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = code;
+    return err;
+}
+
 /* --- Socket helpers ----------------------------------------------------- */
 
 /** Apply the blocking-API socket timeouts (CWIST_REDIS_IO_TIMEOUT_MS) so
@@ -497,7 +506,7 @@ static void flatten_reply(const cwist_redis_reply_t *tree, char **out_value, siz
 static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_reply_t **out) {
     char line[CWIST_REDIS_LINE_MAX];
     cwist_redis_reply_t *node = cwist_alloc(sizeof(*node));
-    if (!node) return make_error(CWIST_ERR_INT16);
+    if (!node) return redis_fail(-ENOMEM);
     *out = node;
     if (redis_recv_line(r, line, sizeof(line)) != 0) goto fail;
     node->type = line[0];
@@ -583,7 +592,7 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
 fail:
     cwist_redis_reply_free(*out);
     *out = NULL;
-    return make_error(CWIST_ERR_INT16);
+    return redis_fail(-EIO);
 }
 
 /** Compatibility wrapper: flatten a reply tree into the legacy
@@ -632,7 +641,7 @@ void cwist_redis_reply_free(cwist_redis_reply_t *reply) {
  *         caller must free with cwist_redis_reply_free()). */
 static cwist_error_t redis_command_frame_tree(cwist_redis_t *r, const char *frame, size_t frame_len,
                                               cwist_redis_reply_t **out_tree) {
-    if (!r || !frame) return make_error(CWIST_ERR_INT16);
+    if (!r || !frame) return redis_fail(-EINVAL);
     if (out_tree) *out_tree = NULL;
     /* A request/reply pair must be serialized as one critical section.  Keeping
      * send and receive separate allows two callers to consume each other's
@@ -697,10 +706,10 @@ static bool redis_frame_append(cwist_sstring *frame, const void *data, size_t le
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, const void *const *argv,
                                              const size_t *argv_lens, cwist_redis_reply_t **reply) {
-    if (!r || !argc || !argv || !argv_lens || !reply) return make_error(CWIST_ERR_INT16);
+    if (!r || !argc || !argv || !argv_lens || !reply) return redis_fail(-EINVAL);
     *reply = NULL;
     cwist_sstring *frame = cwist_sstring_create();
-    if (!frame) return make_error(CWIST_ERR_INT16);
+    if (!frame) return redis_fail(-ENOMEM);
     char count[32];
     snprintf(count, sizeof(count), "*%zu\r\n", argc);
     if (!redis_frame_append(frame, count, strlen(count))) goto fail;
@@ -720,12 +729,12 @@ cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, cons
     if (cwist_error_is_ok(&err) && *reply && (*reply)->type == '-') {
         cwist_redis_reply_free(*reply);
         *reply = NULL;
-        return make_error(CWIST_ERR_INT16);
+        return redis_fail(-EPROTO);
     }
     return err;
 fail:
     cwist_sstring_destroy(frame);
-    return make_error(CWIST_ERR_INT16);
+    return redis_fail(-ENOMEM);
 }
 
 /* --- Connection lifecycle ----------------------------------------------- */
@@ -790,7 +799,7 @@ void cwist_redis_close(cwist_redis_t *r) {
  * @return Error value; on success *@p out_value (if non-NULL input) is a
  *         heap-allocated value the caller must free. */
 static cwist_error_t recv_reply(cwist_redis_t *r, char **out_value) {
-    if (!r) return make_error(CWIST_ERR_INT16);
+    if (!r) return redis_fail(-EINVAL);
     pthread_mutex_lock(&r->mtx);
     cwist_error_t err = read_reply(r, out_value, NULL, NULL);
     pthread_mutex_unlock(&r->mtx);
@@ -817,7 +826,7 @@ static cwist_error_t send_command(cwist_redis_t *r, const char *cmd) {
  *        internally when NULL.
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_command(cwist_redis_t *r, const char *cmd, char **out) {
-    if (!r || !cmd) return make_error(CWIST_ERR_INT16);
+    if (!r || !cmd) return redis_fail(-EINVAL);
     char *value = NULL;
     cwist_error_t err = redis_command_frame(r, cmd, strlen(cmd), &value, NULL);
     if (out)
@@ -838,11 +847,11 @@ cwist_error_t cwist_redis_command(cwist_redis_t *r, const char *cmd, char **out)
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void *const *argv,
                                        const size_t *argv_lens, char **out, size_t *out_len) {
-    if (!r || !argc || !argv || !argv_lens) return make_error(CWIST_ERR_INT16);
+    if (!r || !argc || !argv || !argv_lens) return redis_fail(-EINVAL);
     if (out) *out = NULL;
     if (out_len) *out_len = 0;
     cwist_sstring *frame = cwist_sstring_create();
-    if (!frame) return make_error(CWIST_ERR_INT16);
+    if (!frame) return redis_fail(-ENOMEM);
     char count[32];
     snprintf(count, sizeof(count), "*%zu\r\n", argc);
     if (!redis_frame_append(frame, count, strlen(count))) goto fail;
@@ -865,7 +874,7 @@ cwist_error_t cwist_redis_command_argv(cwist_redis_t *r, size_t argc, const void
     return err;
 fail:
     cwist_sstring_destroy(frame);
-    return make_error(CWIST_ERR_INT16);
+    return redis_fail(-ENOMEM);
 }
 
 /** Authenticate against the server with ACL-style (username, password) or
@@ -886,7 +895,7 @@ static bool redis_peer_is_loopback(const cwist_redis_t *r) {
 }
 
 cwist_error_t cwist_redis_auth(cwist_redis_t *r, const char *username, const char *password) {
-    if (!r || !password) return make_error(CWIST_ERR_INT16);
+    if (!r || !password) return redis_fail(-EINVAL);
     const char *allow_insecure = getenv("CWIST_REDIS_ALLOW_INSECURE_AUTH");
     if (!redis_peer_is_loopback(r) && (!allow_insecure || strcmp(allow_insecure, "1") != 0)) {
         cwist_error_t err = make_error(CWIST_ERR_INT16);
@@ -930,9 +939,10 @@ cwist_error_t cwist_redis_select(cwist_redis_t *r, unsigned int database) {
  *        missing (caller frees).
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_get(cwist_redis_t *r, const char *key, char **out_value) {
-    if (!r || !key || !out_value) return make_error(CWIST_ERR_INT16);
+    if (out_value) *out_value = NULL;
+    if (!r || !key || !out_value) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
-    if (!cmd) return make_error(CWIST_ERR_INT16);
+    if (!cmd) return redis_fail(-ENOMEM);
     cwist_sstring_append(cmd, "*2\r\n");
     write_bulk_string(cmd, "GET");
     write_bulk_string(cmd, key);
@@ -947,9 +957,9 @@ cwist_error_t cwist_redis_get(cwist_redis_t *r, const char *key, char **out_valu
  * @param value Value to store.
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_set(cwist_redis_t *r, const char *key, const char *value) {
-    if (!r || !key || !value) return make_error(CWIST_ERR_INT16);
+    if (!r || !key || !value) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
-    if (!cmd) return make_error(CWIST_ERR_INT16);
+    if (!cmd) return redis_fail(-ENOMEM);
     cwist_sstring_append(cmd, "*3\r\n");
     write_bulk_string(cmd, "SET");
     write_bulk_string(cmd, key);
@@ -968,9 +978,9 @@ cwist_error_t cwist_redis_set(cwist_redis_t *r, const char *key, const char *val
  * @param seconds TTL in seconds; must be positive.
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_setex(cwist_redis_t *r, const char *key, const char *value, int seconds) {
-    if (!r || !key || !value || seconds <= 0) return make_error(CWIST_ERR_INT16);
+    if (!r || !key || !value || seconds <= 0) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
-    if (!cmd) return make_error(CWIST_ERR_INT16);
+    if (!cmd) return redis_fail(-ENOMEM);
     cwist_sstring_append(cmd, "*4\r\n");
     write_bulk_string(cmd, "SETEX");
     write_bulk_string(cmd, key);
@@ -990,9 +1000,9 @@ cwist_error_t cwist_redis_setex(cwist_redis_t *r, const char *key, const char *v
  * @param key Key to delete.
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_del(cwist_redis_t *r, const char *key) {
-    if (!r || !key) return make_error(CWIST_ERR_INT16);
+    if (!r || !key) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
-    if (!cmd) return make_error(CWIST_ERR_INT16);
+    if (!cmd) return redis_fail(-ENOMEM);
     cwist_sstring_append(cmd, "*2\r\n");
     write_bulk_string(cmd, "DEL");
     write_bulk_string(cmd, key);
@@ -1009,9 +1019,9 @@ cwist_error_t cwist_redis_del(cwist_redis_t *r, const char *key) {
  * @param seconds TTL in seconds; must be positive.
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_expire(cwist_redis_t *r, const char *key, int seconds) {
-    if (!r || !key || seconds <= 0) return make_error(CWIST_ERR_INT16);
+    if (!r || !key || seconds <= 0) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
-    if (!cmd) return make_error(CWIST_ERR_INT16);
+    if (!cmd) return redis_fail(-ENOMEM);
     cwist_sstring_append(cmd, "*3\r\n");
     write_bulk_string(cmd, "EXPIRE");
     write_bulk_string(cmd, key);
@@ -1031,9 +1041,9 @@ cwist_error_t cwist_redis_expire(cwist_redis_t *r, const char *key, int seconds)
  * @param message Message payload.
  * @return Error value indicating success or failure. */
 cwist_error_t cwist_redis_publish(cwist_redis_t *r, const char *channel, const char *message) {
-    if (!r || !channel || !message) return make_error(CWIST_ERR_INT16);
+    if (!r || !channel || !message) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
-    if (!cmd) return make_error(CWIST_ERR_INT16);
+    if (!cmd) return redis_fail(-ENOMEM);
     cwist_sstring_append(cmd, "*3\r\n");
     write_bulk_string(cmd, "PUBLISH");
     write_bulk_string(cmd, channel);
@@ -1057,10 +1067,10 @@ cwist_error_t cwist_redis_publish(cwist_redis_t *r, const char *channel, const c
  *         (see cwist_redis_close()). */
 cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwist_redis_msg_cb cb,
                                     void *ctx) {
-    if (!r || !channels || !channels[0] || !cb) return make_error(CWIST_ERR_INT16);
+    if (!r || !channels || !channels[0] || !cb) return redis_fail(-EINVAL);
 
     cwist_sstring *cmd = cwist_sstring_create();
-    if (!cmd) return make_error(CWIST_ERR_INT16);
+    if (!cmd) return redis_fail(-ENOMEM);
     size_t count = 0;
     while (channels[count]) count++;
     char prefix[32];
@@ -1259,7 +1269,7 @@ static void redis_pool_release(cwist_redis_pool_t *pool, cwist_redis_t *r) {
  * releases the connection. See cwist_redis_get() for parameter details. */
 cwist_error_t cwist_redis_pool_get(cwist_redis_pool_t *pool, const char *key, char **out_value) {
     cwist_redis_t *r = redis_pool_acquire(pool);
-    if (!r) return make_error(CWIST_ERR_INT16);
+    if (!r) return redis_fail(-EINVAL);
     cwist_error_t err = cwist_redis_get(r, key, out_value);
     redis_pool_release(pool, r);
     return err;
@@ -1269,7 +1279,7 @@ cwist_error_t cwist_redis_pool_get(cwist_redis_pool_t *pool, const char *key, ch
  * releases the connection. See cwist_redis_set() for parameter details. */
 cwist_error_t cwist_redis_pool_set(cwist_redis_pool_t *pool, const char *key, const char *value) {
     cwist_redis_t *r = redis_pool_acquire(pool);
-    if (!r) return make_error(CWIST_ERR_INT16);
+    if (!r) return redis_fail(-EINVAL);
     cwist_error_t err = cwist_redis_set(r, key, value);
     redis_pool_release(pool, r);
     return err;
@@ -1280,7 +1290,7 @@ cwist_error_t cwist_redis_pool_set(cwist_redis_pool_t *pool, const char *key, co
 cwist_error_t cwist_redis_pool_setex(cwist_redis_pool_t *pool, const char *key, const char *value,
                                      int seconds) {
     cwist_redis_t *r = redis_pool_acquire(pool);
-    if (!r) return make_error(CWIST_ERR_INT16);
+    if (!r) return redis_fail(-EINVAL);
     cwist_error_t err = cwist_redis_setex(r, key, value, seconds);
     redis_pool_release(pool, r);
     return err;
@@ -1290,7 +1300,7 @@ cwist_error_t cwist_redis_pool_setex(cwist_redis_pool_t *pool, const char *key, 
  * releases the connection. See cwist_redis_del() for parameter details. */
 cwist_error_t cwist_redis_pool_del(cwist_redis_pool_t *pool, const char *key) {
     cwist_redis_t *r = redis_pool_acquire(pool);
-    if (!r) return make_error(CWIST_ERR_INT16);
+    if (!r) return redis_fail(-EINVAL);
     cwist_error_t err = cwist_redis_del(r, key);
     redis_pool_release(pool, r);
     return err;
@@ -1302,7 +1312,7 @@ cwist_error_t cwist_redis_pool_del(cwist_redis_pool_t *pool, const char *key) {
 cwist_error_t cwist_redis_pool_publish(cwist_redis_pool_t *pool, const char *channel,
                                        const char *message) {
     cwist_redis_t *r = redis_pool_acquire(pool);
-    if (!r) return make_error(CWIST_ERR_INT16);
+    if (!r) return redis_fail(-EINVAL);
     cwist_error_t err = cwist_redis_publish(r, channel, message);
     redis_pool_release(pool, r);
     return err;
@@ -1315,7 +1325,7 @@ cwist_error_t cwist_redis_pool_command_argv(cwist_redis_pool_t *pool, size_t arg
                                             const void *const *argv, const size_t *argv_lens,
                                             char **out, size_t *out_len) {
     cwist_redis_t *r = redis_pool_acquire(pool);
-    if (!r) return make_error(CWIST_ERR_INT16);
+    if (!r) return redis_fail(-EINVAL);
     cwist_error_t err = cwist_redis_command_argv(r, argc, argv, argv_lens, out, out_len);
     redis_pool_release(pool, r);
     return err;

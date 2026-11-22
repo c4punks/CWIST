@@ -24,6 +24,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <pthread.h>
 #if defined(__linux__)
 #include <sys/prctl.h>
 #endif
@@ -233,6 +234,47 @@ static cwist_http_response *request(cwist_http_client *client, const char *url,
         res = NULL;
     }
     return res;
+}
+
+typedef struct {
+    cwist_http_client *client;
+    const char *base;
+    int ok;
+} shared_client_arg;
+
+static void *shared_client_worker(void *arg) {
+    shared_client_arg *a = arg;
+    char url[128];
+    snprintf(url, sizeof(url), "%s/hello", a->base);
+    for (int i = 0; i < 20; i++) {
+        cwist_http_response *res = NULL;
+        cwist_error_t err =
+            cwist_http_client_request(a->client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
+        if (cwist_error_is_ok(&err) && res && res->status_code == CWIST_HTTP_ACCEPTED &&
+            body_equals(res, HELLO_BODY, strlen(HELLO_BODY)))
+            a->ok++;
+        cwist_error_dispose(&err);
+        if (res) cwist_http_response_destroy(res);
+    }
+    return NULL;
+}
+
+/* #997: one client shared by several threads; requests are serialized. */
+static void test_shared_client_threads(cwist_http_client *client, const char *base) {
+    int before = g_failures;
+    pthread_t threads[4];
+    shared_client_arg args[4];
+    for (int i = 0; i < 4; i++) {
+        args[i] = (shared_client_arg){client, base, 0};
+        CHECK(pthread_create(&threads[i], NULL, shared_client_worker, &args[i]) == 0,
+              "shared client: pthread_create failed");
+    }
+    for (int i = 0; i < 4; i++) {
+        pthread_join(threads[i], NULL);
+        CHECK(args[i].ok == 20, "shared client: thread %d got %d/20 good responses", i,
+              args[i].ok);
+    }
+    report(before, "one client shared by four threads");
 }
 
 static void test_get(cwist_http_client *client, const char *base) {
@@ -599,6 +641,7 @@ int main(void) {
         test_custom_headers_not_forwarded_on_redirect(client, base);
         test_bdr_query_isolation(client, base);
         test_large_request_header(client, base);
+        test_shared_client_threads(client, base);
     }
 
     g_failures += stop_server(pid);
