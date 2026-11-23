@@ -29,8 +29,10 @@ FUZZ_CC ?= clang
 CURL_CFLAGS := $(shell $(PKG_CONFIG) --cflags libcurl 2>/dev/null)
 NGHTTP2_CFLAGS := $(shell $(PKG_CONFIG) --cflags libnghttp2 2>/dev/null)
 BROTLI_CFLAGS := $(shell $(PKG_CONFIG) --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
+LIBPQ_CFLAGS := $(shell $(PKG_CONFIG) --cflags libpq 2>/dev/null)
+LIBPQ_LIBS := $(shell $(PKG_CONFIG) --libs libpq 2>/dev/null)
 
-INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS) $(ZSTD_CFLAGS)
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS) $(ZSTD_CFLAGS) $(LIBPQ_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
 COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
@@ -161,6 +163,7 @@ LIBS = $(if $(filter 1,$(CWIST_NATS)),$(CNATS_LIB)) \
        $(CURL_LIBS) \
        $(NGHTTP2_LIBS) \
        $(BROTLI_LIBS) \
+       $(if $(LIBPQ_LIBS),$(LIBPQ_LIBS)) \
        -pthread -ldl -lm -lstdc++ -lz $(ZSTD_LIBS)
 
 # SQLite Automation
@@ -241,6 +244,9 @@ ifeq ($(CWIST_WS),1)
 endif
 ifeq ($(CWIST_DB),1)
     CFLAGS += -DCWIST_DB
+    ifneq ($(LIBPQ_LIBS),)
+        CFLAGS += -DCWIST_HAS_LIBPQ=1
+    endif
 endif
 ifeq ($(CWIST_NATS),1)
     CFLAGS += -DCWIST_NATS
@@ -1056,6 +1062,7 @@ ifeq ($(CWIST_DB),1)
     SRCS += lib/sqlite3/sqlite3.c \
             src/core/db/db.c \
             src/core/db/pool.c \
+            src/core/db/pg.c \
             src/core/db/nuke_db.c \
             src/core/db/migrate.c \
             src/core/orm/orm.c \
@@ -1485,6 +1492,7 @@ TEST_TARGETS = test_worker_affinity \
                test_db_memory \
                test_db_sync \
                test_db_sync_deadline \
+               test_pg \
                test_sqlite_fts5 \
                test_redis \
                test_scheduler \
@@ -2577,9 +2585,13 @@ test_db_sync: $(LIB_NAME) tests/test_db_sync.c
 test_db_sync_deadline: $(LIB_NAME) tests/test_db_sync_deadline.c
 	$(CC) $(CFLAGS) -o test_db_sync_deadline tests/test_db_sync_deadline.c $(LIB_NAME) $(LIBS)
 	./test_db_sync_deadline
+
+test_pg: $(LIB_NAME) tests/test_pg.c
+	$(CC) $(CFLAGS) -o test_pg tests/test_pg.c $(LIB_NAME) $(LIBS)
+	./test_pg
 else
 # CWIST_DB=0: the module and its tests are compiled out.
-test_db_pool test_db_memory test_db_sync test_db_sync_deadline:
+test_db_pool test_db_memory test_db_sync test_db_sync_deadline test_pg:
 	@echo "CWIST_DB=0: skipping $@"
 endif
 
