@@ -44,7 +44,7 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev
+        sudo apt-get install -y cmake libcurl4-openssl-dev libnghttp2-dev libbrotli-dev libzstd-dev libpq-dev
 
     - name: Generate the amalgamation and the fat archive (vendored code)
       run: make ${{ matrix.cfg }} amalgamation fat-dist -j"$(nproc)"
@@ -68,7 +68,7 @@ jobs:
         gcc -O2 -std=gnu17 -Ibundle/include -o hello main.c \
           libcwist_amalgamated.a \
           "$GITHUB_WORKSPACE/dist/cwist-fat/lib/libcwist.a" \
-          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+          $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd libpq) \
           -pthread -ldl -lm -lstdc++ -lz
         ./hello &
         pid=$!

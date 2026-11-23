@@ -59,6 +59,8 @@ typedef struct {
  * - Else branches: {% if key %}...{% else %}...{% endif %}
  * - Looping over arrays: {% for item in array %}...{{ item.key }}...{% endfor %}
  * - File includes: {% include "partial.html" %}
+ * - Template inheritance: {% extends "base.html" %}
+ * - Template blocks: {% block name %}...{% endblock %}
  * - Comments: {# ignored #}
  *
  * @param template_str The template string to render.

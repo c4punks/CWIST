@@ -230,6 +230,32 @@ static void test_include_root(const cJSON *context) {
     assert(rmdir(base) == 0);
 }
 
+static void test_template_inheritance(void) {
+    char dir[] = "/tmp/cwist-tmpl-inherit-XXXXXX";
+    assert(mkdtemp(dir) != NULL);
+
+    char base_path[PATH_MAX];
+    char child_path[PATH_MAX];
+    snprintf(base_path, sizeof(base_path), "%s/base.html", dir);
+    snprintf(child_path, sizeof(child_path), "%s/child.html", dir);
+
+    write_text(base_path, "HEADER | {% block title %}Default Title{% endblock %} | {% block content %}Default Content{% endblock %} | FOOTER");
+    write_text(child_path, "{% extends \"base.html\" %}{% block content %}Child: {{ msg }}{% endblock %}");
+
+    cJSON *ctx = cJSON_CreateObject();
+    cJSON_AddStringToObject(ctx, "msg", "Hello Inherited");
+
+    cwist_sstring *rendered = cwist_template_render_file(child_path, ctx);
+    assert(rendered != NULL);
+    assert(strcmp(rendered->data, "HEADER | Default Title | Child: Hello Inherited | FOOTER") == 0);
+    cwist_sstring_destroy(rendered);
+
+    cJSON_Delete(ctx);
+    unlink(base_path);
+    unlink(child_path);
+    rmdir(dir);
+}
+
 static void test_unclosed_comment_is_an_error(void) {
     cwist_template_error_t error;
     cwist_sstring *out = cwist_template_render_ex("before {# unterminated", NULL, &error);
@@ -379,6 +405,7 @@ int main(void) {
     assert(unlink(first) == 0);
     assert(unlink(second) == 0);
     assert(rmdir(directory) == 0);
+    test_template_inheritance();
     test_unclosed_comment_is_an_error();
     puts("test_template: all passed");
     return 0;
