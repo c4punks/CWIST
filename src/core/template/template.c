@@ -24,6 +24,12 @@
  * @brief Minimal template renderer supporting variable substitution and simple control flow.
  */
 
+typedef struct template_block_entry {
+    char name[64];
+    char *content;
+    struct template_block_entry *next;
+} template_block_entry;
+
 /** @brief Original source and shared diagnostic for the current file/string. */
 typedef struct {
     const char *text;
@@ -31,6 +37,7 @@ typedef struct {
     const char *base_dir; /**< Directory used to resolve relative includes; may be NULL. */
     const char *include_root; /**< Canonical directory includes must stay in; NULL = any. */
     cwist_template_error_t *error;
+    const template_block_entry *blocks;
 } template_source;
 
 /** @brief Command named by a {% ... %} tag. */
@@ -41,7 +48,10 @@ typedef enum {
     TAG_ENDIF,
     TAG_FOR,
     TAG_ENDFOR,
-    TAG_INCLUDE
+    TAG_INCLUDE,
+    TAG_EXTENDS,
+    TAG_BLOCK,
+    TAG_ENDBLOCK
 } template_tag_kind;
 
 /** @brief Forward declarations for recursive block and file rendering. */
@@ -137,6 +147,7 @@ static template_tag_kind classify_command(const char *cmd, size_t len) {
     } commands[] = {
         {"if", TAG_IF},   {"else", TAG_ELSE},     {"endif", TAG_ENDIF},
         {"for", TAG_FOR}, {"endfor", TAG_ENDFOR}, {"include", TAG_INCLUDE},
+        {"extends", TAG_EXTENDS}, {"block", TAG_BLOCK}, {"endblock", TAG_ENDBLOCK},
     };
     for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
         if (strlen(commands[i].name) == len && strncmp(cmd, commands[i].name, len) == 0)
@@ -160,6 +171,8 @@ static const char *tag_type(const char *tag) {
                 case TAG_IF: return "if";
                 case TAG_FOR: return "for";
                 case TAG_INCLUDE: return "include";
+                case TAG_EXTENDS: return "extends";
+                case TAG_BLOCK: return "block";
                 default: return "control";
             }
         default: return NULL;
@@ -181,7 +194,7 @@ static void template_report_error(const template_source *source, const char *pos
 static const char *find_block_end(const char *start, const char *opening,
                                   template_tag_kind open_kind, const char **else_pos,
                                   const template_source *source) {
-    const template_tag_kind close_kind = open_kind == TAG_IF ? TAG_ENDIF : TAG_ENDFOR;
+    const template_tag_kind close_kind = open_kind == TAG_IF ? TAG_ENDIF : (open_kind == TAG_FOR ? TAG_ENDFOR : TAG_ENDBLOCK);
     int nested = 0;
     const char *scan = start;
     const char *end;
@@ -468,6 +481,91 @@ static const cJSON *get_value_from_context(const cJSON *context, const char *key
     return current;
 }
 
+static const template_block_entry *find_block_override(const template_block_entry *blocks,
+                                                        const char *name) {
+    for (const template_block_entry *b = blocks; b; b = b->next) {
+        if (strcmp(b->name, name) == 0) return b;
+    }
+    return NULL;
+}
+
+static void free_block_list(template_block_entry *head) {
+    while (head) {
+        template_block_entry *next = head->next;
+        if (head->content) cwist_free(head->content);
+        cwist_free(head);
+        head = next;
+    }
+}
+
+static template_block_entry *extract_child_blocks(const char *template_str,
+                                                  const template_source *source) {
+    template_block_entry *head = NULL;
+    const char *p = template_str;
+    while (*p) {
+        if (p[0] != '{') { p++; continue; }
+        if (p[1] == '#') {
+            const char *end = strstr(p + 2, "#}");
+            if (!end) break;
+            p = end + 2;
+            continue;
+        }
+        if (p[1] == '{') {
+            const char *end = strstr(p + 2, "}}");
+            if (!end) break;
+            p = end + 2;
+            continue;
+        }
+        if (p[1] == '%') {
+            const char *opening = p;
+            const char *tag_end = strstr(p + 2, "%}");
+            if (!tag_end) break;
+            char tag[256] = {0};
+            size_t tag_len = (size_t)(tag_end - (p + 2));
+            if (tag_len >= sizeof(tag)) tag_len = sizeof(tag) - 1;
+            memcpy(tag, p + 2, tag_len);
+            p = tag_end + 2;
+
+            char *tag_saveptr = NULL;
+            char *cmd = strtok_r(tag, TAG_DELIMS, &tag_saveptr);
+            if (cmd && classify_command(cmd, strlen(cmd)) == TAG_BLOCK) {
+                char *bname = strtok_r(NULL, TAG_DELIMS, &tag_saveptr);
+                if (bname) {
+                    const char *block_body_start = p;
+                    const char *block_end = find_block_end(p, opening, TAG_BLOCK, NULL, source);
+                    if (!block_end) {
+                        free_block_list(head);
+                        return NULL;
+                    }
+                    size_t blen = (size_t)(block_end - block_body_start);
+                    template_block_entry *entry = (template_block_entry *)cwist_alloc(sizeof(*entry));
+                    if (!entry) {
+                        free_block_list(head);
+                        return NULL;
+                    }
+                    memset(entry, 0, sizeof(*entry));
+                    snprintf(entry->name, sizeof(entry->name), "%s", bname);
+                    entry->content = (char *)cwist_alloc(blen + 1);
+                    if (!entry->content) {
+                        cwist_free(entry);
+                        free_block_list(head);
+                        return NULL;
+                    }
+                    memcpy(entry->content, block_body_start, blen);
+                    entry->content[blen] = '\0';
+                    entry->next = head;
+                    head = entry;
+
+                    p = strstr(block_end, "%}") + 2;
+                }
+            }
+        } else {
+            p++;
+        }
+    }
+    return head;
+}
+
 /** @brief Render @p block one level deeper and append it to @p output. */
 static bool append_block(cwist_sstring *output, const char *block, const cJSON *context, int depth,
                          const template_source *source) {
@@ -509,6 +607,48 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
     }
     const char *p = *template_str;
     const char *start = p;
+
+    /* Check for {% extends "parent.html" %} at top-level */
+    if (depth == 0) {
+        const char *scan = p;
+        while (isspace((unsigned char)*scan)) scan++;
+        if (scan[0] == '{' && scan[1] == '%') {
+            const char *tag_end = strstr(scan + 2, "%}");
+            if (tag_end) {
+                char first_tag[256] = {0};
+                size_t ftlen = (size_t)(tag_end - (scan + 2));
+                if (ftlen >= sizeof(first_tag)) ftlen = sizeof(first_tag) - 1;
+                memcpy(first_tag, scan + 2, ftlen);
+                char *sp = NULL;
+                char *cmd = strtok_r(first_tag, TAG_DELIMS, &sp);
+                if (cmd && classify_command(cmd, strlen(cmd)) == TAG_EXTENDS) {
+                    char *parent_path = strtok_r(NULL, TAG_DELIMS, &sp);
+                    if (parent_path) {
+                        while (*parent_path == ' ' || *parent_path == '\t' || *parent_path == '\n') parent_path++;
+                        char *end = parent_path + strlen(parent_path);
+                        while (end > parent_path && (end[-1] == ' ' || end[-1] == '\t' ||
+                                                      end[-1] == '\n' || end[-1] == '"' || end[-1] == '\''))
+                            *--end = '\0';
+                        if (parent_path[0] == '"' || parent_path[0] == '\'') parent_path++;
+
+                        char resolved[4096];
+                        resolve_include_path(source->base_dir, parent_path, resolved, sizeof(resolved));
+
+                        template_block_entry *child_blocks = extract_child_blocks(tag_end + 2, source);
+                        template_source parent_source = *source;
+                        parent_source.blocks = child_blocks;
+
+                        cwist_sstring *res = render_file_internal(resolved, context, depth + 1, &parent_source, scan);
+                        free_block_list(child_blocks);
+                        cwist_sstring_destroy(output);
+                        if (!res) return NULL;
+                        *template_str = p + strlen(p);
+                        return res;
+                    }
+                }
+            }
+        }
+    }
 
     while (*p) {
         if (p[0] != '{') {
@@ -688,9 +828,38 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         break;
                     }
 
+                    case TAG_BLOCK: {
+                        char *bname = strtok_r(NULL, TAG_DELIMS, &tag_saveptr);
+                        const char *block_end = find_block_end(p, opening, TAG_BLOCK, NULL, source);
+                        if (!block_end) goto fail;
+
+                        const template_block_entry *override = bname ? find_block_override(source->blocks, bname) : NULL;
+                        if (override && override->content) {
+                            if (depth >= CWIST_TEMPLATE_MAX_DEPTH) {
+                                template_report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
+                                goto fail;
+                            }
+                            if (!append_block(output, override->content, context, depth + 1, source))
+                                goto fail;
+                        } else {
+                            if (depth >= CWIST_TEMPLATE_MAX_DEPTH) {
+                                template_report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
+                                goto fail;
+                            }
+                            if (!append_block(output, p, context, depth + 1, source))
+                                goto fail;
+                        }
+                        p = strstr(block_end, "%}") + 2;
+                        break;
+                    }
+
+                    case TAG_EXTENDS:
+                        break;
+
                     case TAG_ELSE:
                     case TAG_ENDIF:
-                    case TAG_ENDFOR: *template_str = p; return output;
+                    case TAG_ENDFOR:
+                    case TAG_ENDBLOCK: *template_str = p; return output;
 
                     case TAG_NONE: break;
                 }
@@ -729,7 +898,7 @@ cwist_sstring *cwist_template_render(const char *template_str, const cJSON *cont
 cwist_sstring *cwist_template_render_ex(const char *template_str, const cJSON *context,
                                         cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {template_str, NULL, NULL, NULL, error};
+    const template_source source = {template_str, NULL, NULL, NULL, error, NULL};
     const char *p = template_str;
     return render_internal(&p, context, 0, &source);
 }
@@ -748,7 +917,7 @@ static bool canonical_root(const char *include_root, char out[PATH_MAX],
 #else
     if (include_root && realpath(include_root, out)) return true;
 #endif
-    const template_source source = {NULL, NULL, NULL, NULL, error};
+    const template_source source = {NULL, NULL, NULL, NULL, error, NULL};
     template_report_error(&source, NULL, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
     return false;
 }
@@ -759,7 +928,7 @@ cwist_sstring *cwist_template_render_rooted(const char *template_str, const cJSO
     if (error) memset(error, 0, sizeof(*error));
     char root[PATH_MAX];
     if (!canonical_root(include_root, root, error)) return NULL;
-    const template_source source = {template_str, NULL, root, root, error};
+    const template_source source = {template_str, NULL, root, root, error, NULL};
     const char *p = template_str;
     return render_internal(&p, context, 0, &source);
 }
@@ -849,7 +1018,7 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
     path_dirname(file_path, dir_buf, sizeof(dir_buf));
 
     const template_source source = {template_str, file_path, dir_buf, parent->include_root,
-                                    parent->error};
+                                    parent->error, parent->blocks};
     const char *p = template_str;
     cwist_sstring *rendered = render_internal(&p, context, depth, &source);
     cwist_free(template_str);
@@ -870,7 +1039,7 @@ cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *co
 cwist_sstring *cwist_template_render_file_ex(const char *file_path, const cJSON *context,
                                              cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {NULL, file_path, NULL, NULL, error};
+    const template_source source = {NULL, file_path, NULL, NULL, error, NULL};
     return render_file_internal(file_path, context, 0, &source, NULL);
 }
 
@@ -880,6 +1049,6 @@ cwist_sstring *cwist_template_render_file_rooted(const char *file_path, const cJ
     if (error) memset(error, 0, sizeof(*error));
     char root[PATH_MAX];
     if (!canonical_root(include_root, root, error)) return NULL;
-    const template_source source = {NULL, file_path, NULL, root, error};
+    const template_source source = {NULL, file_path, NULL, root, error, NULL};
     return render_file_internal(file_path, context, 0, &source, NULL);
 }

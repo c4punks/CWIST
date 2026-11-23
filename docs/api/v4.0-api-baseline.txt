@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (830) ==
+== functions (839) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -640,6 +640,15 @@ cwist_pb_writer_init
 cwist_pb_writer_reserve
 cwist_pb_zigzag_decode
 cwist_pb_zigzag_encode
+cwist_pg_begin
+cwist_pg_commit
+cwist_pg_connect
+cwist_pg_disconnect
+cwist_pg_exec
+cwist_pg_exec_params
+cwist_pg_is_connected
+cwist_pg_last_error
+cwist_pg_rollback
 cwist_port_entropy
 cwist_port_monotonic_ns
 cwist_proxy_listen
@@ -836,7 +845,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (831) ==
+== function signatures (840) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1473,6 +1482,15 @@ cwist_pb_writer_init: void (cwist_pb_writer *)
 cwist_pb_writer_reserve: int (cwist_pb_writer *, size_t)
 cwist_pb_zigzag_decode: int64_t (uint64_t)
 cwist_pb_zigzag_encode: uint64_t (int64_t)
+cwist_pg_begin: cwist_error_t (cwist_pg_t *)
+cwist_pg_commit: cwist_error_t (cwist_pg_t *)
+cwist_pg_connect: cwist_pg_t * (const char *)
+cwist_pg_disconnect: void (cwist_pg_t *)
+cwist_pg_exec: cwist_error_t (cwist_pg_t *, const char *)
+cwist_pg_exec_params: cwist_error_t (cwist_pg_t *, const char *, int, const char *const *, cJSON **)
+cwist_pg_is_connected: bool (cwist_pg_t *)
+cwist_pg_last_error: const char * (cwist_pg_t *)
+cwist_pg_rollback: cwist_error_t (cwist_pg_t *)
 cwist_port_entropy: int (void *, size_t)
 cwist_port_monotonic_ns: uint64_t (void)
 cwist_proxy_listen: int (void)
@@ -1693,7 +1711,7 @@ cwist_wasm_component_dispose: void (void *)
 cwist_wasm_dispatch_memory: const char * (cwist_app *, const char *, size_t, size_t *)
 cwist_wasm_free: void (void *)
 
-== types (struct/union/enum names) (162) ==
+== types (struct/union/enum names) (163) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -1814,6 +1832,7 @@ cwist_pb_field
 cwist_pb_reader
 cwist_pb_wire_type
 cwist_pb_writer
+cwist_pg
 cwist_proxy_config
 cwist_query_bucket
 cwist_query_map
@@ -1857,7 +1876,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (220) ==
+== typedefs (221) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -2011,6 +2030,7 @@ cwist_pb_field
 cwist_pb_reader
 cwist_pb_wire_type_t
 cwist_pb_writer
+cwist_pg_t
 cwist_proxy_config
 cwist_query_bucket
 cwist_query_map
