@@ -163,7 +163,7 @@ LIBS = $(if $(filter 1,$(CWIST_NATS)),$(CNATS_LIB)) \
        $(CURL_LIBS) \
        $(NGHTTP2_LIBS) \
        $(BROTLI_LIBS) \
-       $(if $(LIBPQ_LIBS),$(LIBPQ_LIBS)) \
+       $(if $(filter 1,$(CWIST_PG)),$(if $(LIBPQ_LIBS),$(LIBPQ_LIBS))) \
        -pthread -ldl -lm -lstdc++ -lz $(ZSTD_LIBS)
 
 # SQLite Automation
@@ -187,6 +187,7 @@ CWIST_TINY ?= 0
 CWIST_HTTP3 ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_WS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_DB ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+CWIST_PG ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_NATS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_JWT ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_SQLITE_FTS5 ?= 0
@@ -244,8 +245,10 @@ ifeq ($(CWIST_WS),1)
 endif
 ifeq ($(CWIST_DB),1)
     CFLAGS += -DCWIST_DB
-    ifneq ($(LIBPQ_LIBS),)
-        CFLAGS += -DCWIST_HAS_LIBPQ=1
+    ifeq ($(CWIST_PG),1)
+        ifneq ($(LIBPQ_LIBS),)
+            CFLAGS += -DCWIST_HAS_LIBPQ=1
+        endif
     endif
 endif
 ifeq ($(CWIST_NATS),1)
@@ -1227,8 +1230,8 @@ AMALGAMATION_DIR ?= dist/amalgamation
 AMALGAMATION_DEFINES = $(filter-out -D_FORTIFY_SOURCE=%,$(filter -D%,$(DISTRIBUTION_CFLAGS)))
 AMALGAMATION_KNOBS = CWIST_PLATFORM=$(CWIST_PLATFORM) CWIST_TINY=$(CWIST_TINY) \
     CWIST_HTTP3=$(CWIST_HTTP3) CWIST_WS=$(CWIST_WS) CWIST_DB=$(CWIST_DB) \
-    CWIST_NATS=$(CWIST_NATS) CWIST_JWT=$(CWIST_JWT) CWIST_WEBRTC=$(CWIST_WEBRTC) \
-    CWIST_WEBTRANSPORT=$(CWIST_WEBTRANSPORT)
+    CWIST_PG=$(CWIST_PG) CWIST_NATS=$(CWIST_NATS) CWIST_JWT=$(CWIST_JWT) \
+    CWIST_WEBRTC=$(CWIST_WEBRTC) CWIST_WEBTRANSPORT=$(CWIST_WEBTRANSPORT)
 
 # Submodule header anchors the bundle stages.  Initializing submodules is a
 # no-op once they are checked out, so a clean checkout works out of the box.
