@@ -41,6 +41,8 @@ typedef enum cwist_orm_dialect {
     CWIST_ORM_POSTGRES, /**< PostgreSQL dialect */
     CWIST_ORM_MYSQL,    /**< MySQL dialect */
     CWIST_ORM_MARIADB,  /**< MariaDB dialect */
+    CWIST_ORM_ORACLE,   /**< Oracle dialect */
+    CWIST_ORM_MSSQL,    /**< MS-SQL (T-SQL) dialect */
 } cwist_orm_dialect_t;
 
 /* Lifecycle --------------------------------------------------------------- */

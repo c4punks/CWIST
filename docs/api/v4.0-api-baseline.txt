@@ -4,7 +4,7 @@
 # (parameter names dropped) and struct/union/enum layouts in member order.
 # `make api-check` (CI) fails when the headers no longer match this file.
 
-== functions (841) ==
+== functions (851) ==
 cwist_accept_socket
 cwist_alloc
 cwist_alloc_array
@@ -576,6 +576,15 @@ cwist_mw_rate_limit_reset
 cwist_mw_request_id
 cwist_mw_session
 cwist_mw_waf_lite
+cwist_mysql_begin
+cwist_mysql_commit
+cwist_mysql_connect
+cwist_mysql_disconnect
+cwist_mysql_exec
+cwist_mysql_exec_params
+cwist_mysql_is_connected
+cwist_mysql_last_error
+cwist_mysql_rollback
 cwist_nats_connect
 cwist_nats_destroy
 cwist_nats_dispatch
@@ -671,6 +680,7 @@ cwist_query_map_parse_checked
 cwist_query_map_set
 cwist_rdbms_mount_runtime
 cwist_rdbms_probe_port
+cwist_rdbms_provider_name
 cwist_reactor_add
 cwist_reactor_add_out
 cwist_reactor_create
@@ -847,7 +857,7 @@ cwist_zod_parse
 cwist_zod_print_errors
 cwist_zod_validate
 
-== function signatures (842) ==
+== function signatures (852) ==
 cwist_accept_socket: cwist_error_t (int, struct sockaddr *, void (*)(int client_fd, void *ctx), void *)
 cwist_alloc: void * (size_t)
 cwist_alloc_array: void * (size_t, size_t)
@@ -1420,6 +1430,15 @@ cwist_mw_rate_limit_reset: void (void)
 cwist_mw_request_id: cwist_middleware_func (const char *)
 cwist_mw_session: cwist_middleware_func (cwist_app *)
 cwist_mw_waf_lite: cwist_middleware_func (void)
+cwist_mysql_begin: cwist_error_t (cwist_mysql_t *)
+cwist_mysql_commit: cwist_error_t (cwist_mysql_t *)
+cwist_mysql_connect: cwist_mysql_t * (const char *)
+cwist_mysql_disconnect: void (cwist_mysql_t *)
+cwist_mysql_exec: cwist_error_t (cwist_mysql_t *, const char *)
+cwist_mysql_exec_params: cwist_error_t (cwist_mysql_t *, const char *, int, const char *const *, cJSON **)
+cwist_mysql_is_connected: bool (cwist_mysql_t *)
+cwist_mysql_last_error: const char * (cwist_mysql_t *)
+cwist_mysql_rollback: cwist_error_t (cwist_mysql_t *)
 cwist_nats_connect: cwist_error_t (cwist_nats_t **, const char *)
 cwist_nats_destroy: void (cwist_nats_t *)
 cwist_nats_dispatch: void (cwist_nats_t *)
@@ -1515,6 +1534,7 @@ cwist_query_map_parse_checked: int (cwist_query_map *, const char *)
 cwist_query_map_set: void (cwist_query_map *, const char *, const char *)
 cwist_rdbms_mount_runtime: bool (cwist_app *, cwist_rdbms_provider_t, int)
 cwist_rdbms_probe_port: cwist_rdbms_provider_t (int)
+cwist_rdbms_provider_name: const char * (cwist_rdbms_provider_t)
 cwist_reactor_add: bool (cwist_reactor_t *, int, cwist_reactor_cb_t, const void *, size_t)
 cwist_reactor_add_out: bool (cwist_reactor_t *, int, cwist_reactor_cb_t, const void *, size_t)
 cwist_reactor_create: cwist_reactor_t * (void)
@@ -1715,7 +1735,7 @@ cwist_wasm_component_dispose: void (void *)
 cwist_wasm_dispatch_memory: const char * (cwist_app *, const char *, size_t, size_t *)
 cwist_wasm_free: void (void *)
 
-== types (struct/union/enum names) (163) ==
+== types (struct/union/enum names) (164) ==
 __natsConnection
 __prim_cwist_error_t
 bdr_blob_t
@@ -1825,6 +1845,7 @@ cwist_mux_group
 cwist_mux_middleware_node
 cwist_mux_route
 cwist_mux_router
+cwist_mysql
 cwist_nats
 cwist_nuke_db_t
 cwist_orm
@@ -1880,7 +1901,7 @@ cwist_zod_result
 quic_conn_fc
 quic_stream_fc
 
-== typedefs (221) ==
+== typedefs (222) ==
 __prim_cwist_error_t
 bdr_blob_t
 bdr_entry_t
@@ -2020,6 +2041,7 @@ cwist_mux_group
 cwist_mux_middleware_node
 cwist_mux_route
 cwist_mux_router
+cwist_mysql_t
 cwist_nats_msg_cb
 cwist_nats_t
 cwist_nuke_db_t
@@ -2103,7 +2125,7 @@ quic_conn_fc_t
 quic_net_quality_t
 quic_stream_fc_t
 
-== enum constants (243) ==
+== enum constants (247) ==
 CWIST_ASYNC_CLOSE
 CWIST_ASYNC_DEFER
 CWIST_ASYNC_DETACH
@@ -2309,7 +2331,9 @@ CWIST_METRIC_URING_BUFFERS_ACTIVE
 CWIST_METRIC_URING_SQES_PENDING
 CWIST_METRIC_VALIDATION_ERRORS
 CWIST_ORM_MARIADB
+CWIST_ORM_MSSQL
 CWIST_ORM_MYSQL
+CWIST_ORM_ORACLE
 CWIST_ORM_POSTGRES
 CWIST_ORM_SQLITE
 CWIST_ORM_TYPE_BLOB
@@ -2322,8 +2346,10 @@ CWIST_PB_64BIT
 CWIST_PB_LEN
 CWIST_PB_VARINT
 CWIST_RDBMS_MARIADB
+CWIST_RDBMS_MSSQL
 CWIST_RDBMS_MYSQL
 CWIST_RDBMS_NONE
+CWIST_RDBMS_ORACLE
 CWIST_RDBMS_POSTGRES
 CWIST_RECV_FATAL
 CWIST_RECV_NEED_MORE
@@ -2483,6 +2509,8 @@ enum cwist_rdbms_provider_t [0] CWIST_RDBMS_NONE = 0
 enum cwist_rdbms_provider_t [1] CWIST_RDBMS_POSTGRES
 enum cwist_rdbms_provider_t [2] CWIST_RDBMS_MYSQL
 enum cwist_rdbms_provider_t [3] CWIST_RDBMS_MARIADB
+enum cwist_rdbms_provider_t [4] CWIST_RDBMS_ORACLE
+enum cwist_rdbms_provider_t [5] CWIST_RDBMS_MSSQL
 enum cwist_recv_status_t [0] CWIST_RECV_OK = 0
 enum cwist_recv_status_t [1] CWIST_RECV_NEED_MORE
 enum cwist_recv_status_t [2] CWIST_RECV_FATAL
