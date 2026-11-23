@@ -365,6 +365,66 @@ static void test_bind_form_decoding_limits(void) {
     }
 }
 
+static void test_bind_defensive_bounds(void) {
+    printf("test_bind_defensive_bounds...\n");
+    typedef struct {
+        int x;
+    } small_t;
+
+    /* 1. NULL key field */
+    cwist_bind_field_t bad_fields[] = {
+        {.json_key = NULL, .target_type = CWIST_BIND_INT, .target_offset = 0, .target_size = sizeof(int)},
+    };
+    cwist_bind_schema_t bad_schema = {bad_fields, 1, sizeof(small_t)};
+    small_t out = {0};
+    cwist_bind_result_t result;
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "{\"x\":1}");
+
+    bool ok = cwist_app_req_bind_json(req, &bad_schema, &out, &result);
+    assert(!ok);
+    assert(!result.ok);
+
+    /* 2. OOB offset */
+    cwist_bind_field_t oob_fields[] = {
+        {.json_key = "x", .target_type = CWIST_BIND_INT, .target_offset = 100, .target_size = sizeof(int)},
+    };
+    cwist_bind_schema_t oob_schema = {oob_fields, 1, sizeof(small_t)};
+    ok = cwist_app_req_bind_json(req, &oob_schema, &out, &result);
+    assert(!ok);
+    assert(!result.ok);
+
+    cwist_http_request_destroy(req);
+    printf("  OK\n");
+}
+
+static void test_bind_query(void) {
+    printf("test_bind_query...\n");
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->query, "email=alice%40example.com&age=30&name=Alice&score=95.5");
+
+    user_t out = {0};
+    cwist_bind_result_t result;
+    bool ok = cwist_app_req_bind_query(req, &user_schema, &out, &result);
+    assert(ok);
+    assert(strcmp(out.email, "alice@example.com") == 0);
+    assert(out.age == 30);
+    assert(strcmp(out.name, "Alice") == 0);
+    assert(out.score > 95.0 && out.score < 96.0);
+
+    /* Test query_or_400 */
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_sstring_assign(req->query, "email=invalid-email&age=5");
+    ok = cwist_app_req_bind_query_or_400(req, res, &user_schema, &out);
+    assert(!ok);
+    assert(res->status_code == CWIST_HTTP_BAD_REQUEST);
+    assert(strstr(res->body->data, "\"success\":false") != NULL);
+
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    printf("  OK\n");
+}
+
 int main(void) {
     test_bind_rejects_invalid_numbers_and_shapes();
     test_bind_success();
@@ -377,6 +437,8 @@ int main(void) {
     test_bind_regex();
     test_bind_utf8_length();
     test_bind_null_guards_and_numeric_validation();
+    test_bind_defensive_bounds();
+    test_bind_query();
     printf("All bind tests passed.\n");
     return 0;
 }
