@@ -33,7 +33,7 @@ cd "$work"
 
 # shellcheck disable=SC2046,SC2086
 "$cc" -O2 -std=gnu17 -I"$bundle/include" -o hello main.c ${APP_OBJS:-} "$bundle/lib/libcwist.a" \
-    $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
+    $(pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd libpq 2>/dev/null || pkg-config --libs libcurl libnghttp2 libbrotlienc libbrotlicommon libbrotlidec libzstd) \
     -pthread -lm $cxx_lib -lz
 
 # shellcheck disable=SC2086
