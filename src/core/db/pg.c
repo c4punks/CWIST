@@ -10,7 +10,21 @@
 #include <string.h>
 
 #if defined(CWIST_HAS_LIBPQ)
+#if defined(__has_include)
+#if __has_include(<libpq-fe.h>)
+#define CWIST_INTERNAL_LIBPQ 1
 #include <libpq-fe.h>
+#elif __has_include(<postgresql/libpq-fe.h>)
+#define CWIST_INTERNAL_LIBPQ 1
+#include <postgresql/libpq-fe.h>
+#endif
+#else
+#define CWIST_INTERNAL_LIBPQ 1
+#include <libpq-fe.h>
+#endif
+#endif
+
+#if defined(CWIST_INTERNAL_LIBPQ)
 
 struct cwist_pg {
     PGconn *conn;
@@ -163,7 +177,7 @@ const char *cwist_pg_last_error(cwist_pg_t *pg) {
 
 #else
 
-/* Stubs when CWIST_HAS_LIBPQ is not enabled */
+/* Stubs when CWIST_HAS_LIBPQ is not enabled or libpq header is absent */
 cwist_pg_t *cwist_pg_connect(const char *conninfo) {
     (void)conninfo;
     return NULL;
@@ -181,7 +195,7 @@ bool cwist_pg_is_connected(cwist_pg_t *pg) {
 cwist_error_t cwist_pg_exec(cwist_pg_t *pg, const char *sql) {
     (void)pg; (void)sql;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    err.error.err_i16 = CWIST_ERROR_NOT_SUPPORTED;
+    err.error.err_i16 = -1;
     return err;
 }
 
@@ -190,28 +204,28 @@ cwist_error_t cwist_pg_exec_params(cwist_pg_t *pg, const char *sql, int n_params
     (void)pg; (void)sql; (void)n_params; (void)param_values;
     if (out_rows) *out_rows = NULL;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    err.error.err_i16 = CWIST_ERROR_NOT_SUPPORTED;
+    err.error.err_i16 = -1;
     return err;
 }
 
 cwist_error_t cwist_pg_begin(cwist_pg_t *pg) {
     (void)pg;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    err.error.err_i16 = CWIST_ERROR_NOT_SUPPORTED;
+    err.error.err_i16 = -1;
     return err;
 }
 
 cwist_error_t cwist_pg_commit(cwist_pg_t *pg) {
     (void)pg;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    err.error.err_i16 = CWIST_ERROR_NOT_SUPPORTED;
+    err.error.err_i16 = -1;
     return err;
 }
 
 cwist_error_t cwist_pg_rollback(cwist_pg_t *pg) {
     (void)pg;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    err.error.err_i16 = CWIST_ERROR_NOT_SUPPORTED;
+    err.error.err_i16 = -1;
     return err;
 }
 
