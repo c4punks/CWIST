@@ -31,6 +31,54 @@ static void rdbms_no_sigpipe(int sock) {
 }
 
 /**
+ * @brief Send a minimal MS-SQL TDS Pre-Login packet and check for response.
+ *
+ * @param sock Connected socket.
+ * @return true if server responds with a valid TDS response packet (type 0x04).
+ */
+static bool probe_mssql(int sock) {
+    static const unsigned char tds_prelogin[] = {
+        0x12, 0x01, 0x00, 0x2f, 0x00, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x1a, 0x00, 0x06, 0x01, 0x00, 0x20,
+        0x00, 0x01, 0x02, 0x00, 0x21, 0x00, 0x01, 0x03,
+        0x00, 0x22, 0x00, 0x04, 0x04, 0x00, 0x26, 0x00,
+        0x01, 0xff, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    if (send(sock, tds_prelogin, sizeof(tds_prelogin), MSG_NOSIGNAL) != (ssize_t)sizeof(tds_prelogin)) {
+        return false;
+    }
+    unsigned char resp_hdr[8];
+    ssize_t n = recv(sock, resp_hdr, sizeof(resp_hdr), 0);
+    return (n >= 4 && (resp_hdr[0] == 0x04 || resp_hdr[0] == 0x12));
+}
+
+/**
+ * @brief Send a minimal Oracle TNS Connect packet and check for response.
+ *
+ * @param sock Connected socket.
+ * @return true if server responds with a valid TNS Accept/Refuse/Resend packet.
+ */
+static bool probe_oracle(int sock) {
+    static const unsigned char tns_connect[] = {
+        0x00, 0x3a, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x01, 0x39, 0x01, 0x2c, 0x00, 0x00, 0x08, 0x00,
+        0x7f, 0xff, 0x7f, 0x08, 0x00, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00
+    };
+    if (send(sock, tns_connect, sizeof(tns_connect), MSG_NOSIGNAL) != (ssize_t)sizeof(tns_connect)) {
+        return false;
+    }
+    unsigned char resp[8];
+    ssize_t n = recv(sock, resp, sizeof(resp), 0);
+    return (n >= 5 && (resp[4] == 0x02 || resp[4] == 0x04 || resp[4] == 0x05 || resp[4] == 0x0b));
+}
+
+/**
  * @brief Send a minimal PostgreSQL StartupMessage and check for 'R' response.
  *
  * @param sock Connected socket.
@@ -146,14 +194,70 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
         return CWIST_RDBMS_NONE;
     }
 
-    /* PostgreSQL speaks only after the client sends a StartupMessage */
+    /* Try provider-specific probes */
+    if (port == 1433) {
+        if (probe_mssql(sock)) {
+            close(sock);
+            return CWIST_RDBMS_MSSQL;
+        }
+    } else if (port == 1521) {
+        if (probe_oracle(sock)) {
+            close(sock);
+            return CWIST_RDBMS_ORACLE;
+        }
+    }
+
     if (probe_postgresql(sock)) {
         close(sock);
         return CWIST_RDBMS_POSTGRES;
     }
 
+    /* Check MS-SQL or Oracle if port was generic */
+    if (port != 1433 && port != 1521) {
+        close(sock);
+        sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock >= 0) {
+            rdbms_no_sigpipe(sock);
+            setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+                if (probe_mssql(sock)) {
+                    close(sock);
+                    return CWIST_RDBMS_MSSQL;
+                }
+            }
+            close(sock);
+        }
+        sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock >= 0) {
+            rdbms_no_sigpipe(sock);
+            setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+                if (probe_oracle(sock)) {
+                    close(sock);
+                    return CWIST_RDBMS_ORACLE;
+                }
+            }
+            close(sock);
+        }
+        return CWIST_RDBMS_NONE;
+    }
+
     close(sock);
     return CWIST_RDBMS_NONE;
+}
+
+const char *cwist_rdbms_provider_name(cwist_rdbms_provider_t provider) {
+    switch (provider) {
+        case CWIST_RDBMS_POSTGRES: return "PostgreSQL";
+        case CWIST_RDBMS_MYSQL: return "MySQL";
+        case CWIST_RDBMS_MARIADB: return "MariaDB";
+        case CWIST_RDBMS_ORACLE: return "OracleDB";
+        case CWIST_RDBMS_MSSQL: return "MS-SQL";
+        case CWIST_RDBMS_NONE:
+        default: return "None";
+    }
 }
 
 /**

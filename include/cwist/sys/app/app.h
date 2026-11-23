@@ -83,7 +83,16 @@ typedef enum cwist_rdbms_provider {
     CWIST_RDBMS_POSTGRES,
     CWIST_RDBMS_MYSQL,
     CWIST_RDBMS_MARIADB,
+    CWIST_RDBMS_ORACLE,
+    CWIST_RDBMS_MSSQL,
 } cwist_rdbms_provider_t;
+
+/**
+ * @brief Get the human-readable display name for an RDBMS provider.
+ * @param provider Provider enum value.
+ * @return Display name string (e.g. "PostgreSQL", "MySQL", "OracleDB", "MS-SQL").
+ */
+const char *cwist_rdbms_provider_name(cwist_rdbms_provider_t provider);
 
 /** @brief Mounted RDBMS runtime state */
 typedef struct cwist_rdbms_runtime {

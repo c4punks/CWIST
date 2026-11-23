@@ -31,8 +31,10 @@ NGHTTP2_CFLAGS := $(shell $(PKG_CONFIG) --cflags libnghttp2 2>/dev/null)
 BROTLI_CFLAGS := $(shell $(PKG_CONFIG) --cflags libbrotlienc libbrotlicommon libbrotlidec 2>/dev/null)
 LIBPQ_CFLAGS := $(shell $(PKG_CONFIG) --cflags libpq 2>/dev/null)
 LIBPQ_LIBS := $(shell $(PKG_CONFIG) --libs libpq 2>/dev/null)
+MYSQL_CFLAGS := $(shell $(PKG_CONFIG) --cflags mysqlclient 2>/dev/null || $(PKG_CONFIG) --cflags mariadb 2>/dev/null)
+MYSQL_LIBS := $(shell $(PKG_CONFIG) --libs mysqlclient 2>/dev/null || $(PKG_CONFIG) --libs mariadb 2>/dev/null)
 
-INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS) $(ZSTD_CFLAGS) $(LIBPQ_CFLAGS)
+INCLUDE_PATHS = -I./include -I./lib -I./lib/libttak/include -I./lib/cjson -I./lib/sqlite3 -I./lib/uriparser/include -I./lib/cnats/src $(TLS_INCLUDE_PATHS) -I./lib/lsquic/include -I./lib/multipart-parser-c $(CURL_CFLAGS) $(NGHTTP2_CFLAGS) $(BROTLI_CFLAGS) $(ZSTD_CFLAGS) $(LIBPQ_CFLAGS) $(MYSQL_CFLAGS)
 COMMON_DEFINES = -D_GNU_SOURCE -D_XOPEN_SOURCE=700 -D_REENTRANT -DSQLITE_ENABLE_DESERIALIZE
 COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
@@ -164,6 +166,7 @@ LIBS = $(if $(filter 1,$(CWIST_NATS)),$(CNATS_LIB)) \
        $(NGHTTP2_LIBS) \
        $(BROTLI_LIBS) \
        $(if $(filter 1,$(CWIST_PG)),$(if $(LIBPQ_LIBS),$(LIBPQ_LIBS))) \
+       $(if $(filter 1,$(CWIST_MYSQL)),$(if $(MYSQL_LIBS),$(MYSQL_LIBS))) \
        -pthread -ldl -lm -lstdc++ -lz $(ZSTD_LIBS)
 
 # SQLite Automation
@@ -188,6 +191,7 @@ CWIST_HTTP3 ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_WS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_DB ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_PG ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
+CWIST_MYSQL ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_NATS ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_JWT ?= $(if $(filter 1,$(CWIST_TINY)),0,1)
 CWIST_SQLITE_FTS5 ?= 0
@@ -248,6 +252,11 @@ ifeq ($(CWIST_DB),1)
     ifeq ($(CWIST_PG),1)
         ifneq ($(LIBPQ_LIBS),)
             CFLAGS += -DCWIST_HAS_LIBPQ=1
+        endif
+    endif
+    ifeq ($(CWIST_MYSQL),1)
+        ifneq ($(MYSQL_LIBS),)
+            CFLAGS += -DCWIST_HAS_MYSQL=1
         endif
     endif
 endif
@@ -1066,6 +1075,7 @@ ifeq ($(CWIST_DB),1)
             src/core/db/db.c \
             src/core/db/pool.c \
             src/core/db/pg.c \
+            src/core/db/mysql.c \
             src/core/db/nuke_db.c \
             src/core/db/migrate.c \
             src/core/orm/orm.c \
@@ -1230,7 +1240,7 @@ AMALGAMATION_DIR ?= dist/amalgamation
 AMALGAMATION_DEFINES = $(filter-out -D_FORTIFY_SOURCE=%,$(filter -D%,$(DISTRIBUTION_CFLAGS)))
 AMALGAMATION_KNOBS = CWIST_PLATFORM=$(CWIST_PLATFORM) CWIST_TINY=$(CWIST_TINY) \
     CWIST_HTTP3=$(CWIST_HTTP3) CWIST_WS=$(CWIST_WS) CWIST_DB=$(CWIST_DB) \
-    CWIST_PG=$(CWIST_PG) CWIST_NATS=$(CWIST_NATS) CWIST_JWT=$(CWIST_JWT) \
+    CWIST_PG=$(CWIST_PG) CWIST_MYSQL=$(CWIST_MYSQL) CWIST_NATS=$(CWIST_NATS) CWIST_JWT=$(CWIST_JWT) \
     CWIST_WEBRTC=$(CWIST_WEBRTC) CWIST_WEBTRANSPORT=$(CWIST_WEBTRANSPORT)
 
 # Submodule header anchors the bundle stages.  Initializing submodules is a
@@ -1496,6 +1506,7 @@ TEST_TARGETS = test_worker_affinity \
                test_db_sync \
                test_db_sync_deadline \
                test_pg \
+               test_mysql \
                test_sqlite_fts5 \
                test_redis \
                test_scheduler \
@@ -2592,9 +2603,13 @@ test_db_sync_deadline: $(LIB_NAME) tests/test_db_sync_deadline.c
 test_pg: $(LIB_NAME) tests/test_pg.c
 	$(CC) $(CFLAGS) -o test_pg tests/test_pg.c $(LIB_NAME) $(LIBS)
 	./test_pg
+
+test_mysql: $(LIB_NAME) tests/test_mysql.c
+	$(CC) $(CFLAGS) -o test_mysql tests/test_mysql.c $(LIB_NAME) $(LIBS)
+	./test_mysql
 else
 # CWIST_DB=0: the module and its tests are compiled out.
-test_db_pool test_db_memory test_db_sync test_db_sync_deadline test_pg:
+test_db_pool test_db_memory test_db_sync test_db_sync_deadline test_pg test_mysql:
 	@echo "CWIST_DB=0: skipping $@"
 endif
 
