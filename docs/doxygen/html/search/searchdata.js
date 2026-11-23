@@ -8,7 +8,7 @@ var indexSectionsWithContent =
   5: "_abceghjnopqrsw",
   6: "acfgjlqt",
   7: "acefghjlqt",
-  8: "_abcdeghiklmnopqrstuw",
+  8: "_abcdeghijklmnopqrstuw",
   9: "01235abcdefghijklmnopqrstuvwz개라런레만메문서설실웹참쿠튜"
 };
 

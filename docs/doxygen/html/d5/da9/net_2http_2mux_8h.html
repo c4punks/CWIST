@@ -590,12 +590,13 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Register a handler inside a group. </p>
+<p>The group prefix and <code>path</code> are joined with exactly one '/', whatever slashes either side has: "/api/" + "/users" and "/api" + "users" both register "/api/users".</p>
 <p>Register a handler inside a group.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">group</td><td>Group supplying the path prefix and target router. </td></tr>
     <tr><td class="paramname">method</td><td>HTTP method to match. </td></tr>
-    <tr><td class="paramname">path</td><td>Route path relative to the group prefix; the two are concatenated verbatim. </td></tr>
+    <tr><td class="paramname">path</td><td>Route path relative to the group prefix; the two are joined with exactly one '/'. </td></tr>
     <tr><td class="paramname">handler</td><td>Callback to invoke for a matching request. </td></tr>
   </table>
   </dd>
@@ -702,7 +703,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>Middleware runs in most-recently-added-first order because each node is prepended to the head of the list. An allocation failure is silently ignored. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00450">450</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00461">461</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00019">cwist_mux_middleware_node::func</a>, <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00031">cwist_mux_route::middleware</a>, and <a class="el" href="../../d5/da9/net_2http_2mux_8h_source.html#l00020">cwist_mux_middleware_node::next</a>.</p>
 
@@ -799,7 +800,7 @@ Functions</h2></td></tr>
 <p>Dispatches an HTTP request through the router.</p>
 <dl class="section return"><dt>Returns</dt><dd>True if a route was found and executed, false otherwise (404). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00565">565</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d49/mux_8c_source.html#l00576">576</a> of file <a class="el" href="../../dd/d49/mux_8c_source.html">mux.c</a>.</p>
 
 </div>
 </div>

@@ -1,5 +1,6 @@
 var NAVTREEINDEX10 =
 {
+"d7/d7f/log_8h.html#a66bc16040818fad1c018405eec164ffa":[66,0,1,0,0,11,0],
 "d7/d7f/log_8h.html#a68b665b06cf4ef236c1f63de7b1109e4":[66,0,1,0,0,11,5],
 "d7/d7f/log_8h.html#a68b665b06cf4ef236c1f63de7b1109e4a266d498f15d810518d87b626a2297b09":[66,0,1,0,0,11,5,1],
 "d7/d7f/log_8h.html#a68b665b06cf4ef236c1f63de7b1109e4a317a62dd950f7d13d630d7719a6db5c1":[66,0,1,0,0,11,5,2],
@@ -248,6 +249,5 @@ var NAVTREEINDEX10 =
 "d8/d64/md_docs_2http3-migration.html#autotoc_md356":[33,0],
 "d8/d64/md_docs_2http3-migration.html#autotoc_md357":[33,1],
 "d8/d64/md_docs_2http3-migration.html#autotoc_md358":[33,2],
-"d8/d64/md_docs_2http3-migration.html#autotoc_md359":[33,3],
-"d8/d77/md_docs_2api_2wasm-component.html":[15]
+"d8/d64/md_docs_2http3-migration.html#autotoc_md359":[33,3]
 };

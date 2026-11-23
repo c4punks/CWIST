@@ -330,7 +330,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The request's CSRF token, or NULL if <code>req</code> is NULL or no token has been set. The returned pointer is owned by the request. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../df/d33/csrf_8c_source.html#l00324">324</a> of file <a class="el" href="../../df/d33/csrf_8c_source.html">csrf.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../df/d33/csrf_8c_source.html#l00329">329</a> of file <a class="el" href="../../df/d33/csrf_8c_source.html">csrf.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00189">cwist_http_request::csrf_token</a>.</p>
 
@@ -354,6 +354,7 @@ Functions</h2></td></tr>
 
 <p>CSRF middleware factory. </p>
 <p>On safe requests (GET/HEAD/OPTIONS) a <code>csrf_token</code> cookie is issued if missing. On unsafe requests the <code>X-CSRF-Token</code> header, <code>_csrf</code> form field, or URL-encoded <code>_csrf</code> / <code>csrf_token</code> form field must match the cookie value. Query-string tokens are not accepted because URLs leak easily.</p>
+<p>Tokens are signed with the app's session secret. Without one, a random key is created when this function is called; create the middleware before the server starts (and forks workers) so all workers share it. That key changes on every restart, invalidating issued tokens, so configure a fixed secret with cwist_app_use_session(app, secret) when tokens must survive restarts.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">app</td><td>Application context. </td></tr>

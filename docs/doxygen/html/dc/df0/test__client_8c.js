@@ -1,5 +1,6 @@
 var test__client_8c =
 [
+    [ "JAR_SENDS", "dc/df0/test__client_8c.html#a27bf18ab72e89dc26c7d7719c485ee31", null ],
     [ "cwist_test_client_clear_cookies", "dc/df0/test__client_8c.html#a4a1b1fca085aa5ef47b02dbc2f3cb757", null ],
     [ "cwist_test_client_create", "dc/df0/test__client_8c.html#ad55ee67ee531c07fe9ebbf931183eeee", null ],
     [ "cwist_test_client_delete", "dc/df0/test__client_8c.html#a5ab7c2a2573f0e606b45624d463586de", null ],

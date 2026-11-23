@@ -120,30 +120,32 @@ $(document).ready(function(){initNavTree('d8/d99/sys__info_8c.html','../../'); i
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
 <code>#include &lt;unistd.h&gt;</code><br />
+<code>#include &lt;stdbool.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for sys_info.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d1/d03/sys__info_8c__incl.png" border="0" usemap="#asrc_2sys_2sys__info_8c" alt=""/></div>
 <map name="asrc_2sys_2sys__info_8c" id="asrc_2sys_2sys__info_8c">
 <area shape="rect" title="Cross&#45;platform helpers for estimating available RAM and low&#45;memory pressure." alt="" coords="428,5,564,31"/>
-<area shape="rect" href="../../da/d41/sys__info_8h.html" title="System Resource Monitoring Utilities." alt="" coords="64,79,216,104"/>
-<area shape="poly" title=" " alt="" coords="439,33,212,79,210,73,438,28"/>
-<area shape="rect" href="../../da/dec/core_2macros_8h.html" title="Convenience size&#45;conversion and utility macros shared across CWIST." alt="" coords="240,79,392,104"/>
-<area shape="poly" title=" " alt="" coords="468,33,359,76,357,71,466,28"/>
-<area shape="rect" title=" " alt="" coords="416,79,483,104"/>
-<area shape="poly" title=" " alt="" coords="491,32,467,69,462,66,486,30"/>
-<area shape="rect" title=" " alt="" coords="507,79,578,104"/>
-<area shape="poly" title=" " alt="" coords="506,30,530,66,525,69,501,32"/>
-<area shape="rect" title=" " alt="" coords="602,79,673,104"/>
-<area shape="poly" title=" " alt="" coords="520,28,603,70,601,75,518,33"/>
-<area shape="rect" title=" " alt="" coords="697,79,772,104"/>
-<area shape="poly" title=" " alt="" coords="535,28,685,72,683,78,534,33"/>
+<area shape="rect" href="../../da/d41/sys__info_8h.html" title="System Resource Monitoring Utilities." alt="" coords="60,79,212,104"/>
+<area shape="poly" title=" " alt="" coords="439,33,208,79,207,73,438,28"/>
+<area shape="rect" title=" " alt="" coords="205,152,288,177"/>
+<area shape="poly" title=" " alt="" coords="428,24,390,29,349,40,310,56,276,81,266,93,259,108,251,139,246,137,254,106,262,90,273,77,308,52,348,35,389,24,427,18"/>
+<area shape="rect" href="../../da/dec/core_2macros_8h.html" title="Convenience size&#45;conversion and utility macros shared across CWIST." alt="" coords="287,79,439,104"/>
+<area shape="poly" title=" " alt="" coords="476,33,398,74,395,70,473,28"/>
+<area shape="rect" title=" " alt="" coords="463,79,529,104"/>
+<area shape="poly" title=" " alt="" coords="499,31,499,65,493,65,493,31"/>
+<area shape="rect" title=" " alt="" coords="554,79,625,104"/>
+<area shape="poly" title=" " alt="" coords="513,29,565,68,562,72,509,33"/>
+<area shape="rect" title=" " alt="" coords="649,79,719,104"/>
+<area shape="poly" title=" " alt="" coords="527,28,641,71,640,76,525,33"/>
+<area shape="rect" title=" " alt="" coords="744,79,819,104"/>
+<area shape="poly" title=" " alt="" coords="542,28,731,75,730,80,541,33"/>
 <area shape="rect" title=" " alt="" coords="5,152,80,177"/>
-<area shape="poly" title=" " alt="" coords="126,106,71,146,68,141,123,102"/>
+<area shape="poly" title=" " alt="" coords="123,106,70,146,67,141,119,102"/>
 <area shape="rect" title=" " alt="" coords="105,152,175,177"/>
-<area shape="poly" title=" " alt="" coords="143,104,143,138,137,138,137,104"/>
-<area shape="rect" title=" " alt="" coords="200,152,283,177"/>
-<area shape="poly" title=" " alt="" coords="158,102,215,142,212,146,155,106"/>
+<area shape="poly" title=" " alt="" coords="139,104,141,138,136,139,134,104"/>
+<area shape="poly" title=" " alt="" coords="155,102,218,142,215,147,152,106"/>
 </map>
 </div>
 </div>
@@ -205,11 +207,11 @@ Functions</h2></td></tr>
 <p>Get the available (free + reclaimable) system RAM in bytes.</p>
 <dl class="section return"><dt>Returns</dt><dd>Conservative mock availability used when no platform-specific API exists. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00090">90</a> of file <a class="el" href="../../d8/d99/sys__info_8c_source.html">sys_info.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00162">162</a> of file <a class="el" href="../../d8/d99/sys__info_8c_source.html">sys_info.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/dec/core_2macros_8h_source.html#l00020">CWIST_GIB</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00100">cwist_is_ram_critical()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00172">cwist_is_ram_critical()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>.</p>
 
 </div>
 </div>
@@ -239,9 +241,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when the estimated available RAM is below the threshold. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00100">100</a> of file <a class="el" href="../../d8/d99/sys__info_8c_source.html">sys_info.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00172">172</a> of file <a class="el" href="../../d8/d99/sys__info_8c_source.html">sys_info.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00090">cwist_get_available_ram()</a>.</p>
+<p class="reference">References <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00162">cwist_get_available_ram()</a>.</p>
 
 </div>
 </div>

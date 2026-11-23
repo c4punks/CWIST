@@ -256,7 +256,7 @@ Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Unified HTTP/1.1 and HTTP/2 client using libcurl. </p>
-<p>Provides a CWIST-native wrapper around libcurl for synchronous HTTP requests. Supports connection reuse, Alt-Svc upgrade to HTTP/3, redirects, cookies, and TLS via the system libcurl (linked against BoringSSL + nghttp2). </p>
+<p>Provides a CWIST-native wrapper around libcurl for synchronous HTTP requests. Supports connection reuse, Alt-Svc upgrade to HTTP/3, redirects, and TLS via the system libcurl (linked against BoringSSL + nghttp2). No cookie jar is kept between requests. </p>
 
 <p class="definition">Definition in file <a class="el" href="../../d9/df2/http__client_8h_source.html">http_client.h</a>.</p>
 </div><h2 class="groupheader">Typedef Documentation</h2>
@@ -273,9 +273,9 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Opaque HTTP client handle. </p>
-<p>Internally holds a libcurl multi handle for connection reuse and a share handle for DNS/cookie/SSL session caching. </p>
+<p>Internally holds one libcurl easy handle, reused across requests for connection and TLS session reuse. Requests on one client are serialized, so a client may be shared between threads; create one client per thread for parallel transfers. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/df2/http__client_8h_source.html#l00028">28</a> of file <a class="el" href="../../d9/df2/http__client_8h_source.html">http_client.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/df2/http__client_8h_source.html#l00030">30</a> of file <a class="el" href="../../d9/df2/http__client_8h_source.html">http_client.h</a>.</p>
 
 </div>
 </div>
@@ -302,7 +302,7 @@ Functions</h2></td></tr>
 <p>Acquires the shared curl global state, then initializes an easy handle with defaults: redirect following (max 10 hops), 30 s timeout, TCP keepalive, automatic content decoding, and a CWIST user agent.</p>
 <dl class="section return"><dt>Returns</dt><dd>new client handle, or NULL on allocation/curl init failure (the curl global reference is released in that case). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00195">195</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00199">199</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00019">cwist_curl_global_acquire()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -334,7 +334,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00237">237</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00247">247</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -385,7 +385,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00323">323</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00363">363</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -459,26 +459,11 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>CWIST error, err_i16 == 0 on success.</dd></dl>
-<p>Perform a synchronous HTTP request.</p>
-<p>The handle is reset and re-configured from the client settings before each call, so a client may be reused for multiple requests. The response body is capped at CWIST_HTTP_MAX_BODY_SIZE and headers at 200 entries; exceeding either cap fails the transfer. HTTP/2 is preferred with downgrade to HTTP/1.1. On success a <a class="el" href="../../dd/d22/structcwist__http__response.html" title="HTTP Response Object. Supports standard string body or Zero-Copy pointer body.">cwist_http_response</a> is allocated and stored in *out_response (caller must free it with cwist_http_response_free); *out_response is always set to NULL before the transfer starts. The client is not thread-safe; concurrent requests require separate handles.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">client</td><td>client handle. </td></tr>
-    <tr><td class="paramname">url</td><td>request URL. </td></tr>
-    <tr><td class="paramname">method</td><td>HTTP method. </td></tr>
-    <tr><td class="paramname">headers</td><td>linked list of request headers, or NULL. </td></tr>
-    <tr><td class="paramname">body</td><td>request body, or NULL for no body. </td></tr>
-    <tr><td class="paramname">body_len</td><td>length of body in bytes. </td></tr>
-    <tr><td class="paramname">out_response</td><td>output for the allocated response object. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd><a class="el" href="../../d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system.">cwist_error_t</a> with err_i16 set to 0 on success, -1 on failure (invalid arguments, curl transfer error, or allocation failure). </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>CWIST error, err_i16 == 0 on success. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00374">374</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00430">430</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../d2/dcb/http__client__file_8c_source.html#l00221">cwist_http_client_file_request()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00029">CWIST_HTTP_CREATED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00033">CWIST_HTTP_FORBIDDEN</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02260">cwist_http_header_free_all()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00035">CWIST_HTTP_INTERNAL_ERROR</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l01796">cwist_http_method_to_string()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00030">CWIST_HTTP_NO_CONTENT</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00034">CWIST_HTTP_NOT_FOUND</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00036">CWIST_HTTP_NOT_IMPLEMENTED</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00028">CWIST_HTTP_OK</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02611">cwist_http_response_create()</a>, <a class="el" href="../../d9/dab/net_2http_2http_8h_source.html#l00112">CWIST_HTTP_SERVICE_UNAVAILABLE</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00032">CWIST_HTTP_UNAUTHORIZED</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00545">cwist_sstring_assign()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00090">cwist_sstring_assign_len()</a>, <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00060">cwist_http_header_node::key</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00062">cwist_http_header_node::next</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00061">cwist_http_header_node::value</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
 </div>
 </div>
@@ -513,23 +498,12 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">client</td><td>Client handle. </td></tr>
-    <tr><td class="paramname">path</td><td>Filesystem path, or NULL for in-memory only.</td></tr>
-  </table>
-  </dd>
-</dl>
-<p>Set Alt-Svc cache database file path.</p>
-<p>Replaces any previously set path. Pass NULL to clear it.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">client</td><td>client handle. </td></tr>
-    <tr><td class="paramname">path</td><td>path to the alt-svc cache file, or NULL. </td></tr>
+    <tr><td class="paramname">path</td><td>Filesystem path, or NULL for in-memory only. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00338">338</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00389">389</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -563,23 +537,12 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">client</td><td>Client handle. </td></tr>
-    <tr><td class="paramname">path</td><td>Filesystem path to PEM CA bundle, or NULL for system default.</td></tr>
-  </table>
-  </dd>
-</dl>
-<p>Set path to CA bundle for TLS verification.</p>
-<p>Replaces any previously set path. Pass NULL to fall back to libcurl's default trust store.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">client</td><td>client handle. </td></tr>
-    <tr><td class="paramname">path</td><td>filesystem path to the CA bundle, or NULL. </td></tr>
+    <tr><td class="paramname">path</td><td>Filesystem path to PEM CA bundle, or NULL for system default. </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00304">304</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00346">346</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -612,9 +575,7 @@ Functions</h2></td></tr>
 <p>Allow <a href="file://">file://</a> requests only below a configured directory. </p>
 <p>File URLs are rejected by default. The root is canonicalized when set, and each requested file must resolve inside it. Pass NULL to disable file URLs. </p><dl class="section return"><dt>Returns</dt><dd>0 on success, -1 for an invalid client, root, or unsupported host. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00273">273</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
-
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, and <a class="el" href="../../d6/d32/http__client_8c_source.html#l00023">PATH_MAX</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00320">320</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -652,16 +613,9 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
-<p>Redirects are not followed for requests with custom headers, preventing application credentials from being forwarded to another origin.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">client</td><td>client handle. </td></tr>
-    <tr><td class="paramname">follow</td><td>non-zero to follow redirects, 0 to disable. </td></tr>
-  </table>
-  </dd>
-</dl>
+<p>Redirects are not followed for requests with custom headers, preventing application credentials from being forwarded to another origin. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00255">255</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00272">272</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -695,20 +649,12 @@ Functions</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">client</td><td>Client handle. </td></tr>
-    <tr><td class="paramname">timeout_ms</td><td>Timeout value, 0 for no timeout (default: 30000).</td></tr>
-  </table>
-  </dd>
-</dl>
-<p>Set request timeout in milliseconds.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">client</td><td>client handle. </td></tr>
-    <tr><td class="paramname">timeout_ms</td><td>timeout in milliseconds (applied to the whole transfer). </td></tr>
+    <tr><td class="paramname">timeout_ms</td><td>Timeout value, 0 for no timeout (default: 30000). </td></tr>
   </table>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00267">267</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00291">291</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>

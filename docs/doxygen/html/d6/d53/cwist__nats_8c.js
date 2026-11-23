@@ -1,6 +1,7 @@
 var cwist__nats_8c =
 [
     [ "_GNU_SOURCE", "d6/d53/cwist__nats_8c.html#a369266c24eacffb87046522897a570d5", null ],
+    [ "CWIST_NATS_DESTROY_WAIT_MS", "d6/d53/cwist__nats_8c.html#ad61c95b9066a6535fe6b1f95d5fb48f0", null ],
     [ "cwist_nats_connect", "d6/d53/cwist__nats_8c.html#ac19904f3a8844fd3a09dc1e7670edb92", null ],
     [ "cwist_nats_destroy", "d6/d53/cwist__nats_8c.html#a4e43fad0dffba208e054ecd164a99d4d", null ],
     [ "cwist_nats_dispatch", "d6/d53/cwist__nats_8c.html#afd6076914231fa1c0f1c6bf25e46eb8b", null ],
