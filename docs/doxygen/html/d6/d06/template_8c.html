@@ -107,6 +107,7 @@ $(document).ready(function(){initNavTree('d6/d06/template_8c.html','../../'); in
 <div class="header">
   <div class="summary">
 <a href="#define-members">Macros</a> &#124;
+<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#enum-members">Enumerations</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle"><div class="title">template.c File Reference</div></div>
@@ -200,6 +201,11 @@ Macros</h2></td></tr>
 <tr class="memdesc:a2390e87d3f317fa0ed10c808482c107a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Separators between the words of a {% ... %} tag.  <br /></td></tr>
 <tr class="separator:a2390e87d3f317fa0ed10c808482c107a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
+Typedefs</h2></td></tr>
+<tr class="memitem:a89eae9250c0c1b231739e32e64b88baa" id="r_a89eae9250c0c1b231739e32e64b88baa"><td class="memItemLeft" align="right" valign="top">typedef struct template_block_entry&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d06/template_8c.html#a89eae9250c0c1b231739e32e64b88baa">template_block_entry</a></td></tr>
+<tr class="separator:a89eae9250c0c1b231739e32e64b88baa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
 Enumerations</h2></td></tr>
 <tr class="memitem:a31afc414cf217dbfbb0278dda4c379b1" id="r_a31afc414cf217dbfbb0278dda4c379b1"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1">template_tag_kind</a> { <br />
@@ -211,6 +217,10 @@ Enumerations</h2></td></tr>
 &#160;&#160;<a class="el" href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a53d5a08fcdf1f00be3dc641c47cb9598">TAG_FOR</a>
 , <a class="el" href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a35c3e468313ad1e5fe7d4dcf3a20b501">TAG_ENDFOR</a>
 , <a class="el" href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1add036c0518f3ac025c6fd093b16859a0">TAG_INCLUDE</a>
+, <a class="el" href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1ab84bdca859ebcadaf73c665b511785ab">TAG_EXTENDS</a>
+, <br />
+&#160;&#160;<a class="el" href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a62e7f5b2efaffdda49d499fef6a27d1e">TAG_BLOCK</a>
+, <a class="el" href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a6354c6de300280117ae8cb26b6af30c2">TAG_ENDBLOCK</a>
 <br />
  }</td></tr>
 <tr class="memdesc:a31afc414cf217dbfbb0278dda4c379b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Command named by a {% ... %} tag.  <a href="../../d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1">More...</a><br /></td></tr>
@@ -256,7 +266,7 @@ Functions</h2></td></tr>
 
 <p>Maximum nesting depth for includes/control structures. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00054">54</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00064">64</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 </div>
 </div>
@@ -290,7 +300,7 @@ Functions</h2></td></tr>
 
 <p>Separators between the words of a {% ... %} tag. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00057">57</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00067">67</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 </div>
 </div>
@@ -307,6 +317,21 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00019">19</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Typedef Documentation</h2>
+<a id="a89eae9250c0c1b231739e32e64b88baa" name="a89eae9250c0c1b231739e32e64b88baa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a89eae9250c0c1b231739e32e64b88baa">&#9670;&#160;</a></span>template_block_entry</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">typedef struct template_block_entry template_block_entry</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
 </div>
 </div>
@@ -332,9 +357,12 @@ Functions</h2></td></tr>
 <tr><td class="fieldname"><a id="a31afc414cf217dbfbb0278dda4c379b1a53d5a08fcdf1f00be3dc641c47cb9598" name="a31afc414cf217dbfbb0278dda4c379b1a53d5a08fcdf1f00be3dc641c47cb9598"></a>TAG_FOR&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a31afc414cf217dbfbb0278dda4c379b1a35c3e468313ad1e5fe7d4dcf3a20b501" name="a31afc414cf217dbfbb0278dda4c379b1a35c3e468313ad1e5fe7d4dcf3a20b501"></a>TAG_ENDFOR&#160;</td><td class="fielddoc"></td></tr>
 <tr><td class="fieldname"><a id="a31afc414cf217dbfbb0278dda4c379b1add036c0518f3ac025c6fd093b16859a0" name="a31afc414cf217dbfbb0278dda4c379b1add036c0518f3ac025c6fd093b16859a0"></a>TAG_INCLUDE&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a31afc414cf217dbfbb0278dda4c379b1ab84bdca859ebcadaf73c665b511785ab" name="a31afc414cf217dbfbb0278dda4c379b1ab84bdca859ebcadaf73c665b511785ab"></a>TAG_EXTENDS&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a31afc414cf217dbfbb0278dda4c379b1a62e7f5b2efaffdda49d499fef6a27d1e" name="a31afc414cf217dbfbb0278dda4c379b1a62e7f5b2efaffdda49d499fef6a27d1e"></a>TAG_BLOCK&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a31afc414cf217dbfbb0278dda4c379b1a6354c6de300280117ae8cb26b6af30c2" name="a31afc414cf217dbfbb0278dda4c379b1a6354c6de300280117ae8cb26b6af30c2"></a>TAG_ENDBLOCK&#160;</td><td class="fielddoc"></td></tr>
 </table>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00037">37</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00044">44</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 </div>
 </div>
@@ -377,9 +405,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Heap-allocated rendered output, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00725">725</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00894">894</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d06/template_8c_source.html#l00729">cwist_template_render_ex()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d06/template_8c_source.html#l00898">cwist_template_render_ex()</a>.</p>
 
 </div>
 </div>
@@ -426,9 +454,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Rendered string owned by the caller, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00729">729</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00898">898</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l00725">cwist_template_render()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l00894">cwist_template_render()</a>.</p>
 
 </div>
 </div>
@@ -469,9 +497,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>A new <a class="el" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> containing the rendered output. The caller is responsible for destroying the returned string. Returns NULL if the file cannot be read or on rendering failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00866">866</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l01035">1035</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d06/template_8c_source.html#l00870">cwist_template_render_file_ex()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d06/template_8c_source.html#l01039">cwist_template_render_file_ex()</a>.</p>
 
 </div>
 </div>
@@ -518,9 +546,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Rendered string owned by the caller, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00870">870</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l01039">1039</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l00866">cwist_template_render_file()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d06/template_8c_source.html#l01035">cwist_template_render_file()</a>.</p>
 
 </div>
 </div>
@@ -575,7 +603,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Rendered string owned by the caller, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00877">877</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l01046">1046</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/d06/template_8c_source.html#l00013">PATH_MAX</a>.</p>
 
@@ -632,7 +660,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Rendered string owned by the caller, or NULL on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00756">756</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d06/template_8c_source.html#l00925">925</a> of file <a class="el" href="../../d6/d06/template_8c_source.html">template.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d6/d06/template_8c_source.html#l00013">PATH_MAX</a>.</p>
 

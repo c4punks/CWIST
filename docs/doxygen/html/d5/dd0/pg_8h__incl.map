@@ -1,0 +1,15 @@
+<map id="include/cwist/core/db/pg.h" name="include/cwist/core/db/pg.h">
+<area shape="rect" id="Node000001" title="PostgreSQL client integration using libpq." alt="" coords="140,5,279,45"/>
+<area shape="rect" id="Node000002" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="83,93,226,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="199,47,176,83,172,80,195,44"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="5,181,88,207"/>
+<area shape="poly" id="edge6_Node000001_Node000004" title=" " alt="" coords="144,48,106,67,74,95,64,112,56,131,50,168,45,167,51,129,59,110,70,92,103,63,142,43"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="209,181,319,207"/>
+<area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="221,45,241,92,261,167,256,168,236,94,216,47"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="301,101,376,126"/>
+<area shape="poly" id="edge7_Node000001_Node000006" title=" " alt="" coords="240,43,311,91,308,95,237,48"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="114,181,185,207"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="156,134,154,168,148,167,151,133"/>
+<area shape="poly" id="edge3_Node000002_Node000004" title=" " alt="" coords="130,136,76,175,73,171,127,131"/>
+<area shape="poly" id="edge4_Node000002_Node000005" title=" " alt="" coords="183,131,238,171,235,175,180,136"/>
+</map>
