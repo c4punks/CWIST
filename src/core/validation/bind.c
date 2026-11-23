@@ -22,11 +22,11 @@
  */
 static void bind_add_error(cwist_bind_result_t *r, const char *key, const char *msg) {
     if (!r) return;
+    r->ok = false;
     if (r->error_count >= CWIST_BIND_MAX_ERRORS) return;
     cwist_bind_error_t *e = &r->errors[r->error_count++];
     snprintf(e->key, sizeof(e->key), "%s", key ? key : "(unknown)");
     snprintf(e->message, sizeof(e->message), "%s", msg ? msg : "validation failed");
-    r->ok = false;
 }
 
 /**
@@ -414,6 +414,10 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
             break;
         }
         case CWIST_BIND_SSTRING: {
+            if (f->target_size < sizeof(cwist_sstring *)) {
+                bind_add_error(r, f->json_key, "target size smaller than sstring pointer");
+                return false;
+            }
             cwist_sstring *ss = *(cwist_sstring **)dest;
             if (!ss) {
                 bind_add_error(r, f->json_key, "null sstring target");
@@ -426,6 +430,10 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
             break;
         }
         case CWIST_BIND_JSON_OBJECT: {
+            if (f->target_size < sizeof(cJSON *)) {
+                bind_add_error(r, f->json_key, "target size smaller than cJSON pointer");
+                return false;
+            }
             cJSON **pp = (cJSON **)dest;
             if (!pp) {
                 bind_add_error(r, f->json_key, "null cJSON target");
@@ -457,6 +465,9 @@ static int bind_form_hex(unsigned char c) {
 }
 
 static char *bind_form_decode(const char *src, size_t len) {
+    if (!src) return NULL;
+    if (len > 16 * 1024 * 1024) return NULL;
+    if (memchr(src, '\0', len)) return NULL;
     char *decoded = cwist_alloc(len + 1);
     if (!decoded) return NULL;
     size_t out = 0;
@@ -499,6 +510,11 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
         return false;
     }
 
+    if (!schema->fields && schema->field_count > 0) {
+        bind_add_error(result, "(schema)", "invalid schema: null field array");
+        return false;
+    }
+
     cJSON *root = NULL;
     if (is_json) {
         root = cJSON_ParseWithOpts(payload, NULL, true);
@@ -511,9 +527,22 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
 
     for (size_t i = 0; i < schema->field_count; ++i) {
         const cwist_bind_field_t *f = &schema->fields[i];
+        if (!f->json_key || f->json_key[0] == '\0') {
+            bind_add_error(result, "(schema)", "schema field key is missing");
+            continue;
+        }
+        if (schema->struct_size > 0) {
+            if (f->target_offset >= schema->struct_size ||
+                f->target_size > schema->struct_size ||
+                f->target_offset + f->target_size > schema->struct_size) {
+                bind_add_error(result, f->json_key, "field target offset/size exceeds struct bounds");
+                continue;
+            }
+        }
         const char *raw_value = NULL;
         char *allocated_json = NULL;
         char *allocated_form = NULL;
+        char numbuf[64];
 
         if (is_json && root) {
             const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, f->json_key);
@@ -522,7 +551,6 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                     raw_value = item->valuestring;
                 } else if (cJSON_IsNumber(item)) {
                     /* Keep number as string for uniform validation then convert */
-                    static __thread char numbuf[64];
                     double intpart;
                     if (modf(item->valuedouble, &intpart) == 0.0 &&
                         item->valuedouble >= -9223372036854775808.0 &&
@@ -641,6 +669,21 @@ bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t 
 }
 
 /**
+ * @brief Validate and bind query parameters (req->query) into a struct per the schema.
+ *
+ * @param req HTTP request whose raw query string contains parameters; may be NULL.
+ * @param schema Declarative field schema; must not be NULL.
+ * @param out Destination struct; must not be NULL.
+ * @param result Accumulator for validation errors; reset at start.
+ * @return true when every field passed validation, false otherwise.
+ */
+bool cwist_app_req_bind_query(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
+                              cwist_bind_result_t *result) {
+    const char *payload = (req && req->query && req->query->data) ? req->query->data : NULL;
+    return cwist_bind_generic(schema, payload, false, out, result);
+}
+
+/**
  * @brief Write a 400 Bad Request JSON error response from a bind result.
  *
  * Serializes the accumulated field errors as a JSON object
@@ -654,9 +697,10 @@ bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t 
 void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_result_t *result) {
     if (!res || !result) return;
     res->status_code = CWIST_HTTP_BAD_REQUEST;
-    cwist_sstring_assign(res->status_text, "Bad Request");
+    if (res->status_text) cwist_sstring_assign(res->status_text, "Bad Request");
 
     cwist_json_builder *jb = cwist_json_builder_create();
+    if (!jb) return;
     cwist_json_begin_object(jb);
     cwist_json_add_bool(jb, "success", false);
     cwist_json_begin_array(jb, "errors");
@@ -670,7 +714,7 @@ void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_
     cwist_json_end_object(jb);
 
     const char *json = cwist_json_get_raw(jb);
-    cwist_sstring_assign(res->body, (char *)json);
+    if (res->body && json) cwist_sstring_assign(res->body, (char *)json);
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
     cwist_json_builder_destroy(jb);
 }
@@ -694,6 +738,25 @@ bool cwist_app_req_bind_json_or_400(cwist_http_request *req, cwist_http_response
                                     const cwist_bind_schema_t *schema, void *out) {
     cwist_bind_result_t result;
     if (!cwist_app_req_bind_json(req, schema, out, &result)) {
+        cwist_bind_write_error_response(res, &result);
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Bind URL query parameters, writing a 400 error response on failure.
+ *
+ * @param req HTTP request whose query contains parameter text; may be NULL.
+ * @param res Response receiving the error payload when binding fails.
+ * @param schema Declarative field schema; must not be NULL.
+ * @param out Destination struct; must not be NULL.
+ * @return true when binding succeeded; false when an error response was written.
+ */
+bool cwist_app_req_bind_query_or_400(cwist_http_request *req, cwist_http_response *res,
+                                     const cwist_bind_schema_t *schema, void *out) {
+    cwist_bind_result_t result;
+    if (!cwist_app_req_bind_query(req, schema, out, &result)) {
         cwist_bind_write_error_response(res, &result);
         return false;
     }
