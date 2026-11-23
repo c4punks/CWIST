@@ -191,7 +191,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:aed0d347c76753b520373e20ad3905ac1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Serialize the in-memory database to a raw byte buffer.  <br /></td></tr>
 <tr class="separator:aed0d347c76753b520373e20ad3905ac1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0d51fe7c2f1edae3b320ba9fd8601602" id="r_a0d51fe7c2f1edae3b320ba9fd8601602"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../dc/dfe/nuke__db_8h.html#a0d51fe7c2f1edae3b320ba9fd8601602">cwist_nuke_deserialize</a> (unsigned char *data, sqlite3_int64 data_len)</td></tr>
-<tr class="memdesc:a0d51fe7c2f1edae3b320ba9fd8601602"><td class="mdescLeft">&#160;</td><td class="mdescRight">Load a raw SQLite byte buffer into the in-memory database.  <br /></td></tr>
+<tr class="memdesc:a0d51fe7c2f1edae3b320ba9fd8601602"><td class="mdescLeft">&#160;</td><td class="mdescRight">Replace the NukeDB contents with a raw SQLite byte buffer.  <br /></td></tr>
 <tr class="separator:a0d51fe7c2f1edae3b320ba9fd8601602"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -305,7 +305,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00244">cwist_nuke_sync()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01531">cwist_app_destroy()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l01961">cwist_app_use_nuke_db()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01535">cwist_app_destroy()</a>, <a class="el" href="../../df/d7f/app_8c_source.html#l01965">cwist_app_use_nuke_db()</a>, and <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">cwist_nuke_init()</a>.</p>
 
 </div>
 </div>
@@ -335,8 +335,8 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Load a raw SQLite byte buffer into the in-memory database. </p>
-<p>Uses sqlite3_deserialize() to replace the current in-memory database content with the provided bytes. Ownership of <code>data</code> is transferred to SQLite (allocated with sqlite3_malloc()); do not free it yourself after a successful call.</p>
+<p>Replace the NukeDB contents with a raw SQLite byte buffer. </p>
+<p>The image is written to the database file and to the in-memory mirror, so it persists like any other write. Ownership of <code>data</code> is transferred to SQLite (allocated with sqlite3_malloc()) on success and on failure; do not free it yourself after the call.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">data</td><td>Buffer previously obtained via <a class="el" href="../../dc/dfe/nuke__db_8h.html#aed0d347c76753b520373e20ad3905ac1" title="Serialize the in-memory database to a raw byte buffer.">cwist_nuke_serialize()</a> or <a class="el" href="../../d6/dd4/db__sync_8h.html#a5dc0e7ed8d56fbfba226b34bd3e25e6a" title="Pull a database from a sync server.">cwist_db_sync_pull()</a>. Must be sqlite3_malloc()-allocated. </td></tr>
@@ -345,19 +345,20 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure.</dd></dl>
-<p>Load a raw SQLite byte buffer into the in-memory database.</p>
+<p>Replace the NukeDB contents with a raw SQLite byte buffer.</p>
+<p>The image is loaded into a scratch in-memory connection and copied into the database file (and then the in-memory mirror) with the backup API. Deserializing straight into the file connection, as before, replaced its "main" database with a memory image, so nothing reached the file again (#990).</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">data</td><td>Serialized database buffer; ownership transfers to SQLite, which frees it on close (SQLITE_DESERIALIZE_FREEONCLOSE). </td></tr>
+    <tr><td class="paramname">data</td><td>Serialized database buffer; ownership transfers to SQLite, which frees it (SQLITE_DESERIALIZE_FREEONCLOSE), on success and failure. </td></tr>
     <tr><td class="paramname">data_len</td><td>Length of <code>data</code> in bytes. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>0 on success, or -1 on invalid arguments or when running in disk mode. </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>0 on success, or -1 on invalid arguments or failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00534">534</a> of file <a class="el" href="../../d0/d14/nuke__db_8c_source.html">nuke_db.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00541">541</a> of file <a class="el" href="../../d0/d14/nuke__db_8c_source.html">nuke_db.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00037">cwist_nuke_db_t::disk_db</a>, and <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00036">cwist_nuke_db_t::mem_db</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00037">cwist_nuke_db_t::disk_db</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00042">cwist_nuke_db_t::is_disk_mode</a>, and <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00036">cwist_nuke_db_t::mem_db</a>.</p>
 
 </div>
 </div>
@@ -409,7 +410,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00037">cwist_nuke_db_t::disk_db</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02019">cwist_app_get_db()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01961">cwist_app_use_nuke_db()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l02023">cwist_app_get_db()</a>, and <a class="el" href="../../df/d7f/app_8c_source.html#l01965">cwist_app_use_nuke_db()</a>.</p>
 
 </div>
 </div>
@@ -461,9 +462,9 @@ Functions</h2></td></tr>
 
 <p class="definition">Definition at line <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00393">393</a> of file <a class="el" href="../../d0/d14/nuke__db_8c_source.html">nuke_db.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00039">cwist_nuke_db_t::auto_sync</a>, <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00090">cwist_get_available_ram()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00309">cwist_nuke_close()</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00021">CWIST_NUKE_ERR_GENERIC</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00022">CWIST_NUKE_ERR_LOW_MEMORY</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00020">CWIST_NUKE_OK</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00037">cwist_nuke_db_t::disk_db</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00038">cwist_nuke_db_t::disk_path</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00042">cwist_nuke_db_t::is_disk_mode</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00043">cwist_nuke_db_t::load_successful</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00036">cwist_nuke_db_t::mem_db</a>, and <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00040">cwist_nuke_db_t::sync_interval_ms</a>.</p>
+<p class="reference">References <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00039">cwist_nuke_db_t::auto_sync</a>, <a class="el" href="../../d8/d99/sys__info_8c_source.html#l00162">cwist_get_available_ram()</a>, <a class="el" href="../../d0/d14/nuke__db_8c_source.html#l00309">cwist_nuke_close()</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00021">CWIST_NUKE_ERR_GENERIC</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00022">CWIST_NUKE_ERR_LOW_MEMORY</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00020">CWIST_NUKE_OK</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00037">cwist_nuke_db_t::disk_db</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00038">cwist_nuke_db_t::disk_path</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00042">cwist_nuke_db_t::is_disk_mode</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00043">cwist_nuke_db_t::load_successful</a>, <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00036">cwist_nuke_db_t::mem_db</a>, and <a class="el" href="../../dc/dfe/nuke__db_8h_source.html#l00040">cwist_nuke_db_t::sync_interval_ms</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01961">cwist_app_use_nuke_db()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../df/d7f/app_8c_source.html#l01965">cwist_app_use_nuke_db()</a>.</p>
 
 </div>
 </div>

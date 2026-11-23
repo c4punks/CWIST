@@ -64,7 +64,7 @@ var searchData=
   ['seq_5fauth_5fwasm_5fcrypto_61',['SEQ_AUTH_WASM_CRYPTO',['../d0/d3c/seq__auth_8c.html#a01b057371d731fb19a1a314b7b30a375',1,'seq_auth.c']]],
   ['sequence_62',['sequence',['../d1/d54/md_docs_2deployment_2zero-downtime-restart.html#autotoc_md313',1,'Handoff sequence'],['../df/dc5/md_docs_2async-gc-ownership.html#autotoc_md258',1,'Handoff sequence']]],
   ['sequence_20default_63',['2. Two-letter sequence (default)',['../d0/db4/md_docs_2versioning.html#autotoc_md922',1,'']]],
-  ['sequencing_20specification_64',['sequencing specification',['../d0/db4/md_docs_2versioning.html',1,'Release Codename Sequencing Specification'],['../d6/de8/md_docs_2ko_2versioning.html',1,'Release Codename Sequencing Specification']]],
+  ['sequencing_20specification_64',['sequencing specification',['../d6/de8/md_docs_2ko_2versioning.html',1,'Release Codename Sequencing Specification'],['../d0/db4/md_docs_2versioning.html',1,'Release Codename Sequencing Specification']]],
   ['serve_20the_20ui_65',['3. Serve the UI',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md913',1,'']]],
   ['server_66',['server',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md870',1,'1. Hello World: Starting Your First Server'],['../da/dca/md_docs_2REFERENCE.html#autotoc_md823',1,'2. HTTP Server'],['../db/dbb/md_docs_2api_2livemsg.html#autotoc_md153',1,'Minimal server'],['../d6/d26/md_docs_2api_2wasi.html#autotoc_md216',1,'WASI 0.2 socket server']]],
   ['server_20and_20workload_20mix_67',['Bench server and workload mix',['../db/d05/md_docs_2soak-testing.html#autotoc_md864',1,'']]],

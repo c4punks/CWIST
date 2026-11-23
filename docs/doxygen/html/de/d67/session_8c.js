@@ -3,6 +3,7 @@ var session_8c =
     [ "_POSIX_C_SOURCE", "de/d67/session_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
     [ "CWIST_SESSION_DEFAULT_MAX_AGE", "de/d67/session_8c.html#ac8f6a4d841ccaf1660eb0e49b9cdf21b", null ],
     [ "CWIST_SESSION_DEFAULT_NAME", "de/d67/session_8c.html#a58e82f1844ec683029415534a3f17270", null ],
+    [ "CWIST_SESSION_MAX_COOKIE_BYTES", "de/d67/session_8c.html#a8da15086a4298b2ab8ea0ed7fb62d09c", null ],
     [ "session_revocation", "de/d67/session_8c.html#ad1675f04454ddeb6f84896c7efbb2653", null ],
     [ "cwist_app_set_session_max_age", "de/d67/session_8c.html#a69f3f79ddb480ab91ff161bf6357fae2", null ],
     [ "cwist_app_set_session_name", "de/d67/session_8c.html#a8cb9f009c3a94543ba2572f3a51018f3", null ],

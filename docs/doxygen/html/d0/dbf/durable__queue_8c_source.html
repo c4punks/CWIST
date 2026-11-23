@@ -699,351 +699,381 @@ $(document).ready(function(){initNavTree('d0/dbf/durable__queue_8c_source.html',
 <div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>    <span class="keywordflow">return</span> out;</div>
 <div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>}</div>
 <div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span> </div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_ensure_stream(jq_nats_t *ns, <span class="keyword">const</span> <span class="keywordtype">char</span> *stream, <span class="keyword">const</span> <span class="keywordtype">char</span> *subject) {</div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>    jsErrCode jerr = 0;</div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    jsStreamInfo *si = NULL;</div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>    <span class="keywordflow">if</span> (js_GetStreamInfo(&amp;si, ns-&gt;js, stream, NULL, &amp;jerr) == NATS_OK) {</div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>        jsStreamInfo_Destroy(si);</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>        <span class="keywordflow">return</span> jq_err(0);</div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>    }</div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *subjects[] = {subject};</div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>    jsStreamConfig cfg;</div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>    memset(&amp;cfg, 0, <span class="keyword">sizeof</span>(cfg));</div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>    cfg.Name = stream;</div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>    cfg.Subjects = subjects;</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>    cfg.SubjectsLen = 1;</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>    cfg.Storage = js_FileStorage;</div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>    <span class="keywordflow">if</span> (js_AddStream(&amp;si, ns-&gt;js, &amp;cfg, NULL, &amp;jerr) != NATS_OK) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>    jsStreamInfo_Destroy(si);</div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>    <span class="keywordflow">return</span> jq_err(0);</div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>}</div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span> </div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span><a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *<a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a>(<a class="code hl_typedef" href="../../d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats_t</a> *nats,</div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>                                               <span class="keyword">const</span> <a class="code hl_struct" href="../../da/da7/structcwist__job__queue__opts.html">cwist_job_queue_opts_t</a> *opts) {</div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    <span class="keywordflow">if</span> (!nats) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>    <a class="code hl_typedef" href="../../d1/de1/cwist__nats_8h.html#af88dca0a18efb5c5e994d265a9f04aec">natsConnection</a> *nc = <a class="code hl_function" href="../../d1/de1/cwist__nats_8h.html#a2d775f70cc4aec76437daf2d4e841e93">cwist_nats_native</a>(nats);</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    <span class="keywordflow">if</span> (!nc) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>    <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*q));</div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    <span class="keywordflow">if</span> (!q) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>    memset(q, 0, <span class="keyword">sizeof</span>(*q));</div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    <span class="keywordflow">if</span> (!jq_opts_init(q, opts)) <span class="keywordflow">goto</span> fail;</div>
-<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    q-&gt;backend = 1;</div>
-<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>    q-&gt;dead_count = jq_nats_dead_count;</div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>    ns-&gt;conn = nc;</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>    <span class="keywordtype">char</span> *base = jq_sanitize(q-&gt;name);</div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>    <span class="keywordtype">char</span> *consumer = jq_sanitize(q-&gt;consumer);</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>    <span class="keywordflow">if</span> (!base || !consumer) {</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>        <span class="keywordflow">goto</span> fail;</div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>    }</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>    <span class="keywordtype">size_t</span> n = strlen(base);</div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>    ns-&gt;subject = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(n + 6);</div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    ns-&gt;dead_subject = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(n + 6);</div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    ns-&gt;dead_stream = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(n + 6);</div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    <span class="keywordflow">if</span> (!ns-&gt;subject || !ns-&gt;dead_subject || !ns-&gt;dead_stream) {</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>        <span class="keywordflow">goto</span> fail;</div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    }</div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    snprintf(ns-&gt;subject, n + 6, <span class="stringliteral">&quot;%s.jobs&quot;</span>, base);</div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    snprintf(ns-&gt;dead_subject, n + 6, <span class="stringliteral">&quot;%s.dead&quot;</span>, base);</div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    snprintf(ns-&gt;dead_stream, n + 5, <span class="stringliteral">&quot;%s_DEAD&quot;</span>, base);</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span> </div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>    <span class="keywordflow">if</span> (natsConnection_JetStream(&amp;ns-&gt;js, nc, NULL) != NATS_OK) {</div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>        <span class="keywordflow">goto</span> fail;</div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>    }</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> serr = jq_nats_ensure_stream(ns, base, ns-&gt;subject);</div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>    <span class="keywordflow">if</span> (cwist_error_is_ok(&amp;serr))</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>        serr = jq_nats_ensure_stream(ns, ns-&gt;dead_stream, ns-&gt;dead_subject);</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>    <span class="keywordflow">if</span> (!cwist_error_is_ok(&amp;serr)) {</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>        <span class="keywordflow">goto</span> fail;</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>    }</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span> </div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>    <span class="comment">/* Durable pull consumer; tolerate &quot;already exists&quot; (same config from a</span></div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span><span class="comment">     * previous run). */</span></div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    jsErrCode jerr = 0;</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    jsConsumerInfo *ci = NULL;</div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    jsConsumerConfig cc;</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>    memset(&amp;cc, 0, <span class="keyword">sizeof</span>(cc));</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>    cc.Durable = consumer;</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>    cc.AckPolicy = js_AckExplicit;</div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>    cc.AckWait = (int64_t)q-&gt;visibility_timeout_ms * 1000000;</div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>    cc.MaxDeliver = (int64_t)q-&gt;max_retries + 1;</div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>    cc.DeliverPolicy = js_DeliverAll;</div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    cc.FilterSubject = ns-&gt;subject;</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>    <span class="keywordflow">if</span> (js_AddConsumer(&amp;ci, ns-&gt;js, base, &amp;cc, NULL, &amp;jerr) == NATS_OK) {</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>        jsConsumerInfo_Destroy(ci);</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (js_GetConsumerInfo(&amp;ci, ns-&gt;js, base, consumer, NULL, &amp;jerr) != NATS_OK) {</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>        <span class="keywordflow">goto</span> fail;</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>        jsConsumerInfo_Destroy(ci);</div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>    }</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    <span class="keywordflow">if</span> (js_PullSubscribe(&amp;ns-&gt;sub, ns-&gt;js, ns-&gt;subject, consumer, NULL, NULL, &amp;jerr) != NATS_OK ||</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>        natsConnection_Flush(nc) != NATS_OK) {</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>        <span class="keywordflow">goto</span> fail;</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>    }</div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
-<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>    <span class="keywordflow">return</span> q;</div>
-<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span> </div>
-<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>fail:</div>
-<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>    <span class="keywordflow">if</span> (q) {</div>
-<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.sub) natsSubscription_Destroy(q-&gt;u.nats.sub);</div>
-<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.js) jsCtx_Destroy(q-&gt;u.nats.js);</div>
-<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.subject);</div>
-<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_subject);</div>
-<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_stream);</div>
-<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;name);</div>
-<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;consumer);</div>
-<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q);</div>
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>    }</div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>}</div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span> </div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_enqueue(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <span class="keyword">const</span> <span class="keywordtype">void</span> *payload, <span class="keywordtype">size_t</span> payload_len,</div>
-<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>                                     <span class="keyword">const</span> <span class="keywordtype">char</span> *type) {</div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>    natsMsg *msg = NULL;</div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>    <span class="keywordflow">if</span> (natsMsg_Create(&amp;msg, ns-&gt;subject, NULL, (<span class="keyword">const</span> <span class="keywordtype">char</span> *)payload, (<span class="keywordtype">int</span>)payload_len) != NATS_OK)</div>
-<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>        <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>    <span class="keywordflow">if</span> (type &amp;&amp; natsMsgHeader_Set(msg, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, type) != NATS_OK) {</div>
-<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>        natsMsg_Destroy(msg);</div>
-<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>        <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>    }</div>
-<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    jsErrCode jerr = 0;</div>
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>    jsPubAck *pa = NULL;</div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>    natsStatus s = js_PublishMsg(&amp;pa, ns-&gt;js, msg, NULL, &amp;jerr);</div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>    <span class="keywordflow">if</span> (pa) jsPubAck_Destroy(pa);</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>    natsMsg_Destroy(msg);</div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>    <span class="keywordflow">return</span> s == NATS_OK ? jq_err(0) : jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>}</div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span> </div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span><span class="keyword">static</span> <span class="keywordtype">bool</span> jq_nats_dead_letter(jq_nats_t *ns, natsMsg *msg) {</div>
-<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>    natsMsg *dm = NULL;</div>
-<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>    <span class="keywordflow">if</span> (natsMsg_Create(&amp;dm, ns-&gt;dead_subject, NULL, natsMsg_GetData(msg),</div>
-<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>                       natsMsg_GetDataLength(msg)) != NATS_OK)</div>
-<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *type = NULL;</div>
-<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>    <span class="keywordflow">if</span> (natsMsgHeader_Get(msg, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, &amp;type) == NATS_OK &amp;&amp; type)</div>
-<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>        natsMsgHeader_Set(dm, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, type);</div>
-<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>    jsErrCode jerr = 0;</div>
-<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>    jsPubAck *pa = NULL;</div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>    natsStatus status = js_PublishMsg(&amp;pa, ns-&gt;js, dm, NULL, &amp;jerr);</div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>    <span class="keywordflow">if</span> (pa) jsPubAck_Destroy(pa);</div>
-<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>    natsMsg_Destroy(dm);</div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    <span class="keywordflow">if</span> (status != NATS_OK) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    <span class="keywordflow">return</span> natsMsg_Term(msg, NULL) == NATS_OK;</div>
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>}</div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span> </div>
-<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_claim(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t timeout_ms, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> **job) {</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
-<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>    uint64_t deadline = jq_now_ms() + timeout_ms;</div>
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>    <span class="keywordflow">for</span> (;;) {</div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>        uint64_t now = jq_now_ms();</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>        int64_t slice = (int64_t)(now &gt;= deadline ? 1 : deadline - now);</div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>        <span class="keywordflow">if</span> (slice &gt; (int64_t)<a class="code hl_define" href="../../d0/dbf/durable__queue_8c.html#a1b22d6ca47e8df886f25e54781d8396f">CWIST_JQ_MAX_POLL_SLICE_MS</a>)</div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>            slice = (int64_t)<a class="code hl_define" href="../../d0/dbf/durable__queue_8c.html#a1b22d6ca47e8df886f25e54781d8396f">CWIST_JQ_MAX_POLL_SLICE_MS</a>;</div>
-<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>        natsMsgList list;</div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>        memset(&amp;list, 0, <span class="keyword">sizeof</span>(list));</div>
-<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>        natsStatus s = natsSubscription_Fetch(&amp;list, ns-&gt;sub, 1, slice, NULL);</div>
-<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>        <span class="keywordflow">if</span> (s != NATS_OK) {</div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>            <span class="keywordflow">if</span> (s == NATS_TIMEOUT) {</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>                <span class="keywordflow">if</span> (jq_now_ms() &gt;= deadline) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a09a8293c484896a8ed953ae3d51c06db">CWIST_ERROR_TIMEOUT</a>);</div>
-<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>            }</div>
-<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>            <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        }</div>
-<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; list.Count; i++) {</div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>            natsMsg *msg = list.Msgs[i];</div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>            list.Msgs[i] = NULL; <span class="comment">/* keep the list from double-destroying it */</span></div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>            jsMsgMetaData *meta = NULL;</div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>            <span class="keywordflow">if</span> (natsMsg_GetMetaData(&amp;meta, msg) != NATS_OK) {</div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>                natsMsg_Destroy(msg);</div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>            }</div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>            uint64_t delivered = meta-&gt;NumDelivered;</div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>            <span class="keywordflow">if</span> (delivered &gt; (uint64_t)q-&gt;max_retries) {</div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>                <span class="comment">/* Max deliveries exhausted: park and terminate. */</span></div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>                jq_nats_dead_letter(ns, msg);</div>
-<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>                natsMsg_Destroy(msg);</div>
-<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>                jsMsgMetaData_Destroy(meta);</div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>            }</div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>            <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *j = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*j));</div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>            <span class="keywordflow">if</span> (!j) {</div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>                natsMsg_Destroy(msg);</div>
-<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>                jsMsgMetaData_Destroy(meta);</div>
-<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>                natsMsgList_Destroy(&amp;list);</div>
-<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>                <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a800f1aab8ae12af67cf13a0a8fdf7b86">CWIST_ERROR_NOMEM</a>);</div>
-<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>            }</div>
-<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>            memset(j, 0, <span class="keyword">sizeof</span>(*j));</div>
-<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>            j-&gt;q = q;</div>
-<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>            j-&gt;backend = msg; <span class="comment">/* ownership moves to the job */</span></div>
-<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>            <span class="keywordtype">char</span> id_buf[32];</div>
-<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>            snprintf(id_buf, <span class="keyword">sizeof</span>(id_buf), <span class="stringliteral">&quot;%llu&quot;</span>, (<span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> <span class="keywordtype">long</span>)meta-&gt;Sequence.Stream);</div>
-<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>            j-&gt;id = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(id_buf);</div>
-<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>            <span class="keywordtype">int</span> dlen = natsMsg_GetDataLength(msg);</div>
-<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>            j-&gt;payload_len = dlen &gt; 0 ? (size_t)dlen : 0;</div>
-<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>            <span class="keywordflow">if</span> (j-&gt;payload_len) {</div>
-<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>                j-&gt;payload = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(j-&gt;payload_len);</div>
-<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>                <span class="keywordflow">if</span> (j-&gt;payload) memcpy(j-&gt;payload, natsMsg_GetData(msg), j-&gt;payload_len);</div>
-<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>            }</div>
-<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>            <span class="keyword">const</span> <span class="keywordtype">char</span> *type = NULL;</div>
-<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>            <span class="keywordflow">if</span> (natsMsgHeader_Get(msg, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, &amp;type) == NATS_OK &amp;&amp; type &amp;&amp; *type)</div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>                j-&gt;type = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(type);</div>
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>            j-&gt;attempts = (uint32_t)delivered;</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>            jsMsgMetaData_Destroy(meta);</div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>            <span class="keywordflow">if</span> (!j-&gt;id || (j-&gt;payload_len &amp;&amp; !j-&gt;payload)) {</div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>                cwist_job_free(j);</div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>                natsMsgList_Destroy(&amp;list);</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>                <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a800f1aab8ae12af67cf13a0a8fdf7b86">CWIST_ERROR_NOMEM</a>);</div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>            }</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>            natsMsgList_Destroy(&amp;list); <span class="comment">/* frees the array, not the claimed msg */</span></div>
-<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>            *job = j;</div>
-<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>            <span class="keywordflow">return</span> jq_err(0);</div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>        }</div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>        natsMsgList_Destroy(&amp;list);</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>        <span class="keywordflow">if</span> (jq_now_ms() &gt;= deadline) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a09a8293c484896a8ed953ae3d51c06db">CWIST_ERROR_TIMEOUT</a>);</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>    }</div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>}</div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span> </div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_ack(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>    (void)q;</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    natsStatus s = natsMsg_Ack((natsMsg *)job-&gt;backend, NULL);</div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    natsMsg_Destroy((natsMsg *)job-&gt;backend);</div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    job-&gt;backend = NULL;</div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keywordflow">return</span> s == NATS_OK ? jq_err(0) : jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>}</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span> </div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_nack(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>    natsStatus s;</div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>    <span class="keywordflow">if</span> (q-&gt;retry_delay_ms)</div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>        s = natsMsg_NakWithDelay((natsMsg *)job-&gt;backend, (int64_t)q-&gt;retry_delay_ms, NULL);</div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>    <span class="keywordflow">else</span></div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>        s = natsMsg_Nak((natsMsg *)job-&gt;backend, NULL);</div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>    natsMsg_Destroy((natsMsg *)job-&gt;backend);</div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>    job-&gt;backend = NULL;</div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>    <span class="keywordflow">return</span> s == NATS_OK ? jq_err(0) : jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>}</div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span> </div>
-<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_dead_count(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t *out_count) {</div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
-<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>    jsErrCode jerr = 0;</div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>    jsStreamInfo *si = NULL;</div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <span class="keywordflow">if</span> (js_GetStreamInfo(&amp;si, ns-&gt;js, ns-&gt;dead_stream, NULL, &amp;jerr) != NATS_OK)</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>        <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    *out_count = (uint64_t)si-&gt;State.Msgs;</div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    jsStreamInfo_Destroy(si);</div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <span class="keywordflow">return</span> jq_err(0);</div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>}</div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span><span class="comment">/* CWIST_NATS=0: the JetStream backend is compiled out; creation reports</span></div>
-<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span><span class="comment"> * unsupported the same way an invalid wrapper does. */</span></div>
-<div class="foldopen" id="foldopen00932" data-start="{" data-end="}">
-<div class="line"><a id="l00932" name="l00932"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#ad938cf77198be34b469d14cd39078409">  932</a></span><a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *<a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a>(<a class="code hl_typedef" href="../../d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats_t</a> *nats,</div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>                                               <span class="keyword">const</span> <a class="code hl_struct" href="../../da/da7/structcwist__job__queue__opts.html">cwist_job_queue_opts_t</a> *opts) {</div>
-<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>    (void)nats;</div>
-<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>    (void)opts;</div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>}</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_ensure_stream(jq_nats_t *ns, <span class="keyword">const</span> <span class="keywordtype">char</span> *stream, <span class="keyword">const</span> <span class="keywordtype">char</span> *subject,</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>                                           <span class="keyword">const</span> <span class="keywordtype">char</span> *owner) {</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>    jsErrCode jerr = 0;</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>    jsStreamInfo *si = NULL;</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>    <span class="keywordflow">if</span> (js_GetStreamInfo(&amp;si, ns-&gt;js, stream, NULL, &amp;jerr) == NATS_OK) {</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>        <span class="comment">/* Queue names are sanitized into stream names, so different names</span></div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span><span class="comment">         * (&quot;orders.v1&quot;, &quot;orders_v1&quot;) or a name ending in &quot;_DEAD&quot; can land on</span></div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span><span class="comment">         * a stream that belongs to another queue. Refuse a stream recorded for</span></div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span><span class="comment">         * a different queue, or one that does not carry this queue&#39;s subject</span></div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span><span class="comment">         * (#996). Streams created before the owner was recorded have no</span></div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span><span class="comment">         * description and are only checked by subject. */</span></div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>        <span class="keywordtype">bool</span> ok = si &amp;&amp; si-&gt;Config;</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>        <span class="keywordflow">if</span> (ok &amp;&amp; si-&gt;Config-&gt;Description &amp;&amp; si-&gt;Config-&gt;Description[0] &amp;&amp;</div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>            strcmp(si-&gt;Config-&gt;Description, owner) != 0)</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>            ok = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>        <span class="keywordflow">if</span> (ok) {</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>            <span class="keywordtype">bool</span> has_subject = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>            <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; si-&gt;Config-&gt;SubjectsLen; i++) {</div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>                <span class="keywordflow">if</span> (si-&gt;Config-&gt;Subjects[i] &amp;&amp; strcmp(si-&gt;Config-&gt;Subjects[i], subject) == 0)</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>                    has_subject = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>            }</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>            ok = has_subject;</div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>        }</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>        jsStreamInfo_Destroy(si);</div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>        <span class="keywordflow">return</span> jq_err(ok ? 0 : <a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>    }</div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *subjects[] = {subject};</div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>    jsStreamConfig cfg;</div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>    memset(&amp;cfg, 0, <span class="keyword">sizeof</span>(cfg));</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>    cfg.Name = stream;</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>    cfg.Description = owner;</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>    cfg.Subjects = subjects;</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>    cfg.SubjectsLen = 1;</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>    cfg.Storage = js_FileStorage;</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>    <span class="keywordflow">if</span> (js_AddStream(&amp;si, ns-&gt;js, &amp;cfg, NULL, &amp;jerr) != NATS_OK) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>    jsStreamInfo_Destroy(si);</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>    <span class="keywordflow">return</span> jq_err(0);</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>}</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span> </div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span><a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *<a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a>(<a class="code hl_typedef" href="../../d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats_t</a> *nats,</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>                                               <span class="keyword">const</span> <a class="code hl_struct" href="../../da/da7/structcwist__job__queue__opts.html">cwist_job_queue_opts_t</a> *opts) {</div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>    <span class="keywordflow">if</span> (!nats) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>    <a class="code hl_typedef" href="../../d1/de1/cwist__nats_8h.html#af88dca0a18efb5c5e994d265a9f04aec">natsConnection</a> *nc = <a class="code hl_function" href="../../d1/de1/cwist__nats_8h.html#a2d775f70cc4aec76437daf2d4e841e93">cwist_nats_native</a>(nats);</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>    <span class="keywordflow">if</span> (!nc) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>    <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*q));</div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>    <span class="keywordflow">if</span> (!q) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>    memset(q, 0, <span class="keyword">sizeof</span>(*q));</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>    <span class="keywordflow">if</span> (!jq_opts_init(q, opts)) <span class="keywordflow">goto</span> fail;</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>    q-&gt;backend = 1;</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>    q-&gt;dead_count = jq_nats_dead_count;</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>    ns-&gt;conn = nc;</div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>    <span class="keywordtype">char</span> *base = jq_sanitize(q-&gt;name);</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>    <span class="keywordtype">char</span> *consumer = jq_sanitize(q-&gt;consumer);</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>    <span class="keywordflow">if</span> (!base || !consumer) {</div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>        <span class="keywordflow">goto</span> fail;</div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>    }</div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>    <span class="keywordtype">size_t</span> n = strlen(base);</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>    ns-&gt;subject = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(n + 6);</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>    ns-&gt;dead_subject = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(n + 6);</div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>    ns-&gt;dead_stream = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(n + 6);</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>    <span class="keywordflow">if</span> (!ns-&gt;subject || !ns-&gt;dead_subject || !ns-&gt;dead_stream) {</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>        <span class="keywordflow">goto</span> fail;</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>    }</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>    snprintf(ns-&gt;subject, n + 6, <span class="stringliteral">&quot;%s.jobs&quot;</span>, base);</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>    snprintf(ns-&gt;dead_subject, n + 6, <span class="stringliteral">&quot;%s.dead&quot;</span>, base);</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>    snprintf(ns-&gt;dead_stream, n + 5, <span class="stringliteral">&quot;%s_DEAD&quot;</span>, base);</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span> </div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>    <span class="keywordflow">if</span> (natsConnection_JetStream(&amp;ns-&gt;js, nc, NULL) != NATS_OK) {</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>        <span class="keywordflow">goto</span> fail;</div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>    }</div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>    <span class="keywordtype">size_t</span> owner_len = strlen(q-&gt;name) + 32;</div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>    <span class="keywordtype">char</span> *owner = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(owner_len);</div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>    <span class="keywordtype">char</span> *dead_owner = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(owner_len);</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> serr = jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>    <span class="keywordflow">if</span> (owner &amp;&amp; dead_owner) {</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>        snprintf(owner, owner_len, <span class="stringliteral">&quot;cwist job queue %s&quot;</span>, q-&gt;name);</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>        snprintf(dead_owner, owner_len, <span class="stringliteral">&quot;cwist job queue %s (dead letters)&quot;</span>, q-&gt;name);</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>        serr = jq_nats_ensure_stream(ns, base, ns-&gt;subject, owner);</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>        <span class="keywordflow">if</span> (cwist_error_is_ok(&amp;serr))</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>            serr = jq_nats_ensure_stream(ns, ns-&gt;dead_stream, ns-&gt;dead_subject, dead_owner);</div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>    }</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(owner);</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(dead_owner);</div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>    <span class="keywordflow">if</span> (!cwist_error_is_ok(&amp;serr)) {</div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>        <span class="keywordflow">goto</span> fail;</div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>    }</div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span> </div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>    <span class="comment">/* Durable pull consumer; tolerate &quot;already exists&quot; (same config from a</span></div>
+<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span><span class="comment">     * previous run). */</span></div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>    jsErrCode jerr = 0;</div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>    jsConsumerInfo *ci = NULL;</div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>    jsConsumerConfig cc;</div>
+<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>    memset(&amp;cc, 0, <span class="keyword">sizeof</span>(cc));</div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>    cc.Durable = consumer;</div>
+<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span>    cc.AckPolicy = js_AckExplicit;</div>
+<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>    cc.AckWait = (int64_t)q-&gt;visibility_timeout_ms * 1000000;</div>
+<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>    cc.MaxDeliver = (int64_t)q-&gt;max_retries + 1;</div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>    cc.DeliverPolicy = js_DeliverAll;</div>
+<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>    cc.FilterSubject = ns-&gt;subject;</div>
+<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>    <span class="keywordflow">if</span> (js_AddConsumer(&amp;ci, ns-&gt;js, base, &amp;cc, NULL, &amp;jerr) == NATS_OK) {</div>
+<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>        jsConsumerInfo_Destroy(ci);</div>
+<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (js_GetConsumerInfo(&amp;ci, ns-&gt;js, base, consumer, NULL, &amp;jerr) != NATS_OK) {</div>
+<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
+<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
+<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>        <span class="keywordflow">goto</span> fail;</div>
+<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>        jsConsumerInfo_Destroy(ci);</div>
+<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    }</div>
+<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>    <span class="keywordflow">if</span> (js_PullSubscribe(&amp;ns-&gt;sub, ns-&gt;js, ns-&gt;subject, consumer, NULL, NULL, &amp;jerr) != NATS_OK ||</div>
+<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>        natsConnection_Flush(nc) != NATS_OK) {</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
+<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
+<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>        <span class="keywordflow">goto</span> fail;</div>
+<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>    }</div>
+<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(base);</div>
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(consumer);</div>
+<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    <span class="keywordflow">return</span> q;</div>
+<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span> </div>
+<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>fail:</div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>    <span class="keywordflow">if</span> (q) {</div>
+<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.sub) natsSubscription_Destroy(q-&gt;u.nats.sub);</div>
+<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.js) jsCtx_Destroy(q-&gt;u.nats.js);</div>
+<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.subject);</div>
+<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_subject);</div>
+<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_stream);</div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;name);</div>
+<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;consumer);</div>
+<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q);</div>
+<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>    }</div>
+<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>}</div>
+<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span> </div>
+<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_enqueue(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <span class="keyword">const</span> <span class="keywordtype">void</span> *payload, <span class="keywordtype">size_t</span> payload_len,</div>
+<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>                                     <span class="keyword">const</span> <span class="keywordtype">char</span> *type) {</div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
+<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>    natsMsg *msg = NULL;</div>
+<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>    <span class="keywordflow">if</span> (natsMsg_Create(&amp;msg, ns-&gt;subject, NULL, (<span class="keyword">const</span> <span class="keywordtype">char</span> *)payload, (<span class="keywordtype">int</span>)payload_len) != NATS_OK)</div>
+<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>    <span class="keywordflow">if</span> (type &amp;&amp; natsMsgHeader_Set(msg, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, type) != NATS_OK) {</div>
+<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>        natsMsg_Destroy(msg);</div>
+<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>        <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>    }</div>
+<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>    jsErrCode jerr = 0;</div>
+<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>    jsPubAck *pa = NULL;</div>
+<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>    natsStatus s = js_PublishMsg(&amp;pa, ns-&gt;js, msg, NULL, &amp;jerr);</div>
+<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>    <span class="keywordflow">if</span> (pa) jsPubAck_Destroy(pa);</div>
+<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>    natsMsg_Destroy(msg);</div>
+<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>    <span class="keywordflow">return</span> s == NATS_OK ? jq_err(0) : jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>}</div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span> </div>
+<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span><span class="keyword">static</span> <span class="keywordtype">bool</span> jq_nats_dead_letter(jq_nats_t *ns, natsMsg *msg) {</div>
+<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>    natsMsg *dm = NULL;</div>
+<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>    <span class="keywordflow">if</span> (natsMsg_Create(&amp;dm, ns-&gt;dead_subject, NULL, natsMsg_GetData(msg),</div>
+<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>                       natsMsg_GetDataLength(msg)) != NATS_OK)</div>
+<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *type = NULL;</div>
+<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>    <span class="keywordflow">if</span> (natsMsgHeader_Get(msg, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, &amp;type) == NATS_OK &amp;&amp; type)</div>
+<div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>        natsMsgHeader_Set(dm, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, type);</div>
+<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>    jsErrCode jerr = 0;</div>
+<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>    jsPubAck *pa = NULL;</div>
+<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>    natsStatus status = js_PublishMsg(&amp;pa, ns-&gt;js, dm, NULL, &amp;jerr);</div>
+<div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>    <span class="keywordflow">if</span> (pa) jsPubAck_Destroy(pa);</div>
+<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>    natsMsg_Destroy(dm);</div>
+<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>    <span class="keywordflow">if</span> (status != NATS_OK) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>    <span class="keywordflow">return</span> natsMsg_Term(msg, NULL) == NATS_OK;</div>
+<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>}</div>
+<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span> </div>
+<div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_claim(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t timeout_ms, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> **job) {</div>
+<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
+<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    uint64_t deadline = jq_now_ms() + timeout_ms;</div>
+<div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span>    <span class="keywordflow">for</span> (;;) {</div>
+<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>        uint64_t now = jq_now_ms();</div>
+<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>        int64_t slice = (int64_t)(now &gt;= deadline ? 1 : deadline - now);</div>
+<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span>        <span class="keywordflow">if</span> (slice &gt; (int64_t)<a class="code hl_define" href="../../d0/dbf/durable__queue_8c.html#a1b22d6ca47e8df886f25e54781d8396f">CWIST_JQ_MAX_POLL_SLICE_MS</a>)</div>
+<div class="line"><a id="l00862" name="l00862"></a><span class="lineno">  862</span>            slice = (int64_t)<a class="code hl_define" href="../../d0/dbf/durable__queue_8c.html#a1b22d6ca47e8df886f25e54781d8396f">CWIST_JQ_MAX_POLL_SLICE_MS</a>;</div>
+<div class="line"><a id="l00863" name="l00863"></a><span class="lineno">  863</span>        natsMsgList list;</div>
+<div class="line"><a id="l00864" name="l00864"></a><span class="lineno">  864</span>        memset(&amp;list, 0, <span class="keyword">sizeof</span>(list));</div>
+<div class="line"><a id="l00865" name="l00865"></a><span class="lineno">  865</span>        natsStatus s = natsSubscription_Fetch(&amp;list, ns-&gt;sub, 1, slice, NULL);</div>
+<div class="line"><a id="l00866" name="l00866"></a><span class="lineno">  866</span>        <span class="keywordflow">if</span> (s != NATS_OK) {</div>
+<div class="line"><a id="l00867" name="l00867"></a><span class="lineno">  867</span>            <span class="keywordflow">if</span> (s == NATS_TIMEOUT) {</div>
+<div class="line"><a id="l00868" name="l00868"></a><span class="lineno">  868</span>                <span class="keywordflow">if</span> (jq_now_ms() &gt;= deadline) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a09a8293c484896a8ed953ae3d51c06db">CWIST_ERROR_TIMEOUT</a>);</div>
+<div class="line"><a id="l00869" name="l00869"></a><span class="lineno">  869</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00870" name="l00870"></a><span class="lineno">  870</span>            }</div>
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno">  871</span>            <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>        }</div>
+<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i = 0; i &lt; list.Count; i++) {</div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>            natsMsg *msg = list.Msgs[i];</div>
+<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>            list.Msgs[i] = NULL; <span class="comment">/* keep the list from double-destroying it */</span></div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span>            jsMsgMetaData *meta = NULL;</div>
+<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>            <span class="keywordflow">if</span> (natsMsg_GetMetaData(&amp;meta, msg) != NATS_OK) {</div>
+<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>                natsMsg_Destroy(msg);</div>
+<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>            }</div>
+<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>            uint64_t delivered = meta-&gt;NumDelivered;</div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>            <span class="keywordflow">if</span> (delivered &gt; (uint64_t)q-&gt;max_retries) {</div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>                <span class="comment">/* Max deliveries exhausted: park and terminate. */</span></div>
+<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>                jq_nats_dead_letter(ns, msg);</div>
+<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>                natsMsg_Destroy(msg);</div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>                jsMsgMetaData_Destroy(meta);</div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>            }</div>
+<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>            <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *j = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(*j));</div>
+<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>            <span class="keywordflow">if</span> (!j) {</div>
+<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>                natsMsg_Destroy(msg);</div>
+<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>                jsMsgMetaData_Destroy(meta);</div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>                natsMsgList_Destroy(&amp;list);</div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>                <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a800f1aab8ae12af67cf13a0a8fdf7b86">CWIST_ERROR_NOMEM</a>);</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>            }</div>
+<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>            memset(j, 0, <span class="keyword">sizeof</span>(*j));</div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>            j-&gt;q = q;</div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>            j-&gt;backend = msg; <span class="comment">/* ownership moves to the job */</span></div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>            <span class="keywordtype">char</span> id_buf[32];</div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>            snprintf(id_buf, <span class="keyword">sizeof</span>(id_buf), <span class="stringliteral">&quot;%llu&quot;</span>, (<span class="keywordtype">unsigned</span> <span class="keywordtype">long</span> <span class="keywordtype">long</span>)meta-&gt;Sequence.Stream);</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>            j-&gt;id = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(id_buf);</div>
+<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>            <span class="keywordtype">int</span> dlen = natsMsg_GetDataLength(msg);</div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>            j-&gt;payload_len = dlen &gt; 0 ? (size_t)dlen : 0;</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>            <span class="keywordflow">if</span> (j-&gt;payload_len) {</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>                j-&gt;payload = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(j-&gt;payload_len);</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>                <span class="keywordflow">if</span> (j-&gt;payload) memcpy(j-&gt;payload, natsMsg_GetData(msg), j-&gt;payload_len);</div>
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>            }</div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>            <span class="keyword">const</span> <span class="keywordtype">char</span> *type = NULL;</div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>            <span class="keywordflow">if</span> (natsMsgHeader_Get(msg, <span class="stringliteral">&quot;Cwist-Type&quot;</span>, &amp;type) == NATS_OK &amp;&amp; type &amp;&amp; *type)</div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>                j-&gt;type = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(type);</div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>            j-&gt;attempts = (uint32_t)delivered;</div>
+<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>            jsMsgMetaData_Destroy(meta);</div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>            <span class="keywordflow">if</span> (!j-&gt;id || (j-&gt;payload_len &amp;&amp; !j-&gt;payload)) {</div>
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>                cwist_job_free(j);</div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>                natsMsgList_Destroy(&amp;list);</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>                <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a800f1aab8ae12af67cf13a0a8fdf7b86">CWIST_ERROR_NOMEM</a>);</div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>            }</div>
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>            natsMsgList_Destroy(&amp;list); <span class="comment">/* frees the array, not the claimed msg */</span></div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>            *job = j;</div>
+<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>            <span class="keywordflow">return</span> jq_err(0);</div>
+<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>        }</div>
+<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>        natsMsgList_Destroy(&amp;list);</div>
+<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>        <span class="keywordflow">if</span> (jq_now_ms() &gt;= deadline) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a09a8293c484896a8ed953ae3d51c06db">CWIST_ERROR_TIMEOUT</a>);</div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>    }</div>
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>}</div>
+<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span> </div>
+<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_ack(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>    (void)q;</div>
+<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>    natsStatus s = natsMsg_Ack((natsMsg *)job-&gt;backend, NULL);</div>
+<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>    natsMsg_Destroy((natsMsg *)job-&gt;backend);</div>
+<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>    job-&gt;backend = NULL;</div>
+<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    <span class="keywordflow">return</span> s == NATS_OK ? jq_err(0) : jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>}</div>
+<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span> </div>
+<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_nack(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
+<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>    natsStatus s;</div>
+<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>    <span class="keywordflow">if</span> (q-&gt;retry_delay_ms)</div>
+<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        s = natsMsg_NakWithDelay((natsMsg *)job-&gt;backend, (int64_t)q-&gt;retry_delay_ms, NULL);</div>
+<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>    <span class="keywordflow">else</span></div>
+<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>        s = natsMsg_Nak((natsMsg *)job-&gt;backend, NULL);</div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    natsMsg_Destroy((natsMsg *)job-&gt;backend);</div>
+<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    job-&gt;backend = NULL;</div>
+<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    <span class="keywordflow">return</span> s == NATS_OK ? jq_err(0) : jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>}</div>
+<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span> </div>
+<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span><span class="keyword">static</span> <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> jq_nats_dead_count(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t *out_count) {</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>    jq_nats_t *ns = &amp;q-&gt;u.nats;</div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    jsErrCode jerr = 0;</div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span>    jsStreamInfo *si = NULL;</div>
+<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>    <span class="keywordflow">if</span> (js_GetStreamInfo(&amp;si, ns-&gt;js, ns-&gt;dead_stream, NULL, &amp;jerr) != NATS_OK)</div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>        <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>    *out_count = (uint64_t)si-&gt;State.Msgs;</div>
+<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>    jsStreamInfo_Destroy(si);</div>
+<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>    <span class="keywordflow">return</span> jq_err(0);</div>
+<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>}</div>
+<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span><span class="comment">/* CWIST_NATS=0: the JetStream backend is compiled out; creation reports</span></div>
+<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span><span class="comment"> * unsupported the same way an invalid wrapper does. */</span></div>
+<div class="foldopen" id="foldopen00962" data-start="{" data-end="}">
+<div class="line"><a id="l00962" name="l00962"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#ad938cf77198be34b469d14cd39078409">  962</a></span><a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *<a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a>(<a class="code hl_typedef" href="../../d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats_t</a> *nats,</div>
+<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>                                               <span class="keyword">const</span> <a class="code hl_struct" href="../../da/da7/structcwist__job__queue__opts.html">cwist_job_queue_opts_t</a> *opts) {</div>
+<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>    (void)nats;</div>
+<div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span>    (void)opts;</div>
+<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>}</div>
 </div>
-<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span><span class="preprocessor">#endif </span><span class="comment">/* CWIST_NATS */</span><span class="preprocessor"></span></div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span> </div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span><span class="comment">/* --- Dispatch ----------------------------------------------------------- */</span></div>
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span> </div>
-<div class="foldopen" id="foldopen00943" data-start="{" data-end="}">
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a122c21ac81ba47f8b662b4786b68d4ea">  943</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a122c21ac81ba47f8b662b4786b68d4ea">cwist_job_queue_destroy</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q) {</div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    <span class="keywordflow">if</span> (!q) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    <span class="keywordflow">if</span> (q-&gt;backend == 0) {</div>
-<div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.stream);</div>
-<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.attempts);</div>
-<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.dead);</div>
-<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.delay);</div>
-<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.consumer);</div>
-<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    }</div>
-<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
-<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>    <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.sub) natsSubscription_Destroy(q-&gt;u.nats.sub);</div>
-<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.js) jsCtx_Destroy(q-&gt;u.nats.js);</div>
-<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.subject);</div>
-<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_subject);</div>
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_stream);</div>
-<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>    }</div>
-<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;name);</div>
-<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;consumer);</div>
-<div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q);</div>
-<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>}</div>
-</div>
-<div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span> </div>
-<div class="foldopen" id="foldopen00970" data-start="{" data-end="}">
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a392dee74f5dd41f35495a81d45089df4">  970</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a392dee74f5dd41f35495a81d45089df4">cwist_job_queue_enqueue</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <span class="keyword">const</span> <span class="keywordtype">void</span> *payload, <span class="keywordtype">size_t</span> payload_len,</div>
-<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>                                      <span class="keyword">const</span> <span class="keywordtype">char</span> *type) {</div>
-<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>    <span class="keywordflow">if</span> (!q || (!payload &amp;&amp; payload_len)) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>    <span class="keywordflow">if</span> (!payload) payload = <span class="stringliteral">&quot;&quot;</span>;</div>
-<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>    <span class="keywordflow">return</span> q-&gt;backend == 0 ? jq_redis_enqueue(q, payload, payload_len, type)</div>
-<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>                           : jq_nats_enqueue(q, payload, payload_len, type);</div>
-<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>    <span class="keywordflow">return</span> jq_redis_enqueue(q, payload, payload_len, type);</div>
-<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>}</div>
-</div>
-<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span> </div>
-<div class="foldopen" id="foldopen00986" data-start="{" data-end="}">
-<div class="line"><a id="l00986" name="l00986"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#abc844eef2c375b546b75dd35c94ca58a">  986</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#abc844eef2c375b546b75dd35c94ca58a">cwist_job_queue_claim</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t timeout_ms, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> **job) {</div>
-<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>    <span class="keywordflow">if</span> (!q || !job) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
-<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>    *job = NULL;</div>
-<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
-<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>    <span class="keywordflow">return</span> q-&gt;backend == 0 ? jq_redis_claim(q, timeout_ms, job) : jq_nats_claim(q, timeout_ms, job);</div>
-<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span>    <span class="keywordflow">return</span> jq_redis_claim(q, timeout_ms, job);</div>
-<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span><span class="preprocessor">#endif </span><span class="comment">/* CWIST_NATS */</span><span class="preprocessor"></span></div>
+<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span> </div>
+<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span><span class="comment">/* --- Dispatch ----------------------------------------------------------- */</span></div>
+<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span> </div>
+<div class="foldopen" id="foldopen00973" data-start="{" data-end="}">
+<div class="line"><a id="l00973" name="l00973"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a122c21ac81ba47f8b662b4786b68d4ea">  973</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a122c21ac81ba47f8b662b4786b68d4ea">cwist_job_queue_destroy</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q) {</div>
+<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    <span class="keywordflow">if</span> (!q) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>    <span class="keywordflow">if</span> (q-&gt;backend == 0) {</div>
+<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.stream);</div>
+<div class="line"><a id="l00977" name="l00977"></a><span class="lineno">  977</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.attempts);</div>
+<div class="line"><a id="l00978" name="l00978"></a><span class="lineno">  978</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.dead);</div>
+<div class="line"><a id="l00979" name="l00979"></a><span class="lineno">  979</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.delay);</div>
+<div class="line"><a id="l00980" name="l00980"></a><span class="lineno">  980</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.redis.consumer);</div>
+<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>    }</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
+<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>    <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.sub) natsSubscription_Destroy(q-&gt;u.nats.sub);</div>
+<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>        <span class="keywordflow">if</span> (q-&gt;u.nats.js) jsCtx_Destroy(q-&gt;u.nats.js);</div>
+<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.subject);</div>
+<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_subject);</div>
+<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;u.nats.dead_stream);</div>
+<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span>    }</div>
+<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;name);</div>
+<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q-&gt;consumer);</div>
+<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(q);</div>
 <div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>}</div>
 </div>
 <div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span> </div>
 <div class="foldopen" id="foldopen01000" data-start="{" data-end="}">
-<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a2d7bb58dde2dd3504d61bb65490ac652"> 1000</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a2d7bb58dde2dd3504d61bb65490ac652">cwist_job_queue_ack</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
-<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>    <span class="keywordflow">if</span> (!q || !job || job-&gt;q != q) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
-<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
-<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = q-&gt;backend == 0 ? jq_redis_ack(q, job) : jq_nats_ack(q, job);</div>
-<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = jq_redis_ack(q, job);</div>
-<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span>    cwist_job_free(job);</div>
-<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>    <span class="keywordflow">return</span> err;</div>
-<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>}</div>
+<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a392dee74f5dd41f35495a81d45089df4"> 1000</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a392dee74f5dd41f35495a81d45089df4">cwist_job_queue_enqueue</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <span class="keyword">const</span> <span class="keywordtype">void</span> *payload, <span class="keywordtype">size_t</span> payload_len,</div>
+<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>                                      <span class="keyword">const</span> <span class="keywordtype">char</span> *type) {</div>
+<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>    <span class="keywordflow">if</span> (!q || (!payload &amp;&amp; payload_len)) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
+<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span>    <span class="keywordflow">if</span> (!payload) payload = <span class="stringliteral">&quot;&quot;</span>;</div>
+<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
+<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>    <span class="keywordflow">return</span> q-&gt;backend == 0 ? jq_redis_enqueue(q, payload, payload_len, type)</div>
+<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span>                           : jq_nats_enqueue(q, payload, payload_len, type);</div>
+<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>    <span class="keywordflow">return</span> jq_redis_enqueue(q, payload, payload_len, type);</div>
+<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>}</div>
 </div>
-<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span> </div>
-<div class="foldopen" id="foldopen01015" data-start="{" data-end="}">
-<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a6e465b5ce123b9510377bfc398e5da42"> 1015</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a6e465b5ce123b9510377bfc398e5da42">cwist_job_queue_nack</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
-<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>    <span class="keywordflow">if</span> (!q || !job || job-&gt;q != q) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
-<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
-<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = q-&gt;backend == 0 ? jq_redis_nack(q, job) : jq_nats_nack(q, job);</div>
-<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span><span class="preprocessor">#else</span></div>
-<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = jq_redis_nack(q, job);</div>
-<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>    cwist_job_free(job);</div>
-<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>    <span class="keywordflow">return</span> err;</div>
+<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span> </div>
+<div class="foldopen" id="foldopen01016" data-start="{" data-end="}">
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#abc844eef2c375b546b75dd35c94ca58a"> 1016</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#abc844eef2c375b546b75dd35c94ca58a">cwist_job_queue_claim</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t timeout_ms, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> **job) {</div>
+<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>    <span class="keywordflow">if</span> (!q || !job) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
+<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>    *job = NULL;</div>
+<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
+<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>    <span class="keywordflow">return</span> q-&gt;backend == 0 ? jq_redis_claim(q, timeout_ms, job) : jq_nats_claim(q, timeout_ms, job);</div>
+<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span>    <span class="keywordflow">return</span> jq_redis_claim(q, timeout_ms, job);</div>
+<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span><span class="preprocessor">#endif</span></div>
 <div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>}</div>
 </div>
 <div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span> </div>
-<div class="foldopen" id="foldopen01031" data-start="{" data-end="}">
-<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#aae18dff28136530d9473f498fe438f7c"> 1031</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#aae18dff28136530d9473f498fe438f7c">cwist_job_queue_dead_count</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t *out_count) {</div>
-<div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span>    <span class="keywordflow">if</span> (!q || !out_count) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
-<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>    <span class="keywordflow">if</span> (!q-&gt;dead_count) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
-<div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span>    <span class="keywordflow">return</span> q-&gt;dead_count(q, out_count);</div>
-<div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>}</div>
+<div class="foldopen" id="foldopen01030" data-start="{" data-end="}">
+<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a2d7bb58dde2dd3504d61bb65490ac652"> 1030</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a2d7bb58dde2dd3504d61bb65490ac652">cwist_job_queue_ack</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
+<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>    <span class="keywordflow">if</span> (!q || !job || job-&gt;q != q) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
+<div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
+<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = q-&gt;backend == 0 ? jq_redis_ack(q, job) : jq_nats_ack(q, job);</div>
+<div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = jq_redis_ack(q, job);</div>
+<div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>    cwist_job_free(job);</div>
+<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>    <span class="keywordflow">return</span> err;</div>
+<div class="line"><a id="l01039" name="l01039"></a><span class="lineno"> 1039</span>}</div>
+</div>
+<div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span> </div>
+<div class="foldopen" id="foldopen01045" data-start="{" data-end="}">
+<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#a6e465b5ce123b9510377bfc398e5da42"> 1045</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#a6e465b5ce123b9510377bfc398e5da42">cwist_job_queue_nack</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, <a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a8fc7622c97a13c1026b60ca0f5cb8034">cwist_job_t</a> *job) {</div>
+<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>    <span class="keywordflow">if</span> (!q || !job || job-&gt;q != q) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
+<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span><span class="preprocessor">#ifdef CWIST_NATS</span></div>
+<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = q-&gt;backend == 0 ? jq_redis_nack(q, job) : jq_nats_nack(q, job);</div>
+<div class="line"><a id="l01049" name="l01049"></a><span class="lineno"> 1049</span><span class="preprocessor">#else</span></div>
+<div class="line"><a id="l01050" name="l01050"></a><span class="lineno"> 1050</span>    <a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> err = jq_redis_nack(q, job);</div>
+<div class="line"><a id="l01051" name="l01051"></a><span class="lineno"> 1051</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l01052" name="l01052"></a><span class="lineno"> 1052</span>    cwist_job_free(job);</div>
+<div class="line"><a id="l01053" name="l01053"></a><span class="lineno"> 1053</span>    <span class="keywordflow">return</span> err;</div>
+<div class="line"><a id="l01054" name="l01054"></a><span class="lineno"> 1054</span>}</div>
+</div>
+<div class="line"><a id="l01055" name="l01055"></a><span class="lineno"> 1055</span> </div>
+<div class="foldopen" id="foldopen01061" data-start="{" data-end="}">
+<div class="line"><a id="l01061" name="l01061"></a><span class="lineno"><a class="line" href="../../dd/d3c/durable__queue_8h.html#aae18dff28136530d9473f498fe438f7c"> 1061</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../d0/dbf/durable__queue_8c.html#aae18dff28136530d9473f498fe438f7c">cwist_job_queue_dead_count</a>(<a class="code hl_typedef" href="../../dd/d3c/durable__queue_8h.html#a6c1cff460557a096aba388f7e02ded7e">cwist_job_queue_t</a> *q, uint64_t *out_count) {</div>
+<div class="line"><a id="l01062" name="l01062"></a><span class="lineno"> 1062</span>    <span class="keywordflow">if</span> (!q || !out_count) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f">CWIST_ERROR_INVALID_PARAM</a>);</div>
+<div class="line"><a id="l01063" name="l01063"></a><span class="lineno"> 1063</span>    <span class="keywordflow">if</span> (!q-&gt;dead_count) <span class="keywordflow">return</span> jq_err(<a class="code hl_define" href="../../d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2">CWIST_FAILURE</a>);</div>
+<div class="line"><a id="l01064" name="l01064"></a><span class="lineno"> 1064</span>    <span class="keywordflow">return</span> q-&gt;dead_count(q, out_count);</div>
+<div class="line"><a id="l01065" name="l01065"></a><span class="lineno"> 1065</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
@@ -1051,29 +1081,29 @@ $(document).ready(function(){initNavTree('d0/dbf/durable__queue_8c_source.html',
 <div class="ttc" id="aalloc_8h_html_ae7766da022549f5efa733487814a371b"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#ae7766da022549f5efa733487814a371b">cwist_strndup</a></div><div class="ttdeci">char * cwist_strndup(const char *src, size_t n)</div><div class="ttdoc">Duplicate up to n bytes of a string (libttak-backed).</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00041">alloc.c:41</a></div></div>
 <div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00017">alloc.c:17</a></div></div>
 <div class="ttc" id="acwist__nats_8h_html"><div class="ttname"><a href="../../d1/de1/cwist__nats_8h.html">cwist_nats.h</a></div><div class="ttdoc">NATS client interface.</div></div>
-<div class="ttc" id="acwist__nats_8h_html_a2d775f70cc4aec76437daf2d4e841e93"><div class="ttname"><a href="../../d1/de1/cwist__nats_8h.html#a2d775f70cc4aec76437daf2d4e841e93">cwist_nats_native</a></div><div class="ttdeci">natsConnection * cwist_nats_native(cwist_nats_t *nats)</div><div class="ttdoc">Borrow the underlying cnats connection.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d53/cwist__nats_8c_source.html#l00176">cwist_nats.c:176</a></div></div>
+<div class="ttc" id="acwist__nats_8h_html_a2d775f70cc4aec76437daf2d4e841e93"><div class="ttname"><a href="../../d1/de1/cwist__nats_8h.html#a2d775f70cc4aec76437daf2d4e841e93">cwist_nats_native</a></div><div class="ttdeci">natsConnection * cwist_nats_native(cwist_nats_t *nats)</div><div class="ttdoc">Borrow the underlying cnats connection.</div><div class="ttdef"><b>Definition</b> <a href="../../d6/d53/cwist__nats_8c_source.html#l00256">cwist_nats.c:256</a></div></div>
 <div class="ttc" id="acwist__nats_8h_html_a5692a2f056a6005cf60cafbb3b283cb0"><div class="ttname"><a href="../../d1/de1/cwist__nats_8h.html#a5692a2f056a6005cf60cafbb3b283cb0">cwist_nats_t</a></div><div class="ttdeci">struct cwist_nats cwist_nats_t</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de1/cwist__nats_8h_source.html#l00016">cwist_nats.h:16</a></div></div>
 <div class="ttc" id="acwist__nats_8h_html_af88dca0a18efb5c5e994d265a9f04aec"><div class="ttname"><a href="../../d1/de1/cwist__nats_8h.html#af88dca0a18efb5c5e994d265a9f04aec">natsConnection</a></div><div class="ttdeci">struct __natsConnection natsConnection</div><div class="ttdef"><b>Definition</b> <a href="../../d1/de1/cwist__nats_8h_source.html#l00018">cwist_nats.h:18</a></div></div>
 <div class="ttc" id="acwist__redis_8h_html"><div class="ttname"><a href="../../d0/d39/cwist__redis_8h.html">cwist_redis.h</a></div><div class="ttdoc">Minimal in-tree Redis client (RESP2) with connection pooling.</div></div>
 <div class="ttc" id="acwist__redis_8h_html_a0fd305ee018783b230e1ab78a686d7b7"><div class="ttname"><a href="../../d0/d39/cwist__redis_8h.html#a0fd305ee018783b230e1ab78a686d7b7">cwist_redis_t</a></div><div class="ttdeci">struct cwist_redis cwist_redis_t</div><div class="ttdoc">Single Redis connection handle.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/d39/cwist__redis_8h_source.html#l00019">cwist_redis.h:19</a></div></div>
-<div class="ttc" id="acwist__redis_8h_html_a350593fbaa92a3441a8f1c3a5a5270d3"><div class="ttname"><a href="../../d0/d39/cwist__redis_8h.html#a350593fbaa92a3441a8f1c3a5a5270d3">cwist_redis_command_argv_reply</a></div><div class="ttdeci">cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, const void *const *argv, const size_t *argv_lens, cwist_redis_reply_t **reply)</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dca/cwist__redis_8c_source.html#l00698">cwist_redis.c:698</a></div></div>
-<div class="ttc" id="acwist__redis_8h_html_ac1acbfb11055b6a1a2caf21b41802f99"><div class="ttname"><a href="../../d0/d39/cwist__redis_8h.html#ac1acbfb11055b6a1a2caf21b41802f99">cwist_redis_reply_free</a></div><div class="ttdeci">void cwist_redis_reply_free(cwist_redis_reply_t *reply)</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dca/cwist__redis_8c_source.html#l00616">cwist_redis.c:616</a></div></div>
+<div class="ttc" id="acwist__redis_8h_html_a350593fbaa92a3441a8f1c3a5a5270d3"><div class="ttname"><a href="../../d0/d39/cwist__redis_8h.html#a350593fbaa92a3441a8f1c3a5a5270d3">cwist_redis_command_argv_reply</a></div><div class="ttdeci">cwist_error_t cwist_redis_command_argv_reply(cwist_redis_t *r, size_t argc, const void *const *argv, const size_t *argv_lens, cwist_redis_reply_t **reply)</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dca/cwist__redis_8c_source.html#l00707">cwist_redis.c:707</a></div></div>
+<div class="ttc" id="acwist__redis_8h_html_ac1acbfb11055b6a1a2caf21b41802f99"><div class="ttname"><a href="../../d0/d39/cwist__redis_8h.html#ac1acbfb11055b6a1a2caf21b41802f99">cwist_redis_reply_free</a></div><div class="ttdeci">void cwist_redis_reply_free(cwist_redis_reply_t *reply)</div><div class="ttdef"><b>Definition</b> <a href="../../d4/dca/cwist__redis_8c_source.html#l00625">cwist_redis.c:625</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a0232a14d05af3b981b4751a4c46941a9"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a0232a14d05af3b981b4751a4c46941a9">cwist_job_id</a></div><div class="ttdeci">const char * cwist_job_id(const cwist_job_t *job)</div><div class="ttdoc">Return the backend entry id of the job, or NULL for a NULL job.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00214">durable_queue.c:214</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a0481af7c524b46c84dc96fe89e563ec4"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a0481af7c524b46c84dc96fe89e563ec4">cwist_job_queue_create_redis</a></div><div class="ttdeci">cwist_job_queue_t * cwist_job_queue_create_redis(cwist_redis_t *conn, const cwist_job_queue_opts_t *opts)</div><div class="ttdoc">Create a durable job queue backed by Redis streams.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00599">durable_queue.c:599</a></div></div>
-<div class="ttc" id="adurable__queue_8c_html_a122c21ac81ba47f8b662b4786b68d4ea"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a122c21ac81ba47f8b662b4786b68d4ea">cwist_job_queue_destroy</a></div><div class="ttdeci">void cwist_job_queue_destroy(cwist_job_queue_t *q)</div><div class="ttdoc">Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00943">durable_queue.c:943</a></div></div>
+<div class="ttc" id="adurable__queue_8c_html_a122c21ac81ba47f8b662b4786b68d4ea"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a122c21ac81ba47f8b662b4786b68d4ea">cwist_job_queue_destroy</a></div><div class="ttdeci">void cwist_job_queue_destroy(cwist_job_queue_t *q)</div><div class="ttdoc">Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00973">durable_queue.c:973</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a1b22d6ca47e8df886f25e54781d8396f"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a1b22d6ca47e8df886f25e54781d8396f">CWIST_JQ_MAX_POLL_SLICE_MS</a></div><div class="ttdeci">#define CWIST_JQ_MAX_POLL_SLICE_MS</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00045">durable_queue.c:45</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a1f4aaf3e2d56af200ca2d2150e583345"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a1f4aaf3e2d56af200ca2d2150e583345">cwist_job_payload</a></div><div class="ttdeci">const void * cwist_job_payload(const cwist_job_t *job, size_t *len)</div><div class="ttdoc">Return the job payload pointer and store its length in len (0 on NULL job).</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00199">durable_queue.c:199</a></div></div>
-<div class="ttc" id="adurable__queue_8c_html_a2d7bb58dde2dd3504d61bb65490ac652"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a2d7bb58dde2dd3504d61bb65490ac652">cwist_job_queue_ack</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_ack(cwist_job_queue_t *q, cwist_job_t *job)</div><div class="ttdoc">Acknowledge a claimed job and free it.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01000">durable_queue.c:1000</a></div></div>
-<div class="ttc" id="adurable__queue_8c_html_a392dee74f5dd41f35495a81d45089df4"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a392dee74f5dd41f35495a81d45089df4">cwist_job_queue_enqueue</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload, size_t payload_len, const char *type)</div><div class="ttdoc">Enqueue a job payload with an optional type.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00970">durable_queue.c:970</a></div></div>
+<div class="ttc" id="adurable__queue_8c_html_a2d7bb58dde2dd3504d61bb65490ac652"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a2d7bb58dde2dd3504d61bb65490ac652">cwist_job_queue_ack</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_ack(cwist_job_queue_t *q, cwist_job_t *job)</div><div class="ttdoc">Acknowledge a claimed job and free it.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01030">durable_queue.c:1030</a></div></div>
+<div class="ttc" id="adurable__queue_8c_html_a392dee74f5dd41f35495a81d45089df4"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a392dee74f5dd41f35495a81d45089df4">cwist_job_queue_enqueue</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload, size_t payload_len, const char *type)</div><div class="ttdoc">Enqueue a job payload with an optional type.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01000">durable_queue.c:1000</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a3df45d37cbea58574a2373a7ba9cfe31"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a3df45d37cbea58574a2373a7ba9cfe31">CWIST_JQ_GROUP</a></div><div class="ttdeci">#define CWIST_JQ_GROUP</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00042">durable_queue.c:42</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a4a6bc5bebe8df55dcd570ff064912188"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a4a6bc5bebe8df55dcd570ff064912188">cwist_job_destroy</a></div><div class="ttdeci">void cwist_job_destroy(cwist_job_t *job)</div><div class="ttdoc">Public alias of cwist_job_free(); releases a job returned by claim.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00194">durable_queue.c:194</a></div></div>
-<div class="ttc" id="adurable__queue_8c_html_a6e465b5ce123b9510377bfc398e5da42"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a6e465b5ce123b9510377bfc398e5da42">cwist_job_queue_nack</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_nack(cwist_job_queue_t *q, cwist_job_t *job)</div><div class="ttdoc">Negatively acknowledge a claimed job (retry or dead-letter) and free it.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01015">durable_queue.c:1015</a></div></div>
+<div class="ttc" id="adurable__queue_8c_html_a6e465b5ce123b9510377bfc398e5da42"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a6e465b5ce123b9510377bfc398e5da42">cwist_job_queue_nack</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_nack(cwist_job_queue_t *q, cwist_job_t *job)</div><div class="ttdoc">Negatively acknowledge a claimed job (retry or dead-letter) and free it.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01045">durable_queue.c:1045</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a82a4d762c0345882dcd00561308030d8"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a82a4d762c0345882dcd00561308030d8">cwist_job_attempts</a></div><div class="ttdeci">uint32_t cwist_job_attempts(const cwist_job_t *job)</div><div class="ttdoc">Return the delivery attempt count of the job (0 for a NULL job).</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00219">durable_queue.c:219</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_a843186092bd3f991311f860adba30810"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#a843186092bd3f991311f860adba30810">cwist_job_type</a></div><div class="ttdeci">const char * cwist_job_type(const cwist_job_t *job)</div><div class="ttdoc">Return the job type string, or NULL if none / NULL job.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00209">durable_queue.c:209</a></div></div>
-<div class="ttc" id="adurable__queue_8c_html_aae18dff28136530d9473f498fe438f7c"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#aae18dff28136530d9473f498fe438f7c">cwist_job_queue_dead_count</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_dead_count(cwist_job_queue_t *q, uint64_t *out_count)</div><div class="ttdoc">Store the number of dead-lettered jobs in *out_count.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01031">durable_queue.c:1031</a></div></div>
-<div class="ttc" id="adurable__queue_8c_html_abc844eef2c375b546b75dd35c94ca58a"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#abc844eef2c375b546b75dd35c94ca58a">cwist_job_queue_claim</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job)</div><div class="ttdoc">Claim one job, waiting up to timeout_ms.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00986">durable_queue.c:986</a></div></div>
+<div class="ttc" id="adurable__queue_8c_html_aae18dff28136530d9473f498fe438f7c"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#aae18dff28136530d9473f498fe438f7c">cwist_job_queue_dead_count</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_dead_count(cwist_job_queue_t *q, uint64_t *out_count)</div><div class="ttdoc">Store the number of dead-lettered jobs in *out_count.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01061">durable_queue.c:1061</a></div></div>
+<div class="ttc" id="adurable__queue_8c_html_abc844eef2c375b546b75dd35c94ca58a"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#abc844eef2c375b546b75dd35c94ca58a">cwist_job_queue_claim</a></div><div class="ttdeci">cwist_error_t cwist_job_queue_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job)</div><div class="ttdoc">Claim one job, waiting up to timeout_ms.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l01016">durable_queue.c:1016</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_abd00118bfaf83a4e406d91c1ed818979"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#abd00118bfaf83a4e406d91c1ed818979">jq_dead_count_fn</a></div><div class="ttdeci">cwist_error_t(* jq_dead_count_fn)(cwist_job_queue_t *q, uint64_t *out_count)</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00088">durable_queue.c:88</a></div></div>
-<div class="ttc" id="adurable__queue_8c_html_ad938cf77198be34b469d14cd39078409"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a></div><div class="ttdeci">cwist_job_queue_t * cwist_job_queue_create_nats(cwist_nats_t *nats, const cwist_job_queue_opts_t *opts)</div><div class="ttdoc">Create a durable queue over an existing NATS connection.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00932">durable_queue.c:932</a></div></div>
+<div class="ttc" id="adurable__queue_8c_html_ad938cf77198be34b469d14cd39078409"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#ad938cf77198be34b469d14cd39078409">cwist_job_queue_create_nats</a></div><div class="ttdeci">cwist_job_queue_t * cwist_job_queue_create_nats(cwist_nats_t *nats, const cwist_job_queue_opts_t *opts)</div><div class="ttdoc">Create a durable queue over an existing NATS connection.</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00962">durable_queue.c:962</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_af3b83c681939e1fcbf57c5d2e23a3d95"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#af3b83c681939e1fcbf57c5d2e23a3d95">CWIST_JQ_DEFAULT_MAX_RETRIES</a></div><div class="ttdeci">#define CWIST_JQ_DEFAULT_MAX_RETRIES</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00044">durable_queue.c:44</a></div></div>
 <div class="ttc" id="adurable__queue_8c_html_afab2ce8eeac943bb1d4aab50f9c6ec5c"><div class="ttname"><a href="../../d0/dbf/durable__queue_8c.html#afab2ce8eeac943bb1d4aab50f9c6ec5c">CWIST_JQ_DEFAULT_VISIBILITY_MS</a></div><div class="ttdeci">#define CWIST_JQ_DEFAULT_VISIBILITY_MS</div><div class="ttdef"><b>Definition</b> <a href="../../d0/dbf/durable__queue_8c_source.html#l00043">durable_queue.c:43</a></div></div>
 <div class="ttc" id="adurable__queue_8h_html"><div class="ttname"><a href="../../dd/d3c/durable__queue_8h.html">durable_queue.h</a></div><div class="ttdoc">Durable (persistent) job queue backends over Redis and NATS.</div></div>

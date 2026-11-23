@@ -1,5 +1,6 @@
 var NAVTREEINDEX11 =
 {
+"d7/dba/structcwist__fix__server__mem.html#abe40d549f052c7d81b2a70b8755fdb68":[97,0,26,4],
 "d7/dba/structcwist__fix__server__mem.html#abfb841caf5c116f658b3ab58122f018e":[97,0,26,10],
 "d7/dba/structcwist__fix__server__mem.html#acfd2e162da083d5b11c94002818397b0":[97,0,26,2],
 "d7/dba/structcwist__fix__server__mem.html#ae1ca4427cb3d45d4d3c9bf87d746b6cc":[97,0,26,8],
@@ -248,6 +249,5 @@ var NAVTREEINDEX11 =
 "d8/dad/sockopts_8h.html#a546e727db4f5d4420f59f7cc41c0e382":[98,0,2,2,3,31,0],
 "d8/dad/sockopts_8h_source.html":[98,0,2,2,3,31],
 "d8/dca/struct____prim__cwist__error__t.html":[97,0,0],
-"d8/dca/struct____prim__cwist__error__t.html#a28bfdaaec9dcf6682e1b8e0eee96d664":[97,0,0,4],
-"d8/dca/struct____prim__cwist__error__t.html#a353915bc7ca09777310250478c5afca4":[97,0,0,8]
+"d8/dca/struct____prim__cwist__error__t.html#a28bfdaaec9dcf6682e1b8e0eee96d664":[97,0,0,4]
 };

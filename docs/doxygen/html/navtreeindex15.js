@@ -1,5 +1,6 @@
 var NAVTREEINDEX15 =
 {
+"da/da7/structcwist__job__queue__opts.html#a46057d2576281c8412992bfbaaf0bbb6":[97,0,54,1],
 "da/da7/structcwist__job__queue__opts.html#a832698f6fa4ba3a4424092bf6a9dfd4c":[97,0,54,2],
 "da/db7/openapi_8h.html":[98,0,1,0,16],
 "da/db7/openapi_8h.html#a108228aedcb69c93af2fc61831ec7cc0":[98,0,1,0,16,5],
@@ -248,6 +249,5 @@ var NAVTREEINDEX15 =
 "db/d2e/backend__mbedtls_8c.html#a9965527113e3fab02cd02b8e74a798e9":[98,0,2,3,2,1,30],
 "db/d2e/backend__mbedtls_8c.html#a9a363bc25a9d270a0790faf64904bd4c":[98,0,2,3,2,1,48],
 "db/d2e/backend__mbedtls_8c.html#aa59350689a919b278cad91bd4c29f697":[98,0,2,3,2,1,53],
-"db/d2e/backend__mbedtls_8c.html#aacf6d52200312886799e29bfd1dc480a":[98,0,2,3,2,1,22],
-"db/d2e/backend__mbedtls_8c.html#aae01334b75d611d754e107ac6f1d9965":[98,0,2,3,2,1,42]
+"db/d2e/backend__mbedtls_8c.html#aacf6d52200312886799e29bfd1dc480a":[98,0,2,3,2,1,22]
 };

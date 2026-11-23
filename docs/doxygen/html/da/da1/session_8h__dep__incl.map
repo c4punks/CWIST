@@ -1,13 +1,15 @@
 <map id="include/cwist/net/http/session.h" name="include/cwist/net/http/session.h">
-<area shape="rect" id="Node000001" title="Signed client&#45;side session cookie API." alt="" coords="408,5,571,45"/>
+<area shape="rect" id="Node000001" title="Signed client&#45;side session cookie API." alt="" coords="461,5,624,45"/>
 <area shape="rect" id="Node000002" href="$df/dcd/async__gc_8h.html" title=" " alt="" coords="210,93,382,119"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="431,53,326,96,324,91,429,48"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="471,52,333,96,331,91,470,47"/>
 <area shape="rect" id="Node000005" href="$de/d67/session_8c.html" title="Signed client&#45;side session cookie implementation." alt="" coords="373,174,533,199"/>
-<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="477,59,465,94,458,138,456,174,451,174,453,137,460,93,472,57"/>
+<area shape="poly" id="edge6_Node000001_Node000005" title=" " alt="" coords="500,55,481,73,465,95,457,115,454,137,455,174,449,174,449,136,452,114,460,92,477,70,497,51"/>
 <area shape="rect" id="Node000006" href="$dd/d43/http_8c.html" title="Core HTTP request/response allocation, serialization, socket, and server&#45;loop helpers." alt="" coords="474,93,611,119"/>
-<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="512,55,537,91,532,94,508,58"/>
-<area shape="rect" id="Node000007" href="$d1/d4d/flash_8c.html" title="flash.c interface." alt="" coords="635,93,802,119"/>
-<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="558,47,686,91,684,96,556,52"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="545,59,545,93,540,93,540,59"/>
+<area shape="rect" id="Node000007" href="$df/d7f/app_8c.html" title=" " alt="" coords="635,93,770,119"/>
+<area shape="poly" id="edge7_Node000001_Node000007" title=" " alt="" coords="594,49,680,91,678,96,592,54"/>
+<area shape="rect" id="Node000008" href="$d1/d4d/flash_8c.html" title="flash.c interface." alt="" coords="794,93,961,119"/>
+<area shape="poly" id="edge8_Node000001_Node000008" title=" " alt="" coords="636,46,829,91,828,96,635,51"/>
 <area shape="rect" id="Node000003" href="$db/d84/async_8c.html" title="Deferred&#45;response (async handler) implementation." alt="" coords="5,174,155,199"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="253,126,112,176,111,171,251,121"/>
 <area shape="rect" id="Node000004" href="$d2/dcb/http__client__file_8c.html" title=" " alt="" coords="179,167,349,207"/>

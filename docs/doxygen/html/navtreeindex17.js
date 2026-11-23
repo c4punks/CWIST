@@ -1,5 +1,6 @@
 var NAVTREEINDEX17 =
 {
+"db/dc5/md_docs_2api_2websocket.html#autotoc_md253":[17,3,1],
 "db/dc5/md_docs_2api_2websocket.html#autotoc_md254":[17,3,2],
 "db/dc5/md_docs_2api_2websocket.html#autotoc_md255":[17,3,3],
 "db/dc5/md_docs_2api_2websocket.html#autotoc_md256":[17,4],
@@ -248,6 +249,5 @@ var NAVTREEINDEX17 =
 "dc/d94/tls__chain_8h.html":[98,0,2,2,3,34],
 "dc/d94/tls__chain_8h.html#a402fcbdd8e93c407e64d09ff4c405eb1":[98,0,2,2,3,34,0],
 "dc/d94/tls__chain_8h.html#ae95c36416e4d96a4296216a19efb46b9":[98,0,2,2,3,34,1],
-"dc/d94/tls__chain_8h_source.html":[98,0,2,2,3,34],
-"dc/d97/rate__limit__redis_8c.html":[98,0,2,4,0,14]
+"dc/d94/tls__chain_8h_source.html":[98,0,2,2,3,34]
 };

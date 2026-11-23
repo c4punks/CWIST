@@ -1,5 +1,7 @@
 var NAVTREEINDEX20 =
 {
+"dd/d68/structcwist__http__request.html#a93bc1facc9f75e9d2e243ea9f82b5669":[97,0,49,26],
+"dd/d68/structcwist__http__request.html#a998d09d0c1226ea371439ddbdd8e5e22":[97,0,49,1],
 "dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e":[97,0,49,22],
 "dd/d68/structcwist__http__request.html#a9d21d4ffb5eb56a1e555898e2dd3da38":[97,0,49,27],
 "dd/d68/structcwist__http__request.html#a9d8f44e3e022dbeb0fcea418d916b41f":[97,0,49,18],
@@ -247,7 +249,5 @@ var NAVTREEINDEX20 =
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html":[23],
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md283":[23,0],
 "de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md284":[23,1],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md285":[23,1,0],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md286":[23,1,1],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md287":[23,1,2]
+"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md285":[23,1,0]
 };
