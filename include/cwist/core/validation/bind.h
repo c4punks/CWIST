@@ -146,6 +146,20 @@ bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t 
                              cwist_bind_result_t *result);
 
 /**
+ * @brief Bind URL query parameters (from req->query) to a user struct.
+ *
+ * Operates on req->query treating it as application/x-www-form-urlencoded.
+ *
+ * @param req    HTTP request whose raw query string contains the parameters.
+ * @param schema Bind schema describing the target struct layout.
+ * @param out    Pointer to the user struct to populate.
+ * @param result [out] Detailed validation result.
+ * @return true when every field passes validation and the struct is filled.
+ */
+bool cwist_app_req_bind_query(cwist_http_request *req, const cwist_bind_schema_t *schema, void *out,
+                              cwist_bind_result_t *result);
+
+/**
  * @brief Populate a response with 400 Bad Request and a JSON error payload.
  *
  * The payload follows the shape:
@@ -173,6 +187,18 @@ void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_
  */
 bool cwist_app_req_bind_json_or_400(cwist_http_request *req, cwist_http_response *res,
                                     const cwist_bind_schema_t *schema, void *out);
+
+/**
+ * @brief Bind URL query parameters, writing a 400 error response on failure.
+ *
+ * @param req    HTTP request whose raw query string contains the parameters.
+ * @param res    Response receiving the error payload when binding fails.
+ * @param schema Bind schema.
+ * @param out    Pointer to the user struct to populate.
+ * @return true on success; false when res has been prepped with 400 errors.
+ */
+bool cwist_app_req_bind_query_or_400(cwist_http_request *req, cwist_http_response *res,
+                                     const cwist_bind_schema_t *schema, void *out);
 
 /* -------------------------------------------------------------------------
  * _Generic type-safe dispatch macros
