@@ -1,5 +1,7 @@
 var NAVTREEINDEX14 =
 {
+"d9/dd6/structcwist__grpc__retry__policy.html#a2489b5a997bedc84a3e62a7387edc286":[97,0,32,2],
+"d9/dd6/structcwist__grpc__retry__policy.html#a6250e382d43aefc0a7424e4816529264":[97,0,32,4],
 "d9/dd6/structcwist__grpc__retry__policy.html#a6ee5ca85c84e38c8f875062ded29cce3":[97,0,32,1],
 "d9/dd6/structcwist__grpc__retry__policy.html#ac055005a582c34446038b6c48fc4eb5b":[97,0,32,0],
 "d9/dd6/structcwist__grpc__retry__policy.html#ac21c5fb850186f18f2712d2944fe7703":[97,0,32,3],
@@ -247,7 +249,5 @@ var NAVTREEINDEX14 =
 "da/da0/crypto_8h.html#afd363e108dd7338e218f98f9807b3070":[98,0,2,3,2,0,0,0,2],
 "da/da0/crypto_8h_source.html":[98,0,2,3,2,0,0,0],
 "da/da7/structcwist__job__queue__opts.html":[97,0,54],
-"da/da7/structcwist__job__queue__opts.html#a03d949ba49f2c486db0fda6822e18467":[97,0,54,0],
-"da/da7/structcwist__job__queue__opts.html#a18f1d660490e43551580eae83a280083":[97,0,54,3],
-"da/da7/structcwist__job__queue__opts.html#a3b6d6c0cf3f5d9322f34258c2fabb6f5":[97,0,54,4]
+"da/da7/structcwist__job__queue__opts.html#a03d949ba49f2c486db0fda6822e18467":[97,0,54,0]
 };

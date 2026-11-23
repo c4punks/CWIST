@@ -1,5 +1,9 @@
 var NAVTREEINDEX20 =
 {
+"dd/d68/structcwist__http__request.html#a747dd16054b62bfb37a209af22349812":[97,0,49,0],
+"dd/d68/structcwist__http__request.html#a7ae8498045aa64de63dc00cee14b074d":[97,0,49,23],
+"dd/d68/structcwist__http__request.html#a7b1638bf9bf448d8e1b9834839df655c":[97,0,49,28],
+"dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1":[97,0,49,3],
 "dd/d68/structcwist__http__request.html#a93bc1facc9f75e9d2e243ea9f82b5669":[97,0,49,26],
 "dd/d68/structcwist__http__request.html#a998d09d0c1226ea371439ddbdd8e5e22":[97,0,49,1],
 "dd/d68/structcwist__http__request.html#a9af21e2d67bd5beebe1d273cae31354e":[97,0,49,22],
@@ -245,9 +249,5 @@ var NAVTREEINDEX20 =
 "de/d49/cookie_8c.html#af0cbca640a3104b61278dd2d9a6b91d0":[98,0,2,2,3,6,2],
 "de/d49/cookie_8c.html#afdcb10d812fd677194c8a6a96742ece1":[98,0,2,2,3,6,4],
 "de/d49/cookie_8c.html#affe5d5d5278e31c936fb16a3777edfc1":[98,0,2,2,3,6,6],
-"de/d49/cookie_8c_source.html":[98,0,2,2,3,6],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html":[23],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md283":[23,0],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md284":[23,1],
-"de/d51/md_docs_2decisions_20001-safe-public-fixed-response-cache.html#autotoc_md285":[23,1,0]
+"de/d49/cookie_8c_source.html":[98,0,2,2,3,6]
 };
