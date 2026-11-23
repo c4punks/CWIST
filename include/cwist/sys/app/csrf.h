@@ -21,6 +21,12 @@ extern "C" {
  * or URL-encoded `_csrf` / `csrf_token` form field must match the cookie
  * value. Query-string tokens are not accepted because URLs leak easily.
  *
+ * Tokens are signed with the app's session secret. Without one, a random key
+ * is created when this function is called; create the middleware before the
+ * server starts (and forks workers) so all workers share it. That key changes
+ * on every restart, invalidating issued tokens, so configure a fixed secret
+ * with cwist_app_use_session(app, secret) when tokens must survive restarts.
+ *
  * @param app Application context.
  * @return Middleware function pointer.
  */

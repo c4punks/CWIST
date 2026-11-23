@@ -94,6 +94,10 @@ void cwist_mux_group_destroy(cwist_mux_group *group);
 
 /**
  * @brief Register a handler inside a group.
+ *
+ * The group prefix and @p path are joined with exactly one '/', whatever
+ * slashes either side has: "/api/" + "/users" and "/api" + "users" both
+ * register "/api/users".
  */
 void cwist_mux_group_handle(cwist_mux_group *group, cwist_http_method_t method, const char *path,
                             cwist_http_handler_func handler);

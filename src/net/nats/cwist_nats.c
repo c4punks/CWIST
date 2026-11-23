@@ -7,15 +7,36 @@
 #include <cwist/net/nats/cwist_nats.h>
 #include <cwist/core/mem/alloc.h>
 #include <nats.h>
+#include <errno.h>
+#include <pthread.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 struct cwist_nats {
     natsConnection *conn;
     natsSubscription *sub;
     cwist_nats_msg_cb user_cb;
     void *user_ctx;
+    /* Set by cnats' completion callback once the subscription is closed and
+     * its message handler has returned for the last time (#981). */
+    pthread_mutex_t done_mu;
+    pthread_cond_t done_cv;
+    bool sub_done;
 };
+
+/** Upper bound on how long destroy waits for an in-flight message callback. */
+#define CWIST_NATS_DESTROY_WAIT_MS 5000
+
+/** @brief cnats completion callback: the handler will not run again. */
+static void cwist_nats_on_complete(void *closure) {
+    cwist_nats_t *nats = (cwist_nats_t *)closure;
+    pthread_mutex_lock(&nats->done_mu);
+    nats->sub_done = true;
+    pthread_cond_broadcast(&nats->done_cv);
+    pthread_mutex_unlock(&nats->done_mu);
+}
 
 /** @brief NATS callback shim that forwards a message to the user callback.
  *
@@ -65,8 +86,21 @@ cwist_error_t cwist_nats_connect(cwist_nats_t **nats, const char *url) {
         return err;
     }
     memset(obj, 0, sizeof(*obj));
+    if (pthread_mutex_init(&obj->done_mu, NULL) != 0) {
+        cwist_free(obj);
+        err.error.err_i16 = CWIST_ERROR_NOMEM;
+        return err;
+    }
+    if (pthread_cond_init(&obj->done_cv, NULL) != 0) {
+        pthread_mutex_destroy(&obj->done_mu);
+        cwist_free(obj);
+        err.error.err_i16 = CWIST_ERROR_NOMEM;
+        return err;
+    }
     natsStatus s = natsConnection_ConnectTo(&obj->conn, url ? url : NATS_DEFAULT_URL);
     if (s != NATS_OK) {
+        pthread_cond_destroy(&obj->done_cv);
+        pthread_mutex_destroy(&obj->done_mu);
         cwist_free(obj);
         err.error.err_i16 = (int16_t)s;
         return err;
@@ -98,9 +132,18 @@ cwist_error_t cwist_nats_subscribe(cwist_nats_t *nats, const char *subject, cwis
     }
     nats->user_cb = cb;
     nats->user_ctx = ctx;
+    nats->sub_done = false;
     natsStatus s =
         natsConnection_Subscribe(&nats->sub, nats->conn, subject, cwist_nats_adapter, nats);
+    if (s == NATS_OK) s = natsSubscription_SetOnCompleteCB(nats->sub, cwist_nats_on_complete, nats);
     if (s != NATS_OK) {
+        if (nats->sub) {
+            natsSubscription_Unsubscribe(nats->sub);
+            natsSubscription_Destroy(nats->sub);
+            nats->sub = NULL;
+        }
+        nats->user_cb = NULL;
+        nats->user_ctx = NULL;
         err.error.err_i16 = (int16_t)s;
         return err;
     }
@@ -150,18 +193,55 @@ void cwist_nats_dispatch(cwist_nats_t *nats) {
 /** @brief Destroy a handle and release its resources.
  *
  * Unsubscribes and disconnects if still active, then frees the handle.
- * Safe to call with NULL; the handle must not be used afterwards.
+ * Waits (up to CWIST_NATS_DESTROY_WAIT_MS) until the message callback has
+ * returned for the last time, so it never runs on a freed handle. Must not
+ * be called from inside the message callback. Safe to call with NULL; the
+ * handle must not be used afterwards.
  *
  * @param nats Handle to destroy, or NULL.
  */
 void cwist_nats_destroy(cwist_nats_t *nats) {
     if (!nats) return;
     if (nats->sub) {
+        /* The message handler may still be running, or run once more, on the
+         * delivery thread after the unsubscribe (see
+         * natsSubscription_SetOnCompleteCB in nats.h). Wait for the completion
+         * callback before freeing anything the handler reads (#981). */
+        (void)natsSubscription_Unsubscribe(nats->sub);
+        bool done;
+        {
+            struct timespec deadline;
+            clock_gettime(CLOCK_REALTIME, &deadline);
+            deadline.tv_sec += CWIST_NATS_DESTROY_WAIT_MS / 1000;
+            deadline.tv_nsec += (long)(CWIST_NATS_DESTROY_WAIT_MS % 1000) * 1000000L;
+            if (deadline.tv_nsec >= 1000000000L) {
+                deadline.tv_sec++;
+                deadline.tv_nsec -= 1000000000L;
+            }
+            pthread_mutex_lock(&nats->done_mu);
+            while (!nats->sub_done) {
+                if (pthread_cond_timedwait(&nats->done_cv, &nats->done_mu, &deadline) ==
+                    ETIMEDOUT)
+                    break;
+            }
+            done = nats->sub_done;
+            pthread_mutex_unlock(&nats->done_mu);
+        }
         natsSubscription_Destroy(nats->sub);
+        nats->sub = NULL;
+        if (!done) {
+            /* A handler is still running past the bound: leak the handle
+             * rather than free memory it is using. */
+            if (nats->conn) natsConnection_Destroy(nats->conn);
+            nats->conn = NULL;
+            return;
+        }
     }
     if (nats->conn) {
         natsConnection_Destroy(nats->conn);
     }
+    pthread_cond_destroy(&nats->done_cv);
+    pthread_mutex_destroy(&nats->done_mu);
     cwist_free(nats);
 }
 

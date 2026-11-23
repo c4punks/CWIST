@@ -536,14 +536,26 @@ static void cwist_mw_rate_limit_ip_handler(cwist_http_request *req, cwist_http_r
     if (found) found->last_used_ms = now;
 
     bool allowed = !found || ttak_token_bucket_consume(&found->bucket, 1.0);
+    /* Seconds until one token is back, from the bucket's own state and
+     * rounded up: "60 / rpm" rounded down, so clients retried early (#989). */
+    long retry_after = 1;
+    if (!allowed && found->bucket.refill_rate > 0) {
+        double missing = 1.0 - found->bucket.tokens;
+        if (missing < 0) missing = 0;
+        double secs = missing / found->bucket.refill_rate;
+        if (secs > 86400.0) secs = 86400.0;
+        retry_after = (long)secs;
+        if ((double)retry_after < secs) retry_after++;
+        if (retry_after < 1) retry_after = 1;
+    }
     cwist_sstring_destroy(ip);
     pthread_mutex_unlock(&rate_mutex);
 
     if (!allowed) {
         res->status_code = 429;
         cwist_sstring_assign(res->body, "Too Many Requests");
-        char retry_buf[16];
-        snprintf(retry_buf, sizeof(retry_buf), "%d", 60 / rpm > 0 ? 60 / rpm : 1);
+        char retry_buf[24];
+        snprintf(retry_buf, sizeof(retry_buf), "%ld", retry_after);
         cwist_http_header_add(&res->headers, "Retry-After", retry_buf);
         return;
     }

@@ -90,6 +90,32 @@ static void test_route_order_and_trailing_slash(void) {
     printf("4. Route order and trailing slash... PASSED\n");
 }
 
+/* #983: a group joins prefix and path with exactly one '/'. */
+static void test_group_join(void) {
+    static const char *const prefixes[] = {"/api", "/api/", "api", "/api//"};
+    static const char *const paths[] = {"/users", "users", "//users"};
+    for (size_t i = 0; i < sizeof(prefixes) / sizeof(prefixes[0]); i++) {
+        for (size_t j = 0; j < sizeof(paths) / sizeof(paths[0]); j++) {
+            cwist_mux_router *router = cwist_mux_router_create();
+            cwist_mux_group *g = cwist_mux_group_create(router, prefixes[i]);
+            cwist_mux_group_handle(g, CWIST_HTTP_GET, paths[j], h_users);
+            const char *hit = serve(router, CWIST_HTTP_GET, "/api/users", NULL);
+            if (!hit) fprintf(stderr, "group '%s' + '%s' missed\n", prefixes[i], paths[j]);
+            assert(hit && strcmp(hit, "users") == 0);
+            cwist_mux_group_destroy(g);
+            cwist_mux_router_destroy(router);
+        }
+    }
+    cwist_mux_router *router = cwist_mux_router_create();
+    cwist_mux_group *g = cwist_mux_group_create(router, "/api/");
+    cwist_mux_group_handle(g, CWIST_HTTP_GET, "/", h_users);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/api", NULL), "users") == 0);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/api/", NULL), "users") == 0);
+    cwist_mux_group_destroy(g);
+    cwist_mux_router_destroy(router);
+    printf("5. Group prefix join... PASSED\n");
+}
+
 int main() {
     printf("Running Mux & Query Tests...\n");
 
@@ -176,5 +202,6 @@ int main() {
     printf("PASSED\n");
 
     test_route_order_and_trailing_slash();
+    test_group_join();
     return 0;
 }

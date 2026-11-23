@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 /**
  * @file sys_info.c
@@ -14,36 +15,107 @@
 #if defined(__linux__)
 #include <sys/sysinfo.h>
 
-/**
- * @brief Estimate currently available RAM on Linux using sysinfo or /proc/meminfo.
- * @return Available RAM in bytes, or 0 when the platform cannot provide an estimate.
- */
-uint64_t cwist_get_available_ram(void) {
-    // Attempt 1: sysinfo() (Fastest, standard libc)
-    struct sysinfo si;
-    if (sysinfo(&si) == 0) {
-        // freeram is explicitly free.
-        // bufferram and sharedram might be reclaimable but let's be conservative.
-        // On modern Linux kernels, "MemAvailable" in /proc/meminfo is better,
-        // but sysinfo is a good rough estimate multiplied by mem_unit.
-        return (uint64_t)si.freeram * (uint64_t)si.mem_unit;
-    }
+#include <inttypes.h>
 
-    // Attempt 2: /proc/meminfo (More accurate "Available")
+/** @brief Read one unsigned integer from a file; false if absent or "max". */
+static bool sys_read_u64(const char *path, uint64_t *out) {
+    FILE *fp = fopen(path, "r");
+    if (!fp) return false;
+    char buf[64];
+    bool ok = fgets(buf, sizeof(buf), fp) != NULL;
+    fclose(fp);
+    if (!ok || strncmp(buf, "max", 3) == 0) return false;
+    char *end = NULL;
+    unsigned long long v = strtoull(buf, &end, 10);
+    if (end == buf) return false;
+    *out = (uint64_t)v;
+    return true;
+}
+
+/** @brief MemAvailable from /proc/meminfo (free + reclaimable cache), in bytes. */
+static bool sys_mem_available(uint64_t *out) {
     FILE *fp = fopen("/proc/meminfo", "r");
+    if (!fp) return false;
+    char line[256];
+    bool found = false;
+    while (fgets(line, sizeof(line), fp)) {
+        uint64_t kb = 0;
+        if (sscanf(line, "MemAvailable: %" SCNu64 " kB", &kb) == 1) {
+            *out = kb * 1024;
+            found = true;
+            break;
+        }
+    }
+    fclose(fp);
+    return found;
+}
+
+/**
+ * @brief Memory left under this process's cgroup limit (v2, then v1).
+ * @return true with @p out set when a finite limit applies.
+ */
+static bool sys_cgroup_headroom(uint64_t *out) {
+    uint64_t limit = 0, usage = 0;
+    /* cgroup v2: the process's own group from /proc/self/cgroup ("0::/path"). */
+    FILE *fp = fopen("/proc/self/cgroup", "r");
     if (fp) {
-        char line[256];
-        uint64_t mem_avail_kb = 0;
+        char line[512];
         while (fgets(line, sizeof(line), fp)) {
-            if (sscanf(line, "MemAvailable: %lu kB", &mem_avail_kb) == 1) {
+            if (strncmp(line, "0::", 3) != 0) continue;
+            char *path = line + 3;
+            path[strcspn(path, "\r\n")] = '\0';
+            char file[640];
+            snprintf(file, sizeof(file), "/sys/fs/cgroup%s/memory.max",
+                     strcmp(path, "/") == 0 ? "" : path);
+            bool have_limit = sys_read_u64(file, &limit);
+            snprintf(file, sizeof(file), "/sys/fs/cgroup%s/memory.current",
+                     strcmp(path, "/") == 0 ? "" : path);
+            if (have_limit && sys_read_u64(file, &usage)) {
                 fclose(fp);
-                return mem_avail_kb * 1024;
+                *out = usage < limit ? limit - usage : 1; /* 0 would mean "unknown" */
+                return true;
             }
+            break;
         }
         fclose(fp);
     }
+    /* cgroup v1 memory controller; "no limit" reads as a huge number. */
+    if (sys_read_u64("/sys/fs/cgroup/memory/memory.limit_in_bytes", &limit) &&
+        limit < ((uint64_t)1 << 60) &&
+        sys_read_u64("/sys/fs/cgroup/memory/memory.usage_in_bytes", &usage)) {
+        *out = usage < limit ? limit - usage : 1; /* 0 would mean "unknown" */
+        return true;
+    }
+    return false;
+}
 
-    return 0; // Unknown
+/**
+ * @brief Estimate available RAM on Linux.
+ *
+ * Uses MemAvailable (free memory plus page cache the kernel can reclaim),
+ * capped by the headroom under the process's cgroup memory limit. The
+ * previous estimate, sysinfo().freeram, excludes page cache and is small on
+ * any busy host, so callers switched to their low-memory paths with plenty
+ * of memory available, and container limits were ignored (#992).
+ *
+ * @return Available RAM in bytes, or 0 when no estimate is possible.
+ */
+uint64_t cwist_get_available_ram(void) {
+    uint64_t avail = 0;
+    bool have = sys_mem_available(&avail);
+    if (!have) {
+        struct sysinfo si;
+        if (sysinfo(&si) == 0) {
+            avail = (uint64_t)si.freeram * (uint64_t)si.mem_unit;
+            have = true;
+        }
+    }
+    uint64_t headroom = 0;
+    if (sys_cgroup_headroom(&headroom) && (!have || headroom < avail)) {
+        avail = headroom;
+        have = true;
+    }
+    return have ? avail : 0;
 }
 
 #elif defined(__APPLE__) || defined(__FreeBSD__)

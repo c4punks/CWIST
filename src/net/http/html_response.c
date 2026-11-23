@@ -41,8 +41,11 @@ static bool header_is_true(const cwist_http_request *req, const char *name) {
  * @return true if only a fragment of the page should be returned.
  */
 bool cwist_http_request_wants_fragment(const cwist_http_request *req) {
+    /* Boosted navigation (hx-boost) swaps the whole body and expects a full
+     * page, like a history restore (#988). */
     if (header_is_true(req, "HX-Request"))
-        return !header_is_true(req, "HX-History-Restore-Request");
+        return !header_is_true(req, "HX-History-Restore-Request") &&
+               !header_is_true(req, "HX-Boosted");
     const char *frame = request_header(req, "Turbo-Frame");
     return frame && *frame;
 }

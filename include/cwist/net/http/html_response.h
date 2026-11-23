@@ -31,13 +31,15 @@ extern "C" {
  * cwist_http_response_set_view() sends this as `Vary` so shared caches keep
  * the two representations of one URL apart.
  */
-#define CWIST_HTML_FRAGMENT_VARY "HX-Request, HX-History-Restore-Request, HX-Target, Turbo-Frame"
+#define CWIST_HTML_FRAGMENT_VARY \
+    "HX-Request, HX-Boosted, HX-History-Restore-Request, HX-Target, Turbo-Frame"
 
 /**
  * @brief Whether the client asked for a fragment instead of a full page.
  *
- * True for `HX-Request: true` (unless `HX-History-Restore-Request: true`, which
- * asks for the whole page again) and for any non-empty `Turbo-Frame` header.
+ * True for `HX-Request: true` (unless `HX-History-Restore-Request: true` or
+ * `HX-Boosted: true`, which ask for the whole page) and for any non-empty
+ * `Turbo-Frame` header.
  *
  * @param req Parsed request. NULL gives false.
  */

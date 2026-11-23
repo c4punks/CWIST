@@ -49,6 +49,40 @@ static cwist_test_client_cookie *find_cookie(cwist_test_client_cookie *head, con
     return NULL;
 }
 
+/** @brief Look up a jar cookie by name and path (a cookie is keyed by both). */
+static cwist_test_client_cookie *find_cookie_at(cwist_test_client_cookie *head, const char *name,
+                                                const char *path) {
+    for (; head; head = head->next) {
+        if (!head->name || strcmp(head->name, name) != 0) continue;
+        if ((!head->path && !path) || (head->path && path && strcmp(head->path, path) == 0))
+            return head;
+    }
+    return NULL;
+}
+
+/** @brief RFC 6265 section 5.1.4 path-match; a cookie without a path (set by
+ *         cwist_test_client_set_cookie() with NULL) matches every path. */
+static bool cookie_path_matches(const char *cookie_path, const char *req_path) {
+    if (!cookie_path) return true;
+    if (!req_path || !*req_path) req_path = "/";
+    size_t n = strlen(cookie_path);
+    if (strncmp(req_path, cookie_path, n) != 0) return false;
+    return req_path[n] == '\0' || cookie_path[n - 1] == '/' || req_path[n] == '/';
+}
+
+/** @brief RFC 6265 section 5.1.4 default-path of a request path (owned copy). */
+static char *cookie_default_path(const char *req_path) {
+    if (!req_path || req_path[0] != '/') return clone_str("/");
+    const char *last = strrchr(req_path, '/');
+    if (last == req_path) return clone_str("/");
+    size_t n = (size_t)(last - req_path);
+    char *out = (char *)cwist_alloc(n + 1);
+    if (!out) return NULL;
+    memcpy(out, req_path, n);
+    out[n] = '\0';
+    return out;
+}
+
 /** @brief Build a Cookie header from the jar and ad-hoc pairs and add it to a request.
  * Does nothing if @p client or @p req is NULL, or if there are no valid cookies to send.
  * @param client Client owning the cookie jar.
@@ -59,9 +93,12 @@ static cwist_test_client_cookie *find_cookie(cwist_test_client_cookie *head, con
 static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
                              const cwist_test_client_kv *adhoc, size_t adhoc_count) {
     if (!client || !req) return;
+    /* Send only cookies whose Path matches, as a browser does (#995). */
+    const char *req_path = req->path && req->path->data ? req->path->data : "/";
+#define JAR_SENDS(c) ((c)->name && (c)->value && cookie_path_matches((c)->path, req_path))
     size_t jar_count = 0;
     for (cwist_test_client_cookie *c = client->cookies; c; c = c->next) {
-        if (c->name && c->value) jar_count++;
+        if (JAR_SENDS(c)) jar_count++;
     }
     size_t valid_adhoc = 0;
     for (size_t i = 0; i < adhoc_count; i++) {
@@ -71,7 +108,7 @@ static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
 
     size_t buf_len = 0;
     for (cwist_test_client_cookie *c = client->cookies; c; c = c->next) {
-        if (c->name && c->value) buf_len += strlen(c->name) + 1 + strlen(c->value) + 2;
+        if (JAR_SENDS(c)) buf_len += strlen(c->name) + 1 + strlen(c->value) + 2;
     }
     for (size_t i = 0; i < adhoc_count; i++) {
         if (adhoc && adhoc[i].key && adhoc[i].value)
@@ -84,7 +121,7 @@ static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
 
     size_t pos = 0;
     for (cwist_test_client_cookie *c = client->cookies; c; c = c->next) {
-        if (!c->name || !c->value) continue;
+        if (!JAR_SENDS(c)) continue;
         if (pos > 0) cookie_header[pos++] = ';';
         if (pos > 0) cookie_header[pos++] = ' ';
         pos += (size_t)snprintf(cookie_header + pos, buf_len + 1 - pos, "%s=%s", c->name, c->value);
@@ -97,6 +134,7 @@ static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
                                 adhoc[i].value);
     }
     cwist_http_header_add(&req->headers, "Cookie", cookie_header);
+#undef JAR_SENDS
 }
 
 /** @brief Strip leading and trailing whitespace from a string in place.
@@ -114,9 +152,10 @@ static char *trim(char *s) {
  * @param client Client owning the cookie jar.
  * @param name Cookie name.
  */
-static void cookie_jar_remove(cwist_test_client *client, const char *name) {
+static void cookie_jar_remove(cwist_test_client *client, const char *name, const char *path) {
+    cwist_test_client_cookie *target = find_cookie_at(client->cookies, name, path);
     for (cwist_test_client_cookie **pp = &client->cookies; *pp; pp = &(*pp)->next) {
-        if ((*pp)->name && strcmp((*pp)->name, name) == 0) {
+        if (*pp == target) {
             cwist_test_client_cookie *dead = *pp;
             *pp = dead->next;
             free_cookie(dead);
@@ -126,14 +165,17 @@ static void cookie_jar_remove(cwist_test_client *client, const char *name) {
 }
 
 /** @brief Update the cookie jar from Set-Cookie headers in a response.
- * Adds new cookies to the head of the list; existing cookie names get their value
- * (and path, if present) replaced. A cookie with Max-Age <= 0, or with an Expires
+ * Cookies are keyed by name and path; a Set-Cookie without Path gets the
+ * request's default-path. Adds new cookies to the head of the list; an existing
+ * name/path pair gets its value replaced. A cookie with Max-Age <= 0, or with an Expires
  * date in the past and no Max-Age, is removed (RFC 6265 section 5.2.1, 5.2.2 and
  * 5.3). Malformed Set-Cookie headers are ignored.
  * @param client Client owning the cookie jar.
  * @param res Response whose headers are scanned; NULL is a no-op.
+ * @param req_path Path of the request that got @p res (for the default-path).
  */
-static void cookie_jar_update(cwist_test_client *client, cwist_http_response *res) {
+static void cookie_jar_update(cwist_test_client *client, cwist_http_response *res,
+                              const char *req_path) {
     if (!client || !res) return;
     for (cwist_http_header_node *h = res->headers; h; h = h->next) {
         if (!h->key || !h->value || strcasecmp(h->key->data, "Set-Cookie") != 0) continue;
@@ -182,25 +224,32 @@ static void cookie_jar_update(cwist_test_client *client, cwist_http_response *re
             }
             rest = strtok_r(NULL, ";", &saveptr);
         }
+        /* No (or a relative) Path: the request's default-path (RFC 6265
+         * section 5.2.4). */
+        if (!path || path[0] != '/') {
+            cwist_free(path);
+            path = cookie_default_path(req_path);
+            if (!path) {
+                cwist_free(name);
+                cwist_free(value);
+                cwist_free(buf);
+                continue;
+            }
+        }
         /* Max-Age wins over Expires (RFC 6265 section 5.3, step 3). */
         if (has_max_age ? expired : expires_past) {
-            cookie_jar_remove(client, name);
+            cookie_jar_remove(client, name, path);
             cwist_free(name);
             cwist_free(value);
             cwist_free(path);
             cwist_free(buf);
             continue;
         }
-        cwist_test_client_cookie *c = find_cookie(client->cookies, name);
+        cwist_test_client_cookie *c = find_cookie_at(client->cookies, name, path);
         if (c) {
             cwist_free(c->value);
             c->value = value;
-            if (path) {
-                cwist_free(c->path);
-                c->path = path;
-            } else {
-                cwist_free(path);
-            }
+            cwist_free(path);
             cwist_free(name);
         } else {
             c = (cwist_test_client_cookie *)cwist_alloc(sizeof(*c));
@@ -312,7 +361,7 @@ static cwist_http_response *do_request(cwist_test_client *client, cwist_http_met
         return NULL;
     }
     cwist_app_dispatch(client->app, req, res);
-    cookie_jar_update(client, res);
+    cookie_jar_update(client, res, req->path ? req->path->data : NULL);
     cwist_http_request_destroy(req);
     return res;
 }

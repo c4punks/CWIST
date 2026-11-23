@@ -13,8 +13,9 @@
 /**
  * @brief Get the available (free + reclaimable) system RAM in bytes.
  *
- * Uses /proc/meminfo on Linux.
- * Uses sysctl on BSD/macOS.
+ * Uses MemAvailable from /proc/meminfo on Linux, capped by the headroom under
+ * the process's cgroup (v2 or v1) memory limit; sysinfo() free RAM is only a
+ * fallback. Uses sysctl on BSD/macOS.
  *
  * @return Available RAM in bytes, or 0 if detection fails.
  */

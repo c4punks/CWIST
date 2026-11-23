@@ -103,12 +103,12 @@ void cwist_nuke_signal_handler(int signum);
 unsigned char *cwist_nuke_serialize(sqlite3_int64 *out_size);
 
 /**
- * @brief Load a raw SQLite byte buffer into the in-memory database.
+ * @brief Replace the NukeDB contents with a raw SQLite byte buffer.
  *
- * Uses sqlite3_deserialize() to replace the current in-memory database
- * content with the provided bytes.  Ownership of @p data is transferred to
- * SQLite (allocated with sqlite3_malloc()); do not free it yourself after a
- * successful call.
+ * The image is written to the database file and to the in-memory mirror, so
+ * it persists like any other write. Ownership of @p data is transferred to
+ * SQLite (allocated with sqlite3_malloc()) on success and on failure; do not
+ * free it yourself after the call.
  *
  * @param data     Buffer previously obtained via cwist_nuke_serialize() or
  *                 cwist_db_sync_pull().  Must be sqlite3_malloc()-allocated.
