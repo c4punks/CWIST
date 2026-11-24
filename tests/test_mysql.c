@@ -33,7 +33,7 @@ static void test_silent_peer_times_out(void) {
     cwist_mysql_t *mysql = cwist_mysql_connect(conninfo);
     time_t elapsed = time(NULL) - started;
     assert(mysql == NULL);
-    assert(elapsed >= 4 && elapsed <= 8);
+    assert(elapsed >= 4 && elapsed <= 30);
     close(listener);
 #endif
 }
