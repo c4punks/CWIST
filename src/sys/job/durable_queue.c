@@ -34,6 +34,7 @@
 #include <nats.h>
 #endif
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -176,6 +177,9 @@ static bool jq_opts_init(cwist_job_queue_t *q, const cwist_job_queue_opts_t *opt
         opts->consumer && *opts->consumer ? cwist_strdup(opts->consumer) : jq_default_consumer();
     q->visibility_timeout_ms =
         opts->visibility_timeout_ms ? opts->visibility_timeout_ms : CWIST_JQ_DEFAULT_VISIBILITY_MS;
+#ifdef CWIST_NATS
+    if (q->visibility_timeout_ms > (uint64_t)INT64_MAX / 1000000u) return false;
+#endif
     q->max_retries = opts->max_retries ? opts->max_retries : CWIST_JQ_DEFAULT_MAX_RETRIES;
     q->retry_delay_ms = opts->retry_delay_ms;
     if (!q->name || !q->consumer) return false;
@@ -271,7 +275,9 @@ static cwist_error_t jq_redis_int(cwist_redis_t *conn, size_t argc, const void *
 /** Pack [type_len:4BE][attempts:4BE][type][payload] into an owned blob. */
 static char *jq_blob(const char *type, uint32_t attempts, const void *payload, size_t payload_len,
                      size_t *out_len) {
-    uint32_t type_len = type ? (uint32_t)strlen(type) : 0;
+    size_t type_size = type ? strlen(type) : 0;
+    if (type_size > UINT32_MAX || payload_len > SIZE_MAX - 8 - type_size) return NULL;
+    uint32_t type_len = (uint32_t)type_size;
     size_t len = 8 + type_len + payload_len;
     char *blob = cwist_alloc(len ? len : 1);
     if (!blob) return NULL;
@@ -1011,8 +1017,12 @@ void cwist_job_queue_destroy(cwist_job_queue_t *q) {
 cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload, size_t payload_len,
                                       const char *type) {
     if (!q || (!payload && payload_len)) return jq_err(CWIST_ERROR_INVALID_PARAM);
+    size_t type_len = type ? strlen(type) : 0;
+    if (type_len > UINT32_MAX || payload_len > SIZE_MAX - 8 - type_len)
+        return jq_err(CWIST_ERROR_INVALID_PARAM);
     if (!payload) payload = "";
 #ifdef CWIST_NATS
+    if (q->backend != 0 && payload_len > INT_MAX) return jq_err(CWIST_ERROR_INVALID_PARAM);
     return q->backend == 0 ? jq_redis_enqueue(q, payload, payload_len, type)
                            : jq_nats_enqueue(q, payload, payload_len, type);
 #else
