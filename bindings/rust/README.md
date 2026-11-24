@@ -12,8 +12,9 @@ Experimental: crate version 0.x, published to crates.io as `cwist` and
 ## Building
 
 `cwist-sys` links an installed libcwist through `cwist.pc`, so build and
-install CWIST first (>= 3.9; the advanced wrappers need its headers), then
-point pkg-config at it:
+install CWIST 4.3.8 or newer, then point pkg-config at it. Version 0.2.3 of
+both crates rejects older CWIST installations to require the current security
+and protocol fixes:
 
 ```sh
 make -j"$(nproc)"
