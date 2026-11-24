@@ -144,13 +144,15 @@ static int proxy_transport_upstream(const char *target_host, unsigned short targ
     return fd;
 }
 
-static bool proxy_transport_send_all(int fd, const unsigned char *buf, size_t len) {
+static bool proxy_transport_send_all(int fd, const unsigned char *buf, size_t len,
+                                     uint64_t *last_active_ms) {
     size_t off = 0;
     uint64_t deadline = proxy_transport_now_ms() + PROXY_TRANSPORT_IDLE_TIMEOUT_MS;
     while (off < len && proxy_transport_active()) {
         ssize_t n = send(fd, buf + off, len - off, MSG_NOSIGNAL);
         if (n > 0) {
             off += (size_t)n;
+            *last_active_ms = proxy_transport_now_ms();
             continue;
         }
         if (n < 0 && errno == EINTR) continue;
@@ -204,7 +206,7 @@ static void *proxy_tcp_relay(void *arg) {
             ssize_t n = recv(client_fd, buf, sizeof(buf), 0);
             if (n > 0) {
                 last_active_ms = proxy_transport_now_ms();
-                if (!proxy_transport_send_all(upstream_fd, buf, (size_t)n)) break;
+                if (!proxy_transport_send_all(upstream_fd, buf, (size_t)n, &last_active_ms)) break;
             } else if (n == 0) {
                 client_open = false;
                 (void)shutdown(upstream_fd, SHUT_WR);
@@ -216,7 +218,7 @@ static void *proxy_tcp_relay(void *arg) {
             ssize_t n = recv(upstream_fd, buf, sizeof(buf), 0);
             if (n > 0) {
                 last_active_ms = proxy_transport_now_ms();
-                if (!proxy_transport_send_all(client_fd, buf, (size_t)n)) break;
+                if (!proxy_transport_send_all(client_fd, buf, (size_t)n, &last_active_ms)) break;
             } else if (n == 0) {
                 upstream_open = false;
                 (void)shutdown(client_fd, SHUT_WR);
@@ -522,6 +524,7 @@ void cwist_proxy_transport_stop(void) {
 }
 
 void cwist_proxy_transport_reset(void) {
+    cwist_proxy_transport_stop();
     pthread_mutex_lock(&g_transport_lock);
     proxy_transport_rule *rule = g_transport_rules;
     g_transport_rules = NULL;
