@@ -30,12 +30,11 @@ static void flash_session_store(cwist_http_request *req) {
     cJSON_free(json);
 }
 
-static void flash_session_load(cwist_http_request *req, bool consume) {
+static void flash_session_load(cwist_http_request *req) {
     if (!req || !req->session) return;
     const char *json = cwist_session_get(req->session, CWIST_FLASH_SESSION_KEY);
     if (!json) return;
     cJSON *root = cJSON_Parse(json);
-    if (consume) cwist_session_delete(req->session, CWIST_FLASH_SESSION_KEY);
     if (!root || !cJSON_IsObject(root)) {
         cJSON_Delete(root);
         return;
@@ -82,7 +81,7 @@ void cwist_flash_set(cwist_http_request *req, const char *key, const char *value
  */
 const char *cwist_flash_peek(cwist_http_request *req, const char *key) {
     if (!req || !key) return NULL;
-    flash_session_load(req, false);
+    flash_session_load(req);
     if (!req->flash) return NULL;
     return cwist_query_map_get(req->flash, key);
 }
@@ -100,7 +99,7 @@ const char *cwist_flash_peek(cwist_http_request *req, const char *key) {
  */
 const char *cwist_flash_get(cwist_http_request *req, const char *key) {
     if (!req || !key) return NULL;
-    flash_session_load(req, true);
+    flash_session_load(req);
     if (!req->flash || !req->flash->buckets || req->flash->size == 0) return NULL;
     uint64_t hash = siphash24(key, strlen(key), req->flash->seed);
     size_t idx = hash % req->flash->size;
@@ -115,6 +114,12 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
             /* ownership of value transfers to the caller, who must free it */
             char *ret_val = curr->value;
             cwist_free(curr);
+            if (req->session) {
+                if (req->flash->count > 0)
+                    flash_session_store(req);
+                else
+                    cwist_session_delete(req->session, CWIST_FLASH_SESSION_KEY);
+            }
             return ret_val;
         }
         prev = &curr->next;
@@ -135,7 +140,7 @@ const char *cwist_flash_get(cwist_http_request *req, const char *key) {
  */
 char *cwist_flash_pop_all_json(cwist_http_request *req) {
     if (!req) return NULL;
-    flash_session_load(req, true);
+    flash_session_load(req);
     if (!req->flash || !req->flash->buckets || req->flash->size == 0 ||
         req->flash->count == 0)
         return NULL;
@@ -156,5 +161,6 @@ char *cwist_flash_pop_all_json(cwist_http_request *req) {
     cJSON_free(printed);
     if (!json) return NULL;
     cwist_query_map_clear(req->flash);
+    if (req->session) cwist_session_delete(req->session, CWIST_FLASH_SESSION_KEY);
     return json;
 }

@@ -250,7 +250,13 @@ static int mp_on_part_data_end(multipart_parser *p) {
     ctx->filename = NULL;
     if (ctx->content_type[0]) {
         field->content_type = (char *)cwist_alloc(strlen(ctx->content_type) + 1);
-        if (field->content_type) strcpy(field->content_type, ctx->content_type);
+        if (!field->content_type) {
+            cwist_free(field->name);
+            cwist_free(field->filename);
+            cwist_free(field);
+            return 1;
+        }
+        strcpy(field->content_type, ctx->content_type);
     }
     field->data = ctx->data;
     field->data_len = ctx->data_len;
