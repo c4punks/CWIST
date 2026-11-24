@@ -2,7 +2,7 @@ var searchData=
 [
   ['jar_0',['Cookie jar',['../de/d19/md_docs_2api_2app.html#autotoc_md76',1,'']]],
   ['jar_5fsends_1',['JAR_SENDS',['../dc/df0/test__client_8c.html#a27bf18ab72e89dc26c7d7719c485ee31',1,'test_client.c']]],
-  ['job_5fnode_5ft_2',['job_node_t',['../d1/de4/io__queue_8c.html#a33eb97006e5539c94cc623bb804d7564',1,'job_node_t:&#160;io_queue.c'],['../d9/d70/io__select_8c.html#a33eb97006e5539c94cc623bb804d7564',1,'job_node_t:&#160;io_select.c']]],
+  ['job_5fnode_5ft_2',['job_node_t',['../d9/d70/io__select_8c.html#a33eb97006e5539c94cc623bb804d7564',1,'job_node_t:&#160;io_select.c'],['../d1/de4/io__queue_8c.html#a33eb97006e5539c94cc623bb804d7564',1,'job_node_t:&#160;io_queue.c']]],
   ['jq_5fdead_5fcount_5ffn_3',['jq_dead_count_fn',['../d0/dbf/durable__queue_8c.html#abd00118bfaf83a4e406d91c1ed818979',1,'durable_queue.c']]],
   ['js_4',['Request dispatch from JS',['../d5/d0e/md_docs_2api_2wasm.html#autotoc_md234',1,'']]],
   ['json_5',['json',['../d6/d8e/md_docs_2tutorials_2openapi-swagger.html#autotoc_md616',1,'2. Generate openapi.json'],['../d5/d02/structcwist__heal__result.html#a53aeed692588792dfe70c7c1ae696b3e',1,'cwist_heal_result::json']]],
@@ -12,7 +12,7 @@ var searchData=
   ['json_20parsing_20and_20zod_20schema_20validation_9',['3. JSON Parsing and Zod Schema Validation',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md576',1,'']]],
   ['json_2emd_10',['json.md',['../d8/d51/json_8md.html',1,'']]],
   ['json_5fbuilder_2ec_11',['json_builder.c',['../d5/d7f/json__builder_8c.html',1,'']]],
-  ['json_5fbuilder_2eh_12',['json_builder.h',['../d3/dc7/core_2utils_2json__builder_8h.html',1,'(Global Namespace)'],['../d5/df8/json__builder_8h.html',1,'(Global Namespace)']]],
+  ['json_5fbuilder_2eh_12',['json_builder.h',['../d5/df8/json__builder_8h.html',1,'(Global Namespace)'],['../d3/dc7/core_2utils_2json__builder_8h.html',1,'(Global Namespace)']]],
   ['json_5fheal_2ec_13',['json_heal.c',['../d1/d8b/json__heal_8c.html',1,'']]],
   ['json_5fheal_2eh_14',['json_heal.h',['../db/dd3/json__heal_8h.html',1,'']]],
   ['json_5fkey_15',['json_key',['../df/d21/structcwist__bind__field.html#acadecd9ad542c78a2c32288171f9bbe2',1,'cwist_bind_field']]],

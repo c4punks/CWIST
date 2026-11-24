@@ -25,7 +25,7 @@ var searchData=
   ['get_5foptimal_5fthread_5fcount_22',['get_optimal_thread_count',['../d9/dab/net_2http_2http_8h.html#a8bc51aa11f3b08db86b8e617786b2b9f',1,'get_optimal_thread_count(void):&#160;http.c'],['../dd/d43/http_8c.html#a8bc51aa11f3b08db86b8e617786b2b9f',1,'get_optimal_thread_count(void):&#160;http.c']]],
   ['get_5fsize_23',['get_size',['../d5/ddc/structcwist__sstring.html#ab07dd4ec3ba6f33f00b038dc5012c802',1,'cwist_sstring']]],
   ['getline_24',['getline',['../d7/d69/baremetal__compat_8h.html#aaf07c1bbc2aa081a54bdd66f0e152312',1,'baremetal_compat.h']]],
-  ['getting_20started_25',['1. Getting started',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md514',1,'']]],
+  ['getting_20started_25',['1. Getting started',['..//home/yjlee/cwist/docs/README.md#autotoc_md514',1,'']]],
   ['gin_20exist_26',['Why C, when Axum and Gin exist?',['../index.html#autotoc_md12',1,'']]],
   ['global_20toggle_27',['1. cwist_full_gc(bool) — the global toggle',['../d9/dd1/md_docs_2GC.html#autotoc_md340',1,'']]],
   ['goals_28',['Non-goals',['../d8/d77/md_docs_2api_2wasm-component.html#autotoc_md230',1,'']]],
@@ -87,7 +87,7 @@ var searchData=
   ['grpc_5froute_5fview_84',['grpc_route_view',['../d9/dba/grpc_8c.html#a2832d700232e75b80ecf8501c8d3a878',1,'grpc.c']]],
   ['grpc_5froutes_85',['grpc_routes',['../dc/da0/structcwist__app.html#afc9fa598fee9f0a01b9f94883436918c',1,'cwist_app']]],
   ['grpc_5fstatus_5fmessage_2eh_86',['grpc_status_message.h',['../d8/d7c/grpc__status__message_8h.html',1,'']]],
-  ['guides_87',['2. Task-oriented guides',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md515',1,'']]],
+  ['guides_87',['2. Task-oriented guides',['..//home/yjlee/cwist/docs/README.md#autotoc_md515',1,'']]],
   ['gusuryak_209차_20쌍_88',['3. 역사적 표: Gusuryak 9차 쌍',['../da/d05/md_docs_2ko_2references_2latin__square__references.html#autotoc_md447',1,'']]],
   ['gusuryak_20order_209_20pair_89',['3. Historical table: the Gusuryak order-9 pair',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md541',1,'']]]
 ];

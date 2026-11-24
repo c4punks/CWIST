@@ -311,6 +311,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a09a61118d4a0a593bb221345ec265c2c" id="r_a09a61118d4a0a593bb221345ec265c2c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#a09a61118d4a0a593bb221345ec265c2c">cwist_rdbms_probe_port</a> (int port)</td></tr>
 <tr class="memdesc:a09a61118d4a0a593bb221345ec265c2c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Probe a TCP port on 127.0.0.1 to detect the RDBMS provider.  <br /></td></tr>
 <tr class="separator:a09a61118d4a0a593bb221345ec265c2c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0cff9c4e9aea2cfe90d728561211186c" id="r_a0cff9c4e9aea2cfe90d728561211186c"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#a0cff9c4e9aea2cfe90d728561211186c">cwist_rdbms_provider_name</a> (<a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a> provider)</td></tr>
+<tr class="memdesc:a0cff9c4e9aea2cfe90d728561211186c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the human-readable display name for an RDBMS provider.  <br /></td></tr>
+<tr class="separator:a0cff9c4e9aea2cfe90d728561211186c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af58bf0bc10f785708119dd9e557fab28" id="r_af58bf0bc10f785708119dd9e557fab28"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dec/rdbms__auto__mount_8c.html#af58bf0bc10f785708119dd9e557fab28">cwist_rdbms_mount_runtime</a> (<a class="el" href="../../dc/da0/structcwist__app.html">cwist_app</a> *app, <a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a> provider, int port)</td></tr>
 <tr class="memdesc:af58bf0bc10f785708119dd9e557fab28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Allocate and attach an RDBMS runtime record to an app.  <br /></td></tr>
 <tr class="separator:af58bf0bc10f785708119dd9e557fab28"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -378,9 +381,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if detection and mounting succeed, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00206">206</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00310">310</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00171">cwist_rdbms_mount_runtime()</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00082">CWIST_RDBMS_NONE</a>, <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00097">cwist_rdbms_probe_port()</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00091">cwist_rdbms_runtime::port</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00090">cwist_rdbms_runtime::provider</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00275">cwist_rdbms_mount_runtime()</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00082">CWIST_RDBMS_NONE</a>, <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00145">cwist_rdbms_probe_port()</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00100">cwist_rdbms_runtime::port</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00099">cwist_rdbms_runtime::provider</a>.</p>
 
 </div>
 </div>
@@ -429,11 +432,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if a runtime is mounted, false on NULL app or allocation failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00171">171</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00275">275</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00055">CWIST_LOG_INFO</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00091">cwist_rdbms_runtime::port</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00090">cwist_rdbms_runtime::provider</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00192">cwist_app::rdbms</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00093">cwist_rdbms_runtime::ready</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d7/d7f/log_8h_source.html#l00055">CWIST_LOG_INFO</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00100">cwist_rdbms_runtime::port</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00099">cwist_rdbms_runtime::provider</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00201">cwist_app::rdbms</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00102">cwist_rdbms_runtime::ready</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00206">cwist_app_auto_rdbms()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00310">cwist_app_auto_rdbms()</a>.</p>
 
 </div>
 </div>
@@ -464,11 +467,42 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Detected provider (<code>CWIST_RDBMS_MYSQL</code>, <code>CWIST_RDBMS_MARIADB</code>, or <code>CWIST_RDBMS_POSTGRES</code>) or <code>CWIST_RDBMS_NONE</code> if detection fails. The socket is always closed before returning. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00097">97</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00145">145</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00082">CWIST_RDBMS_NONE</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00083">CWIST_RDBMS_POSTGRES</a>.</p>
+<p class="reference">References <a class="el" href="../../d7/d7f/log_8h_source.html#l00057">CWIST_LOG_ERROR</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00087">CWIST_RDBMS_MSSQL</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00082">CWIST_RDBMS_NONE</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00086">CWIST_RDBMS_ORACLE</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00083">CWIST_RDBMS_POSTGRES</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00206">cwist_app_auto_rdbms()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00310">cwist_app_auto_rdbms()</a>.</p>
+
+</div>
+</div>
+<a id="a0cff9c4e9aea2cfe90d728561211186c" name="a0cff9c4e9aea2cfe90d728561211186c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0cff9c4e9aea2cfe90d728561211186c">&#9670;&#160;</a></span>cwist_rdbms_provider_name()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const char * cwist_rdbms_provider_name </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d77/sys_2app_2app_8h.html#a073fa10a3d7a6d7d24cc378118202ddd">cwist_rdbms_provider_t</a>&#160;</td>
+          <td class="paramname"><em>provider</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Get the human-readable display name for an RDBMS provider. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">provider</td><td>Provider enum value. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Display name string (e.g. "PostgreSQL", "MySQL", "OracleDB", "MS-SQL"). </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html#l00251">251</a> of file <a class="el" href="../../da/dec/rdbms__auto__mount_8c_source.html">rdbms_auto_mount.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00085">CWIST_RDBMS_MARIADB</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00087">CWIST_RDBMS_MSSQL</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00084">CWIST_RDBMS_MYSQL</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00082">CWIST_RDBMS_NONE</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00086">CWIST_RDBMS_ORACLE</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00083">CWIST_RDBMS_POSTGRES</a>.</p>
 
 </div>
 </div>

@@ -355,12 +355,18 @@ Functions</h2></td></tr>
 <tr class="memitem:a454338c5b7f23725d0bd86c03fcc1c8b" id="r_a454338c5b7f23725d0bd86c03fcc1c8b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc2/bind_8h.html#a454338c5b7f23725d0bd86c03fcc1c8b">cwist_app_req_bind_form</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, const <a class="el" href="../../da/dc2/bind_8h.html#a1066c5a43d9c7395525cfa2be387540e">cwist_bind_schema_t</a> *schema, void *out, <a class="el" href="../../da/dc2/bind_8h.html#ad8bdd35490f25f7e65b0fd145a9bafeb">cwist_bind_result_t</a> *result)</td></tr>
 <tr class="memdesc:a454338c5b7f23725d0bd86c03fcc1c8b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bind URL-encoded form data to a user struct.  <br /></td></tr>
 <tr class="separator:a454338c5b7f23725d0bd86c03fcc1c8b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aba7fc8b2201f1bda6d632fd9e856c9b3" id="r_aba7fc8b2201f1bda6d632fd9e856c9b3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc2/bind_8h.html#aba7fc8b2201f1bda6d632fd9e856c9b3">cwist_app_req_bind_query</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, const <a class="el" href="../../da/dc2/bind_8h.html#a1066c5a43d9c7395525cfa2be387540e">cwist_bind_schema_t</a> *schema, void *out, <a class="el" href="../../da/dc2/bind_8h.html#ad8bdd35490f25f7e65b0fd145a9bafeb">cwist_bind_result_t</a> *result)</td></tr>
+<tr class="memdesc:aba7fc8b2201f1bda6d632fd9e856c9b3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bind URL query parameters (from req-&gt;query) to a user struct.  <br /></td></tr>
+<tr class="separator:aba7fc8b2201f1bda6d632fd9e856c9b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adaec190afb4b3baa50acddaddb0daa28" id="r_adaec190afb4b3baa50acddaddb0daa28"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc2/bind_8h.html#adaec190afb4b3baa50acddaddb0daa28">cwist_bind_write_error_response</a> (<a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, const <a class="el" href="../../da/dc2/bind_8h.html#ad8bdd35490f25f7e65b0fd145a9bafeb">cwist_bind_result_t</a> *result)</td></tr>
 <tr class="memdesc:adaec190afb4b3baa50acddaddb0daa28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populate a response with 400 Bad Request and a JSON error payload.  <br /></td></tr>
 <tr class="separator:adaec190afb4b3baa50acddaddb0daa28"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1a0a0b65ababb7cda931d07a71975fad" id="r_a1a0a0b65ababb7cda931d07a71975fad"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc2/bind_8h.html#a1a0a0b65ababb7cda931d07a71975fad">cwist_app_req_bind_json_or_400</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, const <a class="el" href="../../da/dc2/bind_8h.html#a1066c5a43d9c7395525cfa2be387540e">cwist_bind_schema_t</a> *schema, void *out)</td></tr>
 <tr class="memdesc:a1a0a0b65ababb7cda931d07a71975fad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Convenience wrapper: bind JSON and auto-respond 400 on failure.  <br /></td></tr>
 <tr class="separator:a1a0a0b65ababb7cda931d07a71975fad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3fcd5d8780d4282d05534188255dc84b" id="r_a3fcd5d8780d4282d05534188255dc84b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../da/dc2/bind_8h.html#a3fcd5d8780d4282d05534188255dc84b">cwist_app_req_bind_query_or_400</a> (<a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req, <a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res, const <a class="el" href="../../da/dc2/bind_8h.html#a1066c5a43d9c7395525cfa2be387540e">cwist_bind_schema_t</a> *schema, void *out)</td></tr>
+<tr class="memdesc:a3fcd5d8780d4282d05534188255dc84b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bind URL query parameters, writing a 400 error response on failure.  <br /></td></tr>
+<tr class="separator:a3fcd5d8780d4282d05534188255dc84b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Declarative Schema Validation and Type-Safe Binding for CWIST. </p>
@@ -410,9 +416,9 @@ Functions</h2></td></tr>
 <div class="line">     .target_offset = <a class="code hl_define" href="../../da/dc2/bind_8h.html#ab3cf5ab8fc7321e02a33149650ac948b">CWIST_BIND_OFFSET</a>(StructType, MemberName),      \</div>
 <div class="line">     .target_size = <a class="code hl_define" href="../../da/dc2/bind_8h.html#a592b5bbf485e97a586a3db5735fab508">CWIST_BIND_SIZEOF</a>(StructType, MemberName),        \</div>
 <div class="line">     .rules = (RulesArray)}</div>
-<div class="ttc" id="abind_8h_html_a592b5bbf485e97a586a3db5735fab508"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a592b5bbf485e97a586a3db5735fab508">CWIST_BIND_SIZEOF</a></div><div class="ttdeci">#define CWIST_BIND_SIZEOF(st, m)</div><div class="ttdoc">Compute the size of a struct member.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00213">bind.h:213</a></div></div>
-<div class="ttc" id="abind_8h_html_a6ac1901c6d1b84d3abf96f717d6e0631"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a6ac1901c6d1b84d3abf96f717d6e0631">CWIST_BIND_TYPEOF</a></div><div class="ttdeci">#define CWIST_BIND_TYPEOF(x)</div><div class="ttdoc">Internal helper that resolves the cwist_bind_field_type_t for a C expression.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00187">bind.h:187</a></div></div>
-<div class="ttc" id="abind_8h_html_ab3cf5ab8fc7321e02a33149650ac948b"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ab3cf5ab8fc7321e02a33149650ac948b">CWIST_BIND_OFFSET</a></div><div class="ttdeci">#define CWIST_BIND_OFFSET(st, m)</div><div class="ttdoc">Compute the byte offset of a member inside a struct type.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00208">bind.h:208</a></div></div>
+<div class="ttc" id="abind_8h_html_a592b5bbf485e97a586a3db5735fab508"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a592b5bbf485e97a586a3db5735fab508">CWIST_BIND_SIZEOF</a></div><div class="ttdeci">#define CWIST_BIND_SIZEOF(st, m)</div><div class="ttdoc">Compute the size of a struct member.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00239">bind.h:239</a></div></div>
+<div class="ttc" id="abind_8h_html_a6ac1901c6d1b84d3abf96f717d6e0631"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a6ac1901c6d1b84d3abf96f717d6e0631">CWIST_BIND_TYPEOF</a></div><div class="ttdeci">#define CWIST_BIND_TYPEOF(x)</div><div class="ttdoc">Internal helper that resolves the cwist_bind_field_type_t for a C expression.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00213">bind.h:213</a></div></div>
+<div class="ttc" id="abind_8h_html_ab3cf5ab8fc7321e02a33149650ac948b"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ab3cf5ab8fc7321e02a33149650ac948b">CWIST_BIND_OFFSET</a></div><div class="ttdeci">#define CWIST_BIND_OFFSET(st, m)</div><div class="ttdoc">Compute the byte offset of a member inside a struct type.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00234">bind.h:234</a></div></div>
 </div><!-- fragment -->
 <p>Helper to declare a field descriptor with automatic type inference. </p>
 <dl class="params"><dt>Parameters</dt><dd>
@@ -434,15 +440,15 @@ Functions</h2></td></tr>
 <div class="line">    <a class="code hl_define" href="../../da/dc2/bind_8h.html#a915cde2d874761e285316cab0344d4b2">CWIST_BIND_FIELD</a>(user_t, email, <span class="stringliteral">&quot;email&quot;</span>, email_rules),</div>
 <div class="line">    <a class="code hl_define" href="../../da/dc2/bind_8h.html#a915cde2d874761e285316cab0344d4b2">CWIST_BIND_FIELD</a>(user_t, age,   <span class="stringliteral">&quot;age&quot;</span>,   age_rules),</div>
 <div class="line">};</div>
-<div class="ttc" id="abind_8h_html_a915cde2d874761e285316cab0344d4b2"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a915cde2d874761e285316cab0344d4b2">CWIST_BIND_FIELD</a></div><div class="ttdeci">#define CWIST_BIND_FIELD(StructType, MemberName, JsonKey, RulesArray)</div><div class="ttdoc">Helper to declare a field descriptor with automatic type inference.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00253">bind.h:253</a></div></div>
-<div class="ttc" id="abind_8h_html_a9a3deb55cac799eafcbb636767f827d2"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a9a3deb55cac799eafcbb636767f827d2">CWIST_RULE_MIN_VAL</a></div><div class="ttdeci">#define CWIST_RULE_MIN_VAL(v)</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00288">bind.h:288</a></div></div>
-<div class="ttc" id="abind_8h_html_ac0996efa1328c7de363f565f5092ba0c"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ac0996efa1328c7de363f565f5092ba0c">CWIST_RULE_MAX_VAL</a></div><div class="ttdeci">#define CWIST_RULE_MAX_VAL(v)</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00293">bind.h:293</a></div></div>
-<div class="ttc" id="abind_8h_html_ac8a487d8a1e6f89c59edb8dccee027cd"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ac8a487d8a1e6f89c59edb8dccee027cd">CWIST_BIND_RULES</a></div><div class="ttdeci">#define CWIST_BIND_RULES(name,...)</div><div class="ttdoc">Declare a static rule array suitable for use with CWIST_BIND_FIELD.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00228">bind.h:228</a></div></div>
-<div class="ttc" id="abind_8h_html_ad6cc14ff7aa08ee694ba1e9428bc5475"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ad6cc14ff7aa08ee694ba1e9428bc5475">CWIST_RULE_EMAIL</a></div><div class="ttdeci">#define CWIST_RULE_EMAIL()</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00303">bind.h:303</a></div></div>
-<div class="ttc" id="abind_8h_html_af7c9fa065c41b36002251e4ab34276b1"><div class="ttname"><a href="../../da/dc2/bind_8h.html#af7c9fa065c41b36002251e4ab34276b1">CWIST_RULE_REQUIRED</a></div><div class="ttdeci">#define CWIST_RULE_REQUIRED()</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00273">bind.h:273</a></div></div>
+<div class="ttc" id="abind_8h_html_a915cde2d874761e285316cab0344d4b2"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a915cde2d874761e285316cab0344d4b2">CWIST_BIND_FIELD</a></div><div class="ttdeci">#define CWIST_BIND_FIELD(StructType, MemberName, JsonKey, RulesArray)</div><div class="ttdoc">Helper to declare a field descriptor with automatic type inference.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00279">bind.h:279</a></div></div>
+<div class="ttc" id="abind_8h_html_a9a3deb55cac799eafcbb636767f827d2"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a9a3deb55cac799eafcbb636767f827d2">CWIST_RULE_MIN_VAL</a></div><div class="ttdeci">#define CWIST_RULE_MIN_VAL(v)</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00314">bind.h:314</a></div></div>
+<div class="ttc" id="abind_8h_html_ac0996efa1328c7de363f565f5092ba0c"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ac0996efa1328c7de363f565f5092ba0c">CWIST_RULE_MAX_VAL</a></div><div class="ttdeci">#define CWIST_RULE_MAX_VAL(v)</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00319">bind.h:319</a></div></div>
+<div class="ttc" id="abind_8h_html_ac8a487d8a1e6f89c59edb8dccee027cd"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ac8a487d8a1e6f89c59edb8dccee027cd">CWIST_BIND_RULES</a></div><div class="ttdeci">#define CWIST_BIND_RULES(name,...)</div><div class="ttdoc">Declare a static rule array suitable for use with CWIST_BIND_FIELD.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00254">bind.h:254</a></div></div>
+<div class="ttc" id="abind_8h_html_ad6cc14ff7aa08ee694ba1e9428bc5475"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ad6cc14ff7aa08ee694ba1e9428bc5475">CWIST_RULE_EMAIL</a></div><div class="ttdeci">#define CWIST_RULE_EMAIL()</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00329">bind.h:329</a></div></div>
+<div class="ttc" id="abind_8h_html_af7c9fa065c41b36002251e4ab34276b1"><div class="ttname"><a href="../../da/dc2/bind_8h.html#af7c9fa065c41b36002251e4ab34276b1">CWIST_RULE_REQUIRED</a></div><div class="ttdeci">#define CWIST_RULE_REQUIRED()</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00299">bind.h:299</a></div></div>
 <div class="ttc" id="astructcwist__bind__field_html"><div class="ttname"><a href="../../df/d21/structcwist__bind__field.html">cwist_bind_field</a></div><div class="ttdoc">Per-field binding descriptor.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00074">bind.h:74</a></div></div>
 </div><!-- fragment --> 
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00253">253</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00279">279</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -522,7 +528,7 @@ Functions</h2></td></tr>
 
 <p>Compute the byte offset of a member inside a struct type. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00208">208</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00234">234</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -564,7 +570,7 @@ Functions</h2></td></tr>
 <div class="line">    <a class="code hl_define" href="../../da/dc2/bind_8h.html#af7c9fa065c41b36002251e4ab34276b1">CWIST_RULE_REQUIRED</a>(),</div>
 <div class="line">    <a class="code hl_define" href="../../da/dc2/bind_8h.html#ad6cc14ff7aa08ee694ba1e9428bc5475">CWIST_RULE_EMAIL</a>());</div>
 </div><!-- fragment --> 
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00228">228</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00254">254</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -601,7 +607,7 @@ Functions</h2></td></tr>
 </div><!-- fragment -->
 <p>Build a schema descriptor from an array of field descriptors. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00263">263</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00289">289</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -633,7 +639,7 @@ Functions</h2></td></tr>
 
 <p>Compute the size of a struct member. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00213">213</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00239">239</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -681,7 +687,7 @@ Functions</h2></td></tr>
 <p>Internal helper that resolves the cwist_bind_field_type_t for a C expression. </p>
 <p>Uses C11 _Generic to map common C types to the binding enum. This is the core mechanism that makes the macro API type-safe. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00187">187</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00213">213</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -716,7 +722,7 @@ Functions</h2></td></tr>
 <div class="ttc" id="abind_8h_html_a698d39aa5bf28a644edab885a90cd15c"><div class="ttname"><a href="../../da/dc2/bind_8h.html#a698d39aa5bf28a644edab885a90cd15c">cwist_bind_rule_t</a></div><div class="ttdeci">struct cwist_bind_rule cwist_bind_rule_t</div><div class="ttdoc">Single validation rule attached to a field.</div></div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27a232755ad434780c51a5294dcdd951422"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a232755ad434780c51a5294dcdd951422">CWIST_BIND_RULE_CUSTOM</a></div><div class="ttdeci">@ CWIST_BIND_RULE_CUSTOM</div><div class="ttdoc">User-supplied predicate.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00041">bind.h:41</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00308">308</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00334">334</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -739,7 +745,7 @@ Functions</h2></td></tr>
 <div class="line">    }</div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27a4a4c290a4f2d3d1d691787627edbd562"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a4a4c290a4f2d3d1d691787627edbd562">CWIST_BIND_RULE_EMAIL</a></div><div class="ttdeci">@ CWIST_BIND_RULE_EMAIL</div><div class="ttdoc">Must conform to a practical ASCII email subset.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00040">bind.h:40</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00303">303</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00329">329</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -763,7 +769,7 @@ Functions</h2></td></tr>
 <div class="line">    }</div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27a2ca76c9a0f86837bdf1eedb1430c1f34"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a2ca76c9a0f86837bdf1eedb1430c1f34">CWIST_BIND_RULE_MAX_LEN</a></div><div class="ttdeci">@ CWIST_BIND_RULE_MAX_LEN</div><div class="ttdoc">Maximum UTF-8 code-point count.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00036">bind.h:36</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00283">283</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00309">309</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -787,7 +793,7 @@ Functions</h2></td></tr>
 <div class="line">    }</div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27a449f5a141d7e3bea88d77c89e8dc5d2a"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27a449f5a141d7e3bea88d77c89e8dc5d2a">CWIST_BIND_RULE_MAX_VAL</a></div><div class="ttdeci">@ CWIST_BIND_RULE_MAX_VAL</div><div class="ttdoc">Maximum numeric value.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00038">bind.h:38</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00293">293</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00319">319</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -811,7 +817,7 @@ Functions</h2></td></tr>
 <div class="line">    }</div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27ad9a3ebf4b7c268763905c8e8f00e1f5d"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27ad9a3ebf4b7c268763905c8e8f00e1f5d">CWIST_BIND_RULE_MIN_LEN</a></div><div class="ttdeci">@ CWIST_BIND_RULE_MIN_LEN</div><div class="ttdoc">Minimum UTF-8 code-point count.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00035">bind.h:35</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00278">278</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00304">304</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -835,7 +841,7 @@ Functions</h2></td></tr>
 <div class="line">    }</div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27ad987dfd3415e46223ca3eee7fd5f8d61"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27ad987dfd3415e46223ca3eee7fd5f8d61">CWIST_BIND_RULE_MIN_VAL</a></div><div class="ttdeci">@ CWIST_BIND_RULE_MIN_VAL</div><div class="ttdoc">Minimum numeric value.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00037">bind.h:37</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00288">288</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00314">314</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -859,7 +865,7 @@ Functions</h2></td></tr>
 <div class="line">    }</div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27acc9e073c23737b48149e3fa5e4fdfa4f"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27acc9e073c23737b48149e3fa5e4fdfa4f">CWIST_BIND_RULE_REGEX</a></div><div class="ttdeci">@ CWIST_BIND_RULE_REGEX</div><div class="ttdoc">Must fully match a POSIX extended regular expression.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00039">bind.h:39</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00298">298</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00324">324</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -882,7 +888,7 @@ Functions</h2></td></tr>
 <div class="line">    }</div>
 <div class="ttc" id="abind_8h_html_ae88989dbb2cd23835e1c8d6c1b933a27ab40318c186cf82f9b2b5b75e6d780680"><div class="ttname"><a href="../../da/dc2/bind_8h.html#ae88989dbb2cd23835e1c8d6c1b933a27ab40318c186cf82f9b2b5b75e6d780680">CWIST_BIND_RULE_REQUIRED</a></div><div class="ttdeci">@ CWIST_BIND_RULE_REQUIRED</div><div class="ttdoc">Field must be present and non-empty.</div><div class="ttdef"><b>Definition</b> <a href="../../da/dc2/bind_8h_source.html#l00034">bind.h:34</a></div></div>
 </div><!-- fragment -->
-<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00273">273</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/dc2/bind_8h_source.html#l00299">299</a> of file <a class="el" href="../../da/dc2/bind_8h_source.html">bind.h</a>.</p>
 
 </div>
 </div>
@@ -1138,7 +1144,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00637">637</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00665">665</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00073">cwist_http_request::body</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
 
@@ -1215,11 +1221,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00617">617</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00645">645</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00073">cwist_http_request::body</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00693">cwist_app_req_bind_json_or_400()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00737">cwist_app_req_bind_json_or_400()</a>.</p>
 
 </div>
 </div>
@@ -1293,9 +1299,145 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00693">693</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00737">737</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d6d/bind_8c_source.html#l00617">cwist_app_req_bind_json()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d6d/bind_8c_source.html#l00645">cwist_app_req_bind_json()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00697">cwist_bind_write_error_response()</a>.</p>
+
+</div>
+</div>
+<a id="aba7fc8b2201f1bda6d632fd9e856c9b3" name="aba7fc8b2201f1bda6d632fd9e856c9b3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aba7fc8b2201f1bda6d632fd9e856c9b3">&#9670;&#160;</a></span>cwist_app_req_bind_query()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_app_req_bind_query </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *&#160;</td>
+          <td class="paramname"><em>req</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="../../da/dc2/bind_8h.html#a1066c5a43d9c7395525cfa2be387540e">cwist_bind_schema_t</a> *&#160;</td>
+          <td class="paramname"><em>schema</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>out</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../da/dc2/bind_8h.html#ad8bdd35490f25f7e65b0fd145a9bafeb">cwist_bind_result_t</a> *&#160;</td>
+          <td class="paramname"><em>result</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Bind URL query parameters (from req-&gt;query) to a user struct. </p>
+<p>Operates on req-&gt;query treating it as application/x-www-form-urlencoded.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">req</td><td>HTTP request whose raw query string contains the parameters. </td></tr>
+    <tr><td class="paramname">schema</td><td>Bind schema describing the target struct layout. </td></tr>
+    <tr><td class="paramname">out</td><td>Pointer to the user struct to populate. </td></tr>
+    <tr><td class="paramname">result</td><td>[out] Detailed validation result. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true when every field passes validation and the struct is filled.</dd></dl>
+<p>Bind URL query parameters (from req-&gt;query) to a user struct.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">req</td><td>HTTP request whose raw query string contains parameters; may be NULL. </td></tr>
+    <tr><td class="paramname">schema</td><td>Declarative field schema; must not be NULL. </td></tr>
+    <tr><td class="paramname">out</td><td>Destination struct; must not be NULL. </td></tr>
+    <tr><td class="paramname">result</td><td>Accumulator for validation errors; reset at start. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true when every field passed validation, false otherwise. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00680">680</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00068">cwist_http_request::query</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00756">cwist_app_req_bind_query_or_400()</a>.</p>
+
+</div>
+</div>
+<a id="a3fcd5d8780d4282d05534188255dc84b" name="a3fcd5d8780d4282d05534188255dc84b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3fcd5d8780d4282d05534188255dc84b">&#9670;&#160;</a></span>cwist_app_req_bind_query_or_400()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_app_req_bind_query_or_400 </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *&#160;</td>
+          <td class="paramname"><em>req</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *&#160;</td>
+          <td class="paramname"><em>res</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="../../da/dc2/bind_8h.html#a1066c5a43d9c7395525cfa2be387540e">cwist_bind_schema_t</a> *&#160;</td>
+          <td class="paramname"><em>schema</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">void *&#160;</td>
+          <td class="paramname"><em>out</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Bind URL query parameters, writing a 400 error response on failure. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">req</td><td>HTTP request whose raw query string contains the parameters. </td></tr>
+    <tr><td class="paramname">res</td><td>Response receiving the error payload when binding fails. </td></tr>
+    <tr><td class="paramname">schema</td><td>Bind schema. </td></tr>
+    <tr><td class="paramname">out</td><td>Pointer to the user struct to populate. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true on success; false when res has been prepped with 400 errors.</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">req</td><td>HTTP request whose query contains parameter text; may be NULL. </td></tr>
+    <tr><td class="paramname">res</td><td>Response receiving the error payload when binding fails. </td></tr>
+    <tr><td class="paramname">schema</td><td>Declarative field schema; must not be NULL. </td></tr>
+    <tr><td class="paramname">out</td><td>Destination struct; must not be NULL. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true when binding succeeded; false when an error response was written. </dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00756">756</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d6/d6d/bind_8c_source.html#l00680">cwist_app_req_bind_query()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00697">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -1344,11 +1486,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00654">654</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00697">697</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02104">cwist_http_header_add()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00262">cwist_json_add_bool()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00228">cwist_json_add_string()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00200">cwist_json_begin_array()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00164">cwist_json_begin_object()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00022">cwist_json_builder_create()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00038">cwist_json_builder_destroy()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00216">cwist_json_end_array()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00189">cwist_json_end_object()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00289">cwist_json_get_raw()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00545">cwist_sstring_assign()</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00108">cwist_bind_result::error_count</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00107">cwist_bind_result::errors</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00100">cwist_bind_error::key</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00101">cwist_bind_error::message</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00693">cwist_app_req_bind_json_or_400()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00737">cwist_app_req_bind_json_or_400()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00756">cwist_app_req_bind_query_or_400()</a>.</p>
 
 </div>
 </div>

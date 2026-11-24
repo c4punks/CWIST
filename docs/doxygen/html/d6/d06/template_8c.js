@@ -4,6 +4,7 @@ var template_8c =
     [ "PATH_MAX", "d6/d06/template_8c.html#ae688d728e1acdfe5988c7db45d6f0166", null ],
     [ "TAG_DELIMS", "d6/d06/template_8c.html#a2390e87d3f317fa0ed10c808482c107a", null ],
     [ "TEMPLATE_NOINLINE", "d6/d06/template_8c.html#acab5ace3405dbbb905ad2c10565f5eb7", null ],
+    [ "template_block_entry", "d6/d06/template_8c.html#a89eae9250c0c1b231739e32e64b88baa", null ],
     [ "template_tag_kind", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1", [
       [ "TAG_NONE", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1af37541d095d0b1e80fe89c1290d55dc5", null ],
       [ "TAG_IF", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a74f97132401f0bad654341f535eaa489", null ],
@@ -11,7 +12,10 @@ var template_8c =
       [ "TAG_ENDIF", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1ad46adf8add1b0db8d15557860af24628", null ],
       [ "TAG_FOR", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a53d5a08fcdf1f00be3dc641c47cb9598", null ],
       [ "TAG_ENDFOR", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a35c3e468313ad1e5fe7d4dcf3a20b501", null ],
-      [ "TAG_INCLUDE", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1add036c0518f3ac025c6fd093b16859a0", null ]
+      [ "TAG_INCLUDE", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1add036c0518f3ac025c6fd093b16859a0", null ],
+      [ "TAG_EXTENDS", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1ab84bdca859ebcadaf73c665b511785ab", null ],
+      [ "TAG_BLOCK", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a62e7f5b2efaffdda49d499fef6a27d1e", null ],
+      [ "TAG_ENDBLOCK", "d6/d06/template_8c.html#a31afc414cf217dbfbb0278dda4c379b1a6354c6de300280117ae8cb26b6af30c2", null ]
     ] ],
     [ "cwist_template_render", "d6/d06/template_8c.html#aa5369dcdc8385ec6eff42a490b55bed2", null ],
     [ "cwist_template_render_ex", "d6/d06/template_8c.html#aa4e56a8c9cc91fcfa3fccb665eccbad9", null ],

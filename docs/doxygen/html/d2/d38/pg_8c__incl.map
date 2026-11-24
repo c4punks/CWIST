@@ -1,0 +1,32 @@
+<map id="src/core/db/pg.c" name="src/core/db/pg.c">
+<area shape="rect" id="Node000001" title="PostgreSQL client integration using libpq." alt="" coords="604,5,728,31"/>
+<area shape="rect" id="Node000002" href="$d1/da5/pg_8h.html" title="PostgreSQL client integration using libpq." alt="" coords="209,79,349,104"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="604,33,356,79,355,74,603,28"/>
+<area shape="rect" id="Node000008" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="435,79,609,104"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="644,33,559,75,557,70,642,28"/>
+<area shape="rect" id="Node000011" title=" " alt="" coords="633,79,699,104"/>
+<area shape="poly" id="edge15_Node000001_Node000011" title=" " alt="" coords="669,31,669,65,663,65,663,31"/>
+<area shape="rect" id="Node000012" title=" " alt="" coords="724,79,795,104"/>
+<area shape="poly" id="edge16_Node000001_Node000012" title=" " alt="" coords="683,29,735,68,732,72,679,33"/>
+<area shape="rect" id="Node000013" title=" " alt="" coords="819,79,889,104"/>
+<area shape="poly" id="edge17_Node000001_Node000013" title=" " alt="" coords="697,28,811,71,810,76,695,33"/>
+<area shape="rect" id="Node000003" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="99,152,241,192"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="265,106,209,146,206,142,262,102"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="238,240,321,265"/>
+<area shape="poly" id="edge7_Node000002_Node000005" title=" " alt="" coords="282,104,282,226,277,226,277,104"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="5,240,116,265"/>
+<area shape="poly" id="edge6_Node000002_Node000006" title=" " alt="" coords="210,100,178,107,145,117,114,133,88,154,77,170,69,189,63,227,58,226,64,187,72,168,84,150,111,128,143,112,176,101,209,95"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="419,240,494,265"/>
+<area shape="poly" id="edge8_Node000002_Node000007" title=" " alt="" coords="288,103,316,144,357,190,388,213,420,231,417,236,385,217,354,194,312,147,284,106"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="140,240,211,265"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="174,192,176,226,171,226,169,192"/>
+<area shape="poly" id="edge4_Node000003_Node000005" title=" " alt="" coords="198,190,254,230,251,234,195,194"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="145,194,89,234,86,230,142,190"/>
+<area shape="poly" id="edge10_Node000008_Node000007" title=" " alt="" coords="535,103,548,120,560,143,566,168,560,193,537,219,508,237,505,232,534,215,556,191,561,169,555,145,543,123,530,106"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="621,159,762,185"/>
+<area shape="poly" id="edge11_Node000008_Node000009" title=" " alt="" coords="548,102,656,151,653,156,546,106"/>
+<area shape="rect" id="Node000010" href="$da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="367,159,546,185"/>
+<area shape="poly" id="edge12_Node000008_Node000010" title=" " alt="" coords="514,106,477,150,473,147,510,102"/>
+<area shape="poly" id="edge13_Node000010_Node000005" title=" " alt="" coords="432,187,319,237,316,232,430,182"/>
+<area shape="poly" id="edge14_Node000010_Node000007" title=" " alt="" coords="459,185,459,226,454,226,454,185"/>
+</map>
