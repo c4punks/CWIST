@@ -303,7 +303,7 @@ void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follo
  * @param timeout_ms timeout in milliseconds (applied to the whole transfer).
  */
 static void cwist_http_client_set_timeout_ms_locked(cwist_http_client *client, int timeout_ms) {
-    if (!client) return;
+    if (!client || timeout_ms < 0) return;
     client->timeout_ms = timeout_ms;
     curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
 }
@@ -478,7 +478,7 @@ static cwist_error_t http_client_request_locked(cwist_http_client *client, const
 
     if (strncasecmp(url, "file://", 7) == 0) {
         err.error.err_i16 = cwist_http_client_file_request(url, method, client->timeout_ms,
-                                                            client->file_root, out_response);
+                                                           client->file_root, out_response);
         return err;
     }
 
