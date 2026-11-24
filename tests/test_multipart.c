@@ -230,6 +230,13 @@ static void test_disposition_parameter_forms(void) {
                                   "x\r\n"
                                   "--" B "--\r\n";
     assert(cwist_multipart_parse(invalid, sizeof(invalid) - 1, B) == NULL);
+
+    static const char trailing[] = "--" B "\r\n"
+                                   "Content-Disposition: form-data; name=\"bad\" garbage\r\n"
+                                   "\r\n"
+                                   "x\r\n"
+                                   "--" B "--\r\n";
+    assert(cwist_multipart_parse(trailing, sizeof(trailing) - 1, B) == NULL);
     printf("  Passed.\n");
 }
 
@@ -242,6 +249,10 @@ static void test_extract_boundary(void) {
     assert(b && strcmp(b, B) == 0);
     free(b);
     assert(cwist_multipart_extract_boundary("text/plain") == NULL);
+    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"" B) == NULL);
+    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"\"") == NULL);
+    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=") == NULL);
+    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"" B "\" garbage") == NULL);
     printf("  Passed.\n");
 }
 
