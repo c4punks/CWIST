@@ -58,6 +58,7 @@ static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t pre
         new_cap *= 2;
     }
 
+    if (new_cap == SIZE_MAX) return NULL;
     char *result;
     if (str->borrows_buffer) {
         result = (char *)cwist_alloc(new_cap + 1);
@@ -71,6 +72,7 @@ static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t pre
 
     char *orig = str->base ? str->base : str->data;
     const size_t lead = (str->base && str->data) ? (size_t)(str->data - str->base) : 0;
+    if (lead > SIZE_MAX - new_cap - 1) return NULL;
     char *grown = (char *)cwist_realloc(orig, lead + new_cap + 1);
     if (!grown) return NULL;
     str->base = grown;
@@ -666,7 +668,8 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
-    if (sstring_aliases(str, data)) return sstring_with_copy(str, data, cwist_sstring_append_escaped);
+    if (sstring_aliases(str, data))
+        return sstring_with_copy(str, data, cwist_sstring_append_escaped);
     if (!data) {
         // Appending nothing is success
         cwist_error_t err = make_error(CWIST_ERR_INT8);
