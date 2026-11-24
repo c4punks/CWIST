@@ -572,9 +572,9 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
  */
 void cwist_heal_result_free(cwist_heal_result_t *r) {
     if (!r) return;
-    /* result.json comes from cJSON_PrintUnformatted → plain malloc */
+    /* result.json comes from cJSON_PrintUnformatted and uses cJSON hooks. */
     if (r->json) {
-        free(r->json);
+        cJSON_free(r->json);
         r->json = NULL;
     }
 }

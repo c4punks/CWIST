@@ -814,11 +814,11 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
 
     *out_json = cwist_sstring_create();
     if (!*out_json) {
-        free(printed);
+        cJSON_free(printed);
         return gql_error(-1);
     }
     cwist_sstring_assign(*out_json, printed);
-    free(printed);
+    cJSON_free(printed);
 
     return gql_error(0);
 }

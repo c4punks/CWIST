@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 void test_trim() {
     printf("Testing trim...\n");
@@ -312,7 +313,24 @@ void test_adopt_region() {
     printf("Passed adopt_region.\n");
 }
 
+static void test_length_overflow(void) {
+    cwist_sstring *s = cwist_sstring_create();
+    assert(s != NULL);
+    char byte = 'x';
+    s->size = SIZE_MAX - 1;
+    cwist_error_t err = cwist_sstring_append_len(s, &byte, 1);
+    assert(err.error.err_i8 == ERR_SSTRING_RESIZE_TOO_LARGE);
+    s->size = SIZE_MAX;
+    err = cwist_sstring_append_len(s, &byte, 1);
+    assert(err.error.err_i8 == ERR_SSTRING_RESIZE_TOO_LARGE);
+    s->size = 0;
+    err = cwist_sstring_append_len(s, &byte, SIZE_MAX);
+    assert(err.error.err_i8 == ERR_SSTRING_RESIZE_TOO_LARGE);
+    cwist_sstring_destroy(s);
+}
+
 int main() {
+    test_length_overflow();
     test_trim();
     test_resize();
     test_seek();

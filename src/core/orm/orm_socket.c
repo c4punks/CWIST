@@ -154,15 +154,12 @@ static bool socket_is_plain_decimal(const char *txt) {
  *
  * @param ctype sqlite3_column_type() read before any text conversion.
  */
-static void socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i, int ctype) {
+static bool socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i, int ctype) {
     const char *txt = (const char *)sqlite3_column_text(stmt, i);
     const char *colname = sqlite3_column_name(stmt, i);
     if (!colname) colname = "";
 
-    if (!txt) {
-        cJSON_AddNullToObject(row, colname);
-        return;
-    }
+    if (!txt) return cJSON_AddNullToObject(row, colname) != NULL;
 
     /* A REAL value is a number whatever its text looks like ("100.0"). */
     if (ctype == SQLITE_FLOAT) {
@@ -170,11 +167,9 @@ static void socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i, int ct
         if (isfinite(d)) {
             char num[40];
             cwist_number_format_double(num, sizeof(num), d);
-            cJSON_AddRawToObject(row, colname, num);
-        } else {
-            cJSON_AddStringToObject(row, colname, txt);
+            return cJSON_AddRawToObject(row, colname, num) != NULL;
         }
-        return;
+        return cJSON_AddStringToObject(row, colname, txt) != NULL;
     }
 
     /* Attempt numeric conversion for cleaner JSON. */
@@ -188,18 +183,11 @@ static void socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i, int ct
          * Only canonical integer text becomes a number; "007" or
          * " 12" is text that merely parses as one and stays a string. */
         snprintf(canon, sizeof(canon), "%lld", ll);
-        if (strcmp(canon, txt) == 0) {
-            cJSON_AddRawToObject(row, colname, txt);
-        } else {
-            cJSON_AddStringToObject(row, colname, txt);
-        }
-    } else if (socket_is_plain_decimal(txt)) {
-        /* Emit the text itself: it already is a JSON number, and printing
-         * a parsed double could change its digits. */
-        cJSON_AddRawToObject(row, colname, txt);
-    } else {
-        cJSON_AddStringToObject(row, colname, txt);
+        if (strcmp(canon, txt) == 0) return cJSON_AddRawToObject(row, colname, txt) != NULL;
+        return cJSON_AddStringToObject(row, colname, txt) != NULL;
     }
+    if (socket_is_plain_decimal(txt)) return cJSON_AddRawToObject(row, colname, txt) != NULL;
+    return cJSON_AddStringToObject(row, colname, txt) != NULL;
 }
 
 /** @brief Base64 alphabet for BLOB cells in the typed payload. */
@@ -259,34 +247,44 @@ static cJSON *socket_typed_cell(sqlite3_stmt *stmt, int i, int ctype) {
 
     /* Read the typed payload before any text conversion: sqlite3_column_text()
      * changes what sqlite3_column_type() reports for the same column. */
+    bool ok = true;
     switch (ctype) {
     case SQLITE_INTEGER: {
         char digits[32];
         snprintf(digits, sizeof(digits), "%lld", (long long)sqlite3_column_int64(stmt, i));
-        cJSON_AddStringToObject(cell, "t", "int");
-        cJSON_AddStringToObject(cell, "v", digits);
+        ok = cJSON_AddStringToObject(cell, "t", "int") &&
+             cJSON_AddStringToObject(cell, "v", digits);
         break;
     }
     case SQLITE_FLOAT:
-        cJSON_AddStringToObject(cell, "t", "real");
-        cJSON_AddNumberToObject(cell, "v", sqlite3_column_double(stmt, i));
+        ok = cJSON_AddStringToObject(cell, "t", "real") &&
+             cJSON_AddNumberToObject(cell, "v", sqlite3_column_double(stmt, i));
         break;
     case SQLITE_BLOB: {
         const unsigned char *blob = (const unsigned char *)sqlite3_column_blob(stmt, i);
         int n = sqlite3_column_bytes(stmt, i);
-        cJSON_AddStringToObject(cell, "t", "blob");
-        cJSON_AddItemToObject(cell, "v", socket_b64_string(blob ? blob : (const unsigned char *)"", n));
-        cJSON_AddNumberToObject(cell, "n", (double)n);
+        cJSON *encoded = socket_b64_string(blob ? blob : (const unsigned char *)"", n);
+        ok = cJSON_AddStringToObject(cell, "t", "blob") && encoded;
+        bool attached = false;
+        if (ok) {
+            attached = cJSON_AddItemToObject(cell, "v", encoded);
+            ok = attached && cJSON_AddNumberToObject(cell, "n", (double)n);
+        }
+        if (!ok && !attached) cJSON_Delete(encoded);
         break;
     }
     case SQLITE_TEXT:
-        cJSON_AddStringToObject(cell, "t", "text");
-        cJSON_AddStringToObject(cell, "v", (const char *)sqlite3_column_text(stmt, i));
+        ok = cJSON_AddStringToObject(cell, "t", "text") &&
+             cJSON_AddStringToObject(cell, "v", (const char *)sqlite3_column_text(stmt, i));
         break;
     case SQLITE_NULL:
     default:
-        cJSON_AddStringToObject(cell, "t", "null");
+        ok = cJSON_AddStringToObject(cell, "t", "null") != NULL;
         break;
+    }
+    if (!ok) {
+        cJSON_Delete(cell);
+        return NULL;
     }
     return cell;
 }
@@ -328,12 +326,23 @@ static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *ac
             /* Re-shape the typed column list for this statement. */
             cJSON_Delete(acc->columns);
             acc->columns = cJSON_CreateArray();
-            if (acc->columns) {
+            if (!acc->columns) {
+                rc = SQLITE_NOMEM;
+            } else {
                 for (int i = 0; i < ncols; i++) {
                     const char *name = sqlite3_column_name(stmt, i);
-                    cJSON_AddItemToArray(acc->columns, cJSON_CreateString(name ? name : ""));
+                    cJSON *column = cJSON_CreateString(name ? name : "");
+                    if (!column || !cJSON_AddItemToArray(acc->columns, column)) {
+                        cJSON_Delete(column);
+                        rc = SQLITE_NOMEM;
+                        break;
+                    }
                 }
             }
+        }
+        if (rc != SQLITE_OK) {
+            sqlite3_finalize(stmt);
+            break;
         }
 
         while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
@@ -345,13 +354,38 @@ static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *ac
                 rc = SQLITE_NOMEM;
                 break;
             }
+            bool row_ok = true;
             for (int i = 0; i < ncols; i++) {
                 int ctype = sqlite3_column_type(stmt, i);
-                cJSON_AddItemToArray(trow, socket_typed_cell(stmt, i, ctype));
-                socket_add_legacy_cell(row, stmt, i, ctype);
+                cJSON *cell = socket_typed_cell(stmt, i, ctype);
+                if (!cell) {
+                    row_ok = false;
+                    break;
+                }
+                if (!cJSON_AddItemToArray(trow, cell)) {
+                    cJSON_Delete(cell);
+                    row_ok = false;
+                    break;
+                }
+                if (!socket_add_legacy_cell(row, stmt, i, ctype)) {
+                    row_ok = false;
+                    break;
+                }
             }
-            cJSON_AddItemToArray(acc->rows, row);
-            cJSON_AddItemToArray(acc->trows, trow);
+            if (row_ok) {
+                if (cJSON_AddItemToArray(acc->trows, trow)) trow = NULL;
+                else row_ok = false;
+            }
+            if (row_ok) {
+                if (cJSON_AddItemToArray(acc->rows, row)) row = NULL;
+                else row_ok = false;
+            }
+            if (!row_ok) {
+                cJSON_Delete(row);
+                cJSON_Delete(trow);
+                rc = SQLITE_NOMEM;
+                break;
+            }
         }
 
         int frc = sqlite3_finalize(stmt);
@@ -416,6 +450,7 @@ static void *cwist_orm_socket_worker(void *arg)
         acc.rows = cJSON_CreateArray();
         acc.columns = cJSON_CreateArray();
         acc.trows = cJSON_CreateArray();
+        /* socket_exec_all() allocates this with strdup, so release it with free(). */
         char *errmsg = NULL;
 
         if (!acc.rows || !acc.columns || !acc.trows) {
@@ -431,7 +466,7 @@ static void *cwist_orm_socket_worker(void *arg)
             cJSON_Delete(acc.rows);
             cJSON_Delete(acc.columns);
             cJSON_Delete(acc.trows);
-            if (errmsg) sqlite3_free(errmsg);
+            free(errmsg);
             break;
         }
 

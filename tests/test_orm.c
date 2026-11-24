@@ -218,7 +218,8 @@ static void test_exact_i64(void) {
     assert(rc(cwist_orm_exec(orm, "INSERT INTO x VALUES "
                                   "(1, 9007199254740993, '9223372036854775807'), "
                                   "(2, -9223372036854775808, '007'), "
-                                  "(3, 1.5, NULL), (4, 0, '-0');")) == 0);
+                                  "(3, 1.5, NULL), (4, 0, '-0'), "
+                                  "(5, 0, '+1'), (6, 0, ' 1'), (7, 0, '01'), (8, 0, '-01');")) == 0);
     int64_t v = 7;
     assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 1", &v)) == 0);
     assert(v == INT64_C(9007199254740993));
@@ -237,6 +238,10 @@ static void test_exact_i64(void) {
     assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 2", &v)) == CWIST_ERROR_PROTOCOL);
     assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 3", &v)) == CWIST_ERROR_PROTOCOL);
     assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 4", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 5", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 6", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 7", &v)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_i64(orm, "x", "t", "id = 8", &v)) == CWIST_ERROR_PROTOCOL);
     assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 99", &v)) == CWIST_ERROR_PROTOCOL);
     assert(rc(cwist_orm_select_one_i64(orm, "missing", "v", NULL, &v)) == CWIST_ERROR_PROTOCOL);
     assert(v == 42);

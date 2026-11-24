@@ -1,4 +1,3 @@
-1	src/core/db/db.c:free(serialised);
 3	src/core/mem/alloc.c:free(ptr);
 1	src/core/mem/alloc.c:return calloc(1, size ? size : 1);
 1	src/core/mem/alloc.c:return realloc(ptr, new_size ? new_size : 1);
@@ -58,7 +57,6 @@
 7	src/core/orm/orm.c:free(qid);
 2	src/core/orm/orm.c:free(qret);
 17	src/core/orm/orm.c:free(qtable);
-1	src/core/orm/orm.c:free(raw);
 1	src/core/orm/orm.c:free(result);
 1	src/core/orm/orm.c:free(result->cells);
 1	src/core/orm/orm.c:free(result->cells[i].blob);
@@ -86,14 +84,12 @@
 1	src/core/orm/orm_socket.c:ctx->db_path = strdup(db_path);
 2	src/core/orm/orm_socket.c:free(ctx);
 1	src/core/orm/orm_socket.c:free(ctx->db_path);
-1	src/core/orm/orm_socket.c:free(errmsg);
+2	src/core/orm/orm_socket.c:free(errmsg);
 1	src/core/orm/orm_socket.c:free(out);
 1	src/core/orm/orm_socket.c:if (rc != SQLITE_OK && errmsg) *errmsg = strdup(sqlite3_errmsg(db));
-1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
 10	src/net/db_sync/db_sync.c:free(blob);
 1	src/net/db_sync/db_sync.c:unsigned char *blob = (unsigned char *)malloc(blob_len);
-2	src/net/graphql/graphql.c:free(printed);
 1	src/net/http/async.c:cwist_http_carry *c = (cwist_http_carry *)malloc(sizeof(*c) + len);
 2	src/net/http/async.c:free(a->carry);
 1	src/net/http/http3.c:char *tmp = realloc(st->body, new_cap);
@@ -116,7 +112,7 @@
 4	src/net/http/http3.c:free(pkt_buf);
 2	src/net/http/http3.c:free(q);
 2	src/net/http/http3.c:free(st);
-2	src/net/http/http3.c:free(st->body);
+3	src/net/http/http3.c:free(st->body);
 1	src/net/http/http3.c:free(st->seq_buf);
 1	src/net/http/http3.c:h3_async_node *n = (h3_async_node *)calloc(1, sizeof(*n));
 1	src/net/http/http3.c:h3_conn_ctx_t *cc = (h3_conn_ctx_t *)calloc(1, sizeof(*cc));
@@ -125,7 +121,7 @@
 1	src/net/http/http3.c:h3_stream_ctx_t *st = calloc(1, sizeof(*st));
 1	src/net/http/http3.c:if (p && atomic_fetch_sub_explicit(&p->refs, 1, memory_order_acq_rel) == 1) free(p);
 2	src/net/http/http3.c:node->data = malloc(len);
-1	src/net/http/http3.c:st->body = realloc(st->body, assembled_len);
+1	src/net/http/http3.c:char *assembled_body = realloc(st->body, assembled_len);
 1	src/net/http/http3.c:struct cwist_h3_async_queue *q = (struct cwist_h3_async_queue *)calloc(1, sizeof(*q));
 1	src/net/http/http3.c:struct cwist_h3_pending *p = (struct cwist_h3_pending *)calloc(1, sizeof(*p));
 1	src/net/http/http3.c:struct iovec *batch_iovs = malloc(sizeof(*batch_iovs) * H3_RECV_BATCH);
@@ -165,7 +161,6 @@
 1	src/net/http/http3_client.c:st->req_path = strdup(path);
 1	src/net/http/http_client.c:char *tmp = realloc(body->data, new_cap);
 3	src/net/http/http_client.c:free(resp_body.data);
-1	src/net/http/session.c:free(raw);
 1	src/net/http/tls_chain.c:char *url = (char *)malloc((size_t)uri_len + 1);
 1	src/net/http/tls_chain.c:free(buf.data);
 1	src/net/http/tls_chain.c:free(out->data);
