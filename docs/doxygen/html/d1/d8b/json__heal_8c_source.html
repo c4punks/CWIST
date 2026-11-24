@@ -591,9 +591,9 @@ $(document).ready(function(){initNavTree('d1/d8b/json__heal_8c_source.html','../
 <div class="foldopen" id="foldopen00573" data-start="{" data-end="}">
 <div class="line"><a id="l00573" name="l00573"></a><span class="lineno"><a class="line" href="../../db/dd3/json__heal_8h.html#ad27e418639f10545fe4a98ae0230191a">  573</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d1/d8b/json__heal_8c.html#ad27e418639f10545fe4a98ae0230191a">cwist_heal_result_free</a>(<a class="code hl_struct" href="../../d5/d02/structcwist__heal__result.html">cwist_heal_result_t</a> *r) {</div>
 <div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    <span class="keywordflow">if</span> (!r) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>    <span class="comment">/* result.json comes from cJSON_PrintUnformatted → plain malloc */</span></div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>    <span class="comment">/* result.json comes from cJSON_PrintUnformatted and uses cJSON hooks. */</span></div>
 <div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>    <span class="keywordflow">if</span> (r-&gt;<a class="code hl_variable" href="../../d5/d02/structcwist__heal__result.html#a53aeed692588792dfe70c7c1ae696b3e">json</a>) {</div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>        free(r-&gt;<a class="code hl_variable" href="../../d5/d02/structcwist__heal__result.html#a53aeed692588792dfe70c7c1ae696b3e">json</a>);</div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>        cJSON_free(r-&gt;<a class="code hl_variable" href="../../d5/d02/structcwist__heal__result.html#a53aeed692588792dfe70c7c1ae696b3e">json</a>);</div>
 <div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>        r-&gt;<a class="code hl_variable" href="../../d5/d02/structcwist__heal__result.html#a53aeed692588792dfe70c7c1ae696b3e">json</a> = NULL;</div>
 <div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    }</div>
 <div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>}</div>
