@@ -3,6 +3,9 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef __APPLE__
+#include <sys/random.h>
+#endif
 #include <cwist/sys/platform.h>
 #ifdef CWIST_BAREMETAL
 #include <cwist/sys/port.h>
