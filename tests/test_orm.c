@@ -8,6 +8,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/core/orm/orm.h>
 #include <cwist/core/orm/orm_socket.h>
+#include <cwist/sys/app/app.h>
 #include <cjson/cJSON.h>
 #include <assert.h>
 #include <math.h>
@@ -281,6 +282,25 @@ static void test_dialects(void) {
 
     cwist_orm_use_dialect(orm, CWIST_ORM_SQLITE);
     assert(rc(cwist_orm_insert_returning_int(orm, "d", row, "id", &id)) == 0 && id == 3);
+
+    /* Oracle dialect: RETURNING clause (like Postgres) */
+    cwist_orm_use_dialect(orm, CWIST_ORM_ORACLE);
+    id = 0;
+    assert(rc(cwist_orm_insert_returning_int(orm, "d", row, "id", &id)) == 0 && id == 4);
+
+    /* MS-SQL dialect: SCOPE_IDENTITY() does not exist in SQLite, so like MySQL it fails cleanly */
+    cwist_orm_use_dialect(orm, CWIST_ORM_MSSQL);
+    id = 0;
+    assert(rc(cwist_orm_insert_returning_int(orm, "d", row, "id", &id)) != 0);
+
+    /* Provider names */
+    assert(strcmp(cwist_rdbms_provider_name(CWIST_RDBMS_POSTGRES), "PostgreSQL") == 0);
+    assert(strcmp(cwist_rdbms_provider_name(CWIST_RDBMS_MYSQL), "MySQL") == 0);
+    assert(strcmp(cwist_rdbms_provider_name(CWIST_RDBMS_MARIADB), "MariaDB") == 0);
+    assert(strcmp(cwist_rdbms_provider_name(CWIST_RDBMS_ORACLE), "OracleDB") == 0);
+    assert(strcmp(cwist_rdbms_provider_name(CWIST_RDBMS_MSSQL), "MS-SQL") == 0);
+    assert(strcmp(cwist_rdbms_provider_name(CWIST_RDBMS_NONE), "None") == 0);
+
     cwist_orm_use_dialect(NULL, CWIST_ORM_POSTGRES); /* ignored */
     cJSON_Delete(row);
     cwist_orm_close_socket(orm);

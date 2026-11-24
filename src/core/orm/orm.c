@@ -416,18 +416,27 @@ static char *cwist_orm_literal(const cwist_orm_t *orm, const char *src) {
  */
 static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id) {
     if (!orm || !id) return NULL;
-    char quote_ch = '\0';
+    char open_ch = '\0';
+    char close_ch = '\0';
     char escape_ch = '\0';
     switch (orm->dialect) {
         case CWIST_ORM_POSTGRES:
-            quote_ch = '"';
+        case CWIST_ORM_ORACLE:
+            open_ch = '"';
+            close_ch = '"';
             escape_ch = '"';
             break;
         case CWIST_ORM_MYSQL:
         case CWIST_ORM_MARIADB:
         case CWIST_ORM_SQLITE:
-            quote_ch = '`';
+            open_ch = '`';
+            close_ch = '`';
             escape_ch = '`';
+            break;
+        case CWIST_ORM_MSSQL:
+            open_ch = '[';
+            close_ch = ']';
+            escape_ch = ']';
             break;
         default: return strdup(id);
     }
@@ -435,17 +444,17 @@ static char *cwist_orm_quote_identifier(const cwist_orm_t *orm, const char *id) 
     size_t len = strlen(id);
     size_t extra = 0;
     for (size_t i = 0; i < len; i++) {
-        if (id[i] == quote_ch) extra++;
+        if (id[i] == escape_ch) extra++;
     }
     char *out = (char *)malloc(len + extra + 3);
     if (!out) return NULL;
     size_t j = 0;
-    out[j++] = quote_ch;
+    out[j++] = open_ch;
     for (size_t i = 0; i < len; i++) {
-        if (id[i] == quote_ch) out[j++] = escape_ch;
+        if (id[i] == escape_ch) out[j++] = escape_ch;
         out[j++] = id[i];
     }
-    out[j++] = quote_ch;
+    out[j++] = close_ch;
     out[j] = '\0';
     return out;
 }
@@ -858,8 +867,10 @@ static char *orm_build_returning_sql(const cwist_orm_t *orm, const char *table, 
     const char *fmt;
     switch (orm->dialect) {
         case CWIST_ORM_POSTGRES:
-        case CWIST_ORM_MARIADB: fmt = "%s RETURNING %s;"; break;
+        case CWIST_ORM_MARIADB:
+        case CWIST_ORM_ORACLE: fmt = "%s RETURNING %s;"; break;
         case CWIST_ORM_MYSQL: fmt = "%s; SELECT LAST_INSERT_ID() AS %s;"; break;
+        case CWIST_ORM_MSSQL: fmt = "%s; SELECT SCOPE_IDENTITY() AS %s;"; break;
         case CWIST_ORM_SQLITE:
         default: fmt = "%s; SELECT last_insert_rowid() AS %s;"; break;
     }
