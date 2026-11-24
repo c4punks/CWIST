@@ -1,7 +1,7 @@
 name: Deploy Documentation to GitHub Pages
 # Regenerates Doxygen docs and auto-commits them to the pushed branch, then
-# deploys a versioned site: current main at the root, one directory per
-# release tag (retroactive — every v* tag is rebuilt on each deploy).
+# deploys a versioned site: current main at the root, the three newest tags,
+# or only the tag that triggered the workflow.
 
 on:
   push:
@@ -30,7 +30,11 @@ jobs:
           fetch-depth: 0
       - id: list
         run: |
-          tags=$(git tag -l 'v*' | sort -V | jq -R -s -c 'split("\n")[:-1]')
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tags=$(printf '%s\n' "$GITHUB_REF_NAME" | jq -R -s -c 'split("\n")[:-1]')
+          else
+            tags=$(git tag -l 'v*' | sort -V | tail -n 3 | jq -R -s -c 'split("\n")[:-1]')
+          fi
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
 
   main-docs:
@@ -118,9 +122,8 @@ jobs:
 
   deploy:
     needs: [tags, main-docs, tag-docs]
-    # Deploy only on main pushes and manual runs. Each deploy already rebuilds
-    # every v* tag's docs, so a tag push would redeploy the same site, and the
-    # github-pages environment only permits deployments from main anyway.
+    # Deploy only on main pushes and manual runs. A tag push builds only its
+    # own artifact, and the github-pages environment permits main only.
     if: >-
       github.ref == 'refs/heads/main' ||
       github.event_name == 'workflow_dispatch'
