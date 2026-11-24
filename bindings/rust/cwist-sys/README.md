@@ -5,7 +5,7 @@ framework and application server.
 
 This crate uses `bindgen` to generate Rust bindings from the installed CWIST
 headers and links `libcwist.a` through `pkg-config`. You must build and install
-CWIST separately before building this crate.
+CWIST 4.3.8 or newer separately before building this crate.
 
 ```sh
 # Install CWIST first, for example:

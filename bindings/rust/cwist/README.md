@@ -7,7 +7,7 @@ This crate wraps the raw FFI provided by `cwist-sys` with an idiomatic Rust API
 for routing, middleware, request/response handling, and graceful shutdown.
 
 ```sh
-# Install CWIST first; cwist-sys links it through pkg-config.
+# Install CWIST 4.3.8 or newer; cwist-sys links it through pkg-config.
 make && make install PREFIX=$HOME/.local
 export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig
 
