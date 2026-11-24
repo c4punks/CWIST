@@ -1,5 +1,6 @@
 #include <cwist/core/utils/zod.h>
 #include "number_internal.h"
+#include "json_internal.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -135,6 +136,11 @@ cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema
 
     if (!raw) {
         add_error(&r, "(root)", "null input string");
+        return r;
+    }
+
+    if (cwist_json_has_nul_escape(raw)) {
+        add_error(&r, "(root)", "embedded NUL is not allowed");
         return r;
     }
 
