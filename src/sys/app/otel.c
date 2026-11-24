@@ -132,54 +132,93 @@ static bool otel_parse_traceparent(const char *h, char *trace_id, char *parent_i
 
 static cJSON *otel_attr(const char *key, cJSON *value, const char *type) {
     cJSON *a = cJSON_CreateObject();
-    cJSON_AddStringToObject(a, "key", key);
-    cJSON_AddItemToObject(cJSON_AddObjectToObject(a, "value"), type, value);
+    if (!a || !cJSON_AddStringToObject(a, "key", key)) {
+        cJSON_Delete(value);
+        cJSON_Delete(a);
+        return NULL;
+    }
+    cJSON *object = cJSON_AddObjectToObject(a, "value");
+    if (!object || !cJSON_AddItemToObject(object, type, value)) {
+        cJSON_Delete(value);
+        cJSON_Delete(a);
+        return NULL;
+    }
     return a;
+}
+
+static bool otel_add_attr(cJSON *array, const char *key, cJSON *value, const char *type) {
+    cJSON *a = otel_attr(key, value, type);
+    if (!a || !cJSON_AddItemToArray(array, a)) {
+        cJSON_Delete(a);
+        return false;
+    }
+    return true;
 }
 
 /* OTLP/HTTP JSON body for `n` spans (uint64 fields are strings per the
  * protobuf JSON mapping). */
 static char *otel_encode_spans(const otel_span_t *spans, size_t n) {
     cJSON *root = cJSON_CreateObject();
+    if (!root) return NULL;
+    cJSON *resource_spans = cJSON_AddArrayToObject(root, "resourceSpans");
     cJSON *rs = cJSON_CreateObject();
-    cJSON_AddItemToArray(cJSON_AddArrayToObject(root, "resourceSpans"), rs);
-    cJSON *rattrs = cJSON_AddArrayToObject(cJSON_AddObjectToObject(rs, "resource"), "attributes");
-    cJSON_AddItemToArray(
-        rattrs, otel_attr("service.name", cJSON_CreateString(g_otel.service_name), "stringValue"));
+    if (!resource_spans || !rs || !cJSON_AddItemToArray(resource_spans, rs)) {
+        cJSON_Delete(rs);
+        goto oom;
+    }
+    cJSON *resource = cJSON_AddObjectToObject(rs, "resource");
+    cJSON *rattrs = resource ? cJSON_AddArrayToObject(resource, "attributes") : NULL;
+    if (!rattrs || !otel_add_attr(rattrs, "service.name", cJSON_CreateString(g_otel.service_name),
+                                  "stringValue"))
+        goto oom;
+    cJSON *scope_spans = cJSON_AddArrayToObject(rs, "scopeSpans");
     cJSON *ss = cJSON_CreateObject();
-    cJSON_AddItemToArray(cJSON_AddArrayToObject(rs, "scopeSpans"), ss);
-    cJSON_AddStringToObject(cJSON_AddObjectToObject(ss, "scope"), "name", "cwist");
+    if (!scope_spans || !ss || !cJSON_AddItemToArray(scope_spans, ss)) {
+        cJSON_Delete(ss);
+        goto oom;
+    }
+    cJSON *scope = cJSON_AddObjectToObject(ss, "scope");
     cJSON *out = cJSON_AddArrayToObject(ss, "spans");
+    if (!scope || !out || !cJSON_AddStringToObject(scope, "name", "cwist")) goto oom;
 
     for (size_t i = 0; i < n; i++) {
         const otel_span_t *s = &spans[i];
         const char *method = cwist_http_method_to_string(s->method);
         char num[24];
         cJSON *span = cJSON_CreateObject();
-        cJSON_AddStringToObject(span, "traceId", s->trace_id);
-        cJSON_AddStringToObject(span, "spanId", s->span_id);
-        if (s->parent_span_id[0]) cJSON_AddStringToObject(span, "parentSpanId", s->parent_span_id);
-        cJSON_AddStringToObject(span, "name", method);
-        cJSON_AddNumberToObject(span, "kind", 2); /* SPAN_KIND_SERVER */
+        if (!span) goto oom;
+        bool ok = cJSON_AddStringToObject(span, "traceId", s->trace_id) &&
+                  cJSON_AddStringToObject(span, "spanId", s->span_id) &&
+                  (!s->parent_span_id[0] ||
+                   cJSON_AddStringToObject(span, "parentSpanId", s->parent_span_id)) &&
+                  cJSON_AddStringToObject(span, "name", method) &&
+                  cJSON_AddNumberToObject(span, "kind", 2);
         snprintf(num, sizeof(num), "%llu", (unsigned long long)s->start_ns);
-        cJSON_AddStringToObject(span, "startTimeUnixNano", num);
+        ok = ok && cJSON_AddStringToObject(span, "startTimeUnixNano", num);
         snprintf(num, sizeof(num), "%llu", (unsigned long long)s->end_ns);
-        cJSON_AddStringToObject(span, "endTimeUnixNano", num);
+        ok = ok && cJSON_AddStringToObject(span, "endTimeUnixNano", num);
         cJSON *attrs = cJSON_AddArrayToObject(span, "attributes");
-        cJSON_AddItemToArray(
-            attrs, otel_attr("http.request.method", cJSON_CreateString(method), "stringValue"));
-        cJSON_AddItemToArray(attrs,
-                             otel_attr("url.path", cJSON_CreateString(s->path), "stringValue"));
+        ok = ok && attrs &&
+             otel_add_attr(attrs, "http.request.method", cJSON_CreateString(method), "stringValue") &&
+             otel_add_attr(attrs, "url.path", cJSON_CreateString(s->path), "stringValue");
         snprintf(num, sizeof(num), "%d", s->status);
-        cJSON_AddItemToArray(
-            attrs, otel_attr("http.response.status_code", cJSON_CreateString(num), "intValue"));
-        if (s->status >= 500)
-            cJSON_AddNumberToObject(cJSON_AddObjectToObject(span, "status"), "code", 2);
-        cJSON_AddItemToArray(out, span);
+        ok = ok && otel_add_attr(attrs, "http.response.status_code", cJSON_CreateString(num), "intValue");
+        if (ok && s->status >= 500) {
+            cJSON *status = cJSON_AddObjectToObject(span, "status");
+            ok = status && cJSON_AddNumberToObject(status, "code", 2);
+        }
+        if (!ok || !cJSON_AddItemToArray(out, span)) {
+            cJSON_Delete(span);
+            goto oom;
+        }
     }
     char *body = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
     return body;
+
+oom:
+    cJSON_Delete(root);
+    return NULL;
 }
 
 static void otel_export_batch(cwist_http_client *client, const otel_span_t *spans, size_t n) {

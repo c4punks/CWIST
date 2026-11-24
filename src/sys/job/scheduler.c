@@ -103,14 +103,16 @@ static void cond_deadline_after(uint64_t wait_ms, struct timespec *ts) {
  *
  * @param[out] cond Condition variable to initialize.
  */
-static void cond_init_monotonic(pthread_cond_t *cond) {
+static bool cond_init_monotonic(pthread_cond_t *cond) {
     pthread_condattr_t attr;
-    pthread_condattr_init(&attr);
+    if (pthread_condattr_init(&attr) != 0) return false;
+    bool ok = true;
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    pthread_condattr_setclock(&attr, SCHED_COND_CLOCK);
+    ok = pthread_condattr_setclock(&attr, SCHED_COND_CLOCK) == 0;
 #endif
-    pthread_cond_init(cond, &attr);
+    if (ok) ok = pthread_cond_init(cond, &attr) == 0;
     pthread_condattr_destroy(&attr);
+    return ok;
 }
 
 /* --- Min-heap of delayed jobs ------------------------------------------- */
@@ -310,8 +312,19 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
     }
     s->worker_count = worker_count;
 
-    pthread_mutex_init(&s->delayed_mtx, NULL);
-    cond_init_monotonic(&s->delayed_cond);
+    if (pthread_mutex_init(&s->delayed_mtx, NULL) != 0) {
+        cwist_free(s->workers);
+        cwist_io_queue_destroy(s->queue);
+        cwist_free(s);
+        return NULL;
+    }
+    if (!cond_init_monotonic(&s->delayed_cond)) {
+        pthread_mutex_destroy(&s->delayed_mtx);
+        cwist_free(s->workers);
+        cwist_io_queue_destroy(s->queue);
+        cwist_free(s);
+        return NULL;
+    }
     s->running = true;
 
     for (size_t i = 0; i < worker_count; i++) {

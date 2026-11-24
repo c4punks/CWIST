@@ -504,7 +504,7 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
     char *raw = cJSON_PrintUnformatted((cJSON *)node);
     if (!raw) return strdup("NULL");
     char *literal = cwist_orm_literal(orm, raw);
-    free(raw);
+    cJSON_free(raw);
     return literal;
 }
 
@@ -1550,6 +1550,10 @@ static int orm_fill_typed_cell(cwist_orm_value_t *v, const cJSON *cell) {
         if (!cJSON_IsString(payload) || !payload->valuestring) return CWIST_ERROR_PROTOCOL;
         const char *s = payload->valuestring;
         if (!*s) return CWIST_ERROR_PROTOCOL;
+        const char *digits = s[0] == '-' ? s + 1 : s;
+        if (!*digits || (digits[0] == '0' && digits[1] != '\0')) return CWIST_ERROR_PROTOCOL;
+        for (const char *p = digits; *p; p++)
+            if (*p < '0' || *p > '9') return CWIST_ERROR_PROTOCOL;
         errno = 0;
         char *endptr = NULL;
         long long val = strtoll(s, &endptr, 10);

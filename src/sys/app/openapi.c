@@ -104,7 +104,23 @@ static void doc_destroy(void *ctx) {
  * A trailing '*' (a mux wildcard route: "/static/" followed by '*') becomes the path
  * parameter {wildcard}: OpenAPI path templating has no wildcard, and a literal
  * '*' would be read as part of the URL. */
+static bool openapi_add_param(cJSON *params, const char *name, const char *description) {
+    cJSON *p = cJSON_CreateObject();
+    cJSON *schema = p ? cJSON_AddObjectToObject(p, "schema") : NULL;
+    bool ok = p && schema && cJSON_AddStringToObject(p, "name", name) &&
+              cJSON_AddStringToObject(p, "in", "path") &&
+              cJSON_AddBoolToObject(p, "required", 1) &&
+              cJSON_AddStringToObject(schema, "type", "string");
+    if (ok && description) ok = cJSON_AddStringToObject(p, "description", description) != NULL;
+    if (!ok || !cJSON_AddItemToArray(params, p)) {
+        cJSON_Delete(p);
+        return false;
+    }
+    return true;
+}
+
 static char *openapi_path(const char *route, cJSON *params) {
+    if (!params) return NULL;
     size_t len = strlen(route);
     char *out = cwist_alloc(len * 2 + sizeof("{wildcard}"));
     if (!out) return NULL;
@@ -114,14 +130,10 @@ static char *openapi_path(const char *route, cJSON *params) {
             memcpy(w, "{wildcard}", 10);
             w += 10;
             r++;
-            cJSON *p = cJSON_CreateObject();
-            cJSON_AddStringToObject(p, "name", "wildcard");
-            cJSON_AddStringToObject(p, "in", "path");
-            cJSON_AddBoolToObject(p, "required", 1);
-            cJSON_AddStringToObject(p, "description",
-                                    "Rest of the request path; may contain '/'.");
-            cJSON_AddStringToObject(cJSON_AddObjectToObject(p, "schema"), "type", "string");
-            cJSON_AddItemToArray(params, p);
+            if (!openapi_add_param(params, "wildcard", "Rest of the request path; may contain '/'.")) {
+                cwist_free(out);
+                return NULL;
+            }
             continue;
         }
         if (*r != ':' || (r != route && r[-1] != '/')) {
@@ -136,13 +148,12 @@ static char *openapi_path(const char *route, cJSON *params) {
         *w++ = '}';
 
         char *pname = cwist_strndup(name, (size_t)(r - name));
-        cJSON *p = cJSON_CreateObject();
-        cJSON_AddStringToObject(p, "name", pname ? pname : "");
+        bool ok = pname && openapi_add_param(params, pname, NULL);
         cwist_free(pname);
-        cJSON_AddStringToObject(p, "in", "path");
-        cJSON_AddBoolToObject(p, "required", 1);
-        cJSON_AddStringToObject(cJSON_AddObjectToObject(p, "schema"), "type", "string");
-        cJSON_AddItemToArray(params, p);
+        if (!ok) {
+            cwist_free(out);
+            return NULL;
+        }
     }
     *w = '\0';
     return out;
@@ -151,6 +162,7 @@ static char *openapi_path(const char *route, cJSON *params) {
 typedef struct {
     const openapi_doc *doc;
     cJSON *paths;
+    bool oom;
 } build_ctx;
 
 static void add_operation(void *ctx, cwist_http_method_t method, const char *route) {
@@ -159,11 +171,8 @@ static void add_operation(void *ctx, cwist_http_method_t method, const char *rou
     if (method == CWIST_HTTP_GET && strcmp(route, b->doc->json_path) == 0) return;
 
     cJSON *params = cJSON_CreateArray();
-    char *path = openapi_path(route, params);
-    if (!path) {
-        cJSON_Delete(params);
-        return;
-    }
+    char *path = params ? openapi_path(route, params) : NULL;
+    if (!path) goto oom;
     cJSON *item = cJSON_GetObjectItemCaseSensitive(b->paths, path);
     if (!item) item = cJSON_AddObjectToObject(b->paths, path);
     cwist_free(path);
@@ -172,25 +181,44 @@ static void add_operation(void *ctx, cwist_http_method_t method, const char *rou
     snprintf(verb, sizeof(verb), "%s", cwist_http_method_to_string(method));
     for (char *c = verb; *c; c++) *c = (char)(*c | 0x20);
 
-    cJSON *op = cJSON_AddObjectToObject(item, verb);
+    cJSON *op = item ? cJSON_AddObjectToObject(item, verb) : NULL;
+    if (!op) goto oom;
     const openapi_note *note = find_note(b->doc, method, route);
-    if (note && note->summary) cJSON_AddStringToObject(op, "summary", note->summary);
+    if (note && note->summary && !cJSON_AddStringToObject(op, "summary", note->summary)) goto oom;
     if (note && note->tags) {
         cJSON *tags = cJSON_AddArrayToObject(op, "tags");
         char *list = cwist_strdup(note->tags);
+        if (!tags || !list) {
+            cwist_free(list);
+            goto oom;
+        }
         char *save = NULL;
-        for (char *t = list ? strtok_r(list, ",", &save) : NULL; t; t = strtok_r(NULL, ",", &save)) {
+        for (char *t = strtok_r(list, ",", &save); t; t = strtok_r(NULL, ",", &save)) {
             while (*t == ' ') t++;
-            if (*t) cJSON_AddItemToArray(tags, cJSON_CreateString(t));
+            if (*t) {
+                cJSON *tag = cJSON_CreateString(t);
+                if (!tag || !cJSON_AddItemToArray(tags, tag)) {
+                    cJSON_Delete(tag);
+                    cwist_free(list);
+                    goto oom;
+                }
+            }
         }
         cwist_free(list);
     }
-    if (cJSON_GetArraySize(params) > 0)
-        cJSON_AddItemToObject(op, "parameters", params);
-    else
-        cJSON_Delete(params);
-    cJSON *ok = cJSON_AddObjectToObject(cJSON_AddObjectToObject(op, "responses"), "200");
-    cJSON_AddStringToObject(ok, "description", "OK");
+    if (cJSON_GetArraySize(params) > 0) {
+        if (!cJSON_AddItemToObject(op, "parameters", params)) goto oom;
+        params = NULL;
+    }
+    cJSON_Delete(params);
+    cJSON *responses = cJSON_AddObjectToObject(op, "responses");
+    cJSON *ok = responses ? cJSON_AddObjectToObject(responses, "200") : NULL;
+    if (!ok || !cJSON_AddStringToObject(ok, "description", "OK")) goto oom;
+    return;
+
+oom:
+    cJSON_Delete(params);
+    b->oom = true;
 }
 
 static void openapi_handler(void *ctx, cwist_http_request *req, cwist_http_response *res) {
@@ -198,19 +226,27 @@ static void openapi_handler(void *ctx, cwist_http_request *req, cwist_http_respo
     const openapi_doc *doc = ctx;
 
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddStringToObject(root, "openapi", "3.1.0");
+    if (!root) goto oom;
+    if (!cJSON_AddStringToObject(root, "openapi", "3.1.0")) goto oom;
     cJSON *info = cJSON_AddObjectToObject(root, "info");
-    cJSON_AddStringToObject(info, "title", doc->title ? doc->title : "CWIST API");
-    cJSON_AddStringToObject(info, "version", doc->version ? doc->version : "1.0.0");
-    if (doc->description) cJSON_AddStringToObject(info, "description", doc->description);
+    if (!info || !cJSON_AddStringToObject(info, "title", doc->title ? doc->title : "CWIST API") ||
+        !cJSON_AddStringToObject(info, "version", doc->version ? doc->version : "1.0.0") ||
+        (doc->description && !cJSON_AddStringToObject(info, "description", doc->description)))
+        goto oom;
     cJSON *server = cJSON_CreateObject();
-    cJSON_AddStringToObject(server, "url", doc->server_url ? doc->server_url : "/");
-    cJSON_AddItemToArray(cJSON_AddArrayToObject(root, "servers"), server);
+    cJSON *servers = cJSON_AddArrayToObject(root, "servers");
+    if (!server || !servers || !cJSON_AddStringToObject(server, "url", doc->server_url ? doc->server_url : "/") ||
+        !cJSON_AddItemToArray(servers, server)) {
+        cJSON_Delete(server);
+        goto oom;
+    }
 
-    build_ctx b = {.doc = doc, .paths = cJSON_AddObjectToObject(root, "paths")};
+    build_ctx b = {.doc = doc, .paths = cJSON_AddObjectToObject(root, "paths"), .oom = false};
+    if (!b.paths) goto oom;
     pthread_mutex_lock(&g_docs_mu);
     cwist_app_foreach_route(doc->app, add_operation, &b);
     pthread_mutex_unlock(&g_docs_mu);
+    if (b.oom) goto oom;
 
     char *json = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -222,6 +258,11 @@ static void openapi_handler(void *ctx, cwist_http_request *req, cwist_http_respo
     cJSON_free(json);
     res->status_code = CWIST_HTTP_OK;
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    return;
+
+oom:
+    cJSON_Delete(root);
+    res->status_code = CWIST_HTTP_INTERNAL_ERROR;
 }
 
 void cwist_app_enable_openapi(cwist_app *app, const char *json_path,
