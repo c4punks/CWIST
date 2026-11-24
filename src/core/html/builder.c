@@ -43,13 +43,23 @@ cwist_html_element_t *cwist_html_element_create(const char *tag) {
     if (!html_tag_name_is_valid(tag)) return NULL;
     cwist_html_element_t *el = (cwist_html_element_t *)cwist_alloc(sizeof(cwist_html_element_t));
     if (!el) return NULL;
+    memset(el, 0, sizeof(*el));
 
     el->tag = cwist_sstring_create();
-    cwist_sstring_assign(el->tag, tag ? tag : "");
     el->attributes = cJSON_CreateObject();
-    el->children = NULL;
-    el->child_count = 0;
-    el->inner_text = NULL;
+    if (!el->tag || !el->attributes) {
+        cwist_sstring_destroy(el->tag);
+        cJSON_Delete(el->attributes);
+        cwist_free(el);
+        return NULL;
+    }
+    cwist_error_t err = cwist_sstring_assign(el->tag, tag ? tag : "");
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    if (!ok) {
+        cwist_html_element_destroy(el);
+        return NULL;
+    }
 
     return el;
 }
@@ -111,13 +121,23 @@ void cwist_html_element_add_class(cwist_html_element_t *el, const char *class_na
 
     cJSON *cls = cJSON_GetObjectItem(el->attributes, "class");
     if (cls && cls->valuestring && *cls->valuestring) {
-        // Append to existing class
         cwist_sstring *s = cwist_sstring_create();
-        cwist_sstring_assign(s, cls->valuestring);
-        cwist_sstring_append(s, " ");
-        cwist_sstring_append(s, class_name);
-        cJSON_ReplaceItemInObject(el->attributes, "class",
-                                  cJSON_CreateString(s->data ? s->data : ""));
+        if (!s) return;
+        cwist_error_t assign_err = cwist_sstring_assign(s, cls->valuestring);
+        bool ok = cwist_error_is_ok(&assign_err);
+        cwist_error_dispose(&assign_err);
+        cwist_error_t space_err = cwist_sstring_append(s, " ");
+        ok = ok && cwist_error_is_ok(&space_err);
+        cwist_error_dispose(&space_err);
+        cwist_error_t append_err = cwist_sstring_append(s, class_name);
+        ok = ok && cwist_error_is_ok(&append_err);
+        cwist_error_dispose(&append_err);
+        cJSON *updated = cJSON_CreateString(s->data ? s->data : "");
+        if (!ok || !updated || !cJSON_ReplaceItemInObject(el->attributes, "class", updated)) {
+            cJSON_Delete(updated);
+            cwist_sstring_destroy(s);
+            return;
+        }
         cwist_sstring_destroy(s);
     } else {
         cwist_html_element_add_attr(el, "class", class_name);
@@ -198,6 +218,10 @@ static void append_raw_text(cwist_sstring *out, const char *text, const char *ta
     const char *start = text;
     for (const char *p = text; *p; p++) {
         if (p[0] == '<' && p[1] == '/' && strncasecmp(p + 2, tag, tag_len) == 0) {
+            unsigned char next = (unsigned char)p[2 + tag_len];
+            bool end_tag = next == '>' || next == '/' || next == ' ' || next == '\t' ||
+                           next == '\n' || next == '\r' || next == '\f';
+            if (!end_tag) continue;
             cwist_sstring_append_len(out, start, (size_t)(p - start));
             cwist_sstring_append(out, "<\\/");
             start = p + 2;
