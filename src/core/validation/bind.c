@@ -5,6 +5,7 @@
 
 #include <cwist/core/validation/bind.h>
 #include "../utils/number_internal.h"
+#include "../utils/json_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <string.h>
 #include <stdlib.h>
@@ -496,6 +497,32 @@ static char *bind_form_decode(const char *src, size_t len) {
     return decoded;
 }
 
+static cwist_query_map *bind_parse_form(const char *payload) {
+    cwist_query_map *map = cwist_query_map_create();
+    if (!map) return NULL;
+    const char *cursor = payload;
+    while (cursor && *cursor) {
+        const char *amp = strchr(cursor, '&');
+        const char *end = amp ? amp : cursor + strlen(cursor);
+        const char *eq = memchr(cursor, '=', (size_t)(end - cursor));
+        if (eq) {
+            char *key = bind_form_decode(cursor, (size_t)(eq - cursor));
+            char *value = bind_form_decode(eq + 1, (size_t)(end - eq - 1));
+            if (!key || !value) {
+                cwist_free(key);
+                cwist_free(value);
+                cwist_query_map_destroy(map);
+                return NULL;
+            }
+            if (!cwist_query_map_get(map, key)) cwist_query_map_set(map, key, value);
+            cwist_free(key);
+            cwist_free(value);
+        }
+        cursor = amp ? amp + 1 : NULL;
+    }
+    return map;
+}
+
 /**
  * @brief Core binding logic shared between JSON and Form parsers.
  */
@@ -516,11 +543,22 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
     }
 
     cJSON *root = NULL;
+    cwist_query_map *form = NULL;
     if (is_json) {
+        if (cwist_json_has_nul_escape(payload)) {
+            bind_add_error(result, "(root)", "embedded NUL is not allowed");
+            return false;
+        }
         root = cJSON_ParseWithOpts(payload, NULL, true);
         if (!root || !cJSON_IsObject(root)) {
             cJSON_Delete(root);
             bind_add_error(result, "(root)", "expected a JSON object");
+            return false;
+        }
+    } else {
+        form = bind_parse_form(payload);
+        if (!form) {
+            bind_add_error(result, "(root)", "malformed form encoding");
             return false;
         }
     }
@@ -532,16 +570,15 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
             continue;
         }
         if (schema->struct_size > 0) {
-            if (f->target_offset >= schema->struct_size ||
-                f->target_size > schema->struct_size ||
+            if (f->target_offset >= schema->struct_size || f->target_size > schema->struct_size ||
                 f->target_offset + f->target_size > schema->struct_size) {
-                bind_add_error(result, f->json_key, "field target offset/size exceeds struct bounds");
+                bind_add_error(result, f->json_key,
+                               "field target offset/size exceeds struct bounds");
                 continue;
             }
         }
         const char *raw_value = NULL;
         char *allocated_json = NULL;
-        char *allocated_form = NULL;
         char numbuf[64];
 
         if (is_json && root) {
@@ -552,6 +589,13 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                 } else if (cJSON_IsNumber(item)) {
                     /* Keep number as string for uniform validation then convert */
                     double intpart;
+                    if ((f->target_type == CWIST_BIND_INT || f->target_type == CWIST_BIND_UINT) &&
+                        modf(item->valuedouble, &intpart) == 0.0 &&
+                        (item->valuedouble > 9007199254740991.0 ||
+                         item->valuedouble < -9007199254740991.0)) {
+                        bind_add_error(result, f->json_key, "integer is not exactly representable");
+                        continue;
+                    }
                     if (modf(item->valuedouble, &intpart) == 0.0 &&
                         item->valuedouble >= -9223372036854775808.0 &&
                         item->valuedouble < 9223372036854775808.0) {
@@ -574,31 +618,7 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                 }
             }
         } else {
-            const char *cursor = payload;
-            while (cursor && *cursor) {
-                const char *amp = strchr(cursor, '&');
-                const char *end = amp ? amp : cursor + strlen(cursor);
-                const char *eq = memchr(cursor, '=', (size_t)(end - cursor));
-                if (eq) {
-                    char *key = bind_form_decode(cursor, (size_t)(eq - cursor));
-                    char *value = bind_form_decode(eq + 1, (size_t)(end - eq - 1));
-                    if (!key || !value) {
-                        cwist_free(key);
-                        cwist_free(value);
-                        bind_add_error(result, f->json_key, "malformed form encoding");
-                        break;
-                    }
-                    if (strcmp(key, f->json_key) == 0) {
-                        raw_value = value;
-                        allocated_form = value;
-                        cwist_free(key);
-                        break;
-                    }
-                    cwist_free(key);
-                    cwist_free(value);
-                }
-                cursor = amp ? amp + 1 : NULL;
-            }
+            raw_value = cwist_query_map_get(form, f->json_key);
         }
 
         size_t val_len = raw_value ? strlen(raw_value) : 0;
@@ -614,10 +634,10 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
         }
 
         cJSON_free(allocated_json);
-        cwist_free(allocated_form);
     }
 
     if (root) cJSON_Delete(root);
+    if (form) cwist_query_map_destroy(form);
     result->ok = (result->error_count == 0);
     return result->ok;
 }

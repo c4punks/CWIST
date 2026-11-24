@@ -580,6 +580,19 @@ static void test_zod_rejects_invalid_schema(void) {
     assert(!cwist_zod_parse("{\"n\":1}", &negative, NULL).valid);
 }
 
+static void test_zod_and_heal_nul_precision(void) {
+    static const cwist_schema_field_t fields[] = {
+        {"n", {NULL}, CWIST_FIELD_INT, true},
+    };
+    static const cwist_schema_t schema = {fields, 1};
+    assert(!cwist_zod_parse("{\"n\":9007199254740992}", &schema, NULL).valid);
+    assert(!cwist_zod_parse("{\"n\":9223372036854775807}", &schema, NULL).valid);
+    cwist_heal_config_t cfg = {.schema = &schema};
+    cwist_heal_result_t healed = cwist_json_heal("{\"n\":\"123\\u0000junk\"}", &cfg);
+    assert(!healed.healed);
+    cwist_heal_result_free(&healed);
+}
+
 /* ==========================================================================
  * main
  * ======================================================================== */
@@ -612,6 +625,7 @@ int main(void) {
     test_zod_wrong_type();
     test_zod_invalid_json_syntax();
     test_zod_rejects_invalid_schema();
+    test_zod_and_heal_nul_precision();
 
     printf("\n=== DB Integration ===\n");
     test_db_insert_healed();
