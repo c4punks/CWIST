@@ -120,8 +120,8 @@ static bool csrf_token_valid(const cwist_http_request *req, const char *token) {
         token[CWIST_CSRF_TOKEN_CHARS] != '.')
         return false;
     char signature[65];
-    return csrf_sign(req, token, signature) && csrf_equal(token + CWIST_CSRF_TOKEN_CHARS + 1,
-                                                          signature);
+    return csrf_sign(req, token, signature) &&
+           csrf_equal(token + CWIST_CSRF_TOKEN_CHARS + 1, signature);
 }
 
 /**
@@ -140,13 +140,14 @@ static char *csrf_multipart_value(const cwist_http_request *req) {
     const char *content_type = cwist_http_header_get(req->headers, "Content-Type");
     char *boundary = cwist_multipart_extract_boundary(content_type);
     if (!boundary) return NULL;
-    cwist_multipart_result *parts = cwist_multipart_parse(req->body->data, req->body->size, boundary);
+    cwist_multipart_result *parts =
+        cwist_multipart_parse(req->body->data, req->body->size, boundary);
     cwist_free(boundary);
     if (!parts) return NULL;
     char *value = NULL;
     for (cwist_multipart_field *field = parts->fields; field; field = field->next) {
-        if (!field->name || (strcmp(field->name, "_csrf") != 0 &&
-                             strcmp(field->name, "csrf_token") != 0))
+        if (!field->name ||
+            (strcmp(field->name, "_csrf") != 0 && strcmp(field->name, "csrf_token") != 0))
             continue;
         value = cwist_alloc(field->data_len + 1);
         if (value) {
@@ -175,8 +176,7 @@ static char *csrf_form_value(const cwist_http_request *req) {
     const char *content_type = cwist_http_header_get(req->headers, "Content-Type");
     if (content_type && strncasecmp(content_type, "multipart/form-data", 19) == 0)
         return csrf_multipart_value(req);
-    if (content_type &&
-        strncasecmp(content_type, "application/x-www-form-urlencoded", 33) != 0)
+    if (content_type && strncasecmp(content_type, "application/x-www-form-urlencoded", 33) != 0)
         return NULL;
     const char *body = req->body->data;
     size_t len = req->body->size;
@@ -197,19 +197,24 @@ static char *csrf_form_value(const cwist_http_request *req) {
         size_t out = 0;
         for (size_t i = 0; i < value_len; ++i) {
             unsigned char c = (unsigned char)value[i];
-            if (c == '+')
+            if (c == '+') {
                 decoded[out++] = ' ';
-            else if (c == '%' && i + 2 < value_len) {
+            } else if (c == '%') {
+                if (i + 2 >= value_len) {
+                    cwist_free(decoded);
+                    return NULL;
+                }
                 int hi = hex_value((unsigned char)value[i + 1]);
                 int lo = hex_value((unsigned char)value[i + 2]);
-                if (hi < 0 || lo < 0) {
+                if (hi < 0 || lo < 0 || (hi == 0 && lo == 0)) {
                     cwist_free(decoded);
                     return NULL;
                 }
                 decoded[out++] = (char)((hi << 4) | lo);
                 i += 2;
-            } else
+            } else {
                 decoded[out++] = (char)c;
+            }
         }
         decoded[out] = '\0';
         return decoded;
@@ -234,7 +239,8 @@ static void csrf_issue_cookie(cwist_http_request *req, cwist_http_response *res,
     options.http_only = false;
     options.secure = true;
     options.same_site = "Strict";
-    const char *name = req && req->app && req->app->use_ssl ? "__Host-csrf" : CWIST_CSRF_COOKIE_NAME;
+    const char *name =
+        req && req->app && req->app->use_ssl ? "__Host-csrf" : CWIST_CSRF_COOKIE_NAME;
     cwist_cookie_set(res, name, token, &options);
 }
 
@@ -253,7 +259,8 @@ static void csrf_issue_cookie(cwist_http_request *req, cwist_http_response *res,
 static void csrf_handler(cwist_http_request *req, cwist_http_response *res,
                          cwist_handler_func next) {
     const char *cookie_header = cwist_http_header_get(req->headers, "Cookie");
-    const char *cookie_name = req && req->app && req->app->use_ssl ? "__Host-csrf" : CWIST_CSRF_COOKIE_NAME;
+    const char *cookie_name =
+        req && req->app && req->app->use_ssl ? "__Host-csrf" : CWIST_CSRF_COOKIE_NAME;
     cwist_query_map *cookies = cwist_query_map_create();
     const char *cookie = cookies ? cwist_cookie_get(cookies, cookie_name) : NULL;
     if (cookies) {

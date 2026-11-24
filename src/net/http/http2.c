@@ -1352,7 +1352,9 @@ int h2_decode_integer(const unsigned char *buf, size_t len, size_t *pos, uint8_t
     while (*pos < len) {
         uint8_t b = buf[(*pos)++];
         if (m > 28) return -1;
-        n += (uint32_t)(b & 0x7f) << m;
+        uint64_t add = (uint64_t)(b & 0x7f) << m;
+        if (add > UINT32_MAX - n) return -1;
+        n += (uint32_t)add;
         if ((b & 0x80) == 0) {
             *value = n;
             return 0;
@@ -1624,7 +1626,7 @@ static char *h2_decode_string_counted(const unsigned char *buf, size_t len, size
     bool huffman = (buf[*pos] & 0x80) != 0;
     uint32_t str_len = 0;
     if (h2_decode_integer(buf, len, pos, 7, &str_len) != 0) return NULL;
-    if (*pos + str_len > len) return NULL;
+    if (str_len > len - *pos) return NULL;
 
     if (huffman) {
         char *out = h2_huffman_decode(buf + *pos, str_len, out_len);
@@ -1790,9 +1792,10 @@ static int h2_parse_content_length(const char *value, size_t len, size_t *out) {
 
 static bool h2_trailer_is_prohibited(const char *name) {
     static const char *const fields[] = {
-        "host", "authorization", "proxy-authorization", "cookie", "set-cookie",
-        "content-length", "content-type", "content-encoding", "cache-control",
-        "expect", "max-forwards", "te", "forwarded", "x-forwarded-for",
+        "host",          "authorization",   "proxy-authorization", "cookie",
+        "set-cookie",    "content-length",  "content-type",        "content-encoding",
+        "cache-control", "expect",          "max-forwards",        "te",
+        "forwarded",     "x-forwarded-for",
     };
     for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); i++) {
         if (strcmp(name, fields[i]) == 0) return true;
@@ -3069,9 +3072,8 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
             if (!s) {
                 if (goaway_sent) return -2;
                 if (refused)
-                    return h2_decode_refused_headers(hc, payload + block_offset, block_len) < 0
-                               ? -1
-                               : 1;
+                    return h2_decode_refused_headers(hc, payload + block_offset, block_len) < 0 ? -1
+                                                                                                : 1;
                 return -1;
             }
         }
@@ -4359,13 +4361,12 @@ int cwist_http2_push_resource(cwist_http_request *req, const char *path, const c
     for (h2_stream *s = hc->streams; s; s = s->next) {
         if ((s->stream_id & 1u) == 0) active_pushes++;
     }
-    if (hc->peer_max_concurrent_streams > 0 &&
-        active_pushes >= hc->peer_max_concurrent_streams)
+    if (hc->peer_max_concurrent_streams > 0 && active_pushes >= hc->peer_max_concurrent_streams)
         return -1;
     uint32_t next_id = atomic_load_explicit(&hc->next_server_stream_id, memory_order_relaxed);
     if (next_id == 0 || next_id > 0x7ffffffe) return -1;
-    uint32_t promised_stream_id = atomic_fetch_add_explicit(&hc->next_server_stream_id, 2,
-                                                            memory_order_relaxed);
+    uint32_t promised_stream_id =
+        atomic_fetch_add_explicit(&hc->next_server_stream_id, 2, memory_order_relaxed);
 
     unsigned char header_block[4096];
     size_t pos = 0;

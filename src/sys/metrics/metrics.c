@@ -105,31 +105,26 @@ static const cwist_metric_t metric_defaults[CWIST_METRIC_COUNT] = {
 /**
  * @brief Return the process-wide singleton metrics registry.
  *
- * Allocates and initializes the registry on first call; later calls return
- * the cached pointer. All metric atomics are zero-initialized from the
- * static metric_defaults table.
+ * Initializes the static registry on first call; later calls return the same
+ * address. All metric atomics are zero-initialized from the metric_defaults table.
  *
- * @return Pointer to the singleton registry, or NULL on allocation failure.
+ * @return Pointer to the singleton registry.
  */
-static cwist_metrics_registry_t *g_reg;
+static cwist_metrics_registry_t g_reg;
 static pthread_once_t g_reg_once = PTHREAD_ONCE_INIT;
 
 static void cwist_metrics_registry_init(void) {
-    cwist_metrics_registry_t *alloc = cwist_alloc(sizeof(*alloc));
-    if (!alloc) return;
-    if (cwist_full_gc_enabled()) cwist_gc_scope_disown(alloc);
-    memcpy(alloc->metrics, metric_defaults, sizeof(metric_defaults));
+    memcpy(g_reg.metrics, metric_defaults, sizeof(metric_defaults));
     for (int i = 0; i < CWIST_METRIC_COUNT; ++i) {
-        atomic_init(&alloc->metrics[i].value.raw, 0);
-        atomic_init(&alloc->metrics[i].count, 0);
-        atomic_init(&alloc->metrics[i].sum, 0);
+        atomic_init(&g_reg.metrics[i].value.raw, 0);
+        atomic_init(&g_reg.metrics[i].count, 0);
+        atomic_init(&g_reg.metrics[i].sum, 0);
     }
-    g_reg = alloc;
 }
 
 cwist_metrics_registry_t *cwist_metrics_registry(void) {
     pthread_once(&g_reg_once, cwist_metrics_registry_init);
-    return g_reg;
+    return &g_reg;
 }
 
 /**
@@ -293,12 +288,12 @@ static const char *type_str(cwist_metric_type_t t) {
  * sample. Numbers are formatted by metric_u2s(): casting to unsigned long
  * wrapped the milli-unit raw value on wasm32 and 32-bit ARM, and %ju is not
  * available in every embedded printf (newlib-nano) (#971). */
-#define METRIC_FMT                                                                                 \
-    "# HELP %s %s\n"                                                                               \
-    "# TYPE %s %s\n"                                                                               \
-    "%s %s%s.%s\n"                                                                                 \
-    "# HELP %s_count Number of updates to %s\n"                                                    \
-    "# TYPE %s_count counter\n"                                                                    \
+#define METRIC_FMT                              \
+    "# HELP %s %s\n"                            \
+    "# TYPE %s %s\n"                            \
+    "%s %s%s.%s\n"                              \
+    "# HELP %s_count Number of updates to %s\n" \
+    "# TYPE %s_count counter\n"                 \
     "%s_count %s\n\n"
 
 /** Format @p v in decimal, zero-padded to at least @p min_digits. */
@@ -366,9 +361,8 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
         const char *fraction_s = metric_u2s(fraction, 3, fraction_buf);
         const char *cnt_s = metric_u2s(cnt, 1, cnt_buf);
         int need =
-            snprintf(NULL, 0,
-                     METRIC_FMT, m->name, m->help, m->name, type_str(m->type), m->name, sign,
-                     whole_s, fraction_s, m->name, m->name, m->name, m->name, cnt_s);
+            snprintf(NULL, 0, METRIC_FMT, m->name, m->help, m->name, type_str(m->type), m->name,
+                     sign, whole_s, fraction_s, m->name, m->name, m->name, m->name, cnt_s);
         if (need < 0) {
             free(buf);
             return NULL;
@@ -388,9 +382,8 @@ char *cwist_metrics_render_prometheus(const cwist_metrics_registry_t *reg) {
         }
 
         int written =
-            snprintf(buf + len, cap - len,
-                     METRIC_FMT, m->name, m->help, m->name, type_str(m->type), m->name, sign,
-                     whole_s, fraction_s, m->name, m->name, m->name, m->name, cnt_s);
+            snprintf(buf + len, cap - len, METRIC_FMT, m->name, m->help, m->name, type_str(m->type),
+                     m->name, sign, whole_s, fraction_s, m->name, m->name, m->name, m->name, cnt_s);
         if (written < 0 || (size_t)written >= cap - len) {
             free(buf);
             return NULL;

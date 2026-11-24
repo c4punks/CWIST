@@ -1,7 +1,11 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#ifdef __APPLE__
+#include <sys/random.h>
+#endif
 #include <cwist/sys/platform.h>
 #ifdef CWIST_BAREMETAL
 #include <cwist/sys/port.h>
@@ -126,10 +130,10 @@ static inline uint64_t rotl64(uint64_t v, unsigned int r) {
 }
 
 /**
- * @brief Fill a buffer with entropy from /dev/urandom or a timing-based fallback.
+ * @brief Fill a buffer with operating-system entropy.
  *
- * Bare metal has neither /dev/urandom nor a clock worth mixing at boot, so it
- * takes the firmware TRNG (cwist_port_entropy) and aborts if that fails: a
+ * Bare metal takes the firmware TRNG (cwist_port_entropy). Other targets use
+ * /dev/urandom with getentropy() as a fallback. Failure aborts because a
  * guessable seed would silently disable the hash-flooding defense.
  *
  * @param buf Destination buffer to fill.
@@ -150,25 +154,9 @@ static void cwist_entropy_fill(uint8_t *buf, size_t len) {
         close(fd);
     }
     if (filled < len) {
-        struct timespec ts = {0};
-        clock_gettime(CLOCK_MONOTONIC, &ts);
-        /* WASI preview1 has no getppid(); the fallback entropy degrades to
-         * pid + clock only, which is acceptable for a last-resort mixer. */
-#if defined(CWIST_PLATFORM_NO_PROC)
-/* WASI preview1 has no getpid(); the fallback entropy degrades to pure
-         * clock mixing, which is acceptable for a last-resort mixer. */
-        uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec, (uint64_t)ts.tv_sec ^ (uint64_t)ts.tv_nsec};
-#else
-        uint64_t fallbacks[2] = {(uint64_t)ts.tv_nsec ^ (uint64_t)getpid(),
-                                 (uint64_t)ts.tv_sec ^ (uint64_t)getppid()};
-#endif
-        srand((unsigned int)(fallbacks[0] ^ fallbacks[1]));
-        size_t idx = 0;
-        while (filled + idx < len) {
-            uint8_t val = (uint8_t)(fallbacks[idx % 2] >> ((idx * 13) & 63));
-            val ^= (uint8_t)(rand() & 0xff);
-            buf[filled + idx] = val;
-            idx++;
+        /* Never substitute clock/PID randomness for key material. */
+        while (getentropy(buf, len) != 0) {
+            if (errno != EINTR) abort();
         }
     }
 #endif

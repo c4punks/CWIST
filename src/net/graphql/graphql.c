@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../../core/utils/number_internal.h"
+#include "../../core/utils/json_internal.h"
 
 typedef enum { GQL_OP_QUERY, GQL_OP_MUTATION } gql_op_type_t;
 
@@ -742,6 +743,7 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
                                     cwist_sstring **out_json) {
     if (!schema || !request_json || !out_json) return gql_error(-1);
     *out_json = NULL;
+    if (cwist_json_has_nul_escape(request_json)) return gql_error(-1);
 
     cJSON *request = cJSON_Parse(request_json);
     cJSON *root = cJSON_CreateObject();
@@ -791,12 +793,13 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
             if (!validated) {
                 gql_add_error(errors, "Internal memory error validating query");
             } else {
-                const char *end =
-                    parse_selection_set(p, target_schema, variables, validated, errors, NULL, 1, true);
+                const char *end = parse_selection_set(p, target_schema, variables, validated,
+                                                      errors, NULL, 1, true);
                 end = skip_ws_comments(end);
                 if (*end) gql_add_error(errors, "Unexpected trailing content after operation");
                 if (cJSON_GetArraySize(errors) == 0)
-                    (void)parse_selection_set(p, target_schema, variables, data, errors, NULL, 1, false);
+                    (void)parse_selection_set(p, target_schema, variables, data, errors, NULL, 1,
+                                              false);
                 cJSON_Delete(validated);
             }
         }

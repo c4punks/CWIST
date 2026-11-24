@@ -486,9 +486,10 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
     if (cJSON_IsNumber(node)) {
         double value = node->valuedouble;
         if (!isfinite(value)) return NULL;
+        if (trunc(value) == value && (value > 9007199254740991.0 || value < -9007199254740991.0))
+            return NULL;
         char buf[64];
-        if (value >= -9007199254740991.0 && value <= 9007199254740991.0 &&
-            trunc(value) == value) {
+        if (value >= -9007199254740991.0 && value <= 9007199254740991.0 && trunc(value) == value) {
             snprintf(buf, sizeof(buf), "%.0f", value);
         } else {
             snprintf(buf, sizeof(buf), "%.17g", value);
@@ -1046,8 +1047,8 @@ cwist_error_t cwist_orm_insert_returning_llong(cwist_orm_t *orm, const char *tab
  *        select_one helpers.
  * @return malloc'd SQL the caller frees, or NULL on allocation failure.
  */
-static char *orm_build_select_one_sql(const cwist_orm_t *orm, const char *table,
-                                      const char *column, const char *where_clause) {
+static char *orm_build_select_one_sql(const cwist_orm_t *orm, const char *table, const char *column,
+                                      const char *where_clause) {
     char *qtable = cwist_orm_quote_identifier(orm, table);
     char *qcol = cwist_orm_quote_identifier(orm, column);
     if (!qtable || !qcol) {
@@ -1441,9 +1442,8 @@ cwist_error_t cwist_orm_select_one_i64(cwist_orm_t *orm, const char *table, cons
     return err;
 }
 
-cwist_error_t cwist_orm_insert_returning_i64(cwist_orm_t *orm, const char *table,
-                                             const cJSON *data, const char *returning_col,
-                                             int64_t *out) {
+cwist_error_t cwist_orm_insert_returning_i64(cwist_orm_t *orm, const char *table, const cJSON *data,
+                                             const char *returning_col, int64_t *out) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     if (!orm || !table || !data || !returning_col || !out) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
@@ -1518,8 +1518,8 @@ static unsigned char *orm_b64_decode(const char *in, size_t *out_len) {
                 }
             }
         }
-        unsigned triple = ((unsigned)v[0] << 18) | ((unsigned)v[1] << 12) |
-                          ((unsigned)v[2] << 6) | (unsigned)v[3];
+        unsigned triple = ((unsigned)v[0] << 18) | ((unsigned)v[1] << 12) | ((unsigned)v[2] << 6) |
+                          (unsigned)v[3];
         if (o < cap) out[o++] = (unsigned char)(triple >> 16);
         if (o < cap) out[o++] = (unsigned char)(triple >> 8);
         if (o < cap) out[o++] = (unsigned char)triple;
@@ -1663,8 +1663,8 @@ cwist_error_t cwist_orm_query_typed(cwist_orm_t *orm, const char *sql,
         if (res->column_count == 0 ||
             res->row_count > SIZE_MAX / res->column_count / sizeof(cwist_orm_value_t))
             goto fail;
-        res->cells = (cwist_orm_value_t *)calloc(
-            res->row_count * res->column_count, sizeof(cwist_orm_value_t));
+        res->cells = (cwist_orm_value_t *)calloc(res->row_count * res->column_count,
+                                                 sizeof(cwist_orm_value_t));
         if (!res->cells) {
             err.error.err_i16 = CWIST_ERROR_NOMEM;
             goto fail;

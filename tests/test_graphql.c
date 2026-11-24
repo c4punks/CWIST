@@ -127,7 +127,7 @@ static void test_number_arguments(void) {
     static const struct {
         const char *arg;
         const char *expect;
-    } ok[] = {{"0", "\"echo\":0"},       {"-12", "\"echo\":-12"},     {"1.5", "\"echo\":1.5"},
+    } ok[] = {{"0", "\"echo\":0"},         {"-12", "\"echo\":-12"},   {"1.5", "\"echo\":1.5"},
               {"-0.25e2", "\"echo\":-25"}, {"1E+3", "\"echo\":1000"}, {"2e-1", "\"echo\":0.2"}};
     for (size_t i = 0; i < sizeof(ok) / sizeof(ok[0]); i++) {
         char q[64];
@@ -259,7 +259,8 @@ int main(void) {
     assert(strstr(out->data, long_name_b));
     cwist_sstring_destroy(out);
 
-    snprintf(query, sizeof(query), "{\"query\":\"{ greet(%s: \\\"long argument\\\") }\"}", long_name);
+    snprintf(query, sizeof(query), "{\"query\":\"{ greet(%s: \\\"long argument\\\") }\"}",
+             long_name);
     out = NULL;
     assert(cwist_graphql_execute(schema, query, &out).error.err_i16 == 0);
     assert(strcmp(last_name, "long argument") == 0);
@@ -298,7 +299,8 @@ int main(void) {
     cwist_sstring_destroy(out);
 
     out = NULL;
-    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet greet }\"}", &out).error.err_i16 == 0);
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet greet }\"}", &out).error.err_i16 ==
+           0);
     const char *first = strstr(out->data, "\"greet\":");
     assert(first != NULL && strstr(first + 1, "\"greet\":") == NULL);
     cwist_sstring_destroy(out);
@@ -306,31 +308,37 @@ int main(void) {
     out = NULL;
     assert(cwist_graphql_execute(
                schema, "{\"query\":\"{ greet(name: \\\"}\\\") { child } other: greet }\"}", &out)
-                   .error.err_i16 == 0);
+               .error.err_i16 == 0);
     assert(strstr(out->data, "Selection set cannot be applied to a scalar value"));
     assert(strstr(out->data, "\"other\":\"hello world\""));
     cwist_sstring_destroy(out);
 
     out = NULL;
-    assert(cwist_graphql_execute(
-               schema, "{\"query\":\"mutation { createUser(name: \\\"bob\\\") { id name } }\"}",
-               &out)
-                   .error.err_i16 == 0);
+    assert(
+        cwist_graphql_execute(
+            schema, "{\"query\":\"mutation { createUser(name: \\\"bob\\\") { id name } }\"}", &out)
+            .error.err_i16 == 0);
     assert(strstr(out->data, "\"id\":42"));
     assert(strstr(out->data, "\"name\":\"bob\""));
     cwist_sstring_destroy(out);
 
     out = NULL;
-    assert(cwist_graphql_execute(
-               schema,
-               "{\"query\":\"mutation { createUser(name: \\\"bob\\\") { id } createUser(name: \\\"bob\\\") { name } }\"}",
-               &out)
-                   .error.err_i16 == 0);
+    assert(
+        cwist_graphql_execute(
+            schema,
+            "{\"query\":\"mutation { createUser(name: \\\"bob\\\") { id } createUser(name: \\\"bob\\\") { name } }\"}",
+            &out)
+            .error.err_i16 == 0);
     assert(strstr(out->data, "\"id\":42"));
     assert(strstr(out->data, "\"name\":\"bob\""));
     const char *create = strstr(out->data, "\"createUser\":");
     assert(create != NULL && strstr(create + 1, "\"createUser\":") == NULL);
     cwist_sstring_destroy(out);
+
+    out = NULL;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet }\\u0000 trailing\"}", &out)
+               .error.err_i16 != 0);
+    assert(out == NULL);
 
     cwist_graphql_schema_destroy(schema);
     test_nested_selection();

@@ -116,6 +116,7 @@ $(document).ready(function(){initNavTree('dd/d2d/siphash_8c.html','../../'); ini
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;stdint.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
+<code>#include &lt;errno.h&gt;</code><br />
 <code>#include &lt;unistd.h&gt;</code><br />
 <code>#include &lt;fcntl.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="../../de/d03/platform_8h_source.html">cwist/sys/platform.h</a>&gt;</code><br />
@@ -128,30 +129,32 @@ Include dependency graph for siphash.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d8/dd2/siphash_8c__incl.png" border="0" usemap="#asrc_2core_2siphash_2siphash_8c" alt=""/></div>
 <map name="asrc_2core_2siphash_2siphash_8c" id="asrc_2core_2siphash_2siphash_8c">
-<area shape="rect" title="SipHash implementation plus CWIST&#45;specific entropy expansion for hash seeds." alt="" coords="384,5,576,31"/>
-<area shape="rect" title=" " alt="" coords="587,167,658,192"/>
-<area shape="poly" title=" " alt="" coords="483,31,488,72,495,96,507,117,539,144,576,162,573,167,536,148,503,120,490,98,482,73,477,31"/>
+<area shape="rect" title="SipHash implementation plus CWIST&#45;specific entropy expansion for hash seeds." alt="" coords="441,5,633,31"/>
+<area shape="rect" title=" " alt="" coords="679,167,750,192"/>
+<area shape="poly" title=" " alt="" coords="544,30,565,72,580,95,599,117,633,141,669,159,667,164,630,146,596,121,576,99,560,74,540,32"/>
 <area shape="rect" title=" " alt="" coords="185,86,255,111"/>
-<area shape="poly" title=" " alt="" coords="435,33,269,81,262,84,260,78,267,76,434,28"/>
-<area shape="rect" title=" " alt="" coords="280,86,355,111"/>
-<area shape="poly" title=" " alt="" coords="457,33,354,83,352,78,455,28"/>
-<area shape="rect" title=" " alt="" coords="379,86,442,111"/>
-<area shape="poly" title=" " alt="" coords="472,33,432,77,428,74,468,29"/>
+<area shape="poly" title=" " alt="" coords="473,33,376,53,269,81,261,84,259,79,267,76,375,48,472,28"/>
+<area shape="rect" title=" " alt="" coords="279,86,347,111"/>
+<area shape="poly" title=" " alt="" coords="502,33,361,81,355,83,353,78,359,76,500,28"/>
+<area shape="rect" title=" " alt="" coords="372,86,447,111"/>
+<area shape="poly" title=" " alt="" coords="520,33,441,81,438,76,517,29"/>
+<area shape="rect" title=" " alt="" coords="471,86,534,111"/>
+<area shape="poly" title=" " alt="" coords="535,32,516,75,511,72,530,30"/>
 <area shape="rect" href="../../de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="5,86,160,111"/>
-<area shape="poly" title=" " alt="" coords="420,33,173,81,150,86,149,81,171,76,419,28"/>
-<area shape="rect" title=" " alt="" coords="517,86,584,111"/>
-<area shape="poly" title=" " alt="" coords="492,29,533,74,529,77,488,33"/>
-<area shape="rect" title=" " alt="" coords="609,86,679,111"/>
-<area shape="poly" title=" " alt="" coords="505,28,609,78,607,83,503,33"/>
-<area shape="rect" title=" " alt="" coords="704,86,768,111"/>
-<area shape="poly" title=" " alt="" coords="528,28,606,49,693,76,699,78,697,83,691,81,604,54,527,33"/>
-<area shape="rect" href="../../d0/db0/core_2siphash_2siphash_8h.html" title=" " alt="" coords="793,79,935,119"/>
-<area shape="poly" title=" " alt="" coords="540,28,780,76,779,81,539,33"/>
+<area shape="poly" title=" " alt="" coords="462,33,172,81,149,86,148,81,172,76,461,28"/>
+<area shape="rect" title=" " alt="" coords="609,86,676,111"/>
+<area shape="poly" title=" " alt="" coords="554,29,618,76,615,80,551,33"/>
+<area shape="rect" title=" " alt="" coords="701,86,771,111"/>
+<area shape="poly" title=" " alt="" coords="567,28,695,78,693,83,565,33"/>
+<area shape="rect" title=" " alt="" coords="796,86,860,111"/>
+<area shape="poly" title=" " alt="" coords="597,28,686,48,785,76,791,78,790,83,783,81,685,53,596,33"/>
+<area shape="rect" href="../../d0/db0/core_2siphash_2siphash_8h.html" title=" " alt="" coords="885,79,1027,119"/>
+<area shape="poly" title=" " alt="" coords="607,28,872,76,871,81,606,33"/>
 <area shape="rect" href="../../d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="19,167,147,192"/>
 <area shape="poly" title=" " alt="" coords="85,112,85,153,80,153,80,112"/>
-<area shape="poly" title=" " alt="" coords="807,121,672,165,670,160,805,116"/>
-<area shape="rect" title=" " alt="" coords="827,167,901,192"/>
-<area shape="poly" title=" " alt="" coords="867,119,867,153,861,153,861,119"/>
+<area shape="poly" title=" " alt="" coords="899,121,764,165,762,160,897,116"/>
+<area shape="rect" title=" " alt="" coords="919,167,993,192"/>
+<area shape="poly" title=" " alt="" coords="959,119,959,153,953,153,953,119"/>
 </map>
 </div>
 </div>
@@ -202,7 +205,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00021">21</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00025">25</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
 
 </div>
 </div>
@@ -232,7 +235,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00223">223</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00211">211</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../dd/d7f/query_8c_source.html#l00061">cwist_query_map_create_in_arena()</a>.</p>
 
@@ -281,7 +284,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>64-bit keyed hash value. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00052">52</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../dd/d2d/siphash_8c_source.html#l00056">56</a> of file <a class="el" href="../../dd/d2d/siphash_8c_source.html">siphash.c</a>.</p>
 
 <p class="reference">Referenced by <a class="el" href="../../d1/d4d/flash_8c_source.html#l00100">cwist_flash_get()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00220">cwist_query_map_delete()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00196">cwist_query_map_get()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00146">cwist_query_map_set()</a>.</p>
 

@@ -67,6 +67,11 @@ static bool mysql_parse_kv_field(const char *conninfo, const char *key, char *ou
         const char *value_start = p;
         while (*p && (quote ? *p != quote : (*p != ' ' && *p != ';' && *p != '&'))) p++;
         size_t value_len = (size_t)(p - value_start);
+        if (quote) {
+            if (*p != quote) return false;
+            p++;
+        }
+        if (*p && *p != ' ' && *p != ';' && *p != '&') return false;
         if ((size_t)(key_end - key_start) == key_len && strncmp(key_start, key, key_len) == 0) {
             if (value_len >= out_cap) return false;
             memcpy(out, value_start, value_len);
@@ -164,8 +169,7 @@ cwist_mysql_t *cwist_mysql_connect(const char *conninfo) {
 
         if (p < authority_end && *p == '[') {
             const char *close = memchr(p + 1, ']', (size_t)(authority_end - p - 1));
-            if (!close || !mysql_uri_component(host, sizeof(host), p + 1,
-                                               (size_t)(close - p - 1)))
+            if (!close || !mysql_uri_component(host, sizeof(host), p + 1, (size_t)(close - p - 1)))
                 goto invalid;
             if (close + 1 < authority_end) {
                 if (close[1] != ':' ||
@@ -175,9 +179,9 @@ cwist_mysql_t *cwist_mysql_connect(const char *conninfo) {
         } else {
             const char *colon = memchr(p, ':', (size_t)(authority_end - p));
             const char *host_end = colon ? colon : authority_end;
-            if (colon && (memchr(colon + 1, ':', (size_t)(authority_end - colon - 1)) ||
-                          !mysql_parse_uint(colon + 1, (size_t)(authority_end - colon - 1), 65535,
-                                            &port)))
+            if (colon &&
+                (memchr(colon + 1, ':', (size_t)(authority_end - colon - 1)) ||
+                 !mysql_parse_uint(colon + 1, (size_t)(authority_end - colon - 1), 65535, &port)))
                 goto invalid;
             if (!mysql_uri_component(host, sizeof(host), p, (size_t)(host_end - p))) goto invalid;
         }
@@ -221,11 +225,9 @@ cwist_mysql_t *cwist_mysql_connect(const char *conninfo) {
         mysql_options(mysql->conn, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout) != 0)
         goto invalid;
 
-    if (!mysql_real_connect(mysql->conn, host[0] ? host : NULL,
-                            user[0] ? user : NULL,
-                            password[0] ? password : NULL,
-                            dbname[0] ? dbname : NULL,
-                            port, NULL, 0)) {
+    if (!mysql_real_connect(mysql->conn, host[0] ? host : NULL, user[0] ? user : NULL,
+                            password[0] ? password : NULL, dbname[0] ? dbname : NULL, port, NULL,
+                            0)) {
         mysql_set_last_error(mysql, mysql_error(mysql->conn));
         goto invalid;
     }
@@ -462,7 +464,8 @@ bool cwist_mysql_is_connected(cwist_mysql_t *mysql) {
 }
 
 cwist_error_t cwist_mysql_exec(cwist_mysql_t *mysql, const char *sql) {
-    (void)mysql; (void)sql;
+    (void)mysql;
+    (void)sql;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = -1;
     return err;
@@ -470,7 +473,10 @@ cwist_error_t cwist_mysql_exec(cwist_mysql_t *mysql, const char *sql) {
 
 cwist_error_t cwist_mysql_exec_params(cwist_mysql_t *mysql, const char *sql, int n_params,
                                       const char *const *param_values, cJSON **out_rows) {
-    (void)mysql; (void)sql; (void)n_params; (void)param_values;
+    (void)mysql;
+    (void)sql;
+    (void)n_params;
+    (void)param_values;
     if (out_rows) *out_rows = NULL;
     cwist_error_t err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = -1;

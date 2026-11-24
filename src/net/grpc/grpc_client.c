@@ -132,6 +132,11 @@ static uint64_t grpc_client_now_ms(void) {
  * @retval 0 The fd is ready.
  * @retval -1 Error, hangup, or deadline reached.
  */
+static uint64_t grpc_client_deadline_after(uint64_t timeout_ms) {
+    uint64_t now = grpc_client_now_ms();
+    return timeout_ms > UINT64_MAX - now ? UINT64_MAX : now + timeout_ms;
+}
+
 static int grpc_client_wait(cwist_grpc_client *c, short events, uint64_t deadline_ms) {
     for (;;) {
         int timeout = -1;
@@ -668,7 +673,7 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
 
     uint64_t connect_ms =
         options && options->connect_timeout_ms ? options->connect_timeout_ms : 10000;
-    uint64_t deadline = grpc_client_now_ms() + connect_ms;
+    uint64_t deadline = grpc_client_deadline_after(connect_ms);
 
     if (options && options->authority) {
         c->authority = cwist_alloc(strlen(options->authority) + 1);
@@ -979,9 +984,8 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             c->goaway = 1;
             uint32_t last = 0;
             if (f.len >= 4) {
-                last = (((uint32_t)f.payload[0] & 0x7f) << 24) |
-                       ((uint32_t)f.payload[1] << 16) | ((uint32_t)f.payload[2] << 8) |
-                       f.payload[3];
+                last = (((uint32_t)f.payload[0] & 0x7f) << 24) | ((uint32_t)f.payload[1] << 16) |
+                       ((uint32_t)f.payload[2] << 8) | f.payload[3];
             }
             if (!call->trailers && (f.len < 4 || last < call->stream_id)) {
                 /* gRFC A6 case 3: streams above the GOAWAY last-stream-id
@@ -1250,7 +1254,7 @@ cwist_grpc_call *cwist_grpc_call_start_ex(cwist_grpc_client *c, const char *meth
     call->client = c;
     call->stream_id = c->next_stream_id;
     c->next_stream_id += 2;
-    call->deadline_ms = timeout_ms ? grpc_client_now_ms() + timeout_ms : 0;
+    call->deadline_ms = timeout_ms ? grpc_client_deadline_after(timeout_ms) : 0;
     call->send_window = c->peer_initial_window;
     call->status = CWIST_GRPC_OK;
     cwist_grpc_decoder_init(&call->decoder, 0);

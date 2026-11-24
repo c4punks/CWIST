@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/core/utils/json_heal.h>
 #include "number_internal.h"
+#include "json_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <errno.h>
@@ -499,7 +500,7 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     cwist_heal_result_t result;
     memset(&result, 0, sizeof(result));
 
-    if (!input) return result;
+    if (!input || cwist_json_has_nul_escape(input)) return result;
 
     double threshold = (cfg && cfg->threshold > 0.0) ? cfg->threshold : 0.8;
 
@@ -548,7 +549,9 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     if (cfg && cfg->sllm_fn) {
         char *recovered = cfg->sllm_fn(input, cfg->schema, cfg->sllm_userdata);
         if (recovered) {
-            parsed = cJSON_ParseWithOpts(recovered, NULL, true);
+            parsed = cwist_json_has_nul_escape(recovered)
+                         ? NULL
+                         : cJSON_ParseWithOpts(recovered, NULL, true);
             free(recovered); /* SLLM callback uses plain malloc per contract */
             if (parsed) {
                 result.level = 3;
