@@ -25,7 +25,7 @@
  */
 
 typedef struct template_block_entry {
-    char name[64];
+    char *name;
     char *content;
     struct template_block_entry *next;
 } template_block_entry;
@@ -38,6 +38,7 @@ typedef struct {
     const char *include_root; /**< Canonical directory includes must stay in; NULL = any. */
     cwist_template_error_t *error;
     const template_block_entry *blocks;
+    bool extends_allowed;
 } template_source;
 
 /** @brief Command named by a {% ... %} tag. */
@@ -492,7 +493,8 @@ static const template_block_entry *find_block_override(const template_block_entr
 static void free_block_list(template_block_entry *head) {
     while (head) {
         template_block_entry *next = head->next;
-        if (head->content) cwist_free(head->content);
+        cwist_free(head->name);
+        cwist_free(head->content);
         cwist_free(head);
         head = next;
     }
@@ -544,9 +546,11 @@ static template_block_entry *extract_child_blocks(const char *template_str,
                         return NULL;
                     }
                     memset(entry, 0, sizeof(*entry));
-                    snprintf(entry->name, sizeof(entry->name), "%s", bname);
+                    entry->name = cwist_strdup(bname);
                     entry->content = (char *)cwist_alloc(blen + 1);
-                    if (!entry->content) {
+                    if (!entry->name || !entry->content) {
+                        cwist_free(entry->name);
+                        cwist_free(entry->content);
                         cwist_free(entry);
                         free_block_list(head);
                         return NULL;
@@ -569,7 +573,9 @@ static template_block_entry *extract_child_blocks(const char *template_str,
 /** @brief Render @p block one level deeper and append it to @p output. */
 static bool append_block(cwist_sstring *output, const char *block, const cJSON *context, int depth,
                          const template_source *source) {
-    cwist_sstring *rendered = render_internal(&block, context, depth, source);
+    template_source block_source = *source;
+    block_source.extends_allowed = false;
+    cwist_sstring *rendered = render_internal(&block, context, depth, &block_source);
     if (!rendered) return false;
     cwist_sstring_append(output, rendered->data);
     cwist_sstring_destroy(rendered);
@@ -608,8 +614,8 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
     const char *p = *template_str;
     const char *start = p;
 
-    /* Check for {% extends "parent.html" %} at top-level */
-    if (depth == 0) {
+    /* Check for {% extends "parent.html" %} at the start of a template file. */
+    if (source->extends_allowed) {
         const char *scan = p;
         while (isspace((unsigned char)*scan)) scan++;
         if (scan[0] == '{' && scan[1] == '%') {
@@ -635,10 +641,16 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         resolve_include_path(source->base_dir, parent_path, resolved, sizeof(resolved));
 
                         template_block_entry *child_blocks = extract_child_blocks(tag_end + 2, source);
+                        template_block_entry *inherited_tail = (template_block_entry *)source->blocks;
+                        while (inherited_tail && inherited_tail->next)
+                            inherited_tail = inherited_tail->next;
                         template_source parent_source = *source;
-                        parent_source.blocks = child_blocks;
+                        parent_source.blocks = source->blocks ? source->blocks : child_blocks;
+                        parent_source.extends_allowed = true;
+                        if (inherited_tail) inherited_tail->next = child_blocks;
 
                         cwist_sstring *res = render_file_internal(resolved, context, depth + 1, &parent_source, scan);
+                        if (inherited_tail) inherited_tail->next = NULL;
                         free_block_list(child_blocks);
                         cwist_sstring_destroy(output);
                         if (!res) return NULL;
@@ -898,7 +910,7 @@ cwist_sstring *cwist_template_render(const char *template_str, const cJSON *cont
 cwist_sstring *cwist_template_render_ex(const char *template_str, const cJSON *context,
                                         cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {template_str, NULL, NULL, NULL, error, NULL};
+    const template_source source = {template_str, NULL, NULL, NULL, error, NULL, true};
     const char *p = template_str;
     return render_internal(&p, context, 0, &source);
 }
@@ -917,7 +929,7 @@ static bool canonical_root(const char *include_root, char out[PATH_MAX],
 #else
     if (include_root && realpath(include_root, out)) return true;
 #endif
-    const template_source source = {NULL, NULL, NULL, NULL, error, NULL};
+    const template_source source = {NULL, NULL, NULL, NULL, error, NULL, false};
     template_report_error(&source, NULL, CWIST_TEMPLATE_ERROR_INVALID_ARGUMENT);
     return false;
 }
@@ -928,7 +940,7 @@ cwist_sstring *cwist_template_render_rooted(const char *template_str, const cJSO
     if (error) memset(error, 0, sizeof(*error));
     char root[PATH_MAX];
     if (!canonical_root(include_root, root, error)) return NULL;
-    const template_source source = {template_str, NULL, root, root, error, NULL};
+    const template_source source = {template_str, NULL, root, root, error, NULL, true};
     const char *p = template_str;
     return render_internal(&p, context, 0, &source);
 }
@@ -1018,7 +1030,7 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
     path_dirname(file_path, dir_buf, sizeof(dir_buf));
 
     const template_source source = {template_str, file_path, dir_buf, parent->include_root,
-                                    parent->error, parent->blocks};
+                                    parent->error, parent->blocks, true};
     const char *p = template_str;
     cwist_sstring *rendered = render_internal(&p, context, depth, &source);
     cwist_free(template_str);
@@ -1039,7 +1051,7 @@ cwist_sstring *cwist_template_render_file(const char *file_path, const cJSON *co
 cwist_sstring *cwist_template_render_file_ex(const char *file_path, const cJSON *context,
                                              cwist_template_error_t *error) {
     if (error) memset(error, 0, sizeof(*error));
-    const template_source source = {NULL, file_path, NULL, NULL, error, NULL};
+    const template_source source = {NULL, file_path, NULL, NULL, error, NULL, false};
     return render_file_internal(file_path, context, 0, &source, NULL);
 }
 
@@ -1049,6 +1061,6 @@ cwist_sstring *cwist_template_render_file_rooted(const char *file_path, const cJ
     if (error) memset(error, 0, sizeof(*error));
     char root[PATH_MAX];
     if (!canonical_root(include_root, root, error)) return NULL;
-    const template_source source = {NULL, file_path, NULL, root, error, NULL};
+    const template_source source = {NULL, file_path, NULL, root, error, NULL, false};
     return render_file_internal(file_path, context, 0, &source, NULL);
 }
