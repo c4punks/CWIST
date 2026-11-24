@@ -478,7 +478,11 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, c
         if (mc->has_timeout && (eff_timeout == 0 || mc->timeout_ms < eff_timeout))
             eff_timeout = mc->timeout_ms;
     }
-    uint64_t deadline = eff_timeout ? channel_now_ms() + eff_timeout : 0;
+    uint64_t deadline = 0;
+    if (eff_timeout) {
+        uint64_t now = channel_now_ms();
+        deadline = eff_timeout > UINT64_MAX - now ? UINT64_MAX : now + eff_timeout;
+    }
     int buffer_ok = request_len <= ch->buffer_limit;
     uint32_t max_attempts = 1;
     uint32_t mask = 0;

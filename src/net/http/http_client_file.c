@@ -27,6 +27,7 @@ typedef struct {
     pthread_mutex_t lock;
     pthread_cond_t cond;
     char *path;
+    char *root_dir;
     cwist_http_method_t method;
     cwist_http_response *response;
     bool done;
@@ -106,12 +107,36 @@ static char *file_url_path(const char *url) {
     return decoded;
 }
 
+static bool file_path_is_inside(const char *path, const char *root_dir) {
+    size_t root_len = strlen(root_dir);
+    bool root_is_slash = root_len == 1 && root_dir[0] == '/';
+    return root_is_slash || (strncmp(path, root_dir, root_len) == 0 &&
+                             (path[root_len] == '\0' || path[root_len] == '/'));
+}
+
+static bool file_fd_is_confined(int fd, const char *root_dir) {
+    char actual[PATH_MAX];
+#if defined(__linux__)
+    char proc_path[64];
+    snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d", fd);
+    ssize_t n = readlink(proc_path, actual, sizeof(actual) - 1);
+    if (n < 0) return false;
+    actual[n] = '\0';
+#elif defined(__APPLE__)
+    if (fcntl(fd, F_GETPATH, actual) != 0) return false;
+#else
+    return false;
+#endif
+    return file_path_is_inside(actual, root_dir);
+}
+
 static cwist_http_response *file_read_response(file_job *job) {
     int fd = open(job->path, O_RDONLY | O_CLOEXEC | O_NONBLOCK);
     if (fd < 0) return NULL;
     struct stat st;
     if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_size < 0 ||
-        (uintmax_t)st.st_size > CWIST_HTTP_MAX_BODY_SIZE) {
+        (uintmax_t)st.st_size > CWIST_HTTP_MAX_BODY_SIZE ||
+        !file_fd_is_confined(fd, job->root_dir)) {
         close(fd);
         return NULL;
     }
@@ -193,6 +218,7 @@ static void *file_worker_main(void *arg) {
     if (detached) {
         pthread_cond_destroy(&job->cond);
         pthread_mutex_destroy(&job->lock);
+        cwist_free(job->root_dir);
         cwist_free(job->path);
         cwist_free(job);
     }
@@ -210,9 +236,8 @@ static char *file_confined_path(const char *path, const char *root_dir) {
     if (!realpath(path, resolved)) return NULL;
     size_t root_len = strlen(root_dir);
     bool root_is_slash = root_len == 1 && root_dir[0] == '/';
-    if (!root_is_slash &&
-        (strncmp(resolved, root_dir, root_len) != 0 ||
-         (resolved[root_len] != '\0' && resolved[root_len] != '/')))
+    if (!root_is_slash && (strncmp(resolved, root_dir, root_len) != 0 ||
+                           (resolved[root_len] != '\0' && resolved[root_len] != '/')))
         return NULL;
     return cwist_strdup(resolved);
 #endif
@@ -238,14 +263,22 @@ int cwist_http_client_file_request(const char *url, cwist_http_method_t method, 
         cwist_gc_scope_disown(job);
     }
     job->path = path;
+    job->root_dir = cwist_strdup(root_dir);
     job->method = method;
     job->queue = cwist_io_queue_create(1);
+    if (!job->root_dir) {
+        cwist_io_queue_destroy(job->queue);
+        cwist_free(path);
+        cwist_free(job);
+        return -1;
+    }
     bool lock_ready = pthread_mutex_init(&job->lock, NULL) == 0;
     bool cond_ready = lock_ready && file_cond_init(&job->cond) == 0;
     if (!job->queue || !lock_ready || !cond_ready) {
         if (job->queue) cwist_io_queue_destroy(job->queue);
         if (cond_ready) pthread_cond_destroy(&job->cond);
         if (lock_ready) pthread_mutex_destroy(&job->lock);
+        cwist_free(job->root_dir);
         cwist_free(path);
         cwist_free(job);
         return -1;
@@ -254,6 +287,7 @@ int cwist_http_client_file_request(const char *url, cwist_http_method_t method, 
         cwist_io_queue_destroy(job->queue);
         pthread_cond_destroy(&job->cond);
         pthread_mutex_destroy(&job->lock);
+        cwist_free(job->root_dir);
         cwist_free(path);
         cwist_free(job);
         return -1;
@@ -265,6 +299,7 @@ int cwist_http_client_file_request(const char *url, cwist_http_method_t method, 
         cwist_io_queue_destroy(job->queue);
         pthread_cond_destroy(&job->cond);
         pthread_mutex_destroy(&job->lock);
+        cwist_free(job->root_dir);
         cwist_free(path);
         cwist_free(job);
         return -1;
@@ -294,6 +329,7 @@ int cwist_http_client_file_request(const char *url, cwist_http_method_t method, 
     *out_response = job->response;
     pthread_cond_destroy(&job->cond);
     pthread_mutex_destroy(&job->lock);
+    cwist_free(job->root_dir);
     cwist_free(path);
     cwist_free(job);
     return *out_response ? 0 : -1;

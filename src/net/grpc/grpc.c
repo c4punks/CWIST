@@ -215,6 +215,11 @@ static uint64_t grpc_now_ms(void) {
     return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
 
+static uint64_t grpc_deadline_after(uint64_t timeout_ms) {
+    uint64_t now = grpc_now_ms();
+    return timeout_ms > UINT64_MAX - now ? UINT64_MAX : now + timeout_ms;
+}
+
 /** @brief Case-insensitively fetch a request header value.
  *
  * @param req Request to search; may be NULL.
@@ -725,7 +730,7 @@ static void grpc_dispatch_stream_route(cwist_http_request *req, cwist_http_respo
     if (timeout) {
         uint64_t timeout_ms = 0;
         if (cwist_grpc_parse_timeout(timeout, &timeout_ms) == 0)
-            deadline_ms = grpc_now_ms() + timeout_ms;
+            deadline_ms = grpc_deadline_after(timeout_ms);
     }
 
     res->status_code = CWIST_HTTP_OK;
@@ -2173,7 +2178,7 @@ static void *grpc_h2_on_headers(void *conn_ctx, cwist_http_request *req, cwist_h
     if (timeout) {
         uint64_t timeout_ms = 0;
         if (cwist_grpc_parse_timeout(timeout, &timeout_ms) == 0)
-            session->stream.deadline_ms = grpc_now_ms() + timeout_ms;
+            session->stream.deadline_ms = grpc_deadline_after(timeout_ms);
     }
     session->handler = view.stream_handler;
     session->user_ctx = view.user_ctx;

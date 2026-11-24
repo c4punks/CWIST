@@ -271,8 +271,7 @@ static void test_shared_client_threads(cwist_http_client *client, const char *ba
     }
     for (int i = 0; i < 4; i++) {
         pthread_join(threads[i], NULL);
-        CHECK(args[i].ok == 20, "shared client: thread %d got %d/20 good responses", i,
-              args[i].ok);
+        CHECK(args[i].ok == 20, "shared client: thread %d got %d/20 good responses", i, args[i].ok);
     }
     report(before, "one client shared by four threads");
 }
@@ -508,6 +507,7 @@ static void test_closed_port(cwist_http_client *client) {
     snprintf(url, sizeof(url), "http://127.0.0.1:%d/hello", port);
 
     cwist_http_client_set_timeout_ms(client, CLOSED_PORT_TIMEOUT_MS);
+    cwist_http_client_set_timeout_ms(client, -1); /* Invalid values keep the prior timeout. */
     cwist_http_response *res = NULL;
     long start = now_ms();
     cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
