@@ -58,8 +58,8 @@
  * @brief Bundle passed to the background worker thread.
  */
 typedef struct {
-    int      fd;       /**< Server-side socket descriptor. */
-    char    *db_path;  /**< SQLite database path (heap-allocated). */
+    int fd;       /**< Server-side socket descriptor. */
+    char *db_path;  /**< SQLite database path (heap-allocated). */
 } cwist_orm_worker_ctx_t;
 
 /* ------------------------------------------------------------------------- */
@@ -70,8 +70,7 @@ typedef struct {
  * @brief Receive exactly @p n bytes from @p fd into @p buf.
  * @return 0 on success, -1 on EOF or error.
  */
-static int recv_all(int fd, void *buf, size_t n)
-{
+static int recv_all(int fd, void *buf, size_t n) {
     size_t total = 0;
     char *p = (char *)buf;
     while (total < n) {
@@ -144,13 +143,14 @@ static bool socket_is_plain_decimal(const char *txt) {
     return p > frac && *p == '\0' && p[-1] != '0';
 }
 
+static cJSON *socket_b64_string(const unsigned char *data, int n);
+
 /**
  * @brief Add one cell of the current row to the legacy JSON row object.
  *
- * The legacy "rows" payload keeps its text-based typing so existing
- * readers are unaffected: REAL values and canonical integer or decimal text
- * are emitted as JSON numbers, other numeric-looking text ("0x1A", "1e3",
- * "nan", "1.50") stays a string, and NULL stays null.
+ * REAL values and exactly representable canonical integers are emitted as
+ * JSON numbers. Larger integers, non-canonical numeric text, and ASCII BLOBs
+ * stay strings; other BLOBs are base64 strings, and NULL stays null.
  *
  * @param ctype sqlite3_column_type() read before any text conversion.
  */
@@ -159,7 +159,26 @@ static bool socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i, int ct
     const char *colname = sqlite3_column_name(stmt, i);
     if (!colname) colname = "";
 
+    if (ctype == SQLITE_BLOB) {
+        const unsigned char *blob = (const unsigned char *)sqlite3_column_blob(stmt, i);
+        int blob_len = sqlite3_column_bytes(stmt, i);
+        bool ascii = true;
+        for (int j = 0; j < blob_len; j++) {
+            if (blob[j] == 0 || blob[j] >= 0x80) {
+                ascii = false;
+                break;
+            }
+        }
+        if (ascii) return cJSON_AddStringToObject(row, colname, txt ? txt : "") != NULL;
+        cJSON *encoded = socket_b64_string(blob ? blob : (const unsigned char *)"", blob_len);
+        if (!encoded) return false;
+        if (cJSON_AddItemToObject(row, colname, encoded)) return true;
+        cJSON_Delete(encoded);
+        return false;
+    }
     if (!txt) return cJSON_AddNullToObject(row, colname) != NULL;
+    int text_len = sqlite3_column_bytes(stmt, i);
+    if (text_len > 0 && memchr(txt, '\0', (size_t)text_len)) return false;
 
     /* A REAL value is a number whatever its text looks like ("100.0"). */
     if (ctype == SQLITE_FLOAT) {
@@ -183,7 +202,11 @@ static bool socket_add_legacy_cell(cJSON *row, sqlite3_stmt *stmt, int i, int ct
          * Only canonical integer text becomes a number; "007" or
          * " 12" is text that merely parses as one and stays a string. */
         snprintf(canon, sizeof(canon), "%lld", ll);
-        if (strcmp(canon, txt) == 0) return cJSON_AddRawToObject(row, colname, txt) != NULL;
+        if (strcmp(canon, txt) == 0) {
+            if (ll >= -9007199254740991LL && ll <= 9007199254740991LL)
+                return cJSON_AddRawToObject(row, colname, txt) != NULL;
+            return cJSON_AddStringToObject(row, colname, txt) != NULL;
+        }
         return cJSON_AddStringToObject(row, colname, txt) != NULL;
     }
     if (socket_is_plain_decimal(txt)) return cJSON_AddRawToObject(row, colname, txt) != NULL;
@@ -249,38 +272,40 @@ static cJSON *socket_typed_cell(sqlite3_stmt *stmt, int i, int ctype) {
      * changes what sqlite3_column_type() reports for the same column. */
     bool ok = true;
     switch (ctype) {
-    case SQLITE_INTEGER: {
-        char digits[32];
-        snprintf(digits, sizeof(digits), "%lld", (long long)sqlite3_column_int64(stmt, i));
-        ok = cJSON_AddStringToObject(cell, "t", "int") &&
-             cJSON_AddStringToObject(cell, "v", digits);
-        break;
-    }
-    case SQLITE_FLOAT:
-        ok = cJSON_AddStringToObject(cell, "t", "real") &&
-             cJSON_AddNumberToObject(cell, "v", sqlite3_column_double(stmt, i));
-        break;
-    case SQLITE_BLOB: {
-        const unsigned char *blob = (const unsigned char *)sqlite3_column_blob(stmt, i);
-        int n = sqlite3_column_bytes(stmt, i);
-        cJSON *encoded = socket_b64_string(blob ? blob : (const unsigned char *)"", n);
-        ok = cJSON_AddStringToObject(cell, "t", "blob") && encoded;
-        bool attached = false;
-        if (ok) {
-            attached = cJSON_AddItemToObject(cell, "v", encoded);
-            ok = attached && cJSON_AddNumberToObject(cell, "n", (double)n);
+        case SQLITE_INTEGER: {
+            char digits[32];
+            snprintf(digits, sizeof(digits), "%lld", (long long)sqlite3_column_int64(stmt, i));
+            ok = cJSON_AddStringToObject(cell, "t", "int") &&
+                 cJSON_AddStringToObject(cell, "v", digits);
+            break;
         }
-        if (!ok && !attached) cJSON_Delete(encoded);
-        break;
-    }
-    case SQLITE_TEXT:
-        ok = cJSON_AddStringToObject(cell, "t", "text") &&
-             cJSON_AddStringToObject(cell, "v", (const char *)sqlite3_column_text(stmt, i));
-        break;
-    case SQLITE_NULL:
-    default:
-        ok = cJSON_AddStringToObject(cell, "t", "null") != NULL;
-        break;
+        case SQLITE_FLOAT:
+            ok = cJSON_AddStringToObject(cell, "t", "real") &&
+                 cJSON_AddNumberToObject(cell, "v", sqlite3_column_double(stmt, i));
+            break;
+        case SQLITE_BLOB: {
+            const unsigned char *blob = (const unsigned char *)sqlite3_column_blob(stmt, i);
+            int n = sqlite3_column_bytes(stmt, i);
+            cJSON *encoded = socket_b64_string(blob ? blob : (const unsigned char *)"", n);
+            ok = cJSON_AddStringToObject(cell, "t", "blob") && encoded;
+            bool attached = false;
+            if (ok) {
+                attached = cJSON_AddItemToObject(cell, "v", encoded);
+                ok = attached && cJSON_AddNumberToObject(cell, "n", (double)n);
+            }
+            if (!ok && !attached) cJSON_Delete(encoded);
+            break;
+        }
+        case SQLITE_TEXT: {
+            const char *text = (const char *)sqlite3_column_text(stmt, i);
+            int text_len = sqlite3_column_bytes(stmt, i);
+            ok = text && !(text_len > 0 && memchr(text, '\0', (size_t)text_len)) &&
+                 cJSON_AddStringToObject(cell, "t", "text") &&
+                 cJSON_AddStringToObject(cell, "v", text);
+            break;
+        }
+        case SQLITE_NULL:
+        default: ok = cJSON_AddStringToObject(cell, "t", "null") != NULL; break;
     }
     if (!ok) {
         cJSON_Delete(cell);
@@ -310,8 +335,7 @@ typedef struct {
  * @return SQLITE_OK on success, otherwise the failing statement's code
  *         with @p errmsg set to a heap copy of sqlite3_errmsg().
  */
-static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *acc,
-                           char **errmsg) {
+static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *acc, char **errmsg) {
     const char *tail = sql;
     int rc = SQLITE_OK;
 
@@ -373,12 +397,16 @@ static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *ac
                 }
             }
             if (row_ok) {
-                if (cJSON_AddItemToArray(acc->trows, trow)) trow = NULL;
-                else row_ok = false;
+                if (cJSON_AddItemToArray(acc->trows, trow))
+                    trow = NULL;
+                else
+                    row_ok = false;
             }
             if (row_ok) {
-                if (cJSON_AddItemToArray(acc->rows, row)) row = NULL;
-                else row_ok = false;
+                if (cJSON_AddItemToArray(acc->rows, row))
+                    row = NULL;
+                else
+                    row_ok = false;
             }
             if (!row_ok) {
                 cJSON_Delete(row);
@@ -408,16 +436,14 @@ static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *ac
  * Reads framed SQL requests from the socket, executes them, and writes
  * framed JSON responses back.
  */
-static void *cwist_orm_socket_worker(void *arg)
-{
+static void *cwist_orm_socket_worker(void *arg) {
     cwist_orm_worker_ctx_t *ctx = (cwist_orm_worker_ctx_t *)arg;
     if (!ctx) return NULL;
 
     sqlite3 *db = NULL;
     int rc = sqlite3_open(ctx->db_path, &db);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "[ORM-SOCKET] sqlite3_open failed: %s\n",
-                sqlite3_errmsg(db));
+        fprintf(stderr, "[ORM-SOCKET] sqlite3_open failed: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
         close(ctx->fd);
         free_worker_ctx(ctx);
@@ -571,8 +597,7 @@ int cwist_db_transfer_sqlite_to_socket(const char *db_path) {
         return -1;
     }
 
-    cwist_orm_worker_ctx_t *ctx =
-        (cwist_orm_worker_ctx_t *)calloc(1, sizeof(*ctx));
+    cwist_orm_worker_ctx_t *ctx = (cwist_orm_worker_ctx_t *)calloc(1, sizeof(*ctx));
     if (!ctx) {
         close(sv[0]);
         close(sv[1]);

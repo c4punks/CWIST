@@ -176,7 +176,7 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
 
     /* Work on a sorted copy so callers need not pre-sort. */
     cwist_migration_t *sorted =
-        (cwist_migration_t *)cwist_alloc(sizeof(cwist_migration_t) * (size_t)count);
+        (cwist_migration_t *)cwist_alloc_array((size_t)count, sizeof(cwist_migration_t));
     if (!sorted) return CWIST_MIGRATE_ERR_GENERIC;
     memcpy(sorted, migrations, sizeof(cwist_migration_t) * (size_t)count);
     qsort(sorted, (size_t)count, sizeof(cwist_migration_t), migration_cmp_asc);
@@ -226,7 +226,7 @@ int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int cou
 
     /* Sort descending so we undo in reverse order. */
     cwist_migration_t *sorted =
-        (cwist_migration_t *)cwist_alloc(sizeof(cwist_migration_t) * (size_t)count);
+        (cwist_migration_t *)cwist_alloc_array((size_t)count, sizeof(cwist_migration_t));
     if (!sorted) return CWIST_MIGRATE_ERR_GENERIC;
     memcpy(sorted, migrations, sizeof(cwist_migration_t) * (size_t)count);
     qsort(sorted, (size_t)count, sizeof(cwist_migration_t), migration_cmp_desc);

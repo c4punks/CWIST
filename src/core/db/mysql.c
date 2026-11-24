@@ -313,7 +313,7 @@ cwist_error_t cwist_mysql_exec_params(cwist_mysql_t *mysql, const char *sql, int
     if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) goto driver_error;
 
     if (n_params > 0) {
-        param_binds = (MYSQL_BIND *)cwist_alloc(sizeof(MYSQL_BIND) * (size_t)n_params);
+        param_binds = (MYSQL_BIND *)cwist_alloc_array((size_t)n_params, sizeof(MYSQL_BIND));
         if (!param_binds) goto oom;
         memset(param_binds, 0, sizeof(MYSQL_BIND) * (size_t)n_params);
         for (int i = 0; i < n_params; i++) {
@@ -388,6 +388,11 @@ cwist_error_t cwist_mysql_exec_params(cwist_mysql_t *mysql, const char *sql, int
                     if (is_null[j]) {
                         cell = cJSON_AddNullToObject(row, fname);
                     } else {
+                        if (memchr(buffers[j], '\0', lengths[j])) {
+                            mysql_set_last_error(mysql, "result string contains embedded NUL");
+                            err.error.err_i16 = CWIST_ERROR_PROTOCOL;
+                            goto cleanup;
+                        }
                         buffers[j][lengths[j]] = '\0';
                         cell = cJSON_AddStringToObject(row, fname, buffers[j]);
                     }
