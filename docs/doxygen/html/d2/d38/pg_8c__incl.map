@@ -1,15 +1,21 @@
 <map id="src/core/db/pg.c" name="src/core/db/pg.c">
-<area shape="rect" id="Node000001" title="PostgreSQL client integration using libpq." alt="" coords="604,5,728,31"/>
+<area shape="rect" id="Node000001" title="PostgreSQL client integration using libpq." alt="" coords="744,5,868,31"/>
 <area shape="rect" id="Node000002" href="$d1/da5/pg_8h.html" title="PostgreSQL client integration using libpq." alt="" coords="209,79,349,104"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="604,33,356,79,355,74,603,28"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="744,30,364,81,363,76,743,25"/>
 <area shape="rect" id="Node000008" href="$d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="435,79,609,104"/>
-<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="644,33,559,75,557,70,642,28"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="761,33,582,78,580,73,760,28"/>
 <area shape="rect" id="Node000011" title=" " alt="" coords="633,79,699,104"/>
-<area shape="poly" id="edge15_Node000001_Node000011" title=" " alt="" coords="669,31,669,65,663,65,663,31"/>
+<area shape="poly" id="edge15_Node000001_Node000011" title=" " alt="" coords="785,33,702,75,700,70,782,28"/>
 <area shape="rect" id="Node000012" title=" " alt="" coords="724,79,795,104"/>
-<area shape="poly" id="edge16_Node000001_Node000012" title=" " alt="" coords="683,29,735,68,732,72,679,33"/>
+<area shape="poly" id="edge16_Node000001_Node000012" title=" " alt="" coords="801,32,777,69,772,66,796,30"/>
 <area shape="rect" id="Node000013" title=" " alt="" coords="819,79,889,104"/>
-<area shape="poly" id="edge17_Node000001_Node000013" title=" " alt="" coords="697,28,811,71,810,76,695,33"/>
+<area shape="poly" id="edge17_Node000001_Node000013" title=" " alt="" coords="816,30,841,66,836,69,812,33"/>
+<area shape="rect" id="Node000014" title=" " alt="" coords="913,79,981,104"/>
+<area shape="poly" id="edge18_Node000001_Node000014" title=" " alt="" coords="830,28,913,70,911,75,828,33"/>
+<area shape="rect" id="Node000015" title=" " alt="" coords="1006,79,1065,104"/>
+<area shape="poly" id="edge19_Node000001_Node000015" title=" " alt="" coords="844,28,994,74,992,79,842,33"/>
+<area shape="rect" id="Node000016" title=" " alt="" coords="1089,79,1153,104"/>
+<area shape="poly" id="edge20_Node000001_Node000016" title=" " alt="" coords="861,28,1076,76,1075,81,860,33"/>
 <area shape="rect" id="Node000003" href="$d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="99,152,241,192"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="265,106,209,146,206,142,262,102"/>
 <area shape="rect" id="Node000005" title=" " alt="" coords="238,240,321,265"/>

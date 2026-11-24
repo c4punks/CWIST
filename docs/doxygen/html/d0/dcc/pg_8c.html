@@ -118,22 +118,31 @@ $(document).ready(function(){initNavTree('d0/dcc/pg_8c.html','../../'); initResi
 <code>#include &lt;stdio.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
+<code>#include &lt;errno.h&gt;</code><br />
+<code>#include &lt;poll.h&gt;</code><br />
+<code>#include &lt;time.h&gt;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for pg.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d2/d38/pg_8c__incl.png" border="0" usemap="#asrc_2core_2db_2pg_8c" alt=""/></div>
 <map name="asrc_2core_2db_2pg_8c" id="asrc_2core_2db_2pg_8c">
-<area shape="rect" title="PostgreSQL client integration using libpq." alt="" coords="604,5,728,31"/>
+<area shape="rect" title="PostgreSQL client integration using libpq." alt="" coords="744,5,868,31"/>
 <area shape="rect" href="../../d1/da5/pg_8h.html" title="PostgreSQL client integration using libpq." alt="" coords="209,79,349,104"/>
-<area shape="poly" title=" " alt="" coords="604,33,356,79,355,74,603,28"/>
+<area shape="poly" title=" " alt="" coords="744,30,364,81,363,76,743,25"/>
 <area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="435,79,609,104"/>
-<area shape="poly" title=" " alt="" coords="644,33,559,75,557,70,642,28"/>
+<area shape="poly" title=" " alt="" coords="761,33,582,78,580,73,760,28"/>
 <area shape="rect" title=" " alt="" coords="633,79,699,104"/>
-<area shape="poly" title=" " alt="" coords="669,31,669,65,663,65,663,31"/>
+<area shape="poly" title=" " alt="" coords="785,33,702,75,700,70,782,28"/>
 <area shape="rect" title=" " alt="" coords="724,79,795,104"/>
-<area shape="poly" title=" " alt="" coords="683,29,735,68,732,72,679,33"/>
+<area shape="poly" title=" " alt="" coords="801,32,777,69,772,66,796,30"/>
 <area shape="rect" title=" " alt="" coords="819,79,889,104"/>
-<area shape="poly" title=" " alt="" coords="697,28,811,71,810,76,695,33"/>
+<area shape="poly" title=" " alt="" coords="816,30,841,66,836,69,812,33"/>
+<area shape="rect" title=" " alt="" coords="913,79,981,104"/>
+<area shape="poly" title=" " alt="" coords="830,28,913,70,911,75,828,33"/>
+<area shape="rect" title=" " alt="" coords="1006,79,1065,104"/>
+<area shape="poly" title=" " alt="" coords="844,28,994,74,992,79,842,33"/>
+<area shape="rect" title=" " alt="" coords="1089,79,1153,104"/>
+<area shape="poly" title=" " alt="" coords="861,28,1076,76,1075,81,860,33"/>
 <area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="99,152,241,192"/>
 <area shape="poly" title=" " alt="" coords="265,106,209,146,206,142,262,102"/>
 <area shape="rect" title=" " alt="" coords="238,240,321,265"/>
@@ -211,7 +220,7 @@ Functions</h2></td></tr>
 
 <p>Begin a transaction. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00211">211</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00320">320</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
@@ -235,7 +244,7 @@ Functions</h2></td></tr>
 
 <p>Commit the current transaction. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00218">218</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00327">327</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
@@ -260,13 +269,13 @@ Functions</h2></td></tr>
 <p>Connect to a PostgreSQL database using a connection string or URI. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">conninfo</td><td>Connection string (e.g. "host=localhost dbname=test user=postgres") or URI (e.g. "postgresql://user:pass@host:port/dbname"). </td></tr>
+    <tr><td class="paramname">conninfo</td><td>Connection string (e.g. "host=localhost dbname=test user=postgres") or URI (e.g. "postgresql://user:pass@host:port/dbname"). Connection and query operations have 5-second and 30-second deadlines respectively. A transport failure closes the connection. </td></tr>
   </table>
   </dd>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Opaque connection handle, or NULL on allocation/connection failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00181">181</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00290">290</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 </div>
 </div>
@@ -294,7 +303,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00186">186</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00295">295</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 </div>
 </div>
@@ -334,7 +343,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success, error code on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00195">195</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00304">304</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
@@ -398,7 +407,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST_SUCCESS on success, error code on failure. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00202">202</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00311">311</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
@@ -429,7 +438,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if connected and ready; false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00190">190</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00299">299</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 </div>
 </div>
@@ -458,7 +467,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Error message string, or empty string if no error. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00232">232</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00341">341</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 </div>
 </div>
@@ -480,7 +489,7 @@ Functions</h2></td></tr>
 
 <p>Roll back the current transaction. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00225">225</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dcc/pg_8c_source.html#l00334">334</a> of file <a class="el" href="../../d0/dcc/pg_8c_source.html">pg.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
