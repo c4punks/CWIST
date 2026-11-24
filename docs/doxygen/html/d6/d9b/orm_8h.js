@@ -13,7 +13,9 @@ var orm_8h =
       [ "CWIST_ORM_SQLITE", "d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9aa5d3a84232701ac74aea5adcab4714ddc", null ],
       [ "CWIST_ORM_POSTGRES", "d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9aa9f20c34d7159ed126f571a6953da1a50", null ],
       [ "CWIST_ORM_MYSQL", "d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9aa6d56bfe9db7fa0c89c67a924946a4ffd", null ],
-      [ "CWIST_ORM_MARIADB", "d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9aacb4486637508b1de92412b06390f11ef", null ]
+      [ "CWIST_ORM_MARIADB", "d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9aacb4486637508b1de92412b06390f11ef", null ],
+      [ "CWIST_ORM_ORACLE", "d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9aaa9fcab0c423fcf6d439dfa616b66febe", null ],
+      [ "CWIST_ORM_MSSQL", "d6/d9b/orm_8h.html#a8a140e98cb138fd4575440dc18836a9aa5284ba6e87e84b2f718fa56ea1c90d03", null ]
     ] ],
     [ "cwist_orm_value_type", "d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24", [
       [ "CWIST_ORM_TYPE_NULL", "d6/d9b/orm_8h.html#a84b532ec7398ed41c2ef6dbcdbf05e24aa082003106646b20810ceeece0590cb3", null ],

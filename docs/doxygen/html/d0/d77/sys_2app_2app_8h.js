@@ -42,7 +42,9 @@ var sys_2app_2app_8h =
       [ "CWIST_RDBMS_NONE", "d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559a9b0c4f60dcde96e395e07ad0482e3bef", null ],
       [ "CWIST_RDBMS_POSTGRES", "d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559a425d386ca16236bf9d3315a95caf9336", null ],
       [ "CWIST_RDBMS_MYSQL", "d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559a701207d45acb2afbc09ad59217810382", null ],
-      [ "CWIST_RDBMS_MARIADB", "d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559a5352a9923b4d8108ff9f40c71582a7da", null ]
+      [ "CWIST_RDBMS_MARIADB", "d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559a5352a9923b4d8108ff9f40c71582a7da", null ],
+      [ "CWIST_RDBMS_ORACLE", "d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559ac39a6740ce5a62fe7aa68327e2911a5e", null ],
+      [ "CWIST_RDBMS_MSSQL", "d0/d77/sys_2app_2app_8h.html#a9325ff1c8f9f0efd5a28f1baf4458559a0d659ebc9aaf847000355e6c8865e134", null ]
     ] ],
     [ "cwist_app_auto_rdbms", "d0/d77/sys_2app_2app_8h.html#a7c3eba79841911d3e8219ba772550ef5", null ],
     [ "cwist_app_configure_bdr", "d0/d77/sys_2app_2app_8h.html#a460cb44867a7b924634fca514bdd360c", null ],
@@ -112,6 +114,7 @@ var sys_2app_2app_8h =
     [ "cwist_multiport_get_app", "d0/d77/sys_2app_2app_8h.html#a17cdd1726dda152b71012f8b45e2c25e", null ],
     [ "cwist_rdbms_mount_runtime", "d0/d77/sys_2app_2app_8h.html#af58bf0bc10f785708119dd9e557fab28", null ],
     [ "cwist_rdbms_probe_port", "d0/d77/sys_2app_2app_8h.html#a09a61118d4a0a593bb221345ec265c2c", null ],
+    [ "cwist_rdbms_provider_name", "d0/d77/sys_2app_2app_8h.html#a0cff9c4e9aea2cfe90d728561211186c", null ],
     [ "cwist_stream_req_begin", "d0/d77/sys_2app_2app_8h.html#a1cd4c5a9f341d286cae45f69ebefd0f1", null ],
     [ "cwist_stream_req_dispatch", "d0/d77/sys_2app_2app_8h.html#a9193df4fb940e64d87ce852533ea5797", null ],
     [ "cwist_stream_req_end", "d0/d77/sys_2app_2app_8h.html#a2317ac8933409284ec24fc70f134afe0", null ],
