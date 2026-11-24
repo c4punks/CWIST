@@ -71,8 +71,7 @@ static bool mysql_parse_kv_field(const char *conninfo, const char *key, char *ou
             if (*p != quote) return false;
             p++;
         }
-        while (*p == ' ') p++;
-        if (*p && *p != ';' && *p != '&') return false;
+        if (*p && *p != ' ' && *p != ';' && *p != '&') return false;
         if ((size_t)(key_end - key_start) == key_len && strncmp(key_start, key, key_len) == 0) {
             if (value_len >= out_cap) return false;
             memcpy(out, value_start, value_len);
