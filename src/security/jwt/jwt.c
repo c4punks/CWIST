@@ -4,6 +4,7 @@
 #include <cwist/core/seq/seq.h>
 
 #include "../../core/utils/number_internal.h"
+#include "../../core/utils/json_internal.h"
 #include <cjson/cJSON.h>
 
 #if defined(CWIST_TLS_MBEDTLS)
@@ -541,6 +542,7 @@ static bool jwt_time_from_number(double value, time_t *out) {
 static char *jwt_sign_common(jwt_alg_t alg, const char *payload_json, const char *key,
                              const char *kid, long exp_seconds) {
     if (!payload_json || !key) return NULL;
+    if (cwist_json_has_nul_escape(payload_json)) return NULL;
 
     /* --- Build header JSON ------------------------------------------------ */
     cJSON *header = cJSON_CreateObject();
@@ -699,6 +701,12 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
         cwist_free(tok_copy);
         return NULL;
     }
+    if (strlen((const char *)hdr_json) != hdr_json_len ||
+        cwist_json_has_nul_escape((const char *)hdr_json)) {
+        cwist_free(hdr_json);
+        cwist_free(tok_copy);
+        return NULL;
+    }
     cJSON *hdr = cJSON_ParseWithLengthOpts((const char *)hdr_json, hdr_json_len + 1, NULL, true);
     cwist_free(hdr_json);
     if (!hdr) {
@@ -741,6 +749,12 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
     cwist_free(tok_copy);
 
     if (!pay_json) return NULL;
+
+    if (strlen((const char *)pay_json) != pay_json_len ||
+        cwist_json_has_nul_escape((const char *)pay_json)) {
+        cwist_free(pay_json);
+        return NULL;
+    }
 
     cJSON *json = cJSON_ParseWithLengthOpts((const char *)pay_json, pay_json_len + 1, NULL, true);
     cwist_free(pay_json);
