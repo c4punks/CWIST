@@ -127,6 +127,7 @@ static void test_flash_survives_redirect(void) {
     cwist_session_t *session = cwist_session_start(app, first, first_res);
     assert(session != NULL);
     cwist_flash_set(first, "notice", "saved");
+    cwist_flash_set(first, "warning", "keep me");
     assert(cwist_session_get(session, "_cwist_flash") != NULL);
     assert(cwist_session_commit(session, first_res) == 0);
     char cookie[4096];
@@ -142,7 +143,7 @@ static void test_flash_survives_redirect(void) {
     const char *notice = cwist_flash_get(second, "notice");
     assert(notice != NULL && strcmp(notice, "saved") == 0);
     cwist_free((void *)notice);
-    assert(cwist_session_get(next_session, "_cwist_flash") == NULL);
+    assert(cwist_session_get(next_session, "_cwist_flash") != NULL);
     assert(cwist_flash_get(second, "notice") == NULL);
     assert(cwist_session_commit(next_session, second_res) == 0);
     session_cookie_value(second_res, cookie, sizeof(cookie));
@@ -153,6 +154,9 @@ static void test_flash_survives_redirect(void) {
     cwist_http_header_add(&third->headers, "Cookie", cookie_header);
     assert(cwist_session_start(app, third, third_res) != NULL);
     assert(cwist_flash_get(third, "notice") == NULL);
+    const char *warning = cwist_flash_get(third, "warning");
+    assert(warning != NULL && strcmp(warning, "keep me") == 0);
+    cwist_free((void *)warning);
 
     cwist_http_request_destroy(first);
     cwist_http_response_destroy(first_res);
