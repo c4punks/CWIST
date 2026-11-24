@@ -18,6 +18,7 @@ struct cwist_db_pool {
     size_t *idle_slots;
     bool *leased;
     bool closing;
+    _Atomic size_t acquire_refs;
     pthread_mutex_t mtx;
     pthread_cond_t cond;
 };
@@ -155,15 +156,23 @@ static cwist_db *pool_acquire_locked(cwist_db_pool_t *pool) {
     return pool->conns[slot];
 }
 
+static void pool_acquire_leave_locked(cwist_db_pool_t *pool) {
+    atomic_fetch_sub_explicit(&pool->acquire_refs, 1, memory_order_release);
+    if (pool->closing && atomic_load_explicit(&pool->acquire_refs, memory_order_acquire) == 0)
+        pthread_cond_broadcast(&pool->cond);
+}
+
 /** @brief Lease a pooled connection, blocking indefinitely until one is available.
  * @param pool Pool to lease from; must not be NULL.
  * @return Leased connection to pass to cwist_db_pool_release(), or NULL if the pool is NULL or
  * closing. Thread-safe; the caller must not use the connection after releasing it. */
 cwist_db *cwist_db_pool_acquire(cwist_db_pool_t *pool) {
     if (!pool) return NULL;
+    atomic_fetch_add_explicit(&pool->acquire_refs, 1, memory_order_acquire);
     pthread_mutex_lock(&pool->mtx);
     while (!pool->closing && pool->idle_count == 0) pthread_cond_wait(&pool->cond, &pool->mtx);
     cwist_db *db = pool_acquire_locked(pool);
+    pool_acquire_leave_locked(pool);
     pthread_mutex_unlock(&pool->mtx);
     return db;
 }
@@ -177,11 +186,13 @@ cwist_db *cwist_db_pool_acquire_timeout(cwist_db_pool_t *pool, int timeout_ms) {
     if (!pool || timeout_ms < 0) return NULL;
     struct timespec deadline;
     pool_deadline_after_ms(&deadline, timeout_ms);
+    atomic_fetch_add_explicit(&pool->acquire_refs, 1, memory_order_acquire);
     pthread_mutex_lock(&pool->mtx);
     while (!pool->closing && pool->idle_count == 0) {
         if (pthread_cond_timedwait(&pool->cond, &pool->mtx, &deadline) != 0) break;
     }
     cwist_db *db = pool_acquire_locked(pool);
+    pool_acquire_leave_locked(pool);
     pthread_mutex_unlock(&pool->mtx);
     return db;
 }
@@ -230,13 +241,17 @@ bool cwist_db_pool_destroy_timeout(cwist_db_pool_t *pool, int timeout_ms) {
     pool->closing = true;
     pthread_cond_broadcast(&pool->cond);
     if (timeout_ms < 0) {
-        while (pool->in_use != 0) pthread_cond_wait(&pool->cond, &pool->mtx);
+        while (pool->in_use != 0 ||
+               atomic_load_explicit(&pool->acquire_refs, memory_order_acquire) != 0)
+            pthread_cond_wait(&pool->cond, &pool->mtx);
     } else {
         struct timespec deadline;
         pool_deadline_after_ms(&deadline, timeout_ms);
-        while (pool->in_use != 0) {
+        while (pool->in_use != 0 ||
+               atomic_load_explicit(&pool->acquire_refs, memory_order_acquire) != 0) {
             int rc = pthread_cond_timedwait(&pool->cond, &pool->mtx, &deadline);
-            if (rc != 0 && pool->in_use != 0) {
+            if (rc != 0 && (pool->in_use != 0 ||
+                            atomic_load_explicit(&pool->acquire_refs, memory_order_acquire) != 0)) {
                 pthread_mutex_unlock(&pool->mtx);
                 return false;
             }

@@ -240,9 +240,9 @@ static void test_exact_i64(void) {
     int64_t v = 7;
     assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 1", &v)) == 0);
     assert(v == INT64_C(9007199254740993));
-    long long lossy = 0;
-    assert(rc(cwist_orm_select_one_llong(orm, "x", "v", "id = 1", &lossy)) == 0);
-    assert(lossy != 9007199254740993LL); /* why the exact path exists */
+    long long legacy = 0;
+    assert(rc(cwist_orm_select_one_llong(orm, "x", "v", "id = 1", &legacy)) == 0);
+    assert(legacy == 9007199254740993LL);
     assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 2", &v)) == 0 && v == INT64_MIN);
     assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 4", &v)) == 0 && v == 0);
 
@@ -406,15 +406,25 @@ static void test_query_typed(void) {
     cwist_orm_result_free(res);
     cwist_orm_result_free(NULL);
 
-    /* The legacy path still types by text: the id is a JSON number rounded
-     * to a double, and '007' is a string (not canonical integer text). */
+    /* The legacy path keeps large integers as exact strings and '007' as text. */
     cJSON *rows = NULL;
     assert(rc(cwist_orm_query(orm, "SELECT id, s FROM q WHERE id = 9007199254740993;", &rows)) ==
            0);
     cJSON *legacy_row = cJSON_GetArrayItem(rows, 0);
     cJSON *legacy_id = cJSON_GetObjectItem(legacy_row, "id");
-    assert(cJSON_IsNumber(legacy_id) && legacy_id->valuedouble == 9007199254740992.0);
+    assert(cJSON_IsString(legacy_id) && strcmp(legacy_id->valuestring, "9007199254740993") == 0);
     assert(cJSON_IsString(cJSON_GetObjectItem(legacy_row, "s")));
+    cJSON_Delete(rows);
+    rows = NULL;
+
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE embedded(v TEXT);")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO embedded VALUES(CAST(x'610062' AS TEXT));")) == 0);
+    assert(rc(cwist_orm_query(orm, "SELECT v FROM embedded;", &rows)) != 0 && rows == NULL);
+    res = NULL;
+    assert(rc(cwist_orm_query_typed(orm, "SELECT v FROM embedded;", &res)) != 0 && res == NULL);
+    assert(rc(cwist_orm_query(orm, "SELECT b FROM raw;", &rows)) == 0 && rows != NULL);
+    cJSON *legacy_blob = cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(rows, 0), "b");
+    assert(cJSON_IsString(legacy_blob) && strcmp(legacy_blob->valuestring, "wP/uQg==") == 0);
     cJSON_Delete(rows);
 
     cwist_orm_close_socket(orm);

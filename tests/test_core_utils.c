@@ -16,6 +16,25 @@
 #include <stdlib.h>
 #include <string.h>
 
+static int alloc_fail_countdown = -1;
+
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (alloc_fail_countdown == 0) return NULL;
+    if (alloc_fail_countdown > 0) alloc_fail_countdown--;
+    return __real_cwist_alloc(size);
+}
+
+static void test_query_map_insert_oom(void) {
+    cwist_query_map *map = cwist_query_map_create();
+    assert(map != NULL);
+    alloc_fail_countdown = 3;
+    assert(cwist_query_map_parse_checked(map, "new=value") == -1);
+    assert(map->count == 0);
+    alloc_fail_countdown = -1;
+    cwist_query_map_destroy(map);
+}
+
 static bool ok(cwist_error_t e) {
     return e.errtype == CWIST_ERR_INT8 && e.error.err_i8 == ERR_SSTRING_OKAY;
 }
@@ -116,7 +135,8 @@ static void test_sstring_escaped_and_adopt(void) {
     assert(strcmp(s.data, "&lt;b&gt;&quot;x&quot; &amp; &#39;y&#39;&lt;/b&gt;") == 0);
     assert(s.size == strlen(s.data));
     assert(ok(cwist_sstring_append_sstring_escaped(&s, NULL)));
-    assert(cwist_sstring_append_sstring_escaped(NULL, &src).error.err_i8 == ERR_SSTRING_NULL_STRING);
+    assert(cwist_sstring_append_sstring_escaped(NULL, &src).error.err_i8 ==
+           ERR_SSTRING_NULL_STRING);
     assert(cwist_sstring_init_escaped(NULL).error.err_i8 == ERR_SSTRING_NULL_STRING);
 
     /* adopt_len takes ownership of a heap buffer and NUL-terminates it. */
@@ -222,8 +242,10 @@ static void exercise_query_map(cwist_query_map *m) {
     for (int i = 0; i < 300; i++) {
         snprintf(k, sizeof(k), "k%d", i);
         const char *v = cwist_query_map_get(m, k);
-        if (i % 7 == 0) assert(v == NULL);
-        else assert(v && strcmp(v, k) == 0);
+        if (i % 7 == 0)
+            assert(v == NULL);
+        else
+            assert(v && strcmp(v, k) == 0);
     }
 
     cwist_query_map_clear(m);
@@ -260,9 +282,8 @@ static void test_query_map_malformed_escapes(void) {
     cwist_query_map *m = cwist_query_map_create();
     assert(m);
 
-    cwist_query_map_parse(m,
-                          "lit=%zz&trunc=%4&lonely=%&ok=%41&"
-                          "mixed=a%4zb&lower=%ab&upper=%AB&plus=a+b&trail=x%");
+    cwist_query_map_parse(m, "lit=%zz&trunc=%4&lonely=%&ok=%41&"
+                             "mixed=a%4zb&lower=%ab&upper=%AB&plus=a+b&trail=x%");
     assert(strcmp(cwist_query_map_get(m, "lit"), "%zz") == 0);
     assert(strcmp(cwist_query_map_get(m, "trunc"), "%4") == 0);
     assert(strcmp(cwist_query_map_get(m, "lonely"), "%") == 0);
@@ -290,7 +311,8 @@ static void test_query_map_arena_large_query(void) {
     size_t off = 0;
     const int n = 2000;
     for (int i = 0; i < n; i++)
-        off += (size_t)snprintf(q + off, sizeof(q) - off, "%sparam%04d=value%04d", i ? "&" : "", i, i);
+        off +=
+            (size_t)snprintf(q + off, sizeof(q) - off, "%sparam%04d=value%04d", i ? "&" : "", i, i);
     cwist_arena_t *arena = cwist_arena_create(0);
     cwist_query_map *m = cwist_query_map_create_in_arena(arena);
     cwist_query_map_parse(m, q);
@@ -435,7 +457,8 @@ static void test_css_generators(void) {
     cwist_sstring *vars = cwist_css_generate_variables(&cfg);
     assert(vars && vars->data);
     assert(strncmp(vars->data, ":root {\n", 8) == 0);
-    assert(strstr(vars->data, "--color-primary: #3B82F6;") || strstr(vars->data, "--color-primary: #3b82f6;"));
+    assert(strstr(vars->data, "--color-primary: #3B82F6;") ||
+           strstr(vars->data, "--color-primary: #3b82f6;"));
     assert(strstr(vars->data, "--bg-body: #FFFFFF;"));
     assert(strstr(vars->data, "--radius-md: 8.0px;"));
     assert(strstr(vars->data, "--radius-lg: 12.0px;"));
@@ -488,6 +511,7 @@ int main(void) {
     test_query_map_malformed_escapes();
     test_query_params_through_request_parser();
     test_query_map_growth();
+    test_query_map_insert_oom();
     test_css_colors();
     test_css_generators();
     test_alloc_helpers();
