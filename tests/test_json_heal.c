@@ -633,6 +633,27 @@ static void test_zod_and_heal_nul_precision(void) {
     cwist_heal_result_t healed = cwist_json_heal("{\"n\":\"123\\u0000junk\"}", &cfg);
     assert(!healed.healed);
     cwist_heal_result_free(&healed);
+
+    static const cwist_schema_field_t str_fields[] = {
+        {"name", {NULL}, CWIST_FIELD_STRING, true},
+    };
+    static const cwist_schema_t str_schema = {str_fields, 1};
+    cJSON *out = NULL;
+    cwist_zod_result_t r_neg =
+        cwist_zod_parse("{\"name\":\"prefix\\u0000suffix\"}", &str_schema, &out);
+    assert(!r_neg.valid);
+    assert(r_neg.error_count > 0);
+    assert(out == NULL);
+
+    assert(!cwist_zod_parse("{\"name\\u0000key\":\"value\"}", &str_schema, NULL).valid);
+
+    out = NULL;
+    cwist_zod_result_t r_pos =
+        cwist_zod_parse("{\"name\":\"prefix\\\\u0000suffix\"}", &str_schema, &out);
+    assert(r_pos.valid);
+    assert(r_pos.error_count == 0);
+    assert(out != NULL);
+    cJSON_Delete(out);
 }
 
 /* ==========================================================================
