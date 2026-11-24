@@ -115,6 +115,7 @@ $(document).ready(function(){initNavTree('d6/d6d/bind_8c.html','../../'); initRe
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &lt;<a class="el" href="../../da/dc2/bind_8h_source.html">cwist/core/validation/bind.h</a>&gt;</code><br />
 <code>#include &quot;<a class="el" href="../../de/d66/number__internal_8h_source.html">../utils/number_internal.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="../../da/d45/json__internal_8h_source.html">../utils/json_internal.h</a>&quot;</code><br />
 <code>#include &lt;<a class="el" href="../../d2/dfe/alloc_8h_source.html">cwist/core/mem/alloc.h</a>&gt;</code><br />
 <code>#include &lt;string.h&gt;</code><br />
 <code>#include &lt;stdlib.h&gt;</code><br />
@@ -127,121 +128,124 @@ Include dependency graph for bind.c:</div>
 <div class="dyncontent">
 <div class="center"><img src="../../d6/d01/bind_8c__incl.png" border="0" usemap="#asrc_2core_2validation_2bind_8c" alt=""/></div>
 <map name="asrc_2core_2validation_2bind_8c" id="asrc_2core_2validation_2bind_8c">
-<area shape="rect" title="Implementation of declarative schema validation and binding." alt="" coords="2464,5,2607,45"/>
-<area shape="rect" href="../../da/dc2/bind_8h.html" title="Declarative Schema Validation and Type&#45;Safe Binding for CWIST." alt="" coords="992,93,1149,133"/>
-<area shape="poly" title=" " alt="" coords="2464,34,1163,109,1163,104,2464,28"/>
-<area shape="rect" title=" " alt="" coords="2296,438,2367,463"/>
-<area shape="poly" title=" " alt="" coords="2529,47,2346,427,2341,424,2524,44"/>
-<area shape="rect" title=" " alt="" coords="1754,438,1824,463"/>
-<area shape="poly" title=" " alt="" coords="2521,47,2455,122,2360,225,2260,323,2215,361,2178,385,2113,406,2020,424,1839,447,1838,442,2019,419,2112,401,2176,380,2212,356,2256,319,2356,221,2451,119,2517,44"/>
-<area shape="rect" title=" " alt="" coords="2648,438,2714,463"/>
-<area shape="poly" title=" " alt="" coords="2549,44,2610,167,2646,252,2674,342,2681,385,2684,424,2678,424,2676,386,2669,343,2641,254,2605,169,2544,47"/>
-<area shape="rect" href="../../de/d66/number__internal_8h.html" title=" " alt="" coords="2443,350,2628,375"/>
-<area shape="poly" title=" " alt="" coords="2538,46,2538,336,2533,336,2533,46"/>
-<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="101,350,274,375"/>
-<area shape="poly" title=" " alt="" coords="2464,30,2219,33,1853,43,1421,63,1198,78,980,96,887,102,808,104,672,106,608,112,541,125,467,148,384,184,327,218,277,261,236,305,206,340,202,337,232,301,273,257,324,214,381,179,466,143,540,120,607,107,671,101,808,99,887,97,979,91,1198,72,1421,58,1853,38,2219,28,2464,24"/>
-<area shape="rect" title=" " alt="" coords="2656,101,2724,126"/>
-<area shape="poly" title=" " alt="" coords="2571,43,2659,92,2657,96,2568,48"/>
-<area shape="rect" title=" " alt="" coords="2748,101,2816,126"/>
-<area shape="poly" title=" " alt="" coords="2597,43,2738,91,2744,93,2742,98,2736,96,2595,48"/>
-<area shape="rect" title=" " alt="" coords="2840,101,2911,126"/>
-<area shape="poly" title=" " alt="" coords="2608,37,2713,60,2830,91,2837,93,2836,98,2828,96,2712,65,2606,42"/>
-<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="1507,181,1660,207"/>
-<area shape="poly" title=" " alt="" coords="1150,124,1496,177,1495,182,1149,129"/>
-<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="1405,343,1541,383"/>
-<area shape="poly" title=" " alt="" coords="1082,133,1101,167,1130,211,1167,255,1212,292,1255,315,1301,332,1348,344,1391,352,1390,357,1347,349,1300,337,1253,320,1209,297,1164,259,1126,214,1097,170,1077,135"/>
-<area shape="rect" title=" " alt="" coords="1202,519,1285,544"/>
-<area shape="poly" title=" " alt="" coords="1053,135,1006,187,982,220,961,256,929,364,916,432,914,457,917,469,934,482,961,494,1033,511,1115,521,1189,526,1188,531,1115,526,1032,516,959,499,931,487,912,472,909,457,910,432,924,363,956,254,977,217,1002,184,1049,132"/>
-<area shape="rect" title=" " alt="" coords="2026,519,2096,544"/>
-<area shape="poly" title=" " alt="" coords="1149,114,1389,124,1706,147,1868,165,2016,188,2141,217,2192,234,2233,252,2310,297,2345,322,2374,348,2395,376,2405,407,2401,439,2382,472,2363,487,2336,499,2263,516,2182,526,2110,531,2110,526,2181,521,2262,510,2334,494,2360,482,2378,469,2396,437,2400,407,2390,379,2370,352,2341,326,2307,302,2230,257,2190,239,2140,222,2015,193,1867,170,1706,152,1389,129,1149,119"/>
-<area shape="rect" title=" " alt="" coords="682,519,792,544"/>
-<area shape="poly" title=" " alt="" coords="992,130,893,154,836,172,778,195,719,223,663,257,612,297,568,344,544,377,527,407,523,422,523,437,528,453,538,469,564,494,597,511,633,522,668,527,668,532,632,527,595,516,561,498,534,472,523,455,518,438,518,421,522,405,539,374,564,341,609,293,660,253,717,218,776,190,835,167,892,149,991,125"/>
-<area shape="rect" title=" " alt="" coords="422,519,497,544"/>
-<area shape="poly" title=" " alt="" coords="992,123,653,150,499,167,450,176,428,183,404,221,392,263,390,309,396,355,407,400,421,441,449,505,444,507,416,443,402,401,391,356,385,309,387,262,399,218,425,179,448,171,499,162,653,145,991,117"/>
-<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h.html" title="Simple JSON string builder utility." alt="" coords="995,255,1146,295"/>
-<area shape="poly" title=" " alt="" coords="1073,133,1073,241,1068,241,1068,133"/>
-<area shape="rect" title=" " alt="" coords="439,181,510,207"/>
-<area shape="poly" title=" " alt="" coords="992,125,782,148,529,184,524,185,523,180,529,179,782,143,991,120"/>
-<area shape="poly" title=" " alt="" coords="1585,208,1575,249,1566,273,1554,296,1536,318,1515,336,1511,332,1532,314,1549,293,1561,271,1570,247,1579,207"/>
-<area shape="poly" title=" " alt="" coords="1588,207,1593,240,1606,286,1626,336,1656,381,1675,398,1697,412,1742,433,1739,438,1694,417,1672,402,1652,384,1621,338,1601,288,1588,241,1582,207"/>
-<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="1347,431,1490,471"/>
-<area shape="poly" title=" " alt="" coords="1579,209,1549,251,1527,275,1502,297,1471,312,1443,317,1417,323,1406,331,1395,344,1389,361,1389,380,1401,417,1396,419,1384,381,1383,360,1391,341,1402,327,1415,319,1441,311,1470,307,1499,292,1523,271,1544,247,1574,206"/>
-<area shape="poly" title=" " alt="" coords="1660,195,1805,201,1973,212,2120,228,2170,239,2199,253,2222,278,2240,304,2252,331,2258,358,2258,385,2252,414,2240,443,2222,472,2199,496,2171,512,2140,523,2110,529,2109,524,2138,517,2168,507,2196,491,2218,469,2235,440,2246,412,2252,385,2252,358,2247,332,2235,307,2218,282,2195,257,2169,244,2119,234,1973,217,1805,206,1660,200"/>
-<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="926,438,1089,463"/>
-<area shape="poly" title=" " alt="" coords="1507,200,1365,206,1200,216,1059,233,1011,244,985,257,973,275,967,296,965,319,968,342,981,388,997,425,992,427,976,390,963,343,960,319,962,295,968,273,982,253,1009,239,1058,228,1200,211,1364,200,1506,195"/>
-<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="716,262,859,287"/>
-<area shape="poly" title=" " alt="" coords="1507,204,1254,226,939,257,873,265,873,260,938,252,1254,221,1506,199"/>
-<area shape="rect" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint&#45;level behavior flags for CWIST apps." alt="" coords="2037,431,2208,471"/>
-<area shape="poly" title=" " alt="" coords="1661,195,1798,202,1957,213,2094,229,2141,240,2168,253,2190,283,2197,313,2192,346,2179,384,2169,404,2155,423,2151,419,2164,402,2174,382,2187,345,2191,314,2185,285,2165,257,2140,245,2093,235,1956,218,1798,207,1660,201"/>
-<area shape="rect" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="1672,255,1850,295"/>
-<area shape="poly" title=" " alt="" coords="1610,204,1707,247,1705,252,1608,209"/>
-<area shape="rect" href="../../dc/d85/reactor_8h.html" title=" " alt="" coords="1164,438,1323,463"/>
-<area shape="poly" title=" " alt="" coords="1568,209,1503,257,1459,297,1420,321,1381,345,1269,431,1266,427,1378,340,1417,317,1455,293,1499,253,1565,205"/>
-<area shape="rect" href="../../de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="2000,262,2154,287"/>
-<area shape="poly" title=" " alt="" coords="1661,203,1983,252,2009,257,2008,262,1982,257,1660,208"/>
-<area shape="rect" title=" " alt="" coords="1874,262,1970,287"/>
-<area shape="poly" title=" " alt="" coords="1645,204,1748,225,1863,252,1875,255,1874,261,1862,257,1746,230,1644,209"/>
-<area shape="rect" title=" " alt="" coords="1222,262,1324,287"/>
-<area shape="poly" title=" " alt="" coords="1534,209,1338,257,1325,261,1323,256,1336,252,1533,204"/>
-<area shape="rect" title=" " alt="" coords="1349,262,1445,287"/>
-<area shape="poly" title=" " alt="" coords="1558,209,1438,259,1436,254,1555,204"/>
-<area shape="poly" title=" " alt="" coords="1660,193,1885,198,2028,206,2178,219,2325,237,2458,263,2516,279,2567,297,2610,318,2643,341,2658,359,2670,381,2681,424,2676,425,2665,383,2654,362,2639,345,2607,322,2565,302,2514,284,2456,268,2324,243,2178,224,2028,212,1885,204,1660,198"/>
-<area shape="poly" title=" " alt="" coords="1542,369,1655,380,1937,401,2061,411,2220,428,2283,438,2282,443,2219,433,2061,416,1937,406,1654,385,1541,374"/>
-<area shape="poly" title=" " alt="" coords="1542,380,1741,434,1739,439,1540,385"/>
-<area shape="poly" title=" " alt="" coords="1490,382,1501,402,1511,425,1513,450,1504,472,1491,484,1470,494,1417,510,1356,521,1299,528,1298,523,1355,516,1416,504,1469,489,1488,479,1500,469,1508,449,1506,426,1497,404,1485,384"/>
-<area shape="poly" title=" " alt="" coords="1463,384,1440,420,1435,418,1459,381"/>
-<area shape="poly" title=" " alt="" coords="1378,473,1283,515,1281,510,1375,468"/>
-<area shape="poly" title=" " alt="" coords="1490,458,2012,521,2012,527,1490,463"/>
-<area shape="poly" title=" " alt="" coords="1347,471,1336,473,1189,494,1041,510,806,529,806,523,1041,505,1188,489,1335,468,1346,466"/>
-<area shape="poly" title=" " alt="" coords="1089,461,1153,468,1406,489,1654,506,2012,525,2012,531,1654,512,1406,495,1153,473,1089,466"/>
-<area shape="poly" title=" " alt="" coords="928,466,511,525,510,520,928,461"/>
-<area shape="poly" title=" " alt="" coords="830,285,1338,424,1336,430,828,290"/>
-<area shape="poly" title=" " alt="" coords="788,288,745,506,739,505,783,287"/>
-<area shape="poly" title=" " alt="" coords="717,286,641,306,602,323,568,345,532,382,503,427,483,470,469,506,464,505,478,468,499,424,528,379,565,341,600,318,639,301,715,281"/>
-<area shape="rect" title=" " alt="" coords="826,350,904,375"/>
-<area shape="poly" title=" " alt="" coords="800,286,847,338,843,341,796,289"/>
-<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="548,431,699,471"/>
-<area shape="poly" title=" " alt="" coords="716,281,680,287,642,299,608,317,581,344,574,362,577,381,586,401,598,419,594,422,581,403,571,383,569,361,576,341,605,313,640,294,678,282,716,276"/>
-<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="591,350,750,375"/>
-<area shape="poly" title=" " alt="" coords="773,290,699,344,696,340,770,285"/>
-<area shape="poly" title=" " alt="" coords="699,459,1189,520,1188,526,699,464"/>
-<area shape="poly" title=" " alt="" coords="653,469,710,508,707,513,650,473"/>
-<area shape="poly" title=" " alt="" coords="585,473,497,515,495,510,583,468"/>
-<area shape="poly" title=" " alt="" coords="688,373,765,420,817,446,871,468,956,492,1043,508,1189,524,1188,530,1042,513,955,497,869,473,815,451,763,425,686,378"/>
-<area shape="poly" title=" " alt="" coords="681,374,713,430,726,469,735,505,730,506,721,470,708,432,676,377"/>
-<area shape="poly" title=" " alt="" coords="666,377,643,420,638,417,662,374"/>
-<area shape="poly" title=" " alt="" coords="2037,462,1299,528,1299,522,2037,457"/>
-<area shape="poly" title=" " alt="" coords="2110,473,2081,509,2076,506,2105,469"/>
-<area shape="poly" title=" " alt="" coords="1699,297,1550,341,1549,336,1697,292"/>
-<area shape="poly" title=" " alt="" coords="1728,297,1656,345,1619,380,1595,413,1568,444,1526,473,1468,498,1408,515,1349,525,1299,530,1298,525,1349,520,1406,509,1467,493,1524,468,1564,440,1590,409,1615,377,1653,341,1725,293"/>
-<area shape="poly" title=" " alt="" coords="1847,292,1923,314,1955,327,1976,341,2000,371,2009,401,2014,433,2027,470,2048,506,2044,508,2023,472,2009,434,2004,402,1995,374,1972,345,1952,332,1921,319,1846,297"/>
-<area shape="rect" title=" " alt="" coords="1666,350,1765,375"/>
-<area shape="poly" title=" " alt="" coords="1753,296,1731,339,1726,336,1749,294"/>
-<area shape="rect" title=" " alt="" coords="1789,350,1853,375"/>
-<area shape="poly" title=" " alt="" coords="1776,293,1807,337,1803,340,1772,296"/>
-<area shape="rect" title=" " alt="" coords="1878,350,1962,375"/>
-<area shape="poly" title=" " alt="" coords="1797,292,1888,341,1885,346,1795,297"/>
-<area shape="poly" title=" " alt="" coords="1246,464,1246,505,1241,505,1241,464"/>
-<area shape="poly" title=" " alt="" coords="1295,461,1336,468,1532,491,1725,508,2012,525,2012,531,1725,513,1531,497,1335,473,1294,466"/>
-<area shape="poly" title=" " alt="" coords="1164,466,1101,473,765,507,511,529,511,523,764,502,1101,468,1164,460"/>
-<area shape="rect" href="../../d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="2037,350,2165,375"/>
-<area shape="poly" title=" " alt="" coords="2083,287,2096,335,2091,337,2078,288"/>
-<area shape="poly" title=" " alt="" coords="1147,289,1392,341,1391,347,1145,295"/>
-<area shape="poly" title=" " alt="" coords="1077,294,1102,375,1125,424,1155,469,1180,492,1208,510,1205,515,1177,496,1151,472,1120,427,1097,377,1072,296"/>
-<area shape="poly" title=" " alt="" coords="2509,378,2373,435,2371,430,2507,373"/>
-<area shape="poly" title=" " alt="" coords="2443,377,1838,446,1837,441,2443,372"/>
-<area shape="poly" title=" " alt="" coords="2526,377,2467,426,2426,453,2380,473,2313,486,2198,496,1881,514,1300,532,1299,526,1881,508,2197,491,2312,480,2379,468,2423,448,2464,422,2522,373"/>
-<area shape="poly" title=" " alt="" coords="2535,377,2516,424,2499,451,2476,473,2447,487,2407,498,2306,515,2199,526,2110,531,2109,526,2199,520,2306,510,2406,493,2445,482,2473,468,2495,447,2512,422,2530,375"/>
-<area shape="poly" title=" " alt="" coords="2557,373,2651,429,2648,433,2554,378"/>
-<area shape="rect" title=" " alt="" coords="2544,438,2623,463"/>
-<area shape="poly" title=" " alt="" coords="2544,374,2573,424,2568,427,2540,377"/>
-<area shape="poly" title=" " alt="" coords="135,378,84,393,37,414,20,426,11,439,9,453,18,469,36,479,73,488,180,504,409,524,409,530,180,510,72,493,34,484,14,473,4,454,6,438,17,423,35,409,82,388,134,373"/>
-<area shape="rect" title=" " alt="" coords="28,438,169,463"/>
-<area shape="poly" title=" " alt="" coords="177,377,122,430,119,426,174,374"/>
-<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="193,438,372,463"/>
-<area shape="poly" title=" " alt="" coords="202,374,261,426,257,430,199,377"/>
-<area shape="poly" title=" " alt="" coords="372,457,1189,523,1188,528,372,462"/>
-<area shape="poly" title=" " alt="" coords="309,461,423,511,420,516,307,466"/>
+<area shape="rect" title="Implementation of declarative schema validation and binding." alt="" coords="978,5,1121,45"/>
+<area shape="rect" href="../../da/dc2/bind_8h.html" title="Declarative Schema Validation and Type&#45;Safe Binding for CWIST." alt="" coords="914,93,1071,133"/>
+<area shape="poly" title=" " alt="" coords="1039,47,1015,83,1010,80,1035,44"/>
+<area shape="rect" title=" " alt="" coords="362,438,433,463"/>
+<area shape="poly" title=" " alt="" coords="978,33,871,41,746,54,629,72,583,83,548,96,517,113,496,130,478,152,460,183,432,247,415,315,405,377,401,424,396,424,400,376,410,314,427,246,455,180,474,149,492,126,514,108,546,91,581,78,628,67,745,48,870,36,978,28"/>
+<area shape="rect" title=" " alt="" coords="457,438,528,463"/>
+<area shape="poly" title=" " alt="" coords="978,38,850,57,699,88,627,108,563,130,512,155,480,183,463,212,454,244,451,277,453,311,467,375,484,424,479,426,462,377,448,312,446,277,449,243,458,210,476,180,509,151,561,125,625,102,698,83,849,52,978,33"/>
+<area shape="rect" title=" " alt="" coords="66,438,132,463"/>
+<area shape="poly" title=" " alt="" coords="978,32,815,39,609,51,409,70,328,82,266,96,201,110,143,121,120,130,102,144,91,164,87,193,87,276,91,357,98,424,93,425,86,358,82,276,82,192,86,162,98,140,117,126,141,116,200,105,265,91,327,77,409,65,608,46,814,33,978,26"/>
+<area shape="rect" href="../../de/d66/number__internal_8h.html" title=" " alt="" coords="173,350,358,375"/>
+<area shape="poly" title=" " alt="" coords="978,31,803,36,589,47,487,56,400,67,334,80,312,87,299,95,279,122,265,152,256,185,252,219,254,285,262,336,257,337,249,285,247,219,251,184,259,150,274,119,296,91,310,83,333,75,399,61,487,50,589,42,803,31,978,25"/>
+<area shape="rect" href="../../da/d45/json__internal_8h.html" title=" " alt="" coords="2235,181,2398,207"/>
+<area shape="poly" title=" " alt="" coords="1122,33,2222,178,2221,183,1121,39"/>
+<area shape="rect" href="../../d2/dfe/alloc_8h.html" title="Memory allocation wrappers backed by libttak." alt="" coords="2516,350,2690,375"/>
+<area shape="poly" title=" " alt="" coords="1122,31,1896,109,2295,152,2424,168,2480,179,2522,214,2555,256,2580,300,2596,336,2592,338,2575,302,2551,259,2518,217,2478,184,2423,174,2294,157,1896,114,1121,36"/>
+<area shape="rect" title=" " alt="" coords="2162,101,2230,126"/>
+<area shape="poly" title=" " alt="" coords="1121,26,1342,33,1637,46,1930,65,2052,77,2143,91,2156,94,2155,99,2142,96,2051,82,1930,70,1637,51,1342,38,1121,31"/>
+<area shape="rect" title=" " alt="" coords="2254,101,2322,126"/>
+<area shape="poly" title=" " alt="" coords="1121,25,1360,30,1685,41,2008,60,2142,74,2244,91,2253,93,2251,98,2242,96,2142,79,2008,66,1685,46,1360,35,1121,30"/>
+<area shape="rect" title=" " alt="" coords="2346,101,2417,126"/>
+<area shape="poly" title=" " alt="" coords="1121,25,1377,29,1728,39,2080,59,2226,73,2336,91,2345,93,2344,98,2334,96,2225,78,2079,64,1728,45,1377,34,1121,30"/>
+<area shape="rect" href="../../d9/dab/net_2http_2http_8h.html" title="HTTP Protocol Definitions and Helpers." alt="" coords="1166,181,1320,207"/>
+<area shape="poly" title=" " alt="" coords="1053,131,1194,175,1192,180,1052,136"/>
+<area shape="rect" href="../../d4/dbd/core_2sstring_2sstring_8h.html" title="Safe string type with helper methods." alt="" coords="788,343,924,383"/>
+<area shape="poly" title=" " alt="" coords="971,136,919,186,893,219,872,256,861,293,858,329,853,328,856,292,867,254,888,216,915,183,967,132"/>
+<area shape="rect" title=" " alt="" coords="1696,519,1779,544"/>
+<area shape="poly" title=" " alt="" coords="1071,114,1361,126,1546,137,1735,153,1912,173,2060,199,2117,215,2161,232,2190,251,2198,262,2200,273,2200,364,2195,402,2180,429,2156,451,2123,473,2097,485,2061,495,1972,511,1793,529,1792,524,1971,506,2060,490,2095,480,2120,468,2153,447,2176,426,2190,400,2195,364,2195,274,2193,264,2186,255,2159,237,2116,220,2059,205,1912,178,1735,158,1545,142,1360,131,1071,119"/>
+<area shape="rect" title=" " alt="" coords="904,519,974,544"/>
+<area shape="poly" title=" " alt="" coords="913,120,789,128,630,142,456,165,287,199,210,220,143,244,86,272,43,303,28,320,17,338,10,357,8,377,12,398,20,420,35,444,55,469,72,479,99,488,184,503,297,514,427,521,692,528,890,528,890,533,692,533,426,527,296,520,183,509,98,493,69,484,52,473,30,447,15,423,6,399,3,377,5,356,12,336,24,317,40,299,83,267,140,239,209,215,285,193,455,160,629,137,788,123,913,115"/>
+<area shape="rect" title=" " alt="" coords="1561,519,1672,544"/>
+<area shape="poly" title=" " alt="" coords="914,122,841,134,761,158,722,176,686,198,654,224,626,256,608,289,602,319,608,349,626,381,656,414,685,436,716,448,749,455,822,459,865,461,911,468,1090,496,1268,513,1427,522,1547,526,1547,532,1426,528,1268,518,1089,501,911,473,864,467,822,464,748,460,715,453,683,440,652,418,622,384,603,351,597,319,603,287,622,253,650,220,683,193,720,171,759,153,840,129,913,117"/>
+<area shape="rect" title=" " alt="" coords="2110,519,2184,544"/>
+<area shape="poly" title=" " alt="" coords="1071,114,1841,142,2231,161,2357,170,2411,179,2431,202,2450,236,2467,277,2481,322,2490,367,2494,410,2490,446,2478,472,2459,487,2431,499,2356,516,2272,526,2198,531,2198,526,2272,521,2355,511,2429,494,2456,483,2474,469,2485,445,2488,410,2485,368,2475,323,2462,279,2445,238,2427,205,2408,184,2356,176,2231,166,1841,147,1071,120"/>
+<area shape="rect" href="../../d3/dc7/core_2utils_2json__builder_8h.html" title="Simple JSON string builder utility." alt="" coords="917,255,1068,295"/>
+<area shape="poly" title=" " alt="" coords="995,133,995,241,990,241,990,133"/>
+<area shape="rect" title=" " alt="" coords="490,181,561,207"/>
+<area shape="poly" title=" " alt="" coords="914,129,581,184,576,185,575,180,580,179,913,124"/>
+<area shape="poly" title=" " alt="" coords="1166,203,1019,222,952,237,926,246,907,257,892,272,880,291,865,330,860,328,875,289,888,269,904,253,924,241,950,232,1018,216,1166,198"/>
+<area shape="poly" title=" " alt="" coords="1166,199,1000,204,800,214,625,231,564,243,531,257,516,274,505,295,492,341,489,386,491,424,486,425,484,386,487,340,500,293,512,271,528,253,562,238,624,226,800,209,999,199,1166,194"/>
+<area shape="rect" href="../../d7/da1/sys_2err_2cwist__err_8h.html" title="Unified error code and type definitions for the CWIST system layer." alt="" coords="922,431,1065,471"/>
+<area shape="poly" title=" " alt="" coords="1219,209,1181,229,1143,257,1103,297,1067,341,1014,420,1009,417,1063,338,1099,294,1140,253,1179,225,1216,204"/>
+<area shape="poly" title=" " alt="" coords="1166,200,1021,206,851,217,704,234,653,244,626,257,602,282,584,307,571,334,564,360,563,387,568,414,580,442,600,469,619,483,648,495,726,512,814,522,890,526,890,532,813,527,725,518,646,500,616,488,596,473,576,444,563,416,558,388,559,359,566,332,579,305,598,278,623,252,651,239,703,228,851,212,1021,201,1166,195"/>
+<area shape="rect" href="../../d1/d7a/net_2http_2query_8h.html" title="Query string parser and map." alt="" coords="1436,438,1599,463"/>
+<area shape="poly" title=" " alt="" coords="1304,204,1360,222,1388,236,1414,253,1434,271,1453,292,1481,339,1502,386,1514,424,1509,425,1497,388,1477,342,1448,295,1431,275,1411,257,1385,240,1358,227,1302,209"/>
+<area shape="rect" href="../../d0/dae/core_2db_2sql_8h.html" title="Database operations wrapper (SQLite3)." alt="" coords="1598,262,1741,287"/>
+<area shape="poly" title=" " alt="" coords="1311,204,1579,252,1603,257,1602,262,1578,257,1310,209"/>
+<area shape="rect" href="../../de/d66/endpoint__opts_8h.html" title="Endpoint&#45;level behavior flags for CWIST apps." alt="" coords="1242,431,1412,471"/>
+<area shape="poly" title=" " alt="" coords="1277,204,1321,223,1371,252,1419,291,1439,315,1455,342,1461,363,1455,384,1433,409,1406,427,1403,422,1429,405,1450,381,1456,363,1450,344,1435,318,1415,295,1368,257,1319,228,1275,209"/>
+<area shape="rect" href="../../da/d2c/big__dumb__reply_8h.html" title="Auto&#45;Caching Layer for repetitive requests." alt="" coords="1154,255,1332,295"/>
+<area shape="poly" title=" " alt="" coords="1246,207,1246,241,1240,241,1240,207"/>
+<area shape="rect" href="../../dc/d85/reactor_8h.html" title=" " alt="" coords="1950,438,2109,463"/>
+<area shape="poly" title=" " alt="" coords="1320,196,1554,215,1671,231,1719,241,1755,252,1771,262,1781,272,1791,282,1806,292,1829,302,1851,308,1890,311,1929,317,1949,326,1971,341,1990,359,2005,381,2024,424,2020,426,2000,384,1986,363,1968,345,1947,331,1927,323,1890,317,1850,313,1828,307,1803,297,1788,286,1777,276,1768,266,1753,257,1717,246,1670,236,1554,220,1320,202"/>
+<area shape="rect" href="../../de/d03/platform_8h.html" title="Target capability macros shared by all CWIST sources." alt="" coords="636,262,791,287"/>
+<area shape="poly" title=" " alt="" coords="1166,209,804,263,804,257,1166,204"/>
+<area shape="rect" title=" " alt="" coords="1816,262,1912,287"/>
+<area shape="poly" title=" " alt="" coords="1320,197,1536,215,1667,231,1798,252,1815,256,1814,261,1797,257,1666,236,1535,220,1320,202"/>
+<area shape="rect" title=" " alt="" coords="1937,262,2040,287"/>
+<area shape="poly" title=" " alt="" coords="1320,194,1437,199,1589,209,1757,226,1925,252,1942,256,1941,261,1924,257,1756,232,1588,215,1437,205,1320,200"/>
+<area shape="rect" title=" " alt="" coords="2064,262,2160,287"/>
+<area shape="poly" title=" " alt="" coords="1320,192,1458,195,1641,204,1847,222,1951,235,2053,252,2068,256,2067,261,2052,257,1950,240,1846,227,1641,209,1458,200,1320,198"/>
+<area shape="poly" title=" " alt="" coords="1166,200,1039,205,872,215,685,232,498,257,398,269,318,276,282,283,244,295,205,315,162,345,144,363,129,384,109,426,104,424,124,381,140,359,159,341,203,311,242,290,280,278,317,270,397,263,497,252,685,226,872,209,1038,199,1166,194"/>
+<area shape="poly" title=" " alt="" coords="789,383,777,385,683,399,610,405,537,413,445,433,436,436,435,431,444,428,536,408,609,400,683,394,776,380,788,378"/>
+<area shape="poly" title=" " alt="" coords="789,383,542,440,541,435,788,377"/>
+<area shape="poly" title=" " alt="" coords="925,376,1000,397,1079,428,1096,439,1108,450,1119,460,1136,468,1214,492,1282,505,1344,510,1402,510,1526,506,1599,508,1683,516,1682,521,1598,513,1526,511,1402,515,1343,516,1281,511,1213,498,1134,473,1116,464,1104,454,1093,443,1076,433,999,402,924,381"/>
+<area shape="poly" title=" " alt="" coords="888,380,953,421,950,426,885,385"/>
+<area shape="poly" title=" " alt="" coords="1066,465,1085,468,1251,486,1382,492,1514,498,1682,516,1682,521,1513,503,1381,497,1250,491,1084,473,1065,470"/>
+<area shape="poly" title=" " alt="" coords="983,472,957,509,953,506,978,469"/>
+<area shape="poly" title=" " alt="" coords="1066,465,1085,468,1340,501,1547,522,1547,527,1339,507,1084,473,1065,470"/>
+<area shape="poly" title=" " alt="" coords="1465,466,1425,473,1180,507,988,528,988,523,1179,502,1424,468,1464,461"/>
+<area shape="poly" title=" " alt="" coords="1600,459,2096,521,2095,526,1599,465"/>
+<area shape="poly" title=" " alt="" coords="1648,290,1546,336,1479,363,1409,385,1322,406,1234,423,1079,444,1078,439,1233,418,1321,401,1408,380,1477,358,1544,331,1646,285"/>
+<area shape="poly" title=" " alt="" coords="1670,288,1624,506,1619,505,1665,287"/>
+<area shape="poly" title=" " alt="" coords="1742,283,1851,304,1912,320,1970,340,2056,372,2090,393,2124,429,2134,447,2142,467,2148,504,2143,505,2136,468,2130,449,2119,432,2087,397,2054,376,1969,345,1910,325,1850,309,1741,288"/>
+<area shape="rect" title=" " alt="" coords="1674,350,1753,375"/>
+<area shape="poly" title=" " alt="" coords="1678,286,1704,336,1699,339,1673,289"/>
+<area shape="rect" href="../../db/dd3/json__heal_8h.html" title="Self&#45;Healing JSON Recovery Layer (CWIST)" alt="" coords="1776,431,1926,471"/>
+<area shape="poly" title=" " alt="" coords="1725,285,1864,315,1922,330,1950,341,1957,353,1958,365,1948,388,1928,408,1902,426,1899,422,1924,404,1944,385,1953,364,1952,354,1947,345,1921,335,1863,321,1724,290"/>
+<area shape="rect" href="../../dc/d6e/zod_8h.html" title="Strict JSON schema validation (Zod&#45;style) for CWIST." alt="" coords="1777,350,1936,375"/>
+<area shape="poly" title=" " alt="" coords="1696,285,1820,342,1818,347,1694,290"/>
+<area shape="poly" title=" " alt="" coords="1825,473,1767,513,1764,508,1822,469"/>
+<area shape="poly" title=" " alt="" coords="1796,473,1664,517,1662,512,1794,468"/>
+<area shape="poly" title=" " alt="" coords="1923,468,2097,514,2095,519,1921,473"/>
+<area shape="poly" title=" " alt="" coords="1834,378,1798,400,1781,415,1767,432,1750,469,1742,505,1737,504,1745,467,1762,429,1777,411,1795,396,1831,373"/>
+<area shape="poly" title=" " alt="" coords="1836,378,1743,433,1688,474,1641,512,1638,508,1684,470,1740,428,1833,373"/>
+<area shape="poly" title=" " alt="" coords="1858,376,1856,417,1850,416,1853,375"/>
+<area shape="poly" title=" " alt="" coords="1413,466,1425,468,1683,516,1682,521,1424,473,1412,471"/>
+<area shape="poly" title=" " alt="" coords="1242,472,988,523,987,518,1241,467"/>
+<area shape="poly" title=" " alt="" coords="1159,297,939,346,938,341,1158,292"/>
+<area shape="poly" title=" " alt="" coords="1321,292,1364,308,1399,328,1411,340,1418,354,1418,369,1410,384,1390,403,1367,411,1343,412,1319,409,1295,407,1272,407,1251,415,1232,432,1224,451,1226,460,1232,469,1246,481,1264,491,1312,504,1370,512,1436,514,1570,513,1682,516,1682,522,1570,519,1435,520,1370,517,1311,510,1262,496,1243,485,1228,472,1221,462,1218,451,1227,429,1248,410,1271,402,1295,401,1319,404,1343,407,1366,406,1387,398,1406,381,1413,367,1413,355,1407,343,1396,332,1361,313,1320,297"/>
+<area shape="poly" title=" " alt="" coords="1154,293,1090,310,1023,338,991,356,961,378,935,403,913,432,907,450,909,469,925,505,920,507,904,470,902,449,909,429,931,399,958,374,988,352,1021,333,1088,305,1153,287"/>
+<area shape="rect" title=" " alt="" coords="1100,350,1199,375"/>
+<area shape="poly" title=" " alt="" coords="1224,297,1174,342,1171,338,1220,293"/>
+<area shape="rect" title=" " alt="" coords="1223,350,1287,375"/>
+<area shape="poly" title=" " alt="" coords="1248,295,1254,336,1249,337,1243,295"/>
+<area shape="rect" title=" " alt="" coords="1312,350,1396,375"/>
+<area shape="poly" title=" " alt="" coords="1269,293,1329,339,1326,343,1266,297"/>
+<area shape="poly" title=" " alt="" coords="1988,466,1793,518,1791,513,1986,461"/>
+<area shape="poly" title=" " alt="" coords="1981,466,1939,473,1658,502,1382,520,1147,529,988,532,988,527,1147,524,1382,515,1658,497,1939,468,1980,461"/>
+<area shape="poly" title=" " alt="" coords="2048,461,2120,509,2117,513,2045,466"/>
+<area shape="rect" href="../../d3/da3/wasi_8h.html" title="WASI target feature detection shared by all CWIST sources." alt="" coords="636,350,764,375"/>
+<area shape="poly" title=" " alt="" coords="714,288,707,337,702,336,709,287"/>
+<area shape="poly" title=" " alt="" coords="964,297,899,338,896,333,961,292"/>
+<area shape="poly" title=" " alt="" coords="1008,293,1040,333,1088,383,1148,432,1181,452,1216,468,1282,489,1340,501,1393,507,1443,507,1549,506,1611,508,1683,516,1682,521,1610,514,1549,511,1443,513,1392,512,1340,507,1281,495,1214,473,1178,457,1144,436,1084,387,1036,336,1004,296"/>
+<area shape="poly" title=" " alt="" coords="285,373,370,428,367,433,282,378"/>
+<area shape="poly" title=" " alt="" coords="298,373,445,428,451,430,449,435,443,433,296,378"/>
+<area shape="poly" title=" " alt="" coords="275,374,312,427,333,453,351,468,384,479,436,488,585,501,776,508,990,510,1408,511,1573,512,1682,516,1682,522,1573,517,1408,516,990,516,776,513,584,506,435,494,383,484,348,473,329,457,307,430,271,377"/>
+<area shape="poly" title=" " alt="" coords="269,375,278,422,289,448,307,468,339,480,397,491,563,508,746,520,890,526,890,531,746,525,562,513,396,496,337,486,304,473,285,451,273,424,264,376"/>
+<area shape="poly" title=" " alt="" coords="244,378,135,434,133,429,242,373"/>
+<area shape="rect" title=" " alt="" coords="157,438,236,463"/>
+<area shape="poly" title=" " alt="" coords="258,377,216,429,212,425,254,374"/>
+<area shape="poly" title=" " alt="" coords="2319,207,2315,257,2301,330,2288,369,2271,408,2247,443,2218,473,2185,490,2139,504,2084,514,2022,522,1897,530,1793,533,1793,528,1897,525,2022,517,2083,509,2138,499,2183,485,2215,469,2243,440,2266,405,2283,367,2296,329,2309,257,2313,207"/>
+<area shape="poly" title=" " alt="" coords="2626,373,2656,392,2685,416,2696,430,2702,444,2702,458,2694,473,2668,486,2620,497,2482,514,2326,525,2198,531,2198,526,2325,520,2481,509,2619,492,2666,481,2690,469,2697,457,2697,445,2691,432,2681,420,2653,396,2624,378"/>
+<area shape="rect" title=" " alt="" coords="2539,438,2680,463"/>
+<area shape="poly" title=" " alt="" coords="2607,375,2610,424,2605,424,2601,376"/>
+<area shape="rect" href="../../da/d0c/arena_8h.html" title="Request&#45;scoped arena allocator backed by libttak arena generations." alt="" coords="2286,438,2464,463"/>
+<area shape="poly" title=" " alt="" coords="2573,378,2419,436,2417,431,2571,373"/>
+<area shape="poly" title=" " alt="" coords="2313,466,2267,473,2002,506,1793,528,1792,522,2001,501,2267,468,2312,461"/>
+<area shape="poly" title=" " alt="" coords="2343,466,2194,517,2192,512,2341,461"/>
 </map>
 </div>
 </div>
@@ -332,7 +336,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00665">665</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00685">685</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00073">cwist_http_request::body</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
 
@@ -397,11 +401,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00645">645</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00665">665</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00073">cwist_http_request::body</a>, and <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00737">cwist_app_req_bind_json_or_400()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00757">cwist_app_req_bind_json_or_400()</a>.</p>
 
 </div>
 </div>
@@ -464,9 +468,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00737">737</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00757">757</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d6d/bind_8c_source.html#l00645">cwist_app_req_bind_json()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00697">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d6d/bind_8c_source.html#l00665">cwist_app_req_bind_json()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00717">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -521,11 +525,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when every field passed validation, false otherwise. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00680">680</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00700">700</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d4/dbd/core_2sstring_2sstring_8h_source.html#l00015">cwist_sstring::data</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00068">cwist_http_request::query</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00756">cwist_app_req_bind_query_or_400()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00776">cwist_app_req_bind_query_or_400()</a>.</p>
 
 </div>
 </div>
@@ -579,9 +583,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true when binding succeeded; false when an error response was written. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00756">756</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00776">776</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d6/d6d/bind_8c_source.html#l00680">cwist_app_req_bind_query()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00697">cwist_bind_write_error_response()</a>.</p>
+<p class="reference">References <a class="el" href="../../d6/d6d/bind_8c_source.html#l00700">cwist_app_req_bind_query()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00717">cwist_bind_write_error_response()</a>.</p>
 
 </div>
 </div>
@@ -622,11 +626,11 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00697">697</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d6d/bind_8c_source.html#l00717">717</a> of file <a class="el" href="../../d6/d6d/bind_8c_source.html">bind.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02104">cwist_http_header_add()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00262">cwist_json_add_bool()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00228">cwist_json_add_string()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00200">cwist_json_begin_array()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00164">cwist_json_begin_object()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00022">cwist_json_builder_create()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00038">cwist_json_builder_destroy()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00216">cwist_json_end_array()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00189">cwist_json_end_object()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00289">cwist_json_get_raw()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00550">cwist_sstring_assign()</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00108">cwist_bind_result::error_count</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00107">cwist_bind_result::errors</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00100">cwist_bind_error::key</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00101">cwist_bind_error::message</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
+<p class="reference">References <a class="el" href="../../dd/d56/http_8h_source.html#l00087">cwist_http_response::body</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00031">CWIST_HTTP_BAD_REQUEST</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02104">cwist_http_header_add()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00262">cwist_json_add_bool()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00228">cwist_json_add_string()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00200">cwist_json_begin_array()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00164">cwist_json_begin_object()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00022">cwist_json_builder_create()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00038">cwist_json_builder_destroy()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00216">cwist_json_end_array()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00189">cwist_json_end_object()</a>, <a class="el" href="../../d5/d7f/json__builder_8c_source.html#l00289">cwist_json_get_raw()</a>, <a class="el" href="../../dd/d79/sstring_8c_source.html#l00552">cwist_sstring_assign()</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00108">cwist_bind_result::error_count</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00107">cwist_bind_result::errors</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00086">cwist_http_response::headers</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00100">cwist_bind_error::key</a>, <a class="el" href="../../da/dc2/bind_8h_source.html#l00101">cwist_bind_error::message</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00084">cwist_http_response::status_code</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00085">cwist_http_response::status_text</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00737">cwist_app_req_bind_json_or_400()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00756">cwist_app_req_bind_query_or_400()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d6d/bind_8c_source.html#l00757">cwist_app_req_bind_json_or_400()</a>, and <a class="el" href="../../d6/d6d/bind_8c_source.html#l00776">cwist_app_req_bind_query_or_400()</a>.</p>
 
 </div>
 </div>

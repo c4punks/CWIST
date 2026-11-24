@@ -1,5 +1,7 @@
 var NAVTREEINDEX24 =
 {
+"df/dd0/structcwist__proxy__config.html#a943d7c132ace68705f2ed8affade6931":[97,0,81,7],
+"df/dd0/structcwist__proxy__config.html#abb63c12cda2332a6f3836f8d303b03e2":[97,0,81,2],
 "df/dd0/structcwist__proxy__config.html#ac85f1930eb738553f6c2c5055f0703c9":[97,0,81,8],
 "df/dd0/structcwist__proxy__config.html#acdd8a98d3f6aa3fb8f87dc6982902fc3":[97,0,81,1],
 "df/dd0/structcwist__proxy__config.html#affdde68fa29ae9cb9b8d21e63b538654":[97,0,81,6],
@@ -178,14 +180,14 @@ var NAVTREEINDEX24 =
 "functions_vars_v.html":[97,2,2,21],
 "functions_vars_w.html":[97,2,2,22],
 "functions_w.html":[97,2,0,23],
-"globals.html":[98,1,0,0],
 "globals.html":[98,1,0],
+"globals.html":[98,1,0,0],
 "globals_a.html":[98,1,0,1],
 "globals_b.html":[98,1,0,2],
 "globals_c.html":[98,1,0,3],
 "globals_d.html":[98,1,0,4],
-"globals_defs.html":[98,1,6,0],
 "globals_defs.html":[98,1,6],
+"globals_defs.html":[98,1,6,0],
 "globals_defs_a.html":[98,1,6,1],
 "globals_defs_b.html":[98,1,6,2],
 "globals_defs_c.html":[98,1,6,3],
@@ -247,7 +249,5 @@ var NAVTREEINDEX24 =
 "globals_type.html":[98,1,3,0],
 "globals_type.html":[98,1,3],
 "globals_type_a.html":[98,1,3,1],
-"globals_type_b.html":[98,1,3,2],
-"globals_type_c.html":[98,1,3,3],
-"globals_type_e.html":[98,1,3,4]
+"globals_type_b.html":[98,1,3,2]
 };
