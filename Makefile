@@ -1032,9 +1032,9 @@ PCDIR ?= $(LIBDIR)/pkgconfig
 DEPSDIR ?= $(LIBDIR)/cwist
 
 # Release version: latest numeric release tag without the leading 'v'.
-VERSION ?= $(shell git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null | sed 's/^v//')
+VERSION ?= $(shell (git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || git tag --sort=-v:refname -l "v[0-9]*" 2>/dev/null | head -n 1) | sed 's/^v//')
 ifeq ($(strip $(VERSION)),)
-VERSION = 0.0.0
+VERSION = 4.3.8
 endif
 
 PC_FILE = cwist.pc
