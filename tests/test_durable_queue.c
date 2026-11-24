@@ -378,6 +378,11 @@ int main(void) {
     int redis_ran = 0;
     int nats_ran = 0;
 
+    cwist_nats_t *invalid_nats = (cwist_nats_t *)1;
+    cwist_error_t invalid_err = cwist_nats_connect(&invalid_nats, "://");
+    CHECK(invalid_err.error.err_i16 != 0 && invalid_nats == NULL,
+          "failed NATS connect must leave the output handle NULL");
+
     /* Redis backend. */
     const char *host = getenv("CWIST_REDIS_HOST") ? getenv("CWIST_REDIS_HOST") : "127.0.0.1";
     int port = getenv("CWIST_REDIS_PORT") ? atoi(getenv("CWIST_REDIS_PORT")) : 6379;

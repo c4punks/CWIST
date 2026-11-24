@@ -80,6 +80,7 @@ cwist_error_t cwist_nats_connect(cwist_nats_t **nats, const char *url) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;
     }
+    *nats = NULL;
     cwist_nats_t *obj = (cwist_nats_t *)cwist_alloc(sizeof(cwist_nats_t));
     if (!obj) {
         err.error.err_i16 = CWIST_ERROR_NOMEM;

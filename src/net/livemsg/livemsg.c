@@ -61,6 +61,7 @@ static void peer_destroy(cwist_livemsg_peer *peer) {
 static cwist_livemsg_peer *peer_create(cwist_livemsg_ctx *ctx) {
     cwist_livemsg_peer *peer = cwist_alloc(sizeof(*peer));
     if (!peer) return NULL;
+    memset(peer, 0, sizeof(*peer));
     peer->ctx = ctx;
     peer->next = ctx->peers;
     ctx->peers = peer;
@@ -336,6 +337,7 @@ void cwist_livemsg_config_init(cwist_livemsg_config *config, uint32_t transport)
 cwist_livemsg_ctx *cwist_livemsg_create(const cwist_livemsg_config *config) {
     cwist_livemsg_ctx *ctx = cwist_alloc(sizeof(*ctx));
     if (!ctx) return NULL;
+    memset(ctx, 0, sizeof(*ctx));
     if (!config_copy(ctx, config)) {
         int error = errno;
         cwist_free(ctx);
