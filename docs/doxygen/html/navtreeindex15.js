@@ -1,5 +1,7 @@
 var NAVTREEINDEX15 =
 {
+"db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md384":[35,0,1],
+"db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md385":[35,1],
 "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md386":[35,1,0],
 "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md387":[35,1,1],
 "db/d04/md_docs_2ko_2api_2cookie.html#autotoc_md388":[35,1,2],
@@ -247,7 +249,5 @@ var NAVTREEINDEX15 =
 "db/d8a/structcwist__http__async__conn.html#ae11aabec78487fd25035496636eb734c":[65,0,46,29],
 "db/d8a/structcwist__http__async__conn.html#ae42aeba35889090bd4924ff4de2d0ff9":[65,0,46,5],
 "db/d8a/structcwist__http__async__conn.html#ae95142c1a80b7e177cc37bbd94ad3644":[65,0,46,11],
-"db/d8a/structcwist__http__async__conn.html#afeb47b1d1686277776f5ce3b6e2af005":[65,0,46,31],
-"db/d8a/structcwist__http__async__conn.html#aff2c72c0421589cdfc2f16c3f8d62580":[65,0,46,26],
-"db/d95/structcwist__https__connection.html":[65,0,51]
+"db/d8a/structcwist__http__async__conn.html#afeb47b1d1686277776f5ce3b6e2af005":[65,0,46,31]
 };

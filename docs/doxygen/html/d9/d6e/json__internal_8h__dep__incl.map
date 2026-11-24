@@ -1,0 +1,9 @@
+<map id="src/core/utils/json_internal.h" name="src/core/utils/json_internal.h">
+<area shape="rect" id="Node000001" title=" " alt="" coords="169,5,305,45"/>
+<area shape="rect" id="Node000002" href="$d1/d8b/json__heal_8c.html" title="Multi&#45;stage JSON recovery pipeline with optional schema alignment." alt="" coords="5,93,141,133"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="190,54,110,96,108,91,188,49"/>
+<area shape="rect" id="Node000003" href="$d6/d6d/bind_8c.html" title="Implementation of declarative schema validation and binding." alt="" coords="166,93,309,133"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="240,59,240,93,235,93,235,59"/>
+<area shape="rect" id="Node000004" href="$dd/d92/graphql_8c.html" title=" " alt="" coords="333,101,515,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="292,49,400,98,398,103,289,53"/>
+</map>
