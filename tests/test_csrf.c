@@ -173,6 +173,19 @@ static void test_csrf_url_encoded_header_and_rejection(void) {
     assert(next_called == 0 && post_res->status_code == CWIST_HTTP_FORBIDDEN);
     cwist_http_response_destroy(post_res);
     cwist_http_request_destroy(post);
+    const char *malformed[] = {"_csrf=%", "_csrf=%A", "_csrf=%GG", "_csrf=%00"};
+    for (size_t i = 0; i < sizeof(malformed) / sizeof(malformed[0]); i++) {
+        post = cwist_http_request_create();
+        post_res = cwist_http_response_create();
+        post->method = CWIST_HTTP_POST;
+        cwist_http_header_add(&post->headers, "Cookie", cookie);
+        cwist_sstring_assign(post->body, malformed[i]);
+        next_called = 0;
+        mw(post, post_res, test_next);
+        assert(next_called == 0 && post_res->status_code == CWIST_HTTP_FORBIDDEN);
+        cwist_http_response_destroy(post_res);
+        cwist_http_request_destroy(post);
+    }
     cwist_http_response_destroy(seed_res);
     cwist_http_request_destroy(seed);
     cwist_app_destroy(app);

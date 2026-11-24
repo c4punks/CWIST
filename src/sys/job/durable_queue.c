@@ -47,15 +47,17 @@
 /* Atomically schedules a nacked job: XACK, then either park it in the
  * delay zset or dead-letter it. Returns 1 (delayed), 2 (dead-lettered),
  * 0 (entry no longer pending). */
-static const char *JQ_NACK_SCRIPT = "local ok = redis.call('XACK', KEYS[1], KEYS[2], ARGV[1])\n"
-                                    "if ok == 0 then return 0 end\n"
-                                    "redis.call('HDEL', KEYS[5], ARGV[1])\n"
-                                    "if tonumber(ARGV[2]) > tonumber(ARGV[3]) then\n"
-                                    "  redis.call('RPUSH', KEYS[3], ARGV[4])\n"
-                                    "  return 2\n"
-                                    "end\n"
-                                    "redis.call('ZADD', KEYS[4], ARGV[5], ARGV[1] .. '|' .. ARGV[4])\n"
-                                    "return 1\n";
+static const char *JQ_NACK_SCRIPT =
+    "local ok = redis.call('XACK', KEYS[1], KEYS[2], ARGV[1])\n"
+    "if ok == 0 then return 0 end\n"
+    "redis.call('HDEL', KEYS[5], ARGV[1])\n"
+    "if tonumber(ARGV[2]) > tonumber(ARGV[3]) or "
+    "(ARGV[2] == '4294967295' and ARGV[3] == '4294967295') then\n"
+    "  redis.call('RPUSH', KEYS[3], ARGV[4])\n"
+    "  return 2\n"
+    "end\n"
+    "redis.call('ZADD', KEYS[4], ARGV[5], ARGV[1] .. '|' .. ARGV[4])\n"
+    "return 1\n";
 
 /* Moves due delayed blobs back onto the stream. The attempts hash is
  * pre-seeded with attempts-1 because the fresh-claim path HINCRBYs. */
@@ -144,11 +146,17 @@ static cwist_error_t jq_err(int16_t code) {
     return e;
 }
 
-/** @brief Current CLOCK_MONOTONIC time in milliseconds; monotonic and unaffected by wall-clock changes. */
+/** @brief Current CLOCK_MONOTONIC time in milliseconds; monotonic and unaffected by wall-clock
+ * changes. */
 static uint64_t jq_now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
+}
+
+static uint64_t jq_deadline_after(uint64_t timeout_ms) {
+    uint64_t now = jq_now_ms();
+    return timeout_ms > UINT64_MAX - now ? UINT64_MAX : now + timeout_ms;
 }
 
 static unsigned int jq_consumer_seq = 0;
@@ -501,7 +509,7 @@ static void jq_redis_reap_delay(cwist_job_queue_t *q) {
  *         entries, then blocks for new entries.
  */
 static cwist_error_t jq_redis_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
-    uint64_t deadline = jq_now_ms() + timeout_ms;
+    uint64_t deadline = jq_deadline_after(timeout_ms);
     bool polled = false;
     for (;;) {
         jq_redis_reap_delay(q);
@@ -546,8 +554,8 @@ static cwist_error_t jq_redis_ack(cwist_job_queue_t *q, cwist_job_t *job) {
  */
 static cwist_error_t jq_redis_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     jq_redis_t *rs = &q->u.redis;
-    uint32_t next = job->attempts + 1;
-    uint64_t due = jq_now_ms() + q->retry_delay_ms;
+    uint32_t next = job->attempts == UINT32_MAX ? UINT32_MAX : job->attempts + 1;
+    uint64_t due = jq_deadline_after(q->retry_delay_ms);
     char next_buf[16], max_buf[16], due_buf[32];
     int next_len = snprintf(next_buf, sizeof(next_buf), "%u", next);
     int max_len = snprintf(max_buf, sizeof(max_buf), "%u", q->max_retries);
@@ -854,12 +862,13 @@ static bool jq_nats_dead_letter(jq_nats_t *ns, natsMsg *msg) {
  */
 static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
     jq_nats_t *ns = &q->u.nats;
-    uint64_t deadline = jq_now_ms() + timeout_ms;
+    uint64_t deadline = jq_deadline_after(timeout_ms);
     for (;;) {
         uint64_t now = jq_now_ms();
-        int64_t slice = (int64_t)(now >= deadline ? 1 : deadline - now);
-        if (slice > (int64_t)CWIST_JQ_MAX_POLL_SLICE_MS)
-            slice = (int64_t)CWIST_JQ_MAX_POLL_SLICE_MS;
+        uint64_t remaining = now >= deadline ? 1 : deadline - now;
+        int64_t slice =
+            (int64_t)(remaining > CWIST_JQ_MAX_POLL_SLICE_MS ? CWIST_JQ_MAX_POLL_SLICE_MS
+                                                             : remaining);
         natsMsgList list;
         memset(&list, 0, sizeof(list));
         natsStatus s = natsSubscription_Fetch(&list, ns->sub, 1, slice, NULL);
@@ -933,7 +942,8 @@ static cwist_error_t jq_nats_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     return s == NATS_OK ? jq_err(0) : jq_err(CWIST_FAILURE);
 }
 
-/** @brief NATS backend: nak the message (with retry delay if configured) and destroy it; job->backend is NULLed. */
+/** @brief NATS backend: nak the message (with retry delay if configured) and destroy it;
+ * job->backend is NULLed. */
 static cwist_error_t jq_nats_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     natsStatus s;
     if (q->retry_delay_ms)
@@ -969,7 +979,8 @@ cwist_job_queue_t *cwist_job_queue_create_nats(cwist_nats_t *nats,
 
 /* --- Dispatch ----------------------------------------------------------- */
 
-/** @brief Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched. */
+/** @brief Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are
+ * not touched. */
 void cwist_job_queue_destroy(cwist_job_queue_t *q) {
     if (!q) return;
     if (q->backend == 0) {

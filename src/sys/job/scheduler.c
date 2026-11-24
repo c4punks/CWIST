@@ -130,7 +130,12 @@ static bool cond_init_monotonic(pthread_cond_t *cond) {
  */
 static int heap_grow(cwist_scheduler_t *s) {
     if (atomic_load_explicit(&s->heap_count, memory_order_relaxed) < s->heap_capacity) return 0;
-    size_t new_cap = s->heap_capacity ? s->heap_capacity * 2 : CWIST_SCHEDULER_HEAP_INIT;
+    size_t new_cap = s->heap_capacity ? s->heap_capacity : CWIST_SCHEDULER_HEAP_INIT;
+    if (s->heap_capacity) {
+        if (s->heap_capacity > SIZE_MAX / 2) return -1;
+        new_cap = s->heap_capacity * 2;
+    }
+    if (new_cap > SIZE_MAX / sizeof(scheduled_job_t)) return -1;
     scheduled_job_t *new_heap = cwist_realloc(s->heap, new_cap * sizeof(scheduled_job_t));
     if (!new_heap) return -1;
     /* s->heap is owned by the scheduler for its whole lifetime, not by
