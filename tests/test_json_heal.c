@@ -570,6 +570,16 @@ static void test_strict_json_and_schema_boundaries(void) {
     printf("  Passed.\n");
 }
 
+static void test_zod_rejects_invalid_schema(void) {
+    cwist_schema_t missing = {.fields = NULL, .field_count = 1};
+    assert(!cwist_zod_parse("{\"n\":1}", &missing, NULL).valid);
+    cwist_schema_field_t unnamed[] = {{.name = NULL, .type = CWIST_FIELD_INT, .required = true}};
+    cwist_schema_t bad_name = {.fields = unnamed, .field_count = 1};
+    assert(!cwist_zod_parse("{\"n\":1}", &bad_name, NULL).valid);
+    cwist_schema_t negative = {.fields = unnamed, .field_count = -1};
+    assert(!cwist_zod_parse("{\"n\":1}", &negative, NULL).valid);
+}
+
 /* ==========================================================================
  * main
  * ======================================================================== */
@@ -601,6 +611,7 @@ int main(void) {
     test_zod_missing_required();
     test_zod_wrong_type();
     test_zod_invalid_json_syntax();
+    test_zod_rejects_invalid_schema();
 
     printf("\n=== DB Integration ===\n");
     test_db_insert_healed();

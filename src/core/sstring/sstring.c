@@ -237,6 +237,11 @@ cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, siz
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
+    if (str->size == SIZE_MAX || len > SIZE_MAX - str->size - 1) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
     if (sstring_aliases(str, data)) {
         char *copy = cwist_alloc(len + 1);
         if (!copy) {
