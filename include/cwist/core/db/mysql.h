@@ -21,7 +21,9 @@ typedef struct cwist_mysql cwist_mysql_t;
  * @brief Connect to a MySQL or MariaDB database using a connection string or URI.
  *
  * @param conninfo Connection string (e.g. "host=localhost dbname=test user=root password=secret port=3306")
- *                 or URI (e.g. "mysql://user:pass@host:port/dbname").
+ *                 or URI (e.g. "mysql://user:pass@host:port/dbname"). Key/value
+ *                 connections accept connect_timeout, read_timeout, and
+ *                 write_timeout in seconds (defaults: 5, 30, 30).
  * @return Opaque connection handle, or NULL on allocation/connection failure.
  */
 cwist_mysql_t *cwist_mysql_connect(const char *conninfo);

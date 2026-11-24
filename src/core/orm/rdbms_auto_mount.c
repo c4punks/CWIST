@@ -143,6 +143,7 @@ static cwist_rdbms_provider_t classify_mysql(const char *buf, size_t len) {
  *         fails. The socket is always closed before returning.
  */
 cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
+    if (port < 1 || port > 65535) return CWIST_RDBMS_NONE;
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         CWIST_LOG_ERROR("RDBMS probe: socket creation failed: %s", strerror(errno));
@@ -273,7 +274,9 @@ const char *cwist_rdbms_provider_name(cwist_rdbms_provider_t provider) {
  * @return true if a runtime is mounted, false on NULL app or allocation failure.
  */
 bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, int port) {
-    if (!app) return false;
+    if (!app || provider <= CWIST_RDBMS_NONE || provider > CWIST_RDBMS_MSSQL ||
+        port < 1 || port > 65535)
+        return false;
 
     if (app->rdbms) {
         CWIST_LOG_INFO("RDBMS runtime already mounted");

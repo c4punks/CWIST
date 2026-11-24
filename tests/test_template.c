@@ -234,24 +234,39 @@ static void test_template_inheritance(void) {
     char dir[] = "/tmp/cwist-tmpl-inherit-XXXXXX";
     assert(mkdtemp(dir) != NULL);
 
-    char base_path[PATH_MAX];
-    char child_path[PATH_MAX];
+    char base_path[PATH_MAX], parent_path[PATH_MAX], child_path[PATH_MAX];
     snprintf(base_path, sizeof(base_path), "%s/base.html", dir);
+    snprintf(parent_path, sizeof(parent_path), "%s/parent.html", dir);
     snprintf(child_path, sizeof(child_path), "%s/child.html", dir);
 
-    write_text(base_path, "HEADER | {% block title %}Default Title{% endblock %} | {% block content %}Default Content{% endblock %} | FOOTER");
-    write_text(child_path, "{% extends \"base.html\" %}{% block content %}Child: {{ msg }}{% endblock %}");
+    const char *long_name = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789LONG";
+    char source[2048];
+    snprintf(source, sizeof(source),
+             "GRAND | {%% block title %%}Grand{%% endblock %%} | "
+             "{%% block content %%}Base{%% endblock %%} | "
+             "{%% block footer %%}Footer{%% endblock %%} | "
+             "{%% block %s %%}Long Base{%% endblock %%}", long_name);
+    write_text(base_path, source);
+    write_text(parent_path,
+               "{% extends \"base.html\" %}{% block title %}Parent Title{% endblock %}"
+               "{% block footer %}Parent Footer{% endblock %}");
+    snprintf(source, sizeof(source),
+             "{%% extends \"parent.html\" %%}{%% block content %%}Child: {{ msg }}{%% endblock %%}"
+             "{%% block %s %%}Long Child{%% endblock %%}", long_name);
+    write_text(child_path, source);
 
     cJSON *ctx = cJSON_CreateObject();
     cJSON_AddStringToObject(ctx, "msg", "Hello Inherited");
 
     cwist_sstring *rendered = cwist_template_render_file(child_path, ctx);
     assert(rendered != NULL);
-    assert(strcmp(rendered->data, "HEADER | Default Title | Child: Hello Inherited | FOOTER") == 0);
+    assert(strcmp(rendered->data,
+                  "GRAND | Parent Title | Child: Hello Inherited | Parent Footer | Long Child") == 0);
     cwist_sstring_destroy(rendered);
 
     cJSON_Delete(ctx);
     unlink(base_path);
+    unlink(parent_path);
     unlink(child_path);
     rmdir(dir);
 }

@@ -45,17 +45,80 @@ static void mysql_set_last_error(cwist_mysql_t *mysql, const char *msg) {
     }
 }
 
-static void mysql_parse_kv_field(const char *conninfo, const char *key, char *out, size_t out_cap) {
+static bool mysql_parse_kv_field(const char *conninfo, const char *key, char *out, size_t out_cap,
+                                 bool *present) {
+    size_t key_len = strlen(key);
     out[0] = '\0';
-    const char *p = strstr(conninfo, key);
-    if (!p) return;
-    p += strlen(key);
-    while (*p == ' ' || *p == '=') p++;
-    size_t i = 0;
-    while (*p && *p != ' ' && *p != ';' && *p != '&' && i + 1 < out_cap) {
-        out[i++] = *p++;
+    *present = false;
+    const char *p = conninfo;
+    while (*p) {
+        while (*p == ' ' || *p == ';' || *p == '&') p++;
+        const char *key_start = p;
+        while (*p && *p != ' ' && *p != '=' && *p != ';' && *p != '&') p++;
+        const char *key_end = p;
+        while (*p == ' ') p++;
+        if (*p != '=') {
+            while (*p && *p != ' ' && *p != ';' && *p != '&') p++;
+            continue;
+        }
+        p++;
+        while (*p == ' ') p++;
+        char quote = (*p == '\'' || *p == '"') ? *p++ : 0;
+        const char *value_start = p;
+        while (*p && (quote ? *p != quote : (*p != ' ' && *p != ';' && *p != '&'))) p++;
+        size_t value_len = (size_t)(p - value_start);
+        if ((size_t)(key_end - key_start) == key_len && strncmp(key_start, key, key_len) == 0) {
+            if (value_len >= out_cap) return false;
+            memcpy(out, value_start, value_len);
+            out[value_len] = '\0';
+            *present = true;
+            return true;
+        }
+        if (quote && *p == quote) p++;
+        while (*p && *p != ' ' && *p != ';' && *p != '&') p++;
     }
-    out[i] = '\0';
+    return true;
+}
+
+static int mysql_hex_digit(unsigned char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static bool mysql_uri_component(char *out, size_t out_cap, const char *start, size_t len) {
+    size_t out_len = 0;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)start[i];
+        if (c == '%') {
+            if (i + 2 >= len) return false;
+            int hi = mysql_hex_digit((unsigned char)start[i + 1]);
+            int lo = mysql_hex_digit((unsigned char)start[i + 2]);
+            if (hi < 0 || lo < 0 || (hi == 0 && lo == 0)) return false;
+            c = (unsigned char)((hi << 4) | lo);
+            i += 2;
+        }
+        if (out_len + 1 >= out_cap) return false;
+        out[out_len++] = (char)c;
+    }
+    out[out_len] = '\0';
+    return true;
+}
+
+static bool mysql_parse_uint(const char *start, size_t len, unsigned int max, unsigned int *out) {
+    if (len == 0) return false;
+    unsigned int value = 0;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)start[i];
+        if (c < '0' || c > '9') return false;
+        unsigned int digit = c - '0';
+        if (value > (max - digit) / 10) return false;
+        value = value * 10 + digit;
+    }
+    if (value == 0 || value > max) return false;
+    *out = value;
+    return true;
 }
 
 cwist_mysql_t *cwist_mysql_connect(const char *conninfo) {
@@ -76,72 +139,87 @@ cwist_mysql_t *cwist_mysql_connect(const char *conninfo) {
     char password[128] = "";
     char dbname[128] = "";
     unsigned int port = 3306;
+    unsigned int connect_timeout = 5;
+    unsigned int read_timeout = 30;
+    unsigned int write_timeout = 30;
+    bool present;
 
     if (strncmp(conninfo, "mysql://", 8) == 0 || strncmp(conninfo, "mariadb://", 10) == 0) {
         const char *p = strstr(conninfo, "://") + 3;
-        const char *at = strchr(p, '@');
-        const char *slash = strchr(p, '/');
-
+        const char *authority_end = p + strcspn(p, "/?");
+        const char *slash = *authority_end == '/' ? authority_end : NULL;
+        const char *at = memchr(p, '@', (size_t)(authority_end - p));
         if (at) {
-            const char *colon = strchr(p, ':');
-            if (colon && colon < at) {
-                size_t ulen = (size_t)(colon - p);
-                if (ulen >= sizeof(user)) ulen = sizeof(user) - 1;
-                memcpy(user, p, ulen);
-                user[ulen] = '\0';
-
-                size_t plen = (size_t)(at - (colon + 1));
-                if (plen >= sizeof(password)) plen = sizeof(password) - 1;
-                memcpy(password, colon + 1, plen);
-                password[plen] = '\0';
-            } else {
-                size_t ulen = (size_t)(at - p);
-                if (ulen >= sizeof(user)) ulen = sizeof(user) - 1;
-                memcpy(user, p, ulen);
-                user[ulen] = '\0';
+            const char *colon = memchr(p, ':', (size_t)(at - p));
+            if (colon) {
+                if (!mysql_uri_component(user, sizeof(user), p, (size_t)(colon - p)) ||
+                    !mysql_uri_component(password, sizeof(password), colon + 1,
+                                         (size_t)(at - colon - 1)))
+                    goto invalid;
+            } else if (!mysql_uri_component(user, sizeof(user), p, (size_t)(at - p))) {
+                goto invalid;
             }
             p = at + 1;
         }
 
-        const char *host_end = slash ? slash : p + strlen(p);
-        const char *colon = strchr(p, ':');
-        if (colon && colon < host_end) {
-            size_t hlen = (size_t)(colon - p);
-            if (hlen >= sizeof(host)) hlen = sizeof(host) - 1;
-            memcpy(host, p, hlen);
-            host[hlen] = '\0';
-            port = (unsigned int)strtoul(colon + 1, NULL, 10);
+        if (p < authority_end && *p == '[') {
+            const char *close = memchr(p + 1, ']', (size_t)(authority_end - p - 1));
+            if (!close || !mysql_uri_component(host, sizeof(host), p + 1,
+                                               (size_t)(close - p - 1)))
+                goto invalid;
+            if (close + 1 < authority_end) {
+                if (close[1] != ':' ||
+                    !mysql_parse_uint(close + 2, (size_t)(authority_end - close - 2), 65535, &port))
+                    goto invalid;
+            }
         } else {
-            size_t hlen = (size_t)(host_end - p);
-            if (hlen >= sizeof(host)) hlen = sizeof(host) - 1;
-            memcpy(host, p, hlen);
-            host[hlen] = '\0';
+            const char *colon = memchr(p, ':', (size_t)(authority_end - p));
+            const char *host_end = colon ? colon : authority_end;
+            if (colon && (memchr(colon + 1, ':', (size_t)(authority_end - colon - 1)) ||
+                          !mysql_parse_uint(colon + 1, (size_t)(authority_end - colon - 1), 65535,
+                                            &port)))
+                goto invalid;
+            if (!mysql_uri_component(host, sizeof(host), p, (size_t)(host_end - p))) goto invalid;
         }
-
-        if (slash && *(slash + 1)) {
+        if (slash && slash[1]) {
             const char *db_end = strchr(slash + 1, '?');
-            size_t dlen = db_end ? (size_t)(db_end - (slash + 1)) : strlen(slash + 1);
-            if (dlen >= sizeof(dbname)) dlen = sizeof(dbname) - 1;
-            memcpy(dbname, slash + 1, dlen);
-            dbname[dlen] = '\0';
+            size_t db_len = db_end ? (size_t)(db_end - slash - 1) : strlen(slash + 1);
+            if (!mysql_uri_component(dbname, sizeof(dbname), slash + 1, db_len)) goto invalid;
         }
     } else {
-        mysql_parse_kv_field(conninfo, "host", host, sizeof(host));
-        mysql_parse_kv_field(conninfo, "user", user, sizeof(user));
-        mysql_parse_kv_field(conninfo, "password", password, sizeof(password));
-        if (password[0] == '\0') {
-            mysql_parse_kv_field(conninfo, "pass", password, sizeof(password));
-        }
-        mysql_parse_kv_field(conninfo, "dbname", dbname, sizeof(dbname));
-        if (dbname[0] == '\0') {
-            mysql_parse_kv_field(conninfo, "database", dbname, sizeof(dbname));
-        }
-        char port_str[16] = "";
-        mysql_parse_kv_field(conninfo, "port", port_str, sizeof(port_str));
-        if (port_str[0] != '\0') {
-            port = (unsigned int)strtoul(port_str, NULL, 10);
-        }
+        if (!mysql_parse_kv_field(conninfo, "host", host, sizeof(host), &present) ||
+            !mysql_parse_kv_field(conninfo, "user", user, sizeof(user), &present) ||
+            !mysql_parse_kv_field(conninfo, "password", password, sizeof(password), &present))
+            goto invalid;
+        if (password[0] == '\0' &&
+            !mysql_parse_kv_field(conninfo, "pass", password, sizeof(password), &present))
+            goto invalid;
+        if (!mysql_parse_kv_field(conninfo, "dbname", dbname, sizeof(dbname), &present))
+            goto invalid;
+        if (dbname[0] == '\0' &&
+            !mysql_parse_kv_field(conninfo, "database", dbname, sizeof(dbname), &present))
+            goto invalid;
+        char number[16];
+        if (!mysql_parse_kv_field(conninfo, "port", number, sizeof(number), &present)) goto invalid;
+        if (present && !mysql_parse_uint(number, strlen(number), 65535, &port)) goto invalid;
+        if (!mysql_parse_kv_field(conninfo, "connect_timeout", number, sizeof(number), &present))
+            goto invalid;
+        if (present && !mysql_parse_uint(number, strlen(number), 86400, &connect_timeout))
+            goto invalid;
+        if (!mysql_parse_kv_field(conninfo, "read_timeout", number, sizeof(number), &present))
+            goto invalid;
+        if (present && !mysql_parse_uint(number, strlen(number), 86400, &read_timeout))
+            goto invalid;
+        if (!mysql_parse_kv_field(conninfo, "write_timeout", number, sizeof(number), &present))
+            goto invalid;
+        if (present && !mysql_parse_uint(number, strlen(number), 86400, &write_timeout))
+            goto invalid;
     }
+
+    if (mysql_options(mysql->conn, MYSQL_OPT_CONNECT_TIMEOUT, &connect_timeout) != 0 ||
+        mysql_options(mysql->conn, MYSQL_OPT_READ_TIMEOUT, &read_timeout) != 0 ||
+        mysql_options(mysql->conn, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout) != 0)
+        goto invalid;
 
     if (!mysql_real_connect(mysql->conn, host[0] ? host : NULL,
                             user[0] ? user : NULL,
@@ -149,13 +227,16 @@ cwist_mysql_t *cwist_mysql_connect(const char *conninfo) {
                             dbname[0] ? dbname : NULL,
                             port, NULL, 0)) {
         mysql_set_last_error(mysql, mysql_error(mysql->conn));
-        mysql_close(mysql->conn);
-        cwist_free(mysql);
-        return NULL;
+        goto invalid;
     }
 
     mysql_set_last_error(mysql, NULL);
     return mysql;
+
+invalid:
+    mysql_close(mysql->conn);
+    cwist_free(mysql);
+    return NULL;
 }
 
 void cwist_mysql_disconnect(cwist_mysql_t *mysql) {
@@ -188,6 +269,10 @@ cwist_error_t cwist_mysql_exec(cwist_mysql_t *mysql, const char *sql) {
     MYSQL_RES *res = mysql_store_result(mysql->conn);
     if (res) {
         mysql_free_result(res);
+    } else if (mysql_field_count(mysql->conn) != 0 && mysql_errno(mysql->conn) != 0) {
+        mysql_set_last_error(mysql, mysql_error(mysql->conn));
+        err.error.err_i16 = CWIST_ERROR_IO;
+        return err;
     }
 
     mysql_set_last_error(mysql, NULL);
@@ -198,123 +283,147 @@ cwist_error_t cwist_mysql_exec(cwist_mysql_t *mysql, const char *sql) {
 cwist_error_t cwist_mysql_exec_params(cwist_mysql_t *mysql, const char *sql, int n_params,
                                       const char *const *param_values, cJSON **out_rows) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
+    MYSQL_STMT *stmt = NULL;
+    MYSQL_RES *meta = NULL;
+    MYSQL_BIND *param_binds = NULL;
+    MYSQL_BIND *result_binds = NULL;
+    char **buffers = NULL;
+    size_t *capacities = NULL;
+    unsigned long *lengths = NULL;
+    cwist_mysql_bool_t *is_null = NULL;
+    cJSON *rows = NULL;
+    cJSON *row = NULL;
+    unsigned int num_fields = 0;
+
     if (out_rows) *out_rows = NULL;
-    if (!mysql || !mysql->conn || !sql) {
+    if (!mysql || !mysql->conn || !sql || n_params < 0 || (n_params > 0 && !param_values)) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;
     }
 
-    MYSQL_STMT *stmt = mysql_stmt_init(mysql->conn);
+    stmt = mysql_stmt_init(mysql->conn);
     if (!stmt) {
         mysql_set_last_error(mysql, mysql_error(mysql->conn));
         err.error.err_i16 = CWIST_ERROR_NOMEM;
         return err;
     }
 
-    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) {
-        mysql_set_last_error(mysql, mysql_stmt_error(stmt));
-        mysql_stmt_close(stmt);
-        err.error.err_i16 = CWIST_ERROR_PROTOCOL;
-        return err;
-    }
+    if (mysql_stmt_prepare(stmt, sql, (unsigned long)strlen(sql)) != 0) goto driver_error;
 
-    if (n_params > 0 && param_values) {
-        MYSQL_BIND *binds = (MYSQL_BIND *)cwist_alloc(sizeof(MYSQL_BIND) * (size_t)n_params);
-        if (!binds) {
-            mysql_stmt_close(stmt);
-            err.error.err_i16 = CWIST_ERROR_NOMEM;
-            return err;
-        }
-        memset(binds, 0, sizeof(MYSQL_BIND) * (size_t)n_params);
-
+    if (n_params > 0) {
+        param_binds = (MYSQL_BIND *)cwist_alloc(sizeof(MYSQL_BIND) * (size_t)n_params);
+        if (!param_binds) goto oom;
+        memset(param_binds, 0, sizeof(MYSQL_BIND) * (size_t)n_params);
         for (int i = 0; i < n_params; i++) {
             if (!param_values[i]) {
-                binds[i].buffer_type = MYSQL_TYPE_NULL;
+                param_binds[i].buffer_type = MYSQL_TYPE_NULL;
             } else {
-                binds[i].buffer_type = MYSQL_TYPE_STRING;
-                binds[i].buffer = (void *)param_values[i];
-                binds[i].buffer_length = (unsigned long)strlen(param_values[i]);
+                param_binds[i].buffer_type = MYSQL_TYPE_STRING;
+                param_binds[i].buffer = (void *)param_values[i];
+                param_binds[i].buffer_length = (unsigned long)strlen(param_values[i]);
             }
         }
-
-        if (mysql_stmt_bind_param(stmt, binds) != 0) {
-            mysql_set_last_error(mysql, mysql_stmt_error(stmt));
-            cwist_free(binds);
-            mysql_stmt_close(stmt);
-            err.error.err_i16 = CWIST_ERROR_PROTOCOL;
-            return err;
-        }
-        cwist_free(binds);
+        if (mysql_stmt_bind_param(stmt, param_binds) != 0) goto driver_error;
     }
 
-    if (mysql_stmt_execute(stmt) != 0) {
-        mysql_set_last_error(mysql, mysql_stmt_error(stmt));
-        mysql_stmt_close(stmt);
-        err.error.err_i16 = CWIST_ERROR_PROTOCOL;
-        return err;
-    }
+    if (mysql_stmt_execute(stmt) != 0) goto driver_error;
 
     if (out_rows) {
-        MYSQL_RES *meta = mysql_stmt_result_metadata(stmt);
+        meta = mysql_stmt_result_metadata(stmt);
+        if (!meta && mysql_stmt_field_count(stmt) != 0) goto driver_error;
         if (meta) {
-            unsigned int num_fields = mysql_num_fields(meta);
+            num_fields = mysql_num_fields(meta);
             MYSQL_FIELD *fields = mysql_fetch_fields(meta);
-            cJSON *rows = cJSON_CreateArray();
-
-            MYSQL_BIND *result_binds = (MYSQL_BIND *)cwist_alloc(sizeof(MYSQL_BIND) * num_fields);
-            char **buffers = (char **)cwist_alloc(sizeof(char *) * num_fields);
-            unsigned long *lengths = (unsigned long *)cwist_alloc(sizeof(unsigned long) * num_fields);
-            cwist_mysql_bool_t *is_null = (cwist_mysql_bool_t *)cwist_alloc(sizeof(cwist_mysql_bool_t) * num_fields);
-
-            if (result_binds && buffers && lengths && is_null) {
-                memset(result_binds, 0, sizeof(MYSQL_BIND) * num_fields);
-                for (unsigned int j = 0; j < num_fields; j++) {
-                    buffers[j] = (char *)cwist_alloc(4096);
-                    result_binds[j].buffer_type = MYSQL_TYPE_STRING;
-                    result_binds[j].buffer = buffers[j];
-                    result_binds[j].buffer_length = 4096;
-                    result_binds[j].length = &lengths[j];
-                    result_binds[j].is_null = &is_null[j];
-                }
-
-                if (mysql_stmt_bind_result(stmt, result_binds) == 0 &&
-                    mysql_stmt_store_result(stmt) == 0) {
-                    while (mysql_stmt_fetch(stmt) == 0) {
-                        cJSON *row = cJSON_CreateObject();
-                        for (unsigned int j = 0; j < num_fields; j++) {
-                            const char *fname = fields[j].name ? fields[j].name : "";
-                            if (is_null[j]) {
-                                cJSON_AddNullToObject(row, fname);
-                            } else {
-                                if (lengths[j] < 4096) {
-                                    buffers[j][lengths[j]] = '\0';
-                                } else {
-                                    buffers[j][4095] = '\0';
-                                }
-                                cJSON_AddStringToObject(row, fname, buffers[j]);
-                            }
-                        }
-                        cJSON_AddItemToArray(rows, row);
-                    }
-                }
-
-                for (unsigned int j = 0; j < num_fields; j++) {
-                    cwist_free(buffers[j]);
-                }
+            rows = cJSON_CreateArray();
+            result_binds = (MYSQL_BIND *)cwist_alloc(sizeof(MYSQL_BIND) * num_fields);
+            buffers = (char **)cwist_alloc(sizeof(char *) * num_fields);
+            capacities = (size_t *)cwist_alloc(sizeof(size_t) * num_fields);
+            lengths = (unsigned long *)cwist_alloc(sizeof(unsigned long) * num_fields);
+            is_null = (cwist_mysql_bool_t *)cwist_alloc(sizeof(cwist_mysql_bool_t) * num_fields);
+            if (!rows || !result_binds || !buffers || !capacities || !lengths || !is_null) goto oom;
+            memset(result_binds, 0, sizeof(MYSQL_BIND) * num_fields);
+            memset(buffers, 0, sizeof(char *) * num_fields);
+            for (unsigned int j = 0; j < num_fields; j++) {
+                buffers[j] = (char *)cwist_alloc(4096);
+                if (!buffers[j]) goto oom;
+                capacities[j] = 4096;
+                result_binds[j].buffer_type = MYSQL_TYPE_STRING;
+                result_binds[j].buffer = buffers[j];
+                result_binds[j].buffer_length = 4096;
+                result_binds[j].length = &lengths[j];
+                result_binds[j].is_null = &is_null[j];
             }
+            if (mysql_stmt_bind_result(stmt, result_binds) != 0 ||
+                mysql_stmt_store_result(stmt) != 0)
+                goto driver_error;
 
-            cwist_free(result_binds);
-            cwist_free(buffers);
-            cwist_free(lengths);
-            cwist_free(is_null);
-            mysql_free_result(meta);
+            for (;;) {
+                int fetch_rc = mysql_stmt_fetch(stmt);
+                if (fetch_rc == MYSQL_NO_DATA) break;
+                if (fetch_rc != 0 && fetch_rc != MYSQL_DATA_TRUNCATED) goto driver_error;
+                bool resized = false;
+                for (unsigned int j = 0; j < num_fields; j++) {
+                    if (is_null[j] || lengths[j] < capacities[j]) continue;
+                    size_t new_cap = (size_t)lengths[j] + 1;
+                    char *new_buffer = (char *)cwist_alloc(new_cap);
+                    if (!new_buffer) goto oom;
+                    cwist_free(buffers[j]);
+                    buffers[j] = new_buffer;
+                    capacities[j] = new_cap;
+                    result_binds[j].buffer = new_buffer;
+                    result_binds[j].buffer_length = lengths[j] + 1;
+                    if (mysql_stmt_fetch_column(stmt, &result_binds[j], j, 0) != 0)
+                        goto driver_error;
+                    resized = true;
+                }
+                if (resized && mysql_stmt_bind_result(stmt, result_binds) != 0) goto driver_error;
+
+                row = cJSON_CreateObject();
+                if (!row) goto oom;
+                for (unsigned int j = 0; j < num_fields; j++) {
+                    const char *fname = fields[j].name ? fields[j].name : "";
+                    cJSON *cell;
+                    if (is_null[j]) {
+                        cell = cJSON_AddNullToObject(row, fname);
+                    } else {
+                        buffers[j][lengths[j]] = '\0';
+                        cell = cJSON_AddStringToObject(row, fname, buffers[j]);
+                    }
+                    if (!cell) goto oom;
+                }
+                if (!cJSON_AddItemToArray(rows, row)) goto oom;
+                row = NULL;
+            }
             *out_rows = rows;
+            rows = NULL;
         }
     }
 
-    mysql_stmt_close(stmt);
     mysql_set_last_error(mysql, NULL);
     err.error.err_i16 = CWIST_SUCCESS;
+    goto cleanup;
+
+driver_error:
+    mysql_set_last_error(mysql, mysql_stmt_error(stmt));
+    err.error.err_i16 = CWIST_ERROR_PROTOCOL;
+    goto cleanup;
+oom:
+    mysql_set_last_error(mysql, "out of memory");
+    err.error.err_i16 = CWIST_ERROR_NOMEM;
+cleanup:
+    cJSON_Delete(row);
+    cJSON_Delete(rows);
+    if (buffers) {
+        for (unsigned int j = 0; j < num_fields; j++) cwist_free(buffers[j]);
+    }
+    cwist_free(result_binds);
+    cwist_free(buffers);
+    cwist_free(capacities);
+    cwist_free(lengths);
+    cwist_free(is_null);
+    if (meta) mysql_free_result(meta);
+    cwist_free(param_binds);
+    if (stmt) mysql_stmt_close(stmt);
     return err;
 }
 

@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['c1m_2dfile_2dlimits_2emd_0',['c1m-file-limits.md',['../d2/d18/c1m-file-limits_8md.html',1,'(Global Namespace)'],['../dc/d55/ko_2c1m-file-limits_8md.html',1,'(Global Namespace)']]],
+  ['c1m_2dfile_2dlimits_2emd_0',['c1m-file-limits.md',['../dc/d55/ko_2c1m-file-limits_8md.html',1,'(Global Namespace)'],['../d2/d18/c1m-file-limits_8md.html',1,'(Global Namespace)']]],
   ['classic_2dpool_2dstarvation_2emd_1',['classic-pool-starvation.md',['../dc/d77/classic-pool-starvation_8md.html',1,'(Global Namespace)'],['../dd/dec/ko_2classic-pool-starvation_8md.html',1,'(Global Namespace)']]],
   ['compat_2ec_2',['compat.c',['../d0/d5b/compat_8c.html',1,'']]],
   ['component_2ec_3',['component.c',['../d2/d3e/component_8c.html',1,'']]],
@@ -27,5 +27,5 @@ var searchData=
   ['cwist_5fnats_2eh_24',['cwist_nats.h',['../d1/de1/cwist__nats_8h.html',1,'']]],
   ['cwist_5fredis_2ec_25',['cwist_redis.c',['../d4/dca/cwist__redis_8c.html',1,'']]],
   ['cwist_5fredis_2eh_26',['cwist_redis.h',['../d0/d39/cwist__redis_8h.html',1,'']]],
-  ['cwist_5ftutorial_2emd_27',['cwist_tutorial.md',['../d5/d46/cwist__tutorial_8md.html',1,'(Global Namespace)'],['../d5/da8/korean_2cwist__tutorial_8md.html',1,'(Global Namespace)']]]
+  ['cwist_5ftutorial_2emd_27',['cwist_tutorial.md',['../d5/da8/korean_2cwist__tutorial_8md.html',1,'(Global Namespace)'],['../d5/d46/cwist__tutorial_8md.html',1,'(Global Namespace)']]]
 ];

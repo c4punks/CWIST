@@ -22,6 +22,8 @@ typedef struct cwist_pg cwist_pg_t;
  *
  * @param conninfo Connection string (e.g. "host=localhost dbname=test user=postgres")
  *                 or URI (e.g. "postgresql://user:pass@host:port/dbname").
+ *                 Connection and query operations have 5-second and 30-second
+ *                 deadlines respectively. A transport failure closes the connection.
  * @return Opaque connection handle, or NULL on allocation/connection failure.
  */
 cwist_pg_t *cwist_pg_connect(const char *conninfo);
