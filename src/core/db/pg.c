@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <poll.h>
+#include <time.h>
 
 #if defined(CWIST_HAS_LIBPQ)
 #if defined(__has_include)
@@ -40,6 +43,83 @@ static void set_last_error(cwist_pg_t *pg, const char *msg) {
     }
 }
 
+static long long pg_now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+static int pg_wait_until(cwist_pg_t *pg, short events, long long deadline) {
+    int fd = PQsocket(pg->conn);
+    if (fd < 0) return -1;
+    for (;;) {
+        long long remaining = deadline - pg_now_ms();
+        if (remaining <= 0) {
+            set_last_error(pg, "database operation timed out");
+            return 0;
+        }
+        struct pollfd pfd = {.fd = fd, .events = events, .revents = 0};
+        int rc = poll(&pfd, 1, remaining > 2147483647 ? 2147483647 : (int)remaining);
+        if (rc > 0) return 1;
+        if (rc == 0) {
+            set_last_error(pg, "database operation timed out");
+            return 0;
+        }
+        if (errno != EINTR) {
+            set_last_error(pg, strerror(errno));
+            return -1;
+        }
+    }
+}
+
+static void pg_abort_connection(cwist_pg_t *pg) {
+    if (pg->conn) {
+        PQfinish(pg->conn);
+        pg->conn = NULL;
+    }
+}
+
+static int pg_flush(cwist_pg_t *pg, long long deadline) {
+    int rc;
+    while ((rc = PQflush(pg->conn)) == 1) {
+        if (pg_wait_until(pg, POLLOUT, deadline) != 1) return -1;
+    }
+    if (rc < 0) set_last_error(pg, PQerrorMessage(pg->conn));
+    return rc;
+}
+
+static PGresult *pg_results(cwist_pg_t *pg, const char *sql, int n_params,
+                            const char *const *param_values) {
+    long long deadline = pg_now_ms() + 30000;
+    int sent = n_params >= 0 ? PQsendQueryParams(pg->conn, sql, n_params, NULL,
+                                                 param_values, NULL, NULL, 0)
+                             : PQsendQuery(pg->conn, sql);
+    if (sent != 1) {
+        set_last_error(pg, PQerrorMessage(pg->conn));
+        return NULL;
+    }
+    if (pg_flush(pg, deadline) < 0) return NULL;
+
+    PGresult *last = NULL;
+    for (;;) {
+        while (PQisBusy(pg->conn)) {
+            if (!PQconsumeInput(pg->conn)) {
+                set_last_error(pg, PQerrorMessage(pg->conn));
+                goto fail;
+            }
+            if (pg_wait_until(pg, POLLIN, deadline) != 1) goto fail;
+        }
+        PGresult *next = PQgetResult(pg->conn);
+        if (!next) return last;
+        PQclear(last);
+        last = next;
+    }
+
+fail:
+    PQclear(last);
+    return NULL;
+}
+
 cwist_pg_t *cwist_pg_connect(const char *conninfo) {
     if (!conninfo || conninfo[0] == '\0') return NULL;
 
@@ -47,15 +127,31 @@ cwist_pg_t *cwist_pg_connect(const char *conninfo) {
     if (!pg) return NULL;
     memset(pg, 0, sizeof(*pg));
 
-    pg->conn = PQconnectdb(conninfo);
+    pg->conn = PQconnectStart(conninfo);
     if (!pg->conn) {
         cwist_free(pg);
         return NULL;
     }
-
-    if (PQstatus(pg->conn) != CONNECTION_OK) {
+    long long deadline = pg_now_ms() + 5000;
+    for (;;) {
+        PostgresPollingStatusType status = PQconnectPoll(pg->conn);
+        if (status == PGRES_POLLING_OK) break;
+        if (status == PGRES_POLLING_FAILED) {
+            set_last_error(pg, PQerrorMessage(pg->conn));
+            pg_abort_connection(pg);
+            cwist_free(pg);
+            return NULL;
+        }
+        short events = status == PGRES_POLLING_READING ? POLLIN : POLLOUT;
+        if (pg_wait_until(pg, events, deadline) != 1) {
+            pg_abort_connection(pg);
+            cwist_free(pg);
+            return NULL;
+        }
+    }
+    if (PQsetnonblocking(pg->conn, 1) != 0) {
         set_last_error(pg, PQerrorMessage(pg->conn));
-        PQfinish(pg->conn);
+        pg_abort_connection(pg);
         cwist_free(pg);
         return NULL;
     }
@@ -85,9 +181,9 @@ cwist_error_t cwist_pg_exec(cwist_pg_t *pg, const char *sql) {
         return err;
     }
 
-    PGresult *res = PQexec(pg->conn, sql);
+    PGresult *res = pg_results(pg, sql, -1, NULL);
     if (!res) {
-        set_last_error(pg, PQerrorMessage(pg->conn));
+        pg_abort_connection(pg);
         err.error.err_i16 = CWIST_ERROR_IO;
         return err;
     }
@@ -109,16 +205,16 @@ cwist_error_t cwist_pg_exec(cwist_pg_t *pg, const char *sql) {
 cwist_error_t cwist_pg_exec_params(cwist_pg_t *pg, const char *sql, int n_params,
                                    const char *const *param_values, cJSON **out_rows) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
+    cJSON *rows = NULL;
     if (out_rows) *out_rows = NULL;
-    if (!pg || !pg->conn || !sql) {
+    if (!pg || !pg->conn || !sql || n_params < 0 || (n_params > 0 && !param_values)) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;
     }
 
-    PGresult *res = PQexecParams(pg->conn, sql, n_params, NULL,
-                                 param_values, NULL, NULL, 0);
+    PGresult *res = pg_results(pg, sql, n_params, param_values);
     if (!res) {
-        set_last_error(pg, PQerrorMessage(pg->conn));
+        pg_abort_connection(pg);
         err.error.err_i16 = CWIST_ERROR_IO;
         return err;
     }
@@ -132,22 +228,28 @@ cwist_error_t cwist_pg_exec_params(cwist_pg_t *pg, const char *sql, int n_params
     }
 
     if (out_rows) {
-        cJSON *rows = cJSON_CreateArray();
+        rows = cJSON_CreateArray();
+        if (!rows) goto oom;
         int n_rows = PQntuples(res);
         int n_fields = PQnfields(res);
 
         for (int i = 0; i < n_rows; i++) {
             cJSON *row = cJSON_CreateObject();
+            if (!row) goto oom;
             for (int j = 0; j < n_fields; j++) {
                 const char *field_name = PQfname(res, j);
-                if (PQgetisnull(res, i, j)) {
-                    cJSON_AddNullToObject(row, field_name);
-                } else {
-                    const char *val = PQgetvalue(res, i, j);
-                    cJSON_AddStringToObject(row, field_name, val);
+                cJSON *cell = PQgetisnull(res, i, j)
+                                  ? cJSON_AddNullToObject(row, field_name)
+                                  : cJSON_AddStringToObject(row, field_name, PQgetvalue(res, i, j));
+                if (!cell) {
+                    cJSON_Delete(row);
+                    goto oom;
                 }
             }
-            cJSON_AddItemToArray(rows, row);
+            if (!cJSON_AddItemToArray(rows, row)) {
+                cJSON_Delete(row);
+                goto oom;
+            }
         }
         *out_rows = rows;
     }
@@ -155,6 +257,13 @@ cwist_error_t cwist_pg_exec_params(cwist_pg_t *pg, const char *sql, int n_params
     PQclear(res);
     set_last_error(pg, NULL);
     err.error.err_i16 = CWIST_SUCCESS;
+    return err;
+
+oom:
+    cJSON_Delete(rows);
+    PQclear(res);
+    set_last_error(pg, "out of memory");
+    err.error.err_i16 = CWIST_ERROR_NOMEM;
     return err;
 }
 
