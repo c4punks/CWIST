@@ -38,6 +38,7 @@ typedef struct {
     cwist_http_header_node *headers;
     long status_code;
     int header_count;
+    bool oom;
 } response_headers_t;
 
 /**
@@ -136,35 +137,54 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
         value_len--;
     }
 
-    if (name_len > 0) {
-        cwist_scratch_t name_s CWIST_SCRATCH_DEFER = {0};
-        char *name = cwist_scratch_alloc(&name_s, name_len + 1);
-        if (!name) return total;
-        memcpy(name, ptr, name_len);
-        name[name_len] = '\0';
-
-        cwist_scratch_t val_s CWIST_SCRATCH_DEFER = {0};
-        char *val = cwist_scratch_alloc(&val_s, value_len + 1);
-        if (!val) return total;
-        memcpy(val, value, value_len);
-        val[value_len] = '\0';
-
-        cwist_http_header_node *node = cwist_alloc(sizeof(*node));
-        if (!node) return total;
-        node->key = cwist_sstring_create();
-        node->value = cwist_sstring_create();
-        if (!node->key || !node->value) {
-            cwist_sstring_destroy(node->key);
-            cwist_sstring_destroy(node->value);
-            cwist_free(node);
-            return total;
-        }
-        cwist_sstring_assign(node->key, name);
-        cwist_sstring_assign(node->value, val);
-        node->next = rh->headers;
-        rh->headers = node;
-        rh->header_count++;
+    cwist_scratch_t name_s CWIST_SCRATCH_DEFER = {0};
+    char *name = cwist_scratch_alloc(&name_s, name_len + 1);
+    if (!name) {
+        rh->oom = true;
+        return 0;
     }
+    memcpy(name, ptr, name_len);
+    name[name_len] = '\0';
+
+    cwist_scratch_t val_s CWIST_SCRATCH_DEFER = {0};
+    char *val = cwist_scratch_alloc(&val_s, value_len + 1);
+    if (!val) {
+        rh->oom = true;
+        return 0;
+    }
+    memcpy(val, value, value_len);
+    val[value_len] = '\0';
+
+    cwist_http_header_node *node = cwist_alloc(sizeof(*node));
+    if (!node) {
+        rh->oom = true;
+        return 0;
+    }
+    node->key = cwist_sstring_create();
+    node->value = cwist_sstring_create();
+    if (!node->key || !node->value) {
+        cwist_sstring_destroy(node->key);
+        cwist_sstring_destroy(node->value);
+        cwist_free(node);
+        rh->oom = true;
+        return 0;
+    }
+    cwist_error_t key_err = cwist_sstring_assign(node->key, name);
+    bool key_ok = cwist_error_is_ok(&key_err);
+    cwist_error_dispose(&key_err);
+    cwist_error_t value_err = cwist_sstring_assign(node->value, val);
+    bool value_ok = cwist_error_is_ok(&value_err);
+    cwist_error_dispose(&value_err);
+    if (!key_ok || !value_ok) {
+        cwist_sstring_destroy(node->key);
+        cwist_sstring_destroy(node->value);
+        cwist_free(node);
+        rh->oom = true;
+        return 0;
+    }
+    node->next = rh->headers;
+    rh->headers = node;
+    rh->header_count++;
 
     return total;
 }
@@ -585,7 +605,7 @@ static cwist_error_t http_client_request_locked(cwist_http_client *client, const
         curl_slist_free_all(curl_headers);
     }
 
-    if (res != CURLE_OK) {
+    if (res != CURLE_OK || resp_hdrs.oom) {
         free(resp_body.data);
         cwist_http_header_free_all(resp_hdrs.headers);
         err.error.err_i16 = -1;

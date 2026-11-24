@@ -2242,11 +2242,17 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
                 st->body_len = 0;
                 st->body_cap = 0;
             } else {
-                st->body = realloc(st->body, assembled_len);
-                if (!st->body) {
+                /* Keep the original LSQUIC-owned buffer until realloc succeeds. */
+                char *assembled_body = realloc(st->body, assembled_len);
+                if (!assembled_body) {
+                    free(st->body);
+                    st->body = NULL;
+                    st->body_len = 0;
+                    st->body_cap = 0;
                     lsquic_stream_close(stream);
                     return;
                 }
+                st->body = assembled_body;
                 memcpy(st->body, assembled, assembled_len);
                 st->body_len = assembled_len;
                 st->body_cap = assembled_len;

@@ -685,7 +685,7 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     if (!raw) return -1;
 
     char *payload_b64 = session_base64_encode((const uint8_t *)raw, strlen(raw));
-    free(raw);
+    cJSON_free(raw);
     if (!payload_b64) return -1;
     if (strlen(payload_b64) > 8192) {
         cwist_free(payload_b64);
