@@ -75,14 +75,13 @@ void test_bind_missing_required(void) {
 void test_bind_invalid_email(void) {
     printf("test_bind_invalid_email...\n");
     static const char *invalid[] = {
-        "not-an-email", "a b@c.d", "x@@y.z", "a@b..c", "a@-b.c", ".a@b.c",
-        "a..b@c.d", "a@b.c\\r\\nBcc: victim@example.com",
+        "not-an-email", "a b@c.d", "x@@y.z",   "a@b..c",
+        "a@-b.c",       ".a@b.c",  "a..b@c.d", "a@b.c\\r\\nBcc: victim@example.com",
     };
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
         char json[512];
         snprintf(json, sizeof(json),
-                 "{\"email\":\"%s\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}",
-                 invalid[i]);
+                 "{\"email\":\"%s\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}", invalid[i]);
         cwist_http_request *req = cwist_http_request_create();
         cwist_sstring_assign(req->body, json);
         user_t out = {0};
@@ -373,7 +372,10 @@ static void test_bind_defensive_bounds(void) {
 
     /* 1. NULL key field */
     cwist_bind_field_t bad_fields[] = {
-        {.json_key = NULL, .target_type = CWIST_BIND_INT, .target_offset = 0, .target_size = sizeof(int)},
+        {.json_key = NULL,
+         .target_type = CWIST_BIND_INT,
+         .target_offset = 0,
+         .target_size = sizeof(int)},
     };
     cwist_bind_schema_t bad_schema = {bad_fields, 1, sizeof(small_t)};
     small_t out = {0};
@@ -387,7 +389,10 @@ static void test_bind_defensive_bounds(void) {
 
     /* 2. OOB offset */
     cwist_bind_field_t oob_fields[] = {
-        {.json_key = "x", .target_type = CWIST_BIND_INT, .target_offset = 100, .target_size = sizeof(int)},
+        {.json_key = "x",
+         .target_type = CWIST_BIND_INT,
+         .target_offset = 100,
+         .target_size = sizeof(int)},
     };
     cwist_bind_schema_t oob_schema = {oob_fields, 1, sizeof(small_t)};
     ok = cwist_app_req_bind_json(req, &oob_schema, &out, &result);
@@ -425,7 +430,33 @@ static void test_bind_query(void) {
     printf("  OK\n");
 }
 
+static void test_bind_nul_and_precision(void) {
+    const char *nul_json =
+        "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Al\\u0000ice\",\"score\":95.5}";
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, (char *)nul_json);
+    user_t out = {0};
+    cwist_bind_result_t result;
+    assert(!cwist_app_req_bind_json(req, &user_schema, &out, &result));
+    cwist_http_request_destroy(req);
+
+    const char *literal_json =
+        "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Al\\\\u0000\",\"score\":95.5}";
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, (char *)literal_json);
+    assert(cwist_app_req_bind_json(req, &user_schema, &out, &result));
+    cwist_http_request_destroy(req);
+
+    const char *rounded_json =
+        "{\"email\":\"alice@example.com\",\"age\":9007199254740992,\"name\":\"Alice\",\"score\":95.5}";
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, (char *)rounded_json);
+    assert(!cwist_app_req_bind_json(req, &user_schema, &out, &result));
+    cwist_http_request_destroy(req);
+}
+
 int main(void) {
+    test_bind_nul_and_precision();
     test_bind_rejects_invalid_numbers_and_shapes();
     test_bind_success();
     test_bind_missing_required();

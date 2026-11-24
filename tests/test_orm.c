@@ -43,7 +43,8 @@ static cJSON *row_name_score(const char *name, double score) {
 static void test_query_and_transactions(void) {
     cwist_orm_t *orm = open_memdb();
     cwist_orm_immediate_commit(false);
-    assert(rc(cwist_orm_exec(orm, "CREATE TABLE t(id INTEGER PRIMARY KEY, name TEXT, score REAL);")) == 0);
+    assert(rc(cwist_orm_exec(
+               orm, "CREATE TABLE t(id INTEGER PRIMARY KEY, name TEXT, score REAL);")) == 0);
 
     cJSON *rows = NULL;
     assert(rc(cwist_orm_query(orm, "SELECT 1 AS one, 'x' AS s, NULL AS n, 2.5 AS r;", &rows)) == 0);
@@ -87,7 +88,8 @@ static void test_query_and_transactions(void) {
     assert(rc(cwist_orm_commit(orm)) == 0);
     assert(rc(cwist_orm_query(orm, "SELECT name FROM t;", &rows)) == 0);
     assert(cJSON_GetArraySize(rows) == 1);
-    assert(strcmp(cJSON_GetObjectItem(cJSON_GetArrayItem(rows, 0), "name")->valuestring, "kept") == 0);
+    assert(strcmp(cJSON_GetObjectItem(cJSON_GetArrayItem(rows, 0), "name")->valuestring, "kept") ==
+           0);
     cJSON_Delete(rows);
 
     /* COMMIT / ROLLBACK with no open transaction are SQL errors. */
@@ -100,7 +102,8 @@ static void test_query_and_transactions(void) {
 static void test_insert_returning(void) {
     cwist_orm_t *orm = open_memdb();
     cwist_orm_immediate_commit(true);
-    assert(rc(cwist_orm_exec(orm, "CREATE TABLE u(id INTEGER PRIMARY KEY, name TEXT, score REAL);")) == 0);
+    assert(rc(cwist_orm_exec(
+               orm, "CREATE TABLE u(id INTEGER PRIMARY KEY, name TEXT, score REAL);")) == 0);
 
     cJSON *row = row_name_score("a", 1);
     int id_i = 0;
@@ -123,19 +126,25 @@ static void test_insert_returning(void) {
     assert(via_macro == 5);
 
     /* Large rowids round-trip exactly up to 2^53. */
-    assert(rc(cwist_orm_exec(orm, "INSERT INTO u(id, name) VALUES (9007199254740990, 'big');")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO u(id, name) VALUES (9007199254740990, 'big');")) ==
+           0);
     assert(rc(cwist_orm_insert_returning_llong(orm, "u", row, "id", &id_ll)) == 0);
     assert(id_ll == 9007199254740991LL);
     cJSON_Delete(row);
 
     /* Invalid arguments and failed inserts. */
     row = row_name_score("b", 2);
-    assert(rc(cwist_orm_insert_returning_int(NULL, "u", row, "id", &id_i)) == CWIST_ERROR_INVALID_PARAM);
-    assert(rc(cwist_orm_insert_returning_int(orm, NULL, row, "id", &id_i)) == CWIST_ERROR_INVALID_PARAM);
-    assert(rc(cwist_orm_insert_returning_int(orm, "u", NULL, "id", &id_i)) == CWIST_ERROR_INVALID_PARAM);
-    assert(rc(cwist_orm_insert_returning_int(orm, "u", row, NULL, &id_i)) == CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_insert_returning_int(NULL, "u", row, "id", &id_i)) ==
+           CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_insert_returning_int(orm, NULL, row, "id", &id_i)) ==
+           CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_insert_returning_int(orm, "u", NULL, "id", &id_i)) ==
+           CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_insert_returning_int(orm, "u", row, NULL, &id_i)) ==
+           CWIST_ERROR_INVALID_PARAM);
     id_j = (cJSON *)1;
-    assert(rc(cwist_orm_insert_returning_json(orm, "u", row, "id", NULL)) == CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_insert_returning_json(orm, "u", row, "id", NULL)) ==
+           CWIST_ERROR_INVALID_PARAM);
     assert(rc(cwist_orm_insert_returning_json(orm, "missing_table", row, "id", &id_j)) != 0);
     assert(id_j == NULL);
     cJSON_Delete(row);
@@ -145,8 +154,11 @@ static void test_insert_returning(void) {
 static void test_select_one(void) {
     cwist_orm_t *orm = open_memdb();
     cwist_orm_immediate_commit(true);
-    assert(rc(cwist_orm_exec(orm, "CREATE TABLE s(id INTEGER PRIMARY KEY, name TEXT, score REAL, n INTEGER);")) == 0);
-    assert(rc(cwist_orm_exec(orm, "INSERT INTO s VALUES (1, 'alice', 1.5, 7), (2, 'bob', -2.25, NULL);")) == 0);
+    assert(rc(cwist_orm_exec(
+               orm, "CREATE TABLE s(id INTEGER PRIMARY KEY, name TEXT, score REAL, n INTEGER);")) ==
+           0);
+    assert(rc(cwist_orm_exec(
+               orm, "INSERT INTO s VALUES (1, 'alice', 1.5, 7), (2, 'bob', -2.25, NULL);")) == 0);
 
     int i = 0;
     long l = 0;
@@ -169,11 +181,13 @@ static void test_select_one(void) {
 
     /* _Generic wrapper. */
     double via_macro = 0;
-    assert(rc(cwist_orm_select_one(orm, "s", "score", "id = 1", &via_macro)) == 0 && via_macro == 1.5);
+    assert(rc(cwist_orm_select_one(orm, "s", "score", "id = 1", &via_macro)) == 0 &&
+           via_macro == 1.5);
 
     /* Type mismatch, NULL value and no matching row are errors. */
     assert(rc(cwist_orm_select_one_int(orm, "s", "name", "id = 1", &i)) == CWIST_ERROR_PROTOCOL);
-    assert(rc(cwist_orm_select_one_string(orm, "s", "score", "id = 1", &str)) == CWIST_ERROR_PROTOCOL);
+    assert(rc(cwist_orm_select_one_string(orm, "s", "score", "id = 1", &str)) ==
+           CWIST_ERROR_PROTOCOL);
     assert(str == NULL);
     assert(rc(cwist_orm_select_one_int(orm, "s", "n", "id = 2", &i)) == CWIST_ERROR_PROTOCOL);
     assert(rc(cwist_orm_select_one_int(orm, "s", "n", "id = 99", &i)) == CWIST_ERROR_PROTOCOL);
@@ -190,7 +204,9 @@ static void test_value_fidelity(void) {
     cwist_orm_t *orm = open_memdb();
     cwist_orm_immediate_commit(true);
     assert(rc(cwist_orm_exec(orm, "CREATE TABLE f(id INTEGER PRIMARY KEY, code TEXT);")) == 0);
-    assert(rc(cwist_orm_exec(orm, "INSERT INTO f VALUES (1234567890123456, '007'), (2, ' 12'), (3, '-5');")) == 0);
+    assert(rc(cwist_orm_exec(
+               orm, "INSERT INTO f VALUES (1234567890123456, '007'), (2, ' 12'), (3, '-5');")) ==
+           0);
     long long ll = 0;
     assert(rc(cwist_orm_select_one_llong(orm, "f", "id", "code = '007'", &ll)) == 0);
     assert(ll == 1234567890123456LL);
@@ -219,7 +235,8 @@ static void test_exact_i64(void) {
                                   "(1, 9007199254740993, '9223372036854775807'), "
                                   "(2, -9223372036854775808, '007'), "
                                   "(3, 1.5, NULL), (4, 0, '-0'), "
-                                  "(5, 0, '+1'), (6, 0, ' 1'), (7, 0, '01'), (8, 0, '-01');")) == 0);
+                                  "(5, 0, '+1'), (6, 0, ' 1'), (7, 0, '01'), (8, 0, '-01');")) ==
+           0);
     int64_t v = 7;
     assert(rc(cwist_orm_select_one_i64(orm, "x", "v", "id = 1", &v)) == 0);
     assert(v == INT64_C(9007199254740993));
@@ -318,14 +335,16 @@ static void test_dialects(void) {
 static void test_query_typed(void) {
     cwist_orm_t *orm = open_memdb();
     cwist_orm_immediate_commit(true);
-    assert(rc(cwist_orm_exec(orm,
-                             "CREATE TABLE q(id INTEGER PRIMARY KEY, r REAL, s TEXT, b BLOB, n TEXT);")) == 0);
+    assert(rc(cwist_orm_exec(
+               orm, "CREATE TABLE q(id INTEGER PRIMARY KEY, r REAL, s TEXT, b BLOB, n TEXT);")) ==
+           0);
     assert(rc(cwist_orm_exec(orm, "INSERT INTO q VALUES "
                                   "(1, 2.5, 'hello', x'00ff10', NULL), "
                                   "(9007199254740993, -0.25, '007', x'', '');")) == 0);
 
     cwist_orm_result_t *res = NULL;
-    assert(rc(cwist_orm_query_typed(orm, "SELECT id, r, s, b, n FROM q ORDER BY r DESC;", &res)) == 0);
+    assert(rc(cwist_orm_query_typed(orm, "SELECT id, r, s, b, n FROM q ORDER BY r DESC;", &res)) ==
+           0);
     assert(res && res->row_count == 2 && res->column_count == 5);
     assert(cwist_orm_result_column_index(res, "id") == 0);
     assert(cwist_orm_result_column_index(res, "n") == 4);
@@ -390,7 +409,8 @@ static void test_query_typed(void) {
     /* The legacy path still types by text: the id is a JSON number rounded
      * to a double, and '007' is a string (not canonical integer text). */
     cJSON *rows = NULL;
-    assert(rc(cwist_orm_query(orm, "SELECT id, s FROM q WHERE id = 9007199254740993;", &rows)) == 0);
+    assert(rc(cwist_orm_query(orm, "SELECT id, s FROM q WHERE id = 9007199254740993;", &rows)) ==
+           0);
     cJSON *legacy_row = cJSON_GetArrayItem(rows, 0);
     cJSON *legacy_id = cJSON_GetObjectItem(legacy_row, "id");
     assert(cJSON_IsNumber(legacy_id) && legacy_id->valuedouble == 9007199254740992.0);
@@ -446,6 +466,21 @@ static void test_mysql_literal_safety(void) {
     cwist_orm_close_socket(orm);
 }
 
+static void test_json_literal_rejections(void) {
+    cwist_orm_t *orm = open_memdb();
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE literals(v);")) == 0);
+    cJSON *rounded = cJSON_CreateObject();
+    cJSON_AddNumberToObject(rounded, "v", 9007199254740992.0);
+    assert(rc(cwist_orm_insert(orm, "literals", rounded)) == CWIST_ERROR_NOMEM);
+    cJSON_Delete(rounded);
+
+    cJSON *safe = cJSON_CreateObject();
+    cJSON_AddNumberToObject(safe, "v", 9007199254740991.0);
+    assert(rc(cwist_orm_insert(orm, "literals", safe)) == 0);
+    cJSON_Delete(safe);
+    cwist_orm_close_socket(orm);
+}
+
 static void test_closed_peer_does_not_raise_sigpipe(void) {
     int fds[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) == 0);
@@ -477,6 +512,7 @@ int main(void) {
     test_dialects();
     test_numeric_literal_fidelity();
     test_mysql_literal_safety();
+    test_json_literal_rejections();
     test_closed_peer_does_not_raise_sigpipe();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");

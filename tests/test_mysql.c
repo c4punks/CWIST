@@ -44,12 +44,21 @@ int main(void) {
     assert(cwist_mysql_connect("") == NULL);
 
     /* Connection to unreachable dummy port should fail gracefully without crashing */
-    cwist_mysql_t *mysql = cwist_mysql_connect("host=127.0.0.1 port=65432 user=root dbname=nonexistent");
+    cwist_mysql_t *mysql =
+        cwist_mysql_connect("host=127.0.0.1 port=65432 user=root dbname=nonexistent");
     assert(mysql == NULL);
 
     /* URI format to unreachable dummy port should also fail gracefully */
     mysql = cwist_mysql_connect("mysql://root:secret@127.0.0.1:65432/nonexistent");
     assert(mysql == NULL);
+
+    const char *invalid[] = {
+        "password=\"secret",         "password='secret",        "password=\"secret\"junk",
+        "password=secret junk",      "host=127.0.0.1 port=abc", "host=127.0.0.1 port=0",
+        "host=127.0.0.1 port=65536",
+    };
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++)
+        assert(cwist_mysql_connect(invalid[i]) == NULL);
     test_silent_peer_times_out();
 
     /* Disconnect NULL is safe */

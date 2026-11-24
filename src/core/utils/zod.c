@@ -40,8 +40,8 @@ static bool type_matches(const cJSON *item, cwist_field_type_t t) {
                 return false;
             double intpart;
             return modf(item->valuedouble, &intpart) == 0.0 &&
-                   item->valuedouble >= -9223372036854775808.0 &&
-                   item->valuedouble < 9223372036854775808.0;
+                   item->valuedouble >= -9007199254740991.0 &&
+                   item->valuedouble <= 9007199254740991.0;
         case CWIST_FIELD_FLOAT:
             return cJSON_IsNumber(item) && cwist_number_double_is_finite(item->valuedouble);
         case CWIST_FIELD_BOOL: return cJSON_IsBool(item);
