@@ -79,7 +79,7 @@
 1	src/core/orm/orm.c:return strdup(cJSON_IsTrue(node) ? "TRUE" : "FALSE");
 1	src/core/orm/orm.c:unsigned char *out = (unsigned char *)malloc(cap ? cap : 1);
 1	src/core/orm/orm.c:v->text = strdup(payload->valuestring);
-1	src/core/orm/orm_socket.c:(cwist_orm_worker_ctx_t *)calloc(1, sizeof(*ctx));
+1	src/core/orm/orm_socket.c:cwist_orm_worker_ctx_t *ctx = (cwist_orm_worker_ctx_t *)calloc(1, sizeof(*ctx));
 1	src/core/orm/orm_socket.c:char *out = (char *)malloc(out_cap);
 1	src/core/orm/orm_socket.c:ctx->db_path = strdup(db_path);
 2	src/core/orm/orm_socket.c:free(ctx);

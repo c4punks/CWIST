@@ -18,6 +18,7 @@
 #include <cwist/net/redis/cwist_redis.h>
 #include <cwist/sys/job/durable_queue.h>
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -44,6 +45,8 @@ static void make_name(char *buf, size_t len, const char *tag) {
 
 /* enqueue -> claim -> ack; payload (binary) and type round-trip; ack removes. */
 static int t_enqueue_claim_ack(cwist_job_queue_t *q) {
+    cwist_error_t invalid = cwist_job_queue_enqueue(q, "x", SIZE_MAX, NULL);
+    CHECK(invalid.error.err_i16 == CWIST_ERROR_INVALID_PARAM, "oversized payload was accepted");
     const char binary[] = {'h', '\0', 'l', '\0', 'o'};
     cwist_error_t err = cwist_job_queue_enqueue(q, binary, sizeof(binary), "email");
     CHECK(err.error.err_i16 == 0, "enqueue failed");
@@ -188,6 +191,16 @@ static int run_suite(cwist_job_queue_t *(*create)(void *ctx, const char *name,
     make_name(name, sizeof(name), tag);
     q = create(ctx, name, &(cwist_job_queue_opts_t){.name = name});
     if (!q) return -2;
+    if (strcmp(tag, "nats") == 0) {
+        cwist_error_t invalid = cwist_job_queue_enqueue(q, "x", (size_t)INT_MAX + 1, NULL);
+        CHECK(invalid.error.err_i16 == CWIST_ERROR_INVALID_PARAM,
+              "NATS payload length above INT_MAX was accepted");
+        make_name(name, sizeof(name), tag);
+        cwist_job_queue_t *invalid_q =
+            create(ctx, name,
+                   &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = UINT64_MAX});
+        CHECK(invalid_q == NULL, "NATS visibility timeout above the nanosecond range was accepted");
+    }
     if (t_enqueue_claim_ack(q) != 0) return -1;
     cwist_job_queue_destroy(q);
 

@@ -302,7 +302,7 @@ Functions</h2></td></tr>
 <p>Acquires the shared curl global state, then initializes an easy handle with defaults: redirect following (max 10 hops), 30 s timeout, TCP keepalive, automatic content decoding, and a CWIST user agent.</p>
 <dl class="section return"><dt>Returns</dt><dd>new client handle, or NULL on allocation/curl init failure (the curl global reference is released in that case). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00219">219</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00221">221</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00019">cwist_curl_global_acquire()</a>, <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -334,7 +334,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00267">267</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00269">269</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/d7f/curl__global_8c_source.html#l00036">cwist_curl_global_release()</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -385,7 +385,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00383">383</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00385">385</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -461,7 +461,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>CWIST error, err_i16 == 0 on success. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00450">450</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00452">452</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, and <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>.</p>
 
@@ -503,7 +503,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00409">409</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00411">411</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -542,7 +542,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00366">366</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00368">368</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -575,7 +575,7 @@ Functions</h2></td></tr>
 <p>Allow <a href="file://">file://</a> requests only below a configured directory. </p>
 <p>File URLs are rejected by default. The root is canonicalized when set, and each requested file must resolve inside it. Pass NULL to disable file URLs. </p><dl class="section return"><dt>Returns</dt><dd>0 on success, -1 for an invalid client, root, or unsupported host. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00340">340</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00342">342</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -615,7 +615,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Redirects are not followed for requests with custom headers, preventing application credentials from being forwarded to another origin. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00292">292</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00294">294</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>
@@ -654,7 +654,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00311">311</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d6/d32/http__client_8c_source.html#l00313">313</a> of file <a class="el" href="../../d6/d32/http__client_8c_source.html">http_client.c</a>.</p>
 
 </div>
 </div>

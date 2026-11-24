@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <stdint.h>
+#include <limits.h>
 #include <arpa/inet.h>
 
 #ifndef MSG_NOSIGNAL
@@ -1174,19 +1175,24 @@ cwist_error_t cwist_orm_select_one_int(cwist_orm_t *orm, const char *table, cons
  * @param out          [out] Receives the value as a long.
  * @return CWIST_SUCCESS on success; otherwise the error from
  *         cwist_orm_select_one_json() or CWIST_ERROR_PROTOCOL when the
- *         returned value is not a number.
+ *         returned value is not a number or canonical integer string.
  */
 cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, const char *column,
                                         const char *where_clause, long *out) {
-    cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
-    if (err.error.err_i16 != 0) return err;
-    if (cJSON_IsNumber(val)) {
-        *out = (long)val->valuedouble;
-    } else {
-        err.error.err_i16 = CWIST_ERROR_PROTOCOL;
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!out) {
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
     }
-    cJSON_Delete(val);
+    long long value = 0;
+    err = cwist_orm_select_one_llong(orm, table, column, where_clause, &value);
+    if (err.error.err_i16 == 0) {
+        if (value < LONG_MIN || value > LONG_MAX) {
+            err.error.err_i16 = CWIST_ERROR_PROTOCOL;
+        } else {
+            *out = (long)value;
+        }
+    }
     return err;
 }
 
@@ -1200,15 +1206,29 @@ cwist_error_t cwist_orm_select_one_long(cwist_orm_t *orm, const char *table, con
  * @param out          [out] Receives the value as a long long.
  * @return CWIST_SUCCESS on success; otherwise the error from
  *         cwist_orm_select_one_json() or CWIST_ERROR_PROTOCOL when the
- *         returned value is not a number.
+ *         returned value is not a number or canonical integer string.
  */
 cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, const char *column,
                                          const char *where_clause, long long *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!out) {
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
+    }
+    err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
-        *out = (long long)val->valuedouble;
+        if (out) *out = (long long)val->valuedouble;
+    } else if (cJSON_IsString(val) && val->valuestring) {
+        char *end = NULL;
+        errno = 0;
+        long long value = strtoll(val->valuestring, &end, 10);
+        if (errno != ERANGE && end != val->valuestring && end && *end == '\0') {
+            if (out) *out = value;
+        } else {
+            err.error.err_i16 = CWIST_ERROR_PROTOCOL;
+        }
     } else {
         err.error.err_i16 = CWIST_ERROR_PROTOCOL;
     }

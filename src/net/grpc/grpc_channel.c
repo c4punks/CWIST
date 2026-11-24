@@ -523,7 +523,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, c
                 if (backoff > (double)policy->max_backoff_ms)
                     backoff = (double)policy->max_backoff_ms;
                 if (deadline) {
-                    uint64_t left = deadline - channel_now_ms();
+                    now = channel_now_ms();
+                    uint64_t left = now < deadline ? deadline - now : 0;
                     if (delay > left) delay = left;
                 }
                 channel_sleep_ms(delay);
@@ -610,7 +611,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, c
         cwist_grpc_call_destroy(call);
         channel_release(ch, sub);
         if (deadline) {
-            uint64_t left = deadline - channel_now_ms();
+            now = channel_now_ms();
+            uint64_t left = now < deadline ? deadline - now : 0;
             if (delay > left) delay = left;
         }
         channel_sleep_ms(delay);

@@ -114,6 +114,12 @@ int main(void) {
             if (probes[j].delay_us < probes[i].delay_us) assert(probes[j].order < probes[i].order);
         }
     }
+    cwist_reactor_timer_t saturated;
+    cwist_reactor_timer_init(&saturated, cancelled_cb, NULL);
+    assert(cwist_reactor_timer_arm(loop, &saturated, UINT64_MAX));
+    assert(saturated.deadline_ns == UINT64_MAX);
+    cwist_reactor_timer_cancel(loop, &saturated);
+
     assert(!cancelled_fired);
     assert(rearmed_fired == 1);
     assert((rearmed_fired_ns - start_ns) / 1000 >= 50000);

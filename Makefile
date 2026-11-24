@@ -1773,7 +1773,7 @@ test_orm:
 endif
 
 test_core_utils: $(LIB_NAME) tests/test_core_utils.c
-	$(CC) $(CFLAGS) -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
 	./test_core_utils
 
 test_template: $(LIB_NAME) tests/test_template.c

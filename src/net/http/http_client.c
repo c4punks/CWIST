@@ -56,11 +56,13 @@ typedef struct {
  *         the transfer.
  */
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    if (size && nmemb > SIZE_MAX / size) return 0;
     size_t total = size * nmemb;
+    if (total == 0) return 0;
     response_body_t *body = (response_body_t *)userp;
     /* Refuse bodies larger than the server-side cap to prevent an OOM DoS
      * from a malicious or misbehaving server. */
-    if (body->size + total > CWIST_HTTP_MAX_BODY_SIZE) return 0;
+    if (total > CWIST_HTTP_MAX_BODY_SIZE - body->size) return 0;
     size_t need = body->size + total;
     if (need > body->cap) {
         size_t new_cap = body->cap ? body->cap * 2 : 4096;
