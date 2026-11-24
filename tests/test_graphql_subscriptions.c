@@ -316,6 +316,9 @@ int main(void) {
     int fd_binary = attach_conn(reactor);      /* binary GraphQL message */
     int fd_shape = attach_conn(reactor);       /* non-object JSON message */
     int fd_bad_subscribe = attach_conn(reactor);
+    int fd_nul_query = attach_conn(reactor);
+    int fd_nul_var = attach_conn(reactor);
+    int fd_escaped_bs = attach_conn(reactor);
     int fd_dup = attach_conn(reactor);         /* duplicate operation id */
     int fd = attach_conn(reactor);             /* main flow */
 
@@ -377,6 +380,39 @@ int main(void) {
     expect_eof(fd_bad_subscribe);
     close(fd_bad_subscribe);
     puts("invalid subscribe shape -> close 4400: ok");
+
+    write_text(fd_nul_query, "{\"type\":\"connection_init\"}");
+    cJSON_Delete(read_json_message(fd_nul_query));
+    write_text(fd_nul_query,
+               "{\"id\":\"nul_q\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter\\u0000suffix }\"}}");
+    expect_close_code(fd_nul_query, CLOSE_BAD_REQUEST);
+    expect_eof(fd_nul_query);
+    close(fd_nul_query);
+    puts("subscribe with embedded NUL in query -> close 4400: ok");
+
+    write_text(fd_nul_var, "{\"type\":\"connection_init\"}");
+    cJSON_Delete(read_json_message(fd_nul_var));
+    write_text(fd_nul_var,
+               "{\"id\":\"nul_v\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter }\",\"variables\":{\"topic\":\"t\\u0000suffix\"}}}");
+    expect_close_code(fd_nul_var, CLOSE_BAD_REQUEST);
+    expect_eof(fd_nul_var);
+    close(fd_nul_var);
+    puts("subscribe with embedded NUL in variables -> close 4400: ok");
+
+    write_text(fd_escaped_bs, "{\"type\":\"connection_init\"}");
+    cJSON_Delete(read_json_message(fd_escaped_bs));
+    write_text(fd_escaped_bs,
+               "{\"id\":\"esc\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter(topic: \\\"t\\\\u0000suffix\\\") }\"}}");
+    expect_silence(fd_escaped_bs, 100);
+    write_text(fd_escaped_bs, "{\"id\":\"esc\",\"type\":\"complete\"}");
+    write_masked(fd_escaped_bs, 0x88, (const uint8_t *)"\x03\xE8", 2);
+    expect_close_code(fd_escaped_bs, 1000);
+    expect_eof(fd_escaped_bs);
+    close(fd_escaped_bs);
+    puts("subscribe with escaped backslash -> ok");
 
     /* 5. Duplicate subscriber id closes with 4409. */
     write_text(fd_dup, "{\"type\":\"connection_init\"}");
