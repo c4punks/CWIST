@@ -246,7 +246,11 @@ static struct cwist_webrtc_conn *table_find(const cwist_webrtc_ctx *ctx,
 
 /** @brief Double the bucket array once the load factor passes 1. */
 static void table_grow(cwist_webrtc_ctx *ctx) {
+    if (ctx->nbuckets > UINT32_MAX / 2) return;
     uint32_t nb = ctx->nbuckets * 2;
+#if SIZE_MAX <= UINT32_MAX
+    if (nb > SIZE_MAX / sizeof(struct cwist_webrtc_conn *)) return;
+#endif
     struct cwist_webrtc_conn **b = cwist_alloc(nb * sizeof(*b));
     if (!b) return; /* keep the old, longer chains */
     uint32_t old_n = ctx->nbuckets;

@@ -152,7 +152,7 @@ static int grpc_client_wait(cwist_grpc_client *c, short events, uint64_t deadlin
             if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
             return 0;
         }
-        if (rc == 0) return -1; /* timeout */
+        if (rc == 0) continue;
         if (errno == EINTR) continue;
         return -1;
     }
@@ -1241,6 +1241,11 @@ cwist_grpc_call *cwist_grpc_call_start_ex(cwist_grpc_client *c, const char *meth
 
     pthread_mutex_lock(&c->mu);
     if (c->active) {
+        pthread_mutex_unlock(&c->mu);
+        return NULL;
+    }
+    if (c->next_stream_id == 0 || c->next_stream_id > 0x7ffffffdU) {
+        c->goaway = 1;
         pthread_mutex_unlock(&c->mu);
         return NULL;
     }

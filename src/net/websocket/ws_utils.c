@@ -235,6 +235,11 @@ static void SHA1Final(uint8_t digest[20], SHA1_CTX *context) {
 void sha1(const uint8_t *data, size_t len, uint8_t *hash) {
     SHA1_CTX ctx;
     SHA1Init(&ctx);
+    while (len > UINT32_MAX) {
+        SHA1Update(&ctx, data, UINT32_MAX);
+        data += UINT32_MAX;
+        len -= UINT32_MAX;
+    }
     SHA1Update(&ctx, data, (uint32_t)len);
     SHA1Final(hash, &ctx);
 }
@@ -256,7 +261,10 @@ static const int mod_table[] = {0, 2, 1};
  * @return Heap-allocated Base64 string, or NULL when allocation fails.
  */
 char *base64_encode(const uint8_t *data, size_t input_length, size_t *output_length) {
-    *output_length = 4 * ((input_length + 2) / 3);
+    if (!output_length || (!data && input_length) || input_length > SIZE_MAX - 2) return NULL;
+    size_t groups = (input_length + 2) / 3;
+    if (groups > (SIZE_MAX - 1) / 4) return NULL;
+    *output_length = 4 * groups;
     char *encoded_data = (char *)cwist_alloc(*output_length + 1);
     if (encoded_data == NULL) return NULL;
 
