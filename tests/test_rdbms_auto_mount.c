@@ -57,6 +57,21 @@ static void test_double_mount(void) {
     printf("PASS: double mount is idempotent\n");
 }
 
+static void test_invalid_inputs(void) {
+    const int ports[] = {-1, 0, 65536, 100000};
+    for (size_t i = 0; i < sizeof(ports) / sizeof(ports[0]); i++)
+        assert(cwist_rdbms_probe_port(ports[i]) == CWIST_RDBMS_NONE);
+
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    assert(!cwist_rdbms_mount_runtime(app, CWIST_RDBMS_NONE, 5432));
+    assert(!cwist_rdbms_mount_runtime(app, (cwist_rdbms_provider_t)99, 5432));
+    for (size_t i = 0; i < sizeof(ports) / sizeof(ports[0]); i++)
+        assert(!cwist_rdbms_mount_runtime(app, CWIST_RDBMS_POSTGRES, ports[i]));
+    assert(app->rdbms == NULL);
+    cwist_app_destroy(app);
+}
+
 static void test_public_api_declaration(void) {
     /* Ensure the public header declares the function and the struct field */
     cwist_app *app = cwist_app_create();
@@ -71,6 +86,7 @@ int main(void) {
     test_unbound_port();
     test_probe_unbound_port();
     test_double_mount();
+    test_invalid_inputs();
     test_public_api_declaration();
     printf("All RDBMS auto-mount tests passed.\n");
     return 0;
