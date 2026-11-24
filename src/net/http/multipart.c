@@ -121,12 +121,15 @@ static int mp_disposition_param(const char *value, const char *key, char **out) 
                 decoded[out_len++] = *p++;
             }
             if (!closed) goto invalid;
+            p++;
         } else {
             while (*p && *p != ';' && !isspace((unsigned char)*p)) {
                 if (!mp_token_char((unsigned char)*p) || out_len + 1 >= cap) goto invalid;
                 decoded[out_len++] = *p++;
             }
         }
+        while (isspace((unsigned char)*p)) p++;
+        if (*p && *p != ';') goto invalid;
         decoded[out_len] = '\0';
         cwist_free(*out);
         *out = decoded;
@@ -399,13 +402,20 @@ char *cwist_multipart_extract_boundary(const char *content_type) {
                 p++;
                 while (*p && isspace((unsigned char)*p)) p++;
                 const char *start = p;
+                const char *value_end = NULL;
                 if (*p == '"') {
                     start = ++p;
                     while (*p && *p != '"') p++;
+                    if (*p != '"') return NULL;
+                    value_end = p++;
                 } else {
                     while (*p && *p != ';' && !isspace((unsigned char)*p)) p++;
+                    value_end = p;
                 }
-                size_t len = (size_t)(p - start);
+                size_t len = (size_t)(value_end - start);
+                if (len == 0) return NULL;
+                while (isspace((unsigned char)*p)) p++;
+                if (*p && *p != ';') return NULL;
                 char *boundary = (char *)cwist_alloc(len + 1);
                 if (boundary) {
                     memcpy(boundary, start, len);
