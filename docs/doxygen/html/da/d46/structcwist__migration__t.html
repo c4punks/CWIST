@@ -131,7 +131,7 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A single migration step. </p>
 <ul>
-<li>version : monotonically increasing integer (e.g. 1, 2, 3 …)</li>
+<li>version : positive, monotonically increasing integer (e.g. 1, 2, 3 …)</li>
 <li>name : human-readable label (used in history table)</li>
 <li>up_sql : SQL executed when migrating forward; may contain multiple statements separated by ';'</li>
 <li>down_sql: SQL executed when rolling back; NULL means irreversible </li>
