@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_handshake_header;
 cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                            const char *value);
@@ -21,6 +22,7 @@ cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const 
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_http_header_add(head, key, value);
 }
+#endif
 
 void print_hex(const uint8_t *data, size_t len) {
     for (size_t i = 0; i < len; i++) {
@@ -240,11 +242,13 @@ static void test_handshake_protocol_errors(void) {
 
     req = new_handshake_request();
     res = cwist_http_response_create();
+#ifdef CWIST_TEST_WRAP
     fail_handshake_header = 1;
     bool metadata_failed = cwist_websocket_upgrade_response(req, res);
     fail_handshake_header = 0;
     assert(!metadata_failed);
     assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+#endif
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
 

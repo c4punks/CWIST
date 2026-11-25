@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#ifdef CWIST_TEST_WRAP
 void *__real_cwist_alloc(size_t size);
 
 static _Atomic int fail_health_watch_copy;
@@ -25,6 +26,7 @@ void *__wrap_cwist_alloc(size_t size) {
     if (atomic_load(&fail_health_watch_copy) && size == 64) return NULL;
     return __real_cwist_alloc(size);
 }
+#endif
 
 /* --- tiny HPACK literal encoder (without indexing, no huffman) --- */
 
@@ -642,6 +644,7 @@ static void test_health_watch(cwist_app *app) {
     stop_server(cfd, &ctx, tid);
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_health_watch_alloc_failure(cwist_app *app) {
     printf("  health Watch allocation failure...\n");
     server_ctx ctx;
@@ -675,6 +678,7 @@ static void test_health_watch_alloc_failure(cwist_app *app) {
     assert(cwist_app_grpc_health_watchers(app) == 0);
     stop_server(cfd, &ctx, tid);
 }
+#endif
 
 static void test_health_watch_missing_request(cwist_app *app) {
     printf("  health Watch missing request...\n");
@@ -814,7 +818,9 @@ int main(void) {
     test_streaming_incremental(app, &live_st);
     test_deadline(app, &deadline_st);
     test_health_watch(app);
+#ifdef CWIST_TEST_WRAP
     test_health_watch_alloc_failure(app);
+#endif
     test_health_watch_missing_request(app);
 
     /* Cancellation uses the Block handler; swap in the cancel flag state. */

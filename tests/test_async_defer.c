@@ -25,6 +25,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int fail_body;
 cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
 cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
@@ -38,6 +39,7 @@ cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *da
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign_len(str, data, len);
 }
+#endif
 
 #define TEST_PORT 19997
 #define TEST_HOST "127.0.0.1"
@@ -307,6 +309,7 @@ static int test_apply_allocation_failure(void) {
     }
     req->keep_alive = false;
     cwist_async_dispatch_ack(a);
+#ifdef CWIST_TEST_WRAP
     atomic_store(&fail_body, 1);
     CHECK(cwist_async_respond(a, CWIST_HTTP_OK, "text/plain", "ok", 2), "complete with allocation failure");
     atomic_store(&fail_body, 0);
@@ -317,6 +320,7 @@ static int test_apply_allocation_failure(void) {
         response[n] = '\0';
         CHECK(strstr(response, " 500 ") != NULL, "partial result becomes HTTP 500");
     }
+#endif
     close(sockets[1]);
     return failures;
 }

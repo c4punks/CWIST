@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+#ifdef CWIST_TEST_WRAP
 static int entropy_read_mode;
 static int entropy_read_calls;
 
@@ -26,18 +27,24 @@ ssize_t __wrap_read(int fd, void *buf, size_t count) {
     size_t chunk = count > 3 ? 3 : count;
     return __real_read(fd, buf, chunk);
 }
+#endif
 
 static void test_entropy_short_reads(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
+#ifdef CWIST_TEST_WRAP
     entropy_read_mode = 1;
     entropy_read_calls = 0;
+#endif
     assert(cwist_app_use_session(app, NULL) == 0);
+#ifdef CWIST_TEST_WRAP
     entropy_read_mode = 0;
+#endif
     assert(app->session_secret && strlen(app->session_secret) == 64);
     cwist_app_destroy(app);
 }
 
+#ifdef CWIST_TEST_WRAP
 static int fail_alloc;
 void *__real_cwist_alloc(size_t size);
 void *__wrap_cwist_alloc(size_t size) {
@@ -51,7 +58,9 @@ cJSON *__wrap_cJSON_AddStringToObject(cJSON *object, const char *name, const cha
     if (fail_json_key && name && strcmp(name, fail_json_key) == 0) return NULL;
     return __real_cJSON_AddStringToObject(object, name, string);
 }
+#endif
 
+#ifdef CWIST_TEST_WRAP
 static void test_session_allocation_failures(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
@@ -91,6 +100,7 @@ static void test_session_start_map_allocation_failure(void) {
     cwist_http_request_destroy(req);
     cwist_app_destroy(app);
 }
+#endif
 
 static int header_contains(cwist_http_header_node *headers, const char *key, const char *value) {
     cwist_http_header_node *curr = headers;
@@ -557,8 +567,10 @@ static void test_session_untouched_and_prefixed_logout(void) {
 
 int main(void) {
     test_entropy_short_reads();
+#ifdef CWIST_TEST_WRAP
     test_session_start_map_allocation_failure();
     test_session_allocation_failures();
+#endif
     test_session_untouched_and_prefixed_logout();
     test_session_deferred_commit();
     test_session_repeated_commit_revokes_every_cookie();
