@@ -933,7 +933,14 @@ static int grpc_client_pump(cwist_grpc_call *call) {
     int rc = 0;
     switch (f.type) {
         case H2_FRAME_SETTINGS:
-            if (!(f.flags & H2_FLAG_ACK))
+            if (f.stream_id != 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = 0x01; /* PROTOCOL_ERROR */
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+            } else if (!(f.flags & H2_FLAG_ACK))
                 rc = grpc_client_apply_settings(c, f.payload, f.len, call->deadline_ms);
             else if (f.len != 0)
                 rc = -1; /* RFC 7540 section 6.5: ack payload must be empty */
