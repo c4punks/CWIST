@@ -40,6 +40,7 @@ void *__wrap_realloc(void *ptr, size_t size) {
 }
 #endif
 
+#ifdef CWIST_TEST_WRAP_REALLOC
 static cwist_http_request *send_chunked(cwist_http_parse_error_t *err) {
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
@@ -66,6 +67,7 @@ static cwist_http_request *send_chunked(cwist_http_parse_error_t *err) {
     close(sv[0]);
     return req;
 }
+#endif
 
 int main(void) {
 #ifndef CWIST_TEST_WRAP_REALLOC
