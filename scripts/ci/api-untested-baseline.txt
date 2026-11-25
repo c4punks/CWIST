@@ -101,7 +101,6 @@ cwist_redis_command
 cwist_redis_pool_publish
 cwist_redis_publish
 cwist_redis_select
-cwist_redis_subscribe
 cwist_reg_ptr
 cwist_reg_ptr_sized
 cwist_seq_auth_random
