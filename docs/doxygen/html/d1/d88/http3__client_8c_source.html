@@ -1561,7 +1561,7 @@ $(document).ready(function(){initNavTree('d1/d88/http3__client_8c_source.html','
 <div class="line"><a id="l01616" name="l01616"></a><span class="lineno"> 1616</span>        <a class="code hl_function" href="../../d1/d88/http3__client_8c.html#a1cebceb867dbe446f274df968cb30cdd">cwist_http3_client_request</a>(client, <span class="stringliteral">&quot;/&quot;</span>, <a class="code hl_enumvalue" href="../../d9/dab/net_2http_2http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683dae1a213396263435fcc729de16c509dec">CWIST_HTTP_CONNECT</a>, headers, NULL, 0, &amp;response);</div>
 <div class="line"><a id="l01617" name="l01617"></a><span class="lineno"> 1617</span>    <a class="code hl_function" href="../../dd/d56/http_8h.html#ac12c6d41a5af1dea9d3f825c245e7fbd">cwist_http_header_free_all</a>(headers);</div>
 <div class="line"><a id="l01618" name="l01618"></a><span class="lineno"> 1618</span>    <span class="keywordflow">if</span> (response) <a class="code hl_function" href="../../dd/d56/http_8h.html#abb4d7c3cd5624faea1646f36b835ec69">cwist_http_response_destroy</a>(response);</div>
-<div class="line"><a id="l01619" name="l01619"></a><span class="lineno"> 1619</span>    (void)err;</div>
+<div class="line"><a id="l01619" name="l01619"></a><span class="lineno"> 1619</span>    <a class="code hl_function" href="../../d7/da1/sys_2err_2cwist__err_8h.html#acafffea2368d859053b87d99f7e77aaf">cwist_error_dispose</a>(&amp;err);</div>
 <div class="line"><a id="l01620" name="l01620"></a><span class="lineno"> 1620</span>    <span class="keywordflow">return</span> client-&gt;dgc ? 1 : -1;</div>
 <div class="line"><a id="l01621" name="l01621"></a><span class="lineno"> 1621</span>}</div>
 <div class="line"><a id="l01622" name="l01622"></a><span class="lineno"> 1622</span> </div>

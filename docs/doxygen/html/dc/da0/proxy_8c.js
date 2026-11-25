@@ -3,6 +3,7 @@ var proxy_8c =
     [ "PROXY_BODY_GROW_HIGH", "dc/da0/proxy_8c.html#a3969a26182791370029f662caa10935f", null ],
     [ "PROXY_BODY_GROW_MID", "dc/da0/proxy_8c.html#a8aa825d521682253e27d1dce9ba1d592", null ],
     [ "PROXY_BODY_INITIAL_CAP", "dc/da0/proxy_8c.html#a87b244b3ad1694cfa9bc9ed696f2683e", null ],
+    [ "PROXY_CONNECT_MAX_TUNNELS", "dc/da0/proxy_8c.html#abb4db53c3d07bba6d3560d73f3632d32", null ],
     [ "PROXY_DEFAULT_CONNECT_TIMEOUT_MS", "dc/da0/proxy_8c.html#ab2889d4aecfd5c14ed7bee9e57ad2f6a", null ],
     [ "PROXY_DEFAULT_MAX_RESPONSE", "dc/da0/proxy_8c.html#a50e57c759e3734b2c0d0c195388a5a8f", null ],
     [ "PROXY_DEFAULT_TIMEOUT_MS", "dc/da0/proxy_8c.html#a96db0d3ed94adf293bcc87ca6866525f", null ],

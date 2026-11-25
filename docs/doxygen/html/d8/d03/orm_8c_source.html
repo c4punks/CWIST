@@ -526,7 +526,7 @@ $(document).ready(function(){initNavTree('d8/d03/orm_8c_source.html','../../'); 
 <div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span> </div>
 <div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>    <span class="comment">/* Fallback: stringify arrays/objects as JSON text. */</span></div>
 <div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>    <span class="keywordtype">char</span> *raw = cJSON_PrintUnformatted((cJSON *)node);</div>
-<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>    <span class="keywordflow">if</span> (!raw) <span class="keywordflow">return</span> strdup(<span class="stringliteral">&quot;NULL&quot;</span>);</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>    <span class="keywordflow">if</span> (!raw) <span class="keywordflow">return</span> NULL;</div>
 <div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>    <span class="keywordtype">char</span> *literal = cwist_orm_literal(orm, raw);</div>
 <div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>    cJSON_free(raw);</div>
 <div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>    <span class="keywordflow">return</span> literal;</div>

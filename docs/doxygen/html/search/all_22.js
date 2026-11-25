@@ -55,7 +55,7 @@ var searchData=
   ['websocket_20api_52',['websocket api',['../d7/dec/md_docs_2ko_2api_2websocket.html#autotoc_md582',1,'비동기 (C1M) WebSocket API'],['../db/dc5/md_docs_2api_2websocket.html#autotoc_md251',1,'Async (C1M) WebSocket API'],['../d7/dec/md_docs_2ko_2api_2websocket.html',1,'WebSocket API'],['../db/dc5/md_docs_2api_2websocket.html',1,'WebSocket API']]],
   ['websocket_20integration_20real_20time_20bidirectional_20communication_53',['8. WebSocket Integration (Real-Time Bidirectional Communication)',['../dd/d4c/md_docs_2tutorial_2cwist__tutorial.html#autotoc_md878',1,'']]],
   ['websocket_2ec_54',['websocket.c',['../d4/de6/websocket_8c.html',1,'']]],
-  ['websocket_2eh_55',['websocket.h',['../db/d64/websocket_8h.html',1,'(Global Namespace)'],['../dd/dec/net_2websocket_2websocket_8h.html',1,'(Global Namespace)']]],
+  ['websocket_2eh_55',['websocket.h',['../dd/dec/net_2websocket_2websocket_8h.html',1,'(Global Namespace)'],['../db/d64/websocket_8h.html',1,'(Global Namespace)']]],
   ['websocket_2emd_56',['websocket.md',['../d2/d1b/ko_2api_2websocket_8md.html',1,'(Global Namespace)'],['../da/d6f/api_2websocket_8md.html',1,'(Global Namespace)']]],
   ['websocket_5fasync_2ec_57',['websocket_async.c',['../d4/d57/websocket__async_8c.html',1,'']]],
   ['websocket_5fasync_2eh_58',['websocket_async.h',['../d6/dad/websocket__async_8h.html',1,'']]],
