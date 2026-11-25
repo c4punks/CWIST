@@ -1,6 +1,7 @@
 var cwist__redis_8c =
 [
     [ "_POSIX_C_SOURCE", "d4/dca/cwist__redis_8c.html#a3024ccd4a9af5109d24e6c57565d74a1", null ],
+    [ "APPEND_OR_FAIL", "d4/dca/cwist__redis_8c.html#a2bf5e74637aac892c20466b26bb8c482", null ],
     [ "CWIST_REDIS_BUF_SIZE", "d4/dca/cwist__redis_8c.html#a50847f85cac560afa936cbb9ae9b4853", null ],
     [ "CWIST_REDIS_CONNECT_TIMEOUT_MS", "d4/dca/cwist__redis_8c.html#ab671cf1acc0ad9d99f69ade4e9f10e6e", null ],
     [ "CWIST_REDIS_IO_TIMEOUT_MS", "d4/dca/cwist__redis_8c.html#abc91f122927d0bbb5e060aeb32c5341b", null ],
@@ -15,6 +16,7 @@ var cwist__redis_8c =
     [ "CWIST_REDIS_TIMED_MAX_FRAME", "d4/dca/cwist__redis_8c.html#a1ac2e17a5615fa8285ece1d759530e6d", null ],
     [ "CWIST_REDIS_TIMED_MAX_NODES", "d4/dca/cwist__redis_8c.html#abb68e7aef65a70fa07b7cb98070de3dd", null ],
     [ "CWIST_REDIS_TIMED_MAX_PAYLOAD", "d4/dca/cwist__redis_8c.html#a58372c6c4fb93b8a8bbf13ff9b80eaee", null ],
+    [ "WRITE_BULK_OR_FAIL", "d4/dca/cwist__redis_8c.html#adade72b87de512d636ac47090517e4a6", null ],
     [ "redis_timed_parse", "d4/dca/cwist__redis_8c.html#ae1dcf9369869705ffa79e4932ebdea9e", null ],
     [ "cwist_redis_auth", "d4/dca/cwist__redis_8c.html#a50de3b151d4d5dd1fcafcddcc73fed55", null ],
     [ "cwist_redis_close", "d4/dca/cwist__redis_8c.html#af140007c54aab5782e0a5ec02b0d4dc9", null ],

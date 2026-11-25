@@ -1,5 +1,7 @@
 var NAVTREEINDEX16 =
 {
+"db/d11/structcwist__cookie__options.html#a2c4a34204f19c0f94789f5ccbc257890":[97,0,18,2],
+"db/d11/structcwist__cookie__options.html#a479ff309f54d7fb09f207ce931fdd6e4":[97,0,18,3],
 "db/d11/structcwist__cookie__options.html#a4cead1a554a718df4476ac30c22b51ed":[97,0,18,5],
 "db/d11/structcwist__cookie__options.html#a7edc5041cf406830c29817cfca6beb7e":[97,0,18,0],
 "db/d11/structcwist__cookie__options.html#ab0b5e91e7c6e7e8a9bb26666872ed551":[97,0,18,1],
@@ -247,7 +249,5 @@ var NAVTREEINDEX16 =
 "db/d95/structcwist__https__connection.html#ad8c28ef41b14a3bcd430029ecfe06008":[97,0,51,6],
 "db/d95/structcwist__https__connection.html#addf499a7ed2032d9fc705dece83c3c96":[97,0,51,1],
 "db/d95/structcwist__https__connection.html#afdf3f82e9168047d62d064540163dc95":[97,0,51,4],
-"db/d95/structcwist__https__connection.html#aff42bb728da1e31f28cd9d10fadb45a8":[97,0,51,9],
-"db/dad/structcwist__pb__reader.html":[97,0,79],
-"db/dad/structcwist__pb__reader.html#a266540469fff28f35a12cb4848e518c2":[97,0,79,2]
+"db/d95/structcwist__https__connection.html#aff42bb728da1e31f28cd9d10fadb45a8":[97,0,51,9]
 };

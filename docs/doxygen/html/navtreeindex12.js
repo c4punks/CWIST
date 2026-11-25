@@ -1,5 +1,7 @@
 var NAVTREEINDEX12 =
 {
+"d8/d80/jwt_8c.html#af92c64b451fdba1c2e3065572daaf5fc":[98,0,2,3,1,0,12],
+"d8/d80/jwt_8c.html#afbea518478ac45e5f86153c41da97347":[98,0,2,3,1,0,7],
 "d8/d80/jwt_8c_source.html":[98,0,2,3,1,0],
 "d8/d83/md_docs_2api_2html.html":[4],
 "d8/d83/md_docs_2api_2html.html#autotoc_md100":[4,2],
@@ -247,7 +249,5 @@ var NAVTREEINDEX12 =
 "d9/daa/structcwist__webrtc__conn.html#afcb2ad399bab5a3612e07f68a9b5258e":[97,0,107,20],
 "d9/dab/net_2http_2http_8h.html":[98,0,1,0,2,3,4],
 "d9/dab/net_2http_2http_8h.html#a0383b48022592e51561db60f9d77c272":[98,0,1,0,2,3,4,57],
-"d9/dab/net_2http_2http_8h.html#a0a3e9bbda6dec33391d1d045edb62733":[98,0,1,0,2,3,4,15],
-"d9/dab/net_2http_2http_8h.html#a0c1c9b397b1cc699deec7ceec560b6b8":[98,0,1,0,2,3,4,8],
-"d9/dab/net_2http_2http_8h.html#a0d582b995b805e28d989c8a27b9eec2b":[98,0,1,0,2,3,4,60]
+"d9/dab/net_2http_2http_8h.html#a0a3e9bbda6dec33391d1d045edb62733":[98,0,1,0,2,3,4,15]
 };
