@@ -7,6 +7,22 @@
 
 static bool next_called = false;
 
+#ifdef CWIST_TEST_WRAP
+static int fail_header = 0;
+static int fail_header_preflight = 0;
+
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_header) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    if (fail_header_preflight && strcmp(key, "Access-Control-Allow-Methods") == 0) {
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    }
+    return __real_cwist_http_header_add(head, key, value);
+}
+#endif
+
 void dummy_next(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
     (void)res;
@@ -83,10 +99,53 @@ static void test_plain_options_reaches_application(void) {
     cwist_http_response_destroy(res);
 }
 
+#ifdef CWIST_TEST_WRAP
+static void test_cors_header_failure(void) {
+    cwist_middleware_func cors = cwist_mw_cors();
+
+    /* 1. Failure on initial Access-Control-Allow-Origin */
+    cwist_http_request *req = cwist_http_request_create();
+    req->method = CWIST_HTTP_OPTIONS;
+    cwist_http_header_add(&req->headers, "Origin", "https://example.com");
+    cwist_http_header_add(&req->headers, "Access-Control-Request-Method", "GET");
+
+    cwist_http_response *res = cwist_http_response_create();
+    next_called = false;
+    fail_header = 1;
+    cors(req, res, dummy_next);
+    fail_header = 0;
+    assert(next_called == false);
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_request_destroy(req);
+    cwist_http_response_destroy(res);
+
+    /* 2. Failure during preflight header construction */
+    req = cwist_http_request_create();
+    req->method = CWIST_HTTP_OPTIONS;
+    cwist_http_header_add(&req->headers, "Origin", "https://example.com");
+    cwist_http_header_add(&req->headers, "Access-Control-Request-Method", "GET");
+
+    res = cwist_http_response_create();
+    next_called = false;
+    fail_header_preflight = 1;
+    cors(req, res, dummy_next);
+    fail_header_preflight = 0;
+    assert(next_called == false);
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_request_destroy(req);
+    cwist_http_response_destroy(res);
+}
+#endif
+
 int main() {
     test_cors_options();
     test_cors_simple();
     test_plain_options_reaches_application();
+#ifdef CWIST_TEST_WRAP
+    test_cors_header_failure();
+#else
+    printf("Skipped CORS header-failure test (linker has no --wrap).\n");
+#endif
     printf("All CORS tests passed!\n");
     return 0;
 }
