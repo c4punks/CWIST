@@ -2220,7 +2220,9 @@ cwist_error_t cwist_https_send_response(cwist_https_connection *conn, cwist_http
         }
         char alt_svc[64];
         snprintf(alt_svc, sizeof(alt_svc), "h3=\":%d\"; ma=86400", port);
-        cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
+        cwist_error_t alt_err = cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
+        if (!cwist_error_is_ok(&alt_err)) res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_error_dispose(&alt_err);
     }
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];
@@ -2301,7 +2303,9 @@ cwist_error_t cwist_https_send_response_head(cwist_https_connection *conn,
         }
         char alt_svc[64];
         snprintf(alt_svc, sizeof(alt_svc), "h3=\":%d\"; ma=86400", port);
-        cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
+        cwist_error_t alt_err = cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
+        if (!cwist_error_is_ok(&alt_err)) res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_error_dispose(&alt_err);
     }
 
     char header_buf[CWIST_HTTP_MAX_HEADER_SIZE];

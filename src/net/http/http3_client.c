@@ -1616,7 +1616,7 @@ static int h3c_dgc_route(cwist_http3_client *client) {
         cwist_http3_client_request(client, "/", CWIST_HTTP_CONNECT, headers, NULL, 0, &response);
     cwist_http_header_free_all(headers);
     if (response) cwist_http_response_destroy(response);
-    (void)err;
+    cwist_error_dispose(&err);
     return client->dgc ? 1 : -1;
 }
 

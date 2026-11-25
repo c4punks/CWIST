@@ -19,6 +19,19 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#ifdef CWIST_TEST_WRAP
+static _Atomic int fail_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (atomic_load(&fail_header) && strcmp(key, "Sec-WebSocket-Protocol") == 0 &&
+        strcmp(value, "graphql-transport-ws") == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
+#endif
+
 static _Atomic int fail_add;
 cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
 cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
@@ -257,6 +270,18 @@ static void test_upgrade_negotiation(void) {
                   "graphql-transport-ws") == 0);
     cwist_http_response_destroy(direct_res);
     cwist_http_request_destroy(direct_req);
+
+#ifdef CWIST_TEST_WRAP
+    direct_req = new_upgrade_request(true);
+    direct_res = cwist_http_response_create();
+    atomic_store(&fail_header, 1);
+    bool metadata_failed = cwist_graphql_ws_upgrade_response(direct_req, direct_res);
+    atomic_store(&fail_header, 0);
+    assert(!metadata_failed);
+    assert(direct_res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_response_destroy(direct_res);
+    cwist_http_request_destroy(direct_req);
+#endif
 
     int sv[2];
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);

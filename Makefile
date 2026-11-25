@@ -1798,7 +1798,7 @@ bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/re
 
 ifeq ($(CWIST_DB),1)
 test_orm: $(LIB_NAME) tests/test_orm.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -Wl,--wrap=cwist_alloc -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_PrintUnformatted -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -1926,7 +1926,7 @@ test_baremetal_arena: tests/test_baremetal_arena.c src/core/mem/arena.c
 	./$@
 
 test_healthz: $(LIB_NAME) tests/test_healthz.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_sstring_assign -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
 
 test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
@@ -1979,7 +1979,7 @@ test_siphash: $(LIB_NAME) tests/test_siphash.c
 	./test_siphash
 
 test_mux: $(LIB_NAME) tests/test_mux.c
-	$(CC) $(CFLAGS) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
 	./test_mux
 
 test_mux_param: $(LIB_NAME) tests/test_mux_param.c
@@ -2126,7 +2126,7 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 
 ifeq ($(CWIST_WS),1)
 test_websocket: $(LIB_NAME) tests/test_websocket.c
-	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
 	./test_websocket
 
 test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
@@ -2197,11 +2197,11 @@ test_bind: $(LIB_NAME) tests/test_bind.c
 	./test_bind
 
 test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response.c
-	$(CC) $(CFLAGS) -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
 	./test_bind_write_error_response
 
 test_metrics: $(LIB_NAME) tests/test_metrics.c
-	$(CC) $(CFLAGS) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
 	./test_metrics
 
 test_access_log: $(LIB_NAME) tests/test_access_log.c
@@ -2670,7 +2670,7 @@ test_graphql: $(LIB_NAME) tests/test_graphql.c
 
 ifeq ($(CWIST_WS),1)
 test_graphql_subscriptions: $(LIB_NAME) tests/test_graphql_subscriptions.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddStringToObject -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddStringToObject) $(call wrap_flag,cwist_http_header_add) -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
 	./test_graphql_subscriptions
 else
 # CWIST_WS=0: graphql_ws.c rides on websocket_async, so its test is compiled out.
@@ -2739,7 +2739,7 @@ test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	./test_async_file_park
 
 test_test_client: $(LIB_NAME) tests/test_test_client.c
-	$(CC) $(CFLAGS) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=ftell -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
 	./test_test_client
 
 test_openapi: $(LIB_NAME) tests/test_openapi.c
@@ -2747,7 +2747,7 @@ test_openapi: $(LIB_NAME) tests/test_openapi.c
 	./test_openapi
 
 test_otel: $(LIB_NAME) tests/test_otel.c
-	$(CC) $(CFLAGS) -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
 	./test_otel
 
 test_multiport: $(LIB_NAME) tests/test_multiport.c
@@ -2773,7 +2773,7 @@ test_builtin_mw_chain:
 endif
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_alloc -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_http_header_add -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
 	./test_grpc
 
 test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c

@@ -79,6 +79,14 @@ static void check_response(int custom, int pointer, int keep_alive, size_t body_
 
 int main(void) {
     REQUIRE(cwist_http_stringify_response(NULL) == NULL);
+    cwist_http_response *overflow = cwist_http_response_create();
+    REQUIRE(overflow != NULL);
+    cwist_http_response_set_body_ptr(overflow, "x", SIZE_MAX);
+    char *serialized = NULL;
+    size_t serialized_len = 0;
+    REQUIRE(cwist_http_response_serialize(overflow, &serialized, &serialized_len) == -1);
+    REQUIRE(serialized == NULL && serialized_len == 0);
+    cwist_http_response_destroy(overflow);
     check_response(0, 0, 1, 0);
     check_response(0, 0, 1, 4);
     check_response(0, 1, 1, 4);

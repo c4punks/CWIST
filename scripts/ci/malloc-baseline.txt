@@ -68,7 +68,6 @@
 1	src/core/orm/orm.c:if (!len) free(bytes);
 1	src/core/orm/orm.c:if (!node) return strdup("NULL");
 1	src/core/orm/orm.c:if (!node->valuestring) return strdup("''");
-1	src/core/orm/orm.c:if (!raw) return strdup("NULL");
 1	src/core/orm/orm.c:res = (cwist_orm_result_t *)calloc(1, sizeof(*res));
 1	src/core/orm/orm.c:res->cells = (cwist_orm_value_t *)calloc(res->row_count * res->column_count,
 1	src/core/orm/orm.c:res->columns = (char **)calloc(res->column_count ? res->column_count : 1, sizeof(char *));
@@ -170,9 +169,7 @@
 1	src/security/db_crypt/db_crypt.c:free(blob);
 1	src/security/db_crypt/db_crypt.c:free(pt);
 1	src/security/db_crypt/db_crypt.c:unsigned char *pt = (unsigned char *)malloc(ct_len + 1);
-1	src/sys/app/app.c:char *buf = (char *)malloc((size_t)sz + 1);
 1	src/sys/app/app.c:cwist_multiport_http_client *payload = malloc(sizeof(*payload));
-1	src/sys/app/app.c:free(buf);
 1	src/sys/app/app.c:free(carry);
 1	src/sys/app/app.c:free(client);
 1	src/sys/app/app.c:free(h3_p);
