@@ -296,201 +296,204 @@ $(document).ready(function(){initNavTree('d3/d79/multipart_8c_source.html','../.
 <div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span><span class="keyword">static</span> <span class="keywordtype">int</span> mp_on_part_data(multipart_parser *p, <span class="keyword">const</span> <span class="keywordtype">char</span> *at, <span class="keywordtype">size_t</span> len) {</div>
 <div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>    mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);</div>
 <div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>    <span class="keywordflow">if</span> (len == 0) <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    <span class="keywordflow">if</span> (ctx-&gt;data_len + len &gt; ctx-&gt;data_cap) {</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>        <span class="keywordtype">size_t</span> new_cap = (ctx-&gt;data_len + len) * 2;</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>        <span class="keywordflow">if</span> (new_cap &lt; 256) new_cap = 256;</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        <span class="keywordtype">char</span> *new_data = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(new_cap);</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        <span class="keywordflow">if</span> (!new_data) <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        <span class="keywordflow">if</span> (ctx-&gt;data) {</div>
-<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>            memcpy(new_data, ctx-&gt;data, ctx-&gt;data_len);</div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx-&gt;data);</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>        }</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>        ctx-&gt;data = new_data;</div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>        ctx-&gt;data_cap = new_cap;</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>    }</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>    memcpy(ctx-&gt;data + ctx-&gt;data_len, at, len);</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>    ctx-&gt;data_len += len;</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>}</div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span> </div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span><span class="keyword">static</span> <span class="keywordtype">int</span> mp_on_part_data_end(multipart_parser *p) {</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>    mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>    <a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *field =</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>        (<a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(<a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a>));</div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    <span class="keywordflow">if</span> (!field) <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    memset(field, 0, <span class="keyword">sizeof</span>(*field));</div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span> </div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a673a6ed58c680fa10a4b89d67c184578">name</a> = ctx-&gt;name;</div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a0fdc71ba29705501617cd13849a11292">filename</a> = ctx-&gt;filename;</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>    ctx-&gt;name = NULL;</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    ctx-&gt;filename = NULL;</div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    <span class="keywordflow">if</span> (ctx-&gt;content_type[0]) {</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>        field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a> = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(strlen(ctx-&gt;content_type) + 1);</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>        <span class="keywordflow">if</span> (!field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a>) {</div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a673a6ed58c680fa10a4b89d67c184578">name</a>);</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a0fdc71ba29705501617cd13849a11292">filename</a>);</div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field);</div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>            <span class="keywordflow">return</span> 1;</div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>        }</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>        strcpy(field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a>, ctx-&gt;content_type);</div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>    }</div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aaf619016fda2a140eadd6d8ca39ff5ee">data</a> = ctx-&gt;data;</div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a70cbdfa5517e4cd86eaf29f7fdb9c5ad">data_len</a> = ctx-&gt;data_len;</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    *ctx-&gt;next_field = field;</div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    ctx-&gt;next_field = &amp;field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a9695f4d918cdc9e7e81174c6c53177ac">next</a>;</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span> </div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    ctx-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aaf619016fda2a140eadd6d8ca39ff5ee">data</a> = NULL;</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    ctx-&gt;data_len = 0;</div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    ctx-&gt;data_cap = 0;</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>}</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span> </div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span><span class="keyword">static</span> <span class="keywordtype">int</span> mp_on_body_end(multipart_parser *p) {</div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>    ctx-&gt;body_end = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>    <span class="keywordflow">return</span> 0;</div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>}</div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span> </div>
-<div class="foldopen" id="foldopen00295" data-start="{" data-end="}">
-<div class="line"><a id="l00295" name="l00295"></a><span class="lineno"><a class="line" href="../../d0/dd6/multipart_8h.html#aee23385fdec89feda55f4eeae45ac030">  295</a></span><a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *<a class="code hl_function" href="../../d3/d79/multipart_8c.html#aee23385fdec89feda55f4eeae45ac030">cwist_multipart_parse</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *body, <span class="keywordtype">size_t</span> body_len,</div>
-<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>                                              <span class="keyword">const</span> <span class="keywordtype">char</span> *boundary) {</div>
-<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span>    <span class="keywordflow">if</span> (!body || body_len == 0 || !boundary) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span> </div>
-<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>    <a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *result =</div>
-<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>        (<a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(<a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a>));</div>
-<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span>    <span class="keywordflow">if</span> (!result) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    result-&gt;<a class="code hl_variable" href="../../d3/dd4/structcwist__multipart__result.html#abff8beab920f2ee9dc2578e75bd449c6">fields</a> = NULL;</div>
-<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span> </div>
-<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    mp_parse_ctx ctx = {0};</div>
-<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    ctx.result = result;</div>
-<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span>    ctx.next_field = &amp;result-&gt;<a class="code hl_variable" href="../../d3/dd4/structcwist__multipart__result.html#abff8beab920f2ee9dc2578e75bd449c6">fields</a>;</div>
-<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span> </div>
-<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    multipart_parser_settings settings = {</div>
-<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>        .on_header_field = mp_on_header_field,</div>
-<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span>        .on_header_value = mp_on_header_value,</div>
-<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>        .on_headers_complete = mp_on_headers_complete,</div>
-<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>        .on_part_data_begin = mp_on_part_data_begin,</div>
-<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>        .on_part_data = mp_on_part_data,</div>
-<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>        .on_part_data_end = mp_on_part_data_end,</div>
-<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>        .on_body_end = mp_on_body_end,</div>
-<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>    };</div>
-<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span> </div>
-<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>    <span class="comment">/* multipart-parser-c expects the leading dashes in the boundary. */</span></div>
-<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    <span class="keywordtype">size_t</span> blen = strlen(boundary);</div>
-<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span>    <a class="code hl_struct" href="../../d2/d50/structcwist__scratch__t.html">cwist_scratch_t</a> parser_boundary_s <a class="code hl_define" href="../../d2/dfe/alloc_8h.html#af24e2adb2619df9938c0b45a40b4614d">CWIST_SCRATCH_DEFER</a> = {0};</div>
-<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="keywordtype">char</span> *parser_boundary = (<span class="keywordtype">char</span> *)cwist_scratch_alloc(&amp;parser_boundary_s, blen + 3);</div>
-<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    <span class="keywordflow">if</span> (!parser_boundary) {</div>
-<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(result);</div>
-<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    }</div>
-<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>    memcpy(parser_boundary, <span class="stringliteral">&quot;--&quot;</span>, 2);</div>
-<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>    memcpy(parser_boundary + 2, boundary, blen);</div>
-<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    parser_boundary[blen + 2] = <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span> </div>
-<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    multipart_parser *parser = multipart_parser_init(parser_boundary, &amp;settings);</div>
-<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    <span class="keywordflow">if</span> (!parser) {</div>
-<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(result);</div>
-<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    }</div>
-<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>    multipart_parser_set_data(parser, &amp;ctx);</div>
-<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>    <span class="keywordtype">size_t</span> consumed = multipart_parser_execute(parser, body, body_len);</div>
-<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    multipart_parser_free(parser);</div>
-<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span> </div>
-<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx.name);</div>
-<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx.filename);</div>
+<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>    <span class="keywordflow">if</span> (len &gt; SIZE_MAX - ctx-&gt;data_len) <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>    <span class="keywordtype">size_t</span> needed = ctx-&gt;data_len + len;</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>    <span class="keywordflow">if</span> (needed &gt; ctx-&gt;data_cap) {</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        <span class="keywordflow">if</span> (needed &gt; SIZE_MAX / 2) <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>        <span class="keywordtype">size_t</span> new_cap = needed * 2;</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>        <span class="keywordflow">if</span> (new_cap &lt; 256) new_cap = 256;</div>
+<div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span>        <span class="keywordtype">char</span> *new_data = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(new_cap);</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>        <span class="keywordflow">if</span> (!new_data) <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>        <span class="keywordflow">if</span> (ctx-&gt;data) {</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>            memcpy(new_data, ctx-&gt;data, ctx-&gt;data_len);</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx-&gt;data);</div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>        }</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>        ctx-&gt;data = new_data;</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>        ctx-&gt;data_cap = new_cap;</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>    }</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>    memcpy(ctx-&gt;data + ctx-&gt;data_len, at, len);</div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>    ctx-&gt;data_len += len;</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>}</div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span> </div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span><span class="keyword">static</span> <span class="keywordtype">int</span> mp_on_part_data_end(multipart_parser *p) {</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>    <a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *field =</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>        (<a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(<a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a>));</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    <span class="keywordflow">if</span> (!field) <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    memset(field, 0, <span class="keyword">sizeof</span>(*field));</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span> </div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a673a6ed58c680fa10a4b89d67c184578">name</a> = ctx-&gt;name;</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a0fdc71ba29705501617cd13849a11292">filename</a> = ctx-&gt;filename;</div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>    ctx-&gt;name = NULL;</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>    ctx-&gt;filename = NULL;</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>    <span class="keywordflow">if</span> (ctx-&gt;content_type[0]) {</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a> = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(strlen(ctx-&gt;content_type) + 1);</div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        <span class="keywordflow">if</span> (!field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a>) {</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a673a6ed58c680fa10a4b89d67c184578">name</a>);</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a0fdc71ba29705501617cd13849a11292">filename</a>);</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field);</div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>            <span class="keywordflow">return</span> 1;</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>        }</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>        strcpy(field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a>, ctx-&gt;content_type);</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>    }</div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aaf619016fda2a140eadd6d8ca39ff5ee">data</a> = ctx-&gt;data;</div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>    field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a70cbdfa5517e4cd86eaf29f7fdb9c5ad">data_len</a> = ctx-&gt;data_len;</div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    *ctx-&gt;next_field = field;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    ctx-&gt;next_field = &amp;field-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a9695f4d918cdc9e7e81174c6c53177ac">next</a>;</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span> </div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>    ctx-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aaf619016fda2a140eadd6d8ca39ff5ee">data</a> = NULL;</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>    ctx-&gt;data_len = 0;</div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>    ctx-&gt;data_cap = 0;</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>}</div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span> </div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span><span class="keyword">static</span> <span class="keywordtype">int</span> mp_on_body_end(multipart_parser *p) {</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>    mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>    ctx-&gt;body_end = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>    <span class="keywordflow">return</span> 0;</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>}</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span> </div>
+<div class="foldopen" id="foldopen00298" data-start="{" data-end="}">
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno"><a class="line" href="../../d0/dd6/multipart_8h.html#aee23385fdec89feda55f4eeae45ac030">  298</a></span><a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *<a class="code hl_function" href="../../d3/d79/multipart_8c.html#aee23385fdec89feda55f4eeae45ac030">cwist_multipart_parse</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *body, <span class="keywordtype">size_t</span> body_len,</div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span>                                              <span class="keyword">const</span> <span class="keywordtype">char</span> *boundary) {</div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span>    <span class="keywordflow">if</span> (!body || body_len == 0 || !boundary) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span> </div>
+<div class="line"><a id="l00302" name="l00302"></a><span class="lineno">  302</span>    <a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *result =</div>
+<div class="line"><a id="l00303" name="l00303"></a><span class="lineno">  303</span>        (<a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(<span class="keyword">sizeof</span>(<a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a>));</div>
+<div class="line"><a id="l00304" name="l00304"></a><span class="lineno">  304</span>    <span class="keywordflow">if</span> (!result) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00305" name="l00305"></a><span class="lineno">  305</span>    result-&gt;<a class="code hl_variable" href="../../d3/dd4/structcwist__multipart__result.html#abff8beab920f2ee9dc2578e75bd449c6">fields</a> = NULL;</div>
+<div class="line"><a id="l00306" name="l00306"></a><span class="lineno">  306</span> </div>
+<div class="line"><a id="l00307" name="l00307"></a><span class="lineno">  307</span>    mp_parse_ctx ctx = {0};</div>
+<div class="line"><a id="l00308" name="l00308"></a><span class="lineno">  308</span>    ctx.result = result;</div>
+<div class="line"><a id="l00309" name="l00309"></a><span class="lineno">  309</span>    ctx.next_field = &amp;result-&gt;<a class="code hl_variable" href="../../d3/dd4/structcwist__multipart__result.html#abff8beab920f2ee9dc2578e75bd449c6">fields</a>;</div>
+<div class="line"><a id="l00310" name="l00310"></a><span class="lineno">  310</span> </div>
+<div class="line"><a id="l00311" name="l00311"></a><span class="lineno">  311</span>    multipart_parser_settings settings = {</div>
+<div class="line"><a id="l00312" name="l00312"></a><span class="lineno">  312</span>        .on_header_field = mp_on_header_field,</div>
+<div class="line"><a id="l00313" name="l00313"></a><span class="lineno">  313</span>        .on_header_value = mp_on_header_value,</div>
+<div class="line"><a id="l00314" name="l00314"></a><span class="lineno">  314</span>        .on_headers_complete = mp_on_headers_complete,</div>
+<div class="line"><a id="l00315" name="l00315"></a><span class="lineno">  315</span>        .on_part_data_begin = mp_on_part_data_begin,</div>
+<div class="line"><a id="l00316" name="l00316"></a><span class="lineno">  316</span>        .on_part_data = mp_on_part_data,</div>
+<div class="line"><a id="l00317" name="l00317"></a><span class="lineno">  317</span>        .on_part_data_end = mp_on_part_data_end,</div>
+<div class="line"><a id="l00318" name="l00318"></a><span class="lineno">  318</span>        .on_body_end = mp_on_body_end,</div>
+<div class="line"><a id="l00319" name="l00319"></a><span class="lineno">  319</span>    };</div>
+<div class="line"><a id="l00320" name="l00320"></a><span class="lineno">  320</span> </div>
+<div class="line"><a id="l00321" name="l00321"></a><span class="lineno">  321</span>    <span class="comment">/* multipart-parser-c expects the leading dashes in the boundary. */</span></div>
+<div class="line"><a id="l00322" name="l00322"></a><span class="lineno">  322</span>    <span class="keywordtype">size_t</span> blen = strlen(boundary);</div>
+<div class="line"><a id="l00323" name="l00323"></a><span class="lineno">  323</span>    <a class="code hl_struct" href="../../d2/d50/structcwist__scratch__t.html">cwist_scratch_t</a> parser_boundary_s <a class="code hl_define" href="../../d2/dfe/alloc_8h.html#af24e2adb2619df9938c0b45a40b4614d">CWIST_SCRATCH_DEFER</a> = {0};</div>
+<div class="line"><a id="l00324" name="l00324"></a><span class="lineno">  324</span>    <span class="keywordtype">char</span> *parser_boundary = (<span class="keywordtype">char</span> *)cwist_scratch_alloc(&amp;parser_boundary_s, blen + 3);</div>
+<div class="line"><a id="l00325" name="l00325"></a><span class="lineno">  325</span>    <span class="keywordflow">if</span> (!parser_boundary) {</div>
+<div class="line"><a id="l00326" name="l00326"></a><span class="lineno">  326</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(result);</div>
+<div class="line"><a id="l00327" name="l00327"></a><span class="lineno">  327</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00328" name="l00328"></a><span class="lineno">  328</span>    }</div>
+<div class="line"><a id="l00329" name="l00329"></a><span class="lineno">  329</span>    memcpy(parser_boundary, <span class="stringliteral">&quot;--&quot;</span>, 2);</div>
+<div class="line"><a id="l00330" name="l00330"></a><span class="lineno">  330</span>    memcpy(parser_boundary + 2, boundary, blen);</div>
+<div class="line"><a id="l00331" name="l00331"></a><span class="lineno">  331</span>    parser_boundary[blen + 2] = <span class="charliteral">&#39;\0&#39;</span>;</div>
+<div class="line"><a id="l00332" name="l00332"></a><span class="lineno">  332</span> </div>
+<div class="line"><a id="l00333" name="l00333"></a><span class="lineno">  333</span>    multipart_parser *parser = multipart_parser_init(parser_boundary, &amp;settings);</div>
+<div class="line"><a id="l00334" name="l00334"></a><span class="lineno">  334</span>    <span class="keywordflow">if</span> (!parser) {</div>
+<div class="line"><a id="l00335" name="l00335"></a><span class="lineno">  335</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(result);</div>
+<div class="line"><a id="l00336" name="l00336"></a><span class="lineno">  336</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00337" name="l00337"></a><span class="lineno">  337</span>    }</div>
+<div class="line"><a id="l00338" name="l00338"></a><span class="lineno">  338</span>    multipart_parser_set_data(parser, &amp;ctx);</div>
+<div class="line"><a id="l00339" name="l00339"></a><span class="lineno">  339</span>    <span class="keywordtype">size_t</span> consumed = multipart_parser_execute(parser, body, body_len);</div>
+<div class="line"><a id="l00340" name="l00340"></a><span class="lineno">  340</span>    multipart_parser_free(parser);</div>
 <div class="line"><a id="l00341" name="l00341"></a><span class="lineno">  341</span> </div>
-<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <span class="comment">/* Truncated body: on_part_data_end never fired, so release the in-flight</span></div>
-<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span><span class="comment">     * part buffer here. */</span></div>
-<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span>    <span class="keywordflow">if</span> (ctx.data) {</div>
-<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx.data);</div>
-<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span>        ctx.data = NULL;</div>
-<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    }</div>
-<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span> </div>
-<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>    <span class="comment">/* The parser can consume a truncated body without seeing its close delimiter. */</span></div>
-<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    <span class="keywordflow">if</span> (consumed != body_len || !ctx.body_end) {</div>
-<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span>        <a class="code hl_function" href="../../d3/d79/multipart_8c.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a>(result);</div>
-<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>        <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    }</div>
-<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span> </div>
-<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>    <span class="keywordflow">return</span> result;</div>
-<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>}</div>
-</div>
+<div class="line"><a id="l00342" name="l00342"></a><span class="lineno">  342</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx.name);</div>
+<div class="line"><a id="l00343" name="l00343"></a><span class="lineno">  343</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx.filename);</div>
+<div class="line"><a id="l00344" name="l00344"></a><span class="lineno">  344</span> </div>
+<div class="line"><a id="l00345" name="l00345"></a><span class="lineno">  345</span>    <span class="comment">/* Truncated body: on_part_data_end never fired, so release the in-flight</span></div>
+<div class="line"><a id="l00346" name="l00346"></a><span class="lineno">  346</span><span class="comment">     * part buffer here. */</span></div>
+<div class="line"><a id="l00347" name="l00347"></a><span class="lineno">  347</span>    <span class="keywordflow">if</span> (ctx.data) {</div>
+<div class="line"><a id="l00348" name="l00348"></a><span class="lineno">  348</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(ctx.data);</div>
+<div class="line"><a id="l00349" name="l00349"></a><span class="lineno">  349</span>        ctx.data = NULL;</div>
+<div class="line"><a id="l00350" name="l00350"></a><span class="lineno">  350</span>    }</div>
+<div class="line"><a id="l00351" name="l00351"></a><span class="lineno">  351</span> </div>
+<div class="line"><a id="l00352" name="l00352"></a><span class="lineno">  352</span>    <span class="comment">/* The parser can consume a truncated body without seeing its close delimiter. */</span></div>
+<div class="line"><a id="l00353" name="l00353"></a><span class="lineno">  353</span>    <span class="keywordflow">if</span> (consumed != body_len || !ctx.body_end) {</div>
+<div class="line"><a id="l00354" name="l00354"></a><span class="lineno">  354</span>        <a class="code hl_function" href="../../d3/d79/multipart_8c.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a>(result);</div>
+<div class="line"><a id="l00355" name="l00355"></a><span class="lineno">  355</span>        <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00356" name="l00356"></a><span class="lineno">  356</span>    }</div>
 <div class="line"><a id="l00357" name="l00357"></a><span class="lineno">  357</span> </div>
-<div class="foldopen" id="foldopen00366" data-start="{" data-end="}">
-<div class="line"><a id="l00366" name="l00366"></a><span class="lineno"><a class="line" href="../../d0/dd6/multipart_8h.html#a1ab0ea22a33afa70cac42856fcbf07ef">  366</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d3/d79/multipart_8c.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a>(<a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *result) {</div>
-<div class="line"><a id="l00367" name="l00367"></a><span class="lineno">  367</span>    <span class="keywordflow">if</span> (!result) <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00368" name="l00368"></a><span class="lineno">  368</span>    <a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *curr = result-&gt;<a class="code hl_variable" href="../../d3/dd4/structcwist__multipart__result.html#abff8beab920f2ee9dc2578e75bd449c6">fields</a>;</div>
-<div class="line"><a id="l00369" name="l00369"></a><span class="lineno">  369</span>    <span class="keywordflow">while</span> (curr) {</div>
-<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>        <a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *next = curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a9695f4d918cdc9e7e81174c6c53177ac">next</a>;</div>
-<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a673a6ed58c680fa10a4b89d67c184578">name</a>);</div>
-<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a0fdc71ba29705501617cd13849a11292">filename</a>);</div>
-<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a>);</div>
-<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aaf619016fda2a140eadd6d8ca39ff5ee">data</a>);</div>
-<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr);</div>
-<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>        curr = next;</div>
-<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>    }</div>
-<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(result);</div>
-<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>}</div>
+<div class="line"><a id="l00358" name="l00358"></a><span class="lineno">  358</span>    <span class="keywordflow">return</span> result;</div>
+<div class="line"><a id="l00359" name="l00359"></a><span class="lineno">  359</span>}</div>
 </div>
-<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span> </div>
-<div class="foldopen" id="foldopen00393" data-start="{" data-end="}">
-<div class="line"><a id="l00393" name="l00393"></a><span class="lineno"><a class="line" href="../../d0/dd6/multipart_8h.html#a300a26bea890db4715752e2ac2cea9a7">  393</a></span><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d3/d79/multipart_8c.html#a300a26bea890db4715752e2ac2cea9a7">cwist_multipart_extract_boundary</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *content_type) {</div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>    <span class="keywordflow">if</span> (!content_type) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *p = content_type;</div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>    <span class="keywordflow">while</span> (*p) {</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>        <span class="keywordflow">while</span> (*p &amp;&amp; (isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p) || *p == <span class="charliteral">&#39;;&#39;</span>)) p++;</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>        <span class="keywordflow">if</span> (strncasecmp(p, <span class="stringliteral">&quot;boundary&quot;</span>, 8) == 0) {</div>
-<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>            p += 8;</div>
-<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>            <span class="keywordflow">while</span> (*p &amp;&amp; isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>            <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;=&#39;</span>) {</div>
-<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>                p++;</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>                <span class="keywordflow">while</span> (*p &amp;&amp; isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *start = p;</div>
-<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *value_end = NULL;</div>
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>                <span class="keywordtype">bool</span> quoted = *p == <span class="charliteral">&#39;&quot;&#39;</span>;</div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>                <span class="keywordflow">if</span> (quoted) {</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>                    start = ++p;</div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>                        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\\&#39;</span>) {</div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>                            p++;</div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>                            <span class="keywordflow">if</span> (!*p) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>                        }</div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>                        p++;</div>
-<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>                    }</div>
-<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>                    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;&quot;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>                    value_end = p++;</div>
-<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>                } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span> &amp;&amp; !isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
-<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>                    value_end = p;</div>
-<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>                }</div>
-<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>                <span class="keywordtype">size_t</span> len = (size_t)(value_end - start);</div>
-<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>                <span class="keywordflow">if</span> (len == 0) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>                <span class="keywordflow">while</span> (isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
-<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>                <span class="keywordflow">if</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>                <span class="keywordtype">char</span> *boundary = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(len + 1);</div>
-<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>                <span class="keywordflow">if</span> (!boundary) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>                <span class="keywordtype">size_t</span> out = 0;</div>
-<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; len; i++) {</div>
-<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>                    <span class="keywordflow">if</span> (quoted &amp;&amp; start[i] == <span class="charliteral">&#39;\\&#39;</span>) i++;</div>
-<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>                    boundary[out++] = start[i];</div>
-<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>                }</div>
-<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>                boundary[out] = <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>                <span class="keywordflow">return</span> boundary;</div>
-<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>            }</div>
-<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>        }</div>
-<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>        p = mp_skip_param(p);</div>
-<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;;&#39;</span>) p++;</div>
-<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    }</div>
-<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>}</div>
+<div class="line"><a id="l00360" name="l00360"></a><span class="lineno">  360</span> </div>
+<div class="foldopen" id="foldopen00369" data-start="{" data-end="}">
+<div class="line"><a id="l00369" name="l00369"></a><span class="lineno"><a class="line" href="../../d0/dd6/multipart_8h.html#a1ab0ea22a33afa70cac42856fcbf07ef">  369</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../d3/d79/multipart_8c.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a>(<a class="code hl_struct" href="../../d3/dd4/structcwist__multipart__result.html">cwist_multipart_result</a> *result) {</div>
+<div class="line"><a id="l00370" name="l00370"></a><span class="lineno">  370</span>    <span class="keywordflow">if</span> (!result) <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l00371" name="l00371"></a><span class="lineno">  371</span>    <a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *curr = result-&gt;<a class="code hl_variable" href="../../d3/dd4/structcwist__multipart__result.html#abff8beab920f2ee9dc2578e75bd449c6">fields</a>;</div>
+<div class="line"><a id="l00372" name="l00372"></a><span class="lineno">  372</span>    <span class="keywordflow">while</span> (curr) {</div>
+<div class="line"><a id="l00373" name="l00373"></a><span class="lineno">  373</span>        <a class="code hl_struct" href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a> *next = curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a9695f4d918cdc9e7e81174c6c53177ac">next</a>;</div>
+<div class="line"><a id="l00374" name="l00374"></a><span class="lineno">  374</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a673a6ed58c680fa10a4b89d67c184578">name</a>);</div>
+<div class="line"><a id="l00375" name="l00375"></a><span class="lineno">  375</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#a0fdc71ba29705501617cd13849a11292">filename</a>);</div>
+<div class="line"><a id="l00376" name="l00376"></a><span class="lineno">  376</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aafe91ba0775fc407b4c905c2da5db17d">content_type</a>);</div>
+<div class="line"><a id="l00377" name="l00377"></a><span class="lineno">  377</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr-&gt;<a class="code hl_variable" href="../../d9/d34/structcwist__multipart__field.html#aaf619016fda2a140eadd6d8ca39ff5ee">data</a>);</div>
+<div class="line"><a id="l00378" name="l00378"></a><span class="lineno">  378</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(curr);</div>
+<div class="line"><a id="l00379" name="l00379"></a><span class="lineno">  379</span>        curr = next;</div>
+<div class="line"><a id="l00380" name="l00380"></a><span class="lineno">  380</span>    }</div>
+<div class="line"><a id="l00381" name="l00381"></a><span class="lineno">  381</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(result);</div>
+<div class="line"><a id="l00382" name="l00382"></a><span class="lineno">  382</span>}</div>
+</div>
+<div class="line"><a id="l00383" name="l00383"></a><span class="lineno">  383</span> </div>
+<div class="foldopen" id="foldopen00396" data-start="{" data-end="}">
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno"><a class="line" href="../../d0/dd6/multipart_8h.html#a300a26bea890db4715752e2ac2cea9a7">  396</a></span><span class="keywordtype">char</span> *<a class="code hl_function" href="../../d3/d79/multipart_8c.html#a300a26bea890db4715752e2ac2cea9a7">cwist_multipart_extract_boundary</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *content_type) {</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>    <span class="keywordflow">if</span> (!content_type) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *p = content_type;</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>    <span class="keywordflow">while</span> (*p) {</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>        <span class="keywordflow">while</span> (*p &amp;&amp; (isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p) || *p == <span class="charliteral">&#39;;&#39;</span>)) p++;</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>        <span class="keywordflow">if</span> (strncasecmp(p, <span class="stringliteral">&quot;boundary&quot;</span>, 8) == 0) {</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>            p += 8;</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>            <span class="keywordflow">while</span> (*p &amp;&amp; isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>            <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;=&#39;</span>) {</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>                p++;</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>                <span class="keywordflow">while</span> (*p &amp;&amp; isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *start = p;</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *value_end = NULL;</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>                <span class="keywordtype">bool</span> quoted = *p == <span class="charliteral">&#39;&quot;&#39;</span>;</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>                <span class="keywordflow">if</span> (quoted) {</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>                    start = ++p;</div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>                        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\\&#39;</span>) {</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>                            p++;</div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>                            <span class="keywordflow">if</span> (!*p) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>                        }</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>                        p++;</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>                    }</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>                    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;&quot;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>                    value_end = p++;</div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>                } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span> &amp;&amp; !isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>                    value_end = p;</div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>                }</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>                <span class="keywordtype">size_t</span> len = (size_t)(value_end - start);</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>                <span class="keywordflow">if</span> (len == 0) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>                <span class="keywordflow">while</span> (isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>                <span class="keywordflow">if</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>                <span class="keywordtype">char</span> *boundary = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(len + 1);</div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>                <span class="keywordflow">if</span> (!boundary) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>                <span class="keywordtype">size_t</span> out = 0;</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; len; i++) {</div>
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>                    <span class="keywordflow">if</span> (quoted &amp;&amp; start[i] == <span class="charliteral">&#39;\\&#39;</span>) i++;</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>                    boundary[out++] = start[i];</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>                }</div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>                boundary[out] = <span class="charliteral">&#39;\0&#39;</span>;</div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>                <span class="keywordflow">return</span> boundary;</div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>            }</div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>        }</div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>        p = mp_skip_param(p);</div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;;&#39;</span>) p++;</div>
+<div class="line"><a id="l00442" name="l00442"></a><span class="lineno">  442</span>    }</div>
+<div class="line"><a id="l00443" name="l00443"></a><span class="lineno">  443</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00444" name="l00444"></a><span class="lineno">  444</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
 <div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00017">alloc.c:17</a></div></div>
 <div class="ttc" id="aalloc_8h_html_af24e2adb2619df9938c0b45a40b4614d"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#af24e2adb2619df9938c0b45a40b4614d">CWIST_SCRATCH_DEFER</a></div><div class="ttdeci">#define CWIST_SCRATCH_DEFER</div><div class="ttdoc">Attach to a cwist_scratch_t variable's declaration so its allocation (arena- or heap-backed,...</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dfe/alloc_8h_source.html#l00190">alloc.h:190</a></div></div>
-<div class="ttc" id="amultipart_8c_html_a1ab0ea22a33afa70cac42856fcbf07ef"><div class="ttname"><a href="../../d3/d79/multipart_8c.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a></div><div class="ttdeci">void cwist_multipart_result_destroy(cwist_multipart_result *result)</div><div class="ttdoc">Destroy a parse result and everything it owns.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d79/multipart_8c_source.html#l00366">multipart.c:366</a></div></div>
-<div class="ttc" id="amultipart_8c_html_a300a26bea890db4715752e2ac2cea9a7"><div class="ttname"><a href="../../d3/d79/multipart_8c.html#a300a26bea890db4715752e2ac2cea9a7">cwist_multipart_extract_boundary</a></div><div class="ttdeci">char * cwist_multipart_extract_boundary(const char *content_type)</div><div class="ttdoc">Extract the boundary parameter from a Content-Type header value.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d79/multipart_8c_source.html#l00393">multipart.c:393</a></div></div>
-<div class="ttc" id="amultipart_8c_html_aee23385fdec89feda55f4eeae45ac030"><div class="ttname"><a href="../../d3/d79/multipart_8c.html#aee23385fdec89feda55f4eeae45ac030">cwist_multipart_parse</a></div><div class="ttdeci">cwist_multipart_result * cwist_multipart_parse(const char *body, size_t body_len, const char *boundary)</div><div class="ttdoc">Parse a multipart/form-data body into a field list.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d79/multipart_8c_source.html#l00295">multipart.c:295</a></div></div>
+<div class="ttc" id="amultipart_8c_html_a1ab0ea22a33afa70cac42856fcbf07ef"><div class="ttname"><a href="../../d3/d79/multipart_8c.html#a1ab0ea22a33afa70cac42856fcbf07ef">cwist_multipart_result_destroy</a></div><div class="ttdeci">void cwist_multipart_result_destroy(cwist_multipart_result *result)</div><div class="ttdoc">Destroy a parse result and everything it owns.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d79/multipart_8c_source.html#l00369">multipart.c:369</a></div></div>
+<div class="ttc" id="amultipart_8c_html_a300a26bea890db4715752e2ac2cea9a7"><div class="ttname"><a href="../../d3/d79/multipart_8c.html#a300a26bea890db4715752e2ac2cea9a7">cwist_multipart_extract_boundary</a></div><div class="ttdeci">char * cwist_multipart_extract_boundary(const char *content_type)</div><div class="ttdoc">Extract the boundary parameter from a Content-Type header value.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d79/multipart_8c_source.html#l00396">multipart.c:396</a></div></div>
+<div class="ttc" id="amultipart_8c_html_aee23385fdec89feda55f4eeae45ac030"><div class="ttname"><a href="../../d3/d79/multipart_8c.html#aee23385fdec89feda55f4eeae45ac030">cwist_multipart_parse</a></div><div class="ttdeci">cwist_multipart_result * cwist_multipart_parse(const char *body, size_t body_len, const char *boundary)</div><div class="ttdoc">Parse a multipart/form-data body into a field list.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d79/multipart_8c_source.html#l00298">multipart.c:298</a></div></div>
 <div class="ttc" id="amultipart_8h_html"><div class="ttname"><a href="../../d0/dd6/multipart_8h.html">multipart.h</a></div><div class="ttdoc">RFC 7578 multipart/form-data parser.</div></div>
 <div class="ttc" id="aotel_8c_html_a856fa22aef923b4a345805d81580aebe"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a></div><div class="ttdeci">size_t cap</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00059">otel.c:59</a></div></div>
 <div class="ttc" id="astructcwist__multipart__field_html"><div class="ttname"><a href="../../d9/d34/structcwist__multipart__field.html">cwist_multipart_field</a></div><div class="ttdef"><b>Definition</b> <a href="../../d0/dd6/multipart_8h_source.html#l00011">multipart.h:11</a></div></div>
