@@ -94,6 +94,12 @@ static bool ws_reject(cwist_http_response *res, int status, const char *body) {
     return false;
 }
 
+static bool ws_output_ok(cwist_error_t err) {
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
 static bool ws_origin_allowed(const cwist_http_request *req, const char *const *allowed_origins,
                               size_t origin_count) {
     if (!allowed_origins) return true;
@@ -144,12 +150,13 @@ bool cwist_websocket_upgrade_response_ex(cwist_http_request *req, cwist_http_res
     if (!accept_key) return false;
 
     res->status_code = 101;
-    cwist_sstring_assign(res->status_text, "Switching Protocols");
-    cwist_http_header_add(&res->headers, "Upgrade", "websocket");
-    cwist_http_header_add(&res->headers, "Connection", "Upgrade");
-    cwist_http_header_add(&res->headers, "Sec-WebSocket-Accept", accept_key);
+    bool ok = ws_output_ok(cwist_sstring_assign(res->status_text, "Switching Protocols")) &&
+              ws_output_ok(cwist_http_header_add(&res->headers, "Upgrade", "websocket")) &&
+              ws_output_ok(cwist_http_header_add(&res->headers, "Connection", "Upgrade")) &&
+              ws_output_ok(cwist_http_header_add(&res->headers, "Sec-WebSocket-Accept", accept_key));
 
     cwist_free(accept_key);
+    if (!ok) return ws_reject(res, CWIST_HTTP_INTERNAL_ERROR, "WebSocket Upgrade Failed");
     return true;
 }
 

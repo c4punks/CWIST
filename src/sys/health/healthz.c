@@ -172,6 +172,11 @@ void cwist_app_healthz(cwist_http_response *res) {
     cwist_healthz_run(probes, CWIST_HEALTHZ_MAX_PROBES, &count, &overall);
 
     cwist_json_builder *jb = cwist_json_builder_create();
+    if (!jb) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_sstring_assign(res->body, "health render failed");
+        return;
+    }
     cwist_json_begin_object(jb);
     cwist_json_add_string(jb, "status", status_str(overall));
     cwist_json_begin_array(jb, "probes");
@@ -194,8 +199,22 @@ void cwist_app_healthz(cwist_http_response *res) {
         cwist_json_builder_destroy(jb);
         return;
     }
-    cwist_sstring_assign(res->body, (char *)json);
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    cwist_error_t body_err = cwist_sstring_assign(res->body, (char *)json);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_json_builder_destroy(jb);
+        return;
+    }
+    cwist_error_dispose(&body_err);
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_json_builder_destroy(jb);
+        return;
+    }
+    cwist_error_dispose(&header_err);
 
     switch (overall) {
         case CWIST_HEALTH_OK: res->status_code = CWIST_HTTP_OK; break;

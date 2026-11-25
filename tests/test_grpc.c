@@ -11,6 +11,15 @@
 
 static int fail_body;
 static int fail_message;
+static int fail_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_header && strcmp(key, "grpc-accept-encoding") == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
 cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
 cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
     if (fail_body && data && len >= 5 && (unsigned char)data[0] <= 1)
@@ -509,6 +518,15 @@ static void test_response_failures(void) {
     grpc_status = cwist_http_header_get(res->headers, "grpc-status");
     assert(grpc_status == NULL || strcmp(grpc_status, "13") == 0);
     cwist_http_response_destroy(res);
+
+    res = cwist_http_response_create();
+    fail_header = 1;
+    cwist_grpc_set_response(res, CWIST_GRPC_OK, NULL, "x", 1);
+    fail_header = 0;
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    grpc_status = cwist_http_header_get(res->headers, "grpc-status");
+    assert(grpc_status && strcmp(grpc_status, "13") == 0);
+    cwist_http_response_destroy(res);
 }
 
 int main(void) {
@@ -597,6 +615,14 @@ int main(void) {
     opts.body = stream_body->data;
     opts.body_len = stream_body->size;
     opts.content_type = "application/grpc";
+    fail_header = 1;
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Chat", &opts);
+    fail_header = 0;
+    assert(res && res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    grpc_status = cwist_http_header_get(res->headers, "grpc-status");
+    assert(grpc_status && strcmp(grpc_status, "13") == 0);
+    cwist_http_response_destroy(res);
+
     res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Chat", &opts);
     const char *expected_stream[] = {"chunk-1:one", "chunk-2:two"};
     assert_stream_response(res, expected_stream, 2);

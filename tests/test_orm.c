@@ -46,6 +46,13 @@ void *__wrap_cwist_alloc(size_t size) {
     return __real_cwist_alloc(size);
 }
 
+static int fail_json_print;
+char *__real_cJSON_PrintUnformatted(const cJSON *item);
+char *__wrap_cJSON_PrintUnformatted(const cJSON *item) {
+    if (fail_json_print) return NULL;
+    return __real_cJSON_PrintUnformatted(item);
+}
+
 static cwist_orm_t *open_memdb(void) {
     int sock = cwist_db_transfer_sqlite_to_socket(":memory:");
     assert(sock >= 0);
@@ -741,7 +748,28 @@ static void test_db_open_allocation_failure(void) {
     fail_cwist_alloc = 0;
 }
 
+static void test_json_print_failure_is_not_sql_null(void) {
+    cwist_orm_t *orm = open_memdb();
+    cwist_orm_immediate_commit(true);
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE j(v TEXT);")) == 0);
+    cJSON *row = cJSON_CreateObject();
+    assert(cJSON_AddObjectToObject(row, "v") != NULL);
+    fail_json_print = 1;
+    cwist_error_t err = cwist_orm_insert(orm, "j", row);
+    fail_json_print = 0;
+    assert(rc(err) != 0);
+    cJSON_Delete(row);
+
+    cJSON *rows = NULL;
+    assert(rc(cwist_orm_query(orm, "SELECT COUNT(*) AS c FROM j;", &rows)) == 0);
+    assert(cJSON_GetObjectItem(cJSON_GetArrayItem(rows, 0), "c")->valuedouble == 0);
+    cJSON_Delete(rows);
+    cwist_orm_close_socket(orm);
+    cwist_orm_immediate_commit(false);
+}
+
 int main(void) {
+    test_json_print_failure_is_not_sql_null();
     test_query_and_transactions();
     test_insert_returning();
     test_select_one();

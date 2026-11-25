@@ -12,10 +12,23 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <poll.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include "../src/sys/app/otel.c"
+
+static _Atomic int fail_export_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_export_header)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
 
 #define FAIL_IF(cond, msg)                      \
     do {                                        \
@@ -156,6 +169,13 @@ int main(void) {
     FAIL_IF(!strstr(export,
                     "\"key\":\"http.response.status_code\",\"value\":{\"intValue\":\"503\"}"),
             "deferred status recorded after completion");
+
+    fail_export_header = 1;
+    FAIL_IF(get_trace_id(client, NULL, id, sizeof(id)) != 0, "request with failed export header");
+    struct pollfd idle = {.fd = lfd, .events = POLLIN};
+    int export_rc = poll(&idle, 1, 250);
+    fail_export_header = 0;
+    FAIL_IF(export_rc != 0, "export was sent despite header failure");
     close(lfd);
 
     cwist_test_client_destroy(client);

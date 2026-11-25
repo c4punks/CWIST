@@ -12,6 +12,16 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+static int fail_handshake_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_handshake_header && strcmp(key, "Sec-WebSocket-Accept") == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
+
 void print_hex(const uint8_t *data, size_t len) {
     for (size_t i = 0; i < len; i++) {
         printf("%02x ", data[i]);
@@ -226,6 +236,16 @@ static void test_handshake_protocol_errors(void) {
     assert(strstr(reply, "403 Forbidden") != NULL);
     close(sv[0]);
     close(sv[1]);
+    cwist_http_request_destroy(req);
+
+    req = new_handshake_request();
+    res = cwist_http_response_create();
+    fail_handshake_header = 1;
+    bool metadata_failed = cwist_websocket_upgrade_response(req, res);
+    fail_handshake_header = 0;
+    assert(!metadata_failed);
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);
 
     printf("WebSocket handshake protocol error tests passed.\n");

@@ -225,10 +225,18 @@ static void otel_export_batch(cwist_http_client *client, const otel_span_t *span
     char *body = otel_encode_spans(spans, n);
     if (!body) return;
     cwist_http_header_node *headers = NULL;
-    cwist_http_header_add(&headers, "Content-Type", "application/json");
+    cwist_error_t header_err = cwist_http_header_add(&headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        cwist_http_header_free_all(headers);
+        cJSON_free(body);
+        return;
+    }
+    cwist_error_dispose(&header_err);
     cwist_http_response *res = NULL;
-    cwist_http_client_request(client, g_otel.endpoint, CWIST_HTTP_POST, headers, body, strlen(body),
-                              &res);
+    cwist_error_t request_err = cwist_http_client_request(client, g_otel.endpoint, CWIST_HTTP_POST,
+                                                          headers, body, strlen(body), &res);
+    cwist_error_dispose(&request_err);
     if (res) cwist_http_response_destroy(res);
     cwist_http_header_free_all(headers);
     cJSON_free(body);

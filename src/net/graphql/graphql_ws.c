@@ -75,7 +75,15 @@ bool cwist_graphql_ws_upgrade_response(cwist_http_request *req, cwist_http_respo
         return false;
     }
     if (!cwist_websocket_upgrade_response(req, res)) return false;
-    cwist_http_header_add(&res->headers, "Sec-WebSocket-Protocol", "graphql-transport-ws");
+    cwist_error_t err =
+        cwist_http_header_add(&res->headers, "Sec-WebSocket-Protocol", "graphql-transport-ws");
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_sstring_assign(res->status_text, "Internal Server Error");
+        return false;
+    }
+    cwist_error_dispose(&err);
     return true;
 }
 

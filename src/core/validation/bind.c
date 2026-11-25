@@ -717,6 +717,11 @@ bool cwist_app_req_bind_query(cwist_http_request *req, const cwist_bind_schema_t
     return cwist_bind_generic(schema, payload, false, out, result);
 }
 
+static void bind_write_internal_error(cwist_http_response *res) {
+    res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+    if (res->status_text) cwist_sstring_assign(res->status_text, "Internal Server Error");
+}
+
 /**
  * @brief Write a 400 Bad Request JSON error response from a bind result.
  *
@@ -734,7 +739,10 @@ void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_
     if (res->status_text) cwist_sstring_assign(res->status_text, "Bad Request");
 
     cwist_json_builder *jb = cwist_json_builder_create();
-    if (!jb) return;
+    if (!jb) {
+        bind_write_internal_error(res);
+        return;
+    }
     cwist_json_begin_object(jb);
     cwist_json_add_bool(jb, "success", false);
     cwist_json_begin_array(jb, "errors");
@@ -748,9 +756,26 @@ void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_
     cwist_json_end_object(jb);
 
     const char *json = cwist_json_get_raw(jb);
-    if (res->body && json) cwist_sstring_assign(res->body, (char *)json);
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!res->body || !json) {
+        cwist_json_builder_destroy(jb);
+        bind_write_internal_error(res);
+        return;
+    }
+    cwist_error_t body_err = cwist_sstring_assign(res->body, (char *)json);
     cwist_json_builder_destroy(jb);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        bind_write_internal_error(res);
+        return;
+    }
+    cwist_error_dispose(&body_err);
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        bind_write_internal_error(res);
+        return;
+    }
+    cwist_error_dispose(&header_err);
 }
 
 /**
