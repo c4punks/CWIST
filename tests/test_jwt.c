@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <cjson/cJSON.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_string;
 static int fail_number;
 cJSON *__real_cJSON_AddStringToObject(cJSON *object, const char *string, const char *value);
@@ -26,7 +27,9 @@ cJSON *__wrap_cJSON_AddNumberToObject(cJSON *object, const char *string, double 
     if (fail_number) return NULL;
     return __real_cJSON_AddNumberToObject(object, string, number);
 }
+#endif
 
+#ifdef CWIST_TEST_WRAP
 static void test_allocation_failures(void) {
     fail_string = 1;
     assert(cwist_jwt_sign("{\"sub\":\"user42\"}", "secret", 3600) == NULL);
@@ -35,6 +38,7 @@ static void test_allocation_failures(void) {
     assert(cwist_jwt_sign("{\"sub\":\"user42\"}", "secret", 3600) == NULL);
     fail_number = 0;
 }
+#endif
 
 static void test_sign_and_verify(void) {
     printf("Testing JWT sign and verify...\n");
@@ -407,7 +411,9 @@ static void test_embedded_nul_claims(void) {
 }
 
 int main(void) {
+#ifdef CWIST_TEST_WRAP
     test_allocation_failures();
+#endif
     test_input_shape_and_time_bounds();
     test_malformed_time_claim_types();
     test_sign_and_verify();

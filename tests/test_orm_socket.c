@@ -10,6 +10,7 @@
 #include <cwist/core/orm/orm.h>
 #include <cwist/core/orm/orm_socket.h>
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int fail_add;
 static _Atomic int fail_typed;
 cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
@@ -33,6 +34,7 @@ cJSON *__wrap_cJSON_AddStringToObject(cJSON *object, const char *string, const c
     if (__atomic_load_n(&fail_metadata, __ATOMIC_SEQ_CST)) return NULL;
     return __real_cJSON_AddStringToObject(object, string, value);
 }
+#endif
 
 /* cwist_db_transfer_sqlite_to_socket() must hand back a usable SQL socket:
  * the ORM helpers round-trip rows through the SQLite worker behind it. */
@@ -98,6 +100,7 @@ static void test_transfer_sqlite_to_socket(void) {
     cJSON_Delete(rows);
 
     rows = NULL;
+#ifdef CWIST_TEST_WRAP
     fail_add = 1;
     cwist_error_t err = cwist_orm_select(orm, "posts", "id", NULL, &rows);
     fail_add = 0;
@@ -117,6 +120,7 @@ static void test_transfer_sqlite_to_socket(void) {
     fail_metadata = 0;
     assert(!cwist_error_is_ok(&err) && rows == NULL);
     cwist_error_dispose(&err);
+#endif
 
     cwist_orm_close_socket(orm);
     printf("cwist_db_transfer_sqlite_to_socket round-trip test passed.\n");

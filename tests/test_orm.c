@@ -29,6 +29,7 @@ static int rc(cwist_error_t e) {
     return e.error.err_i16;
 }
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int inject_recv_eintr;
 ssize_t __real_recv(int fd, void *buf, size_t len, int flags);
 ssize_t __wrap_recv(int fd, void *buf, size_t len, int flags) {
@@ -52,6 +53,7 @@ char *__wrap_cJSON_PrintUnformatted(const cJSON *item) {
     if (fail_json_print) return NULL;
     return __real_cJSON_PrintUnformatted(item);
 }
+#endif
 
 static cwist_orm_t *open_memdb(void) {
     int sock = cwist_db_transfer_sqlite_to_socket(":memory:");
@@ -581,7 +583,9 @@ static void test_commit_scope_and_interrupted_recv(void) {
     assert(rc(cwist_orm_exec(writer, "BEGIN;")) == 0);
     assert(rc(cwist_orm_exec(writer, "INSERT INTO commits VALUES (99); ROLLBACK;")) ==
            CWIST_ERROR_PROTOCOL);
+#ifdef CWIST_TEST_WRAP
     inject_recv_eintr = 1;
+#endif
     assert(rc(cwist_orm_query(writer, "SELECT 1 AS n;", &rows)) == 0);
     cJSON_Delete(rows);
     cwist_orm_close_socket(writer);
@@ -739,6 +743,7 @@ static void test_status_and_blob_validation(void) {
     mock_query_payload(valid, true, true);
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_db_open_allocation_failure(void) {
     fail_cwist_alloc = 1;
     cwist_db *db = (cwist_db *)1;
@@ -747,7 +752,9 @@ static void test_db_open_allocation_failure(void) {
     assert(cwist_db_open_memory(&db, "x", 1, 0).error.err_i16 != 0 && db == NULL);
     fail_cwist_alloc = 0;
 }
+#endif
 
+#ifdef CWIST_TEST_WRAP
 static void test_json_print_failure_is_not_sql_null(void) {
     cwist_orm_t *orm = open_memdb();
     cwist_orm_immediate_commit(true);
@@ -767,9 +774,12 @@ static void test_json_print_failure_is_not_sql_null(void) {
     cwist_orm_close_socket(orm);
     cwist_orm_immediate_commit(false);
 }
+#endif
 
 int main(void) {
+#ifdef CWIST_TEST_WRAP
     test_json_print_failure_is_not_sql_null();
+#endif
     test_query_and_transactions();
     test_insert_returning();
     test_select_one();
@@ -786,7 +796,9 @@ int main(void) {
     test_typed_multi_statement();
     test_malformed_rows_shape();
     test_status_and_blob_validation();
+#ifdef CWIST_TEST_WRAP
     test_db_open_allocation_failure();
+#endif
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");
     return 0;

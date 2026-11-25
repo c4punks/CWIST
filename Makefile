@@ -1798,7 +1798,7 @@ bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/re
 
 ifeq ($(CWIST_DB),1)
 test_orm: $(LIB_NAME) tests/test_orm.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_PrintUnformatted -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,recv) $(call wrap_flag,cwist_alloc) $(call wrap_flag,cJSON_PrintUnformatted) -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -1988,7 +1988,7 @@ test_mux_param: $(LIB_NAME) tests/test_mux_param.c
 
 ifeq ($(CWIST_JWT),1)
 test_jwt: $(LIB_NAME) tests/test_jwt.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddStringToObject -Wl,--wrap=cJSON_AddNumberToObject -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddStringToObject) $(call wrap_flag,cJSON_AddNumberToObject) -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
 	./test_jwt
 
 test_jwt_asym: $(LIB_NAME) tests/test_jwt_asym.c
@@ -2012,7 +2012,7 @@ endif
 
 ifeq ($(CWIST_DB),1)
 test_json_heal: $(LIB_NAME) tests/test_json_heal.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_realloc -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddItemToArray -Wl,--wrap=cJSON_Duplicate -Wl,--wrap=cJSON_ReplaceItemInObjectCaseSensitive -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_realloc) $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddItemToArray) $(call wrap_flag,cJSON_Duplicate) $(call wrap_flag,cJSON_ReplaceItemInObjectCaseSensitive) -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
 	./test_json_heal
 else
 # CWIST_DB=0: json_heal's DB round-trip path is compiled out with the module.
@@ -2970,7 +2970,7 @@ test_linux_writer_fast: $(LIB_NAME) tests/test_linux_writer_fast.c
 
 ifeq ($(CWIST_DB),1)
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddObjectToObject -Wl,--wrap=cJSON_AddNumberToObject -Wl,--wrap=cJSON_AddStringToObject -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddObjectToObject) $(call wrap_flag,cJSON_AddNumberToObject) $(call wrap_flag,cJSON_AddStringToObject) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
 
 test_orm_socket_sigpipe: $(LIB_NAME) tests/test_orm_socket_sigpipe.c
