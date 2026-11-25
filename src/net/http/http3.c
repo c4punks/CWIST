@@ -2271,7 +2271,21 @@ static void cwist_h3_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h)
             return;
         }
         if (st->body_len > 0 && st->req && st->req->body) {
-            cwist_sstring_assign_len(st->req->body, st->body, st->body_len);
+            cwist_error_t body_err = cwist_sstring_assign_len(st->req->body, st->body, st->body_len);
+            if (!cwist_error_is_ok(&body_err)) {
+                cwist_error_dispose(&body_err);
+                if (st->res) cwist_http_response_destroy(st->res);
+                st->res = cwist_http_response_create();
+                if (st->res)
+                    h3_json_error(st->res, CWIST_HTTP_INTERNAL_ERROR,
+                                  "{\"error\":\"request body allocation failed\"}");
+                st->response_ready = 1;
+                lsquic_stream_wantread(stream, 0);
+                lsquic_stream_shutdown(stream, 0);
+                lsquic_stream_wantwrite(stream, 1);
+                return;
+            }
+            cwist_error_dispose(&body_err);
         }
 
         st->res = cwist_http_response_create();

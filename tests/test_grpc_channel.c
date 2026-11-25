@@ -113,6 +113,31 @@ static void bk_pushback(cwist_http_request *req, cwist_http_response *res,
     bk_success(req, res, bs);
 }
 
+static void bk_stream_empty(cwist_grpc_stream *stream, void *user_ctx) {
+    (void)user_ctx;
+    cwist_grpc_message msg;
+    while (cwist_grpc_stream_recv(stream, &msg) == 1);
+    cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
+}
+
+static void bk_stream_multi(cwist_grpc_stream *stream, void *user_ctx) {
+    (void)user_ctx;
+    cwist_grpc_message msg;
+    while (cwist_grpc_stream_recv(stream, &msg) == 1);
+    assert(cwist_grpc_stream_send(stream, "first", 5) == 0);
+    assert(cwist_grpc_stream_send(stream, "second", 6) == 0);
+    cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
+}
+
+static void bk_stream_multi_empty(cwist_grpc_stream *stream, void *user_ctx) {
+    (void)user_ctx;
+    cwist_grpc_message msg;
+    while (cwist_grpc_stream_recv(stream, &msg) == 1);
+    assert(cwist_grpc_stream_send(stream, "first", 5) == 0);
+    assert(cwist_grpc_stream_send(stream, NULL, 0) == 0);
+    cwist_grpc_stream_close(stream, CWIST_GRPC_OK, NULL);
+}
+
 static void bk_bridge(void *user_ctx, cwist_http_request *req, cwist_http_response *res) {
     cwist_app *app = user_ctx;
     req->app = app;
@@ -173,6 +198,10 @@ static uint16_t start_backend(test_backend *bk, char id) {
     assert(cwist_app_grpc_unary(bk->app, "cwist.test.Bk", "Always", bk_always, &bk->state) == 0);
     assert(cwist_app_grpc_unary(bk->app, "cwist.test.Bk", "Pushback", bk_pushback, &bk->state) ==
            0);
+    assert(cwist_app_grpc_stream(bk->app, "cwist.test.Bk", "Empty", bk_stream_empty, NULL) == 0);
+    assert(cwist_app_grpc_stream(bk->app, "cwist.test.Bk", "Multi", bk_stream_multi, NULL) == 0);
+    assert(cwist_app_grpc_stream(bk->app, "cwist.test.Bk", "MultiEmpty", bk_stream_multi_empty,
+                                 NULL) == 0);
 
     bk->listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(bk->listen_fd >= 0);
@@ -740,6 +769,28 @@ static void test_unary_allocation_failure(uint16_t port_a) {
     cwist_grpc_channel_close(ch);
 }
 
+static void test_unary_response_cardinality(uint16_t port_a) {
+    char target[96];
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
+    cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, NULL);
+    assert(ch != NULL);
+    size_t req_len = 0;
+    uint8_t *req = build_request("hi", &req_len);
+    static const char *const methods[] = {"Empty", "Multi", "MultiEmpty"};
+    for (size_t i = 0; i < sizeof(methods) / sizeof(methods[0]); i++) {
+        char method[64];
+        snprintf(method, sizeof(method), "/cwist.test.Bk/%s", methods[i]);
+        uint8_t *response = NULL;
+        size_t response_len = 0;
+        cwist_grpc_status_t status =
+            cwist_grpc_channel_unary(ch, method, req, req_len, 1000, &response, &response_len, NULL);
+        assert(status == CWIST_GRPC_INTERNAL);
+        assert(response == NULL && response_len == 0);
+    }
+    cwist_free(req);
+    cwist_grpc_channel_close(ch);
+}
+
 static void test_transparent_retry_goaway(uint16_t port_b) {
     printf("  retry: GOAWAY last_stream_id < stream id retries transparently...\n");
     goaway_fake fake;
@@ -833,6 +884,7 @@ int main(void) {
     test_throttle(&a, port_a);
     test_deadline_across_attempts(port_a);
     test_unary_allocation_failure(port_a);
+    test_unary_response_cardinality(port_a);
     test_json_service_config(&a, &b, port_a, port_b);
     test_transparent_retry_goaway(port_b);
     test_graceful_goaway();

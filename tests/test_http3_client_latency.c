@@ -30,16 +30,34 @@
 #define REQUESTS 300
 #define LIMIT_US 800.0
 
-static _Atomic int fail_alloc;
+static _Thread_local int fail_alloc;
 void *__real_malloc(size_t size);
 void *__wrap_malloc(size_t size) {
     if (fail_alloc) return NULL;
     return __real_malloc(size);
 }
+static _Thread_local int fail_header;
+static _Thread_local int fail_client_body;
+static _Atomic int fail_server_body;
+static _Atomic int handler_calls;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_header) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
+cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (fail_client_body || (fail_server_body && len == 5 && memcmp(data, "hello", 5) == 0))
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign_len(str, data, len);
+}
 
 static void get_handler(void *user, cwist_http_request *req, cwist_http_response *res) {
     (void)user;
     (void)req;
+    atomic_fetch_add(&handler_calls, 1);
     res->status_code = CWIST_HTTP_OK;
     cwist_sstring_assign(res->body, "pong");
 }
@@ -98,6 +116,32 @@ int main(void) {
     res = NULL;
     e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
     if (e.error.err_i16 != 0 || !res) return 1;
+    cwist_http_response_destroy(res);
+
+    fail_header = 1;
+    res = NULL;
+    e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    fail_header = 0;
+    if (res) {
+        cwist_http_response_destroy(res);
+        return 1;
+    }
+    fail_client_body = 1;
+    res = NULL;
+    e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    fail_client_body = 0;
+    if (res) {
+        cwist_http_response_destroy(res);
+        return 1;
+    }
+    int before = atomic_load(&handler_calls);
+    fail_server_body = 1;
+    res = NULL;
+    e = cwist_http3_client_request(c, "/", CWIST_HTTP_POST, NULL, "hello", 5, &res);
+    fail_server_body = 0;
+    if (e.error.err_i16 != 0 || !res || res->status_code != CWIST_HTTP_INTERNAL_ERROR ||
+        atomic_load(&handler_calls) != before)
+        return 1;
     cwist_http_response_destroy(res);
     static double lat[REQUESTS];
     for (int i = 0; i < REQUESTS; i++) {

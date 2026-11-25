@@ -676,6 +676,23 @@ static void test_health_watch_alloc_failure(cwist_app *app) {
     stop_server(cfd, &ctx, tid);
 }
 
+static void test_health_watch_missing_request(cwist_app *app) {
+    printf("  health Watch missing request...\n");
+    server_ctx ctx;
+    pthread_t tid;
+    int cfd = start_server(app, &ctx, &tid);
+    uint8_t block[4096];
+    size_t blen = build_request_block(block, "/grpc.health.v1.Health/Watch", NULL, 0);
+    fd_send_frame(cfd, 0x01, 0x05, 1, block, (uint32_t)blen);
+    test_frame f;
+    assert(fd_read_stream_frame(cfd, &f, 0x01, 1, 5000) == 0);
+    assert(f.flags & 0x01);
+    assert(frame_payload_contains(&f, "grpc-status"));
+    assert(frame_payload_contains(&f, "3"));
+    assert(cwist_app_grpc_health_watchers(app) == 0);
+    stop_server(cfd, &ctx, tid);
+}
+
 /* --- 8. unregistering methods with calls still in flight (#602) --- */
 typedef struct {
     atomic_int entered;
@@ -798,6 +815,7 @@ int main(void) {
     test_deadline(app, &deadline_st);
     test_health_watch(app);
     test_health_watch_alloc_failure(app);
+    test_health_watch_missing_request(app);
 
     /* Cancellation uses the Block handler; swap in the cancel flag state. */
     assert(cwist_app_grpc_stream(app, "cwist.test.Wire", "Block", wire_block, &cancel_st) == 0);

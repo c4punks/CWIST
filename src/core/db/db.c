@@ -528,7 +528,11 @@ cwist_error_t cwist_db_query_strict(cwist_db *db, const char *sql, cJSON **resul
         cwist_zod_result_t zod = cwist_zod_validate(row, schema);
         if (zod.valid) {
             cJSON *clone = cJSON_Duplicate(row, 1);
-            if (clone) cJSON_AddItemToArray(conforming, clone);
+            if (!clone) goto oom;
+            if (!cJSON_AddItemToArray(conforming, clone)) {
+                cJSON_Delete(clone);
+                goto oom;
+            }
         }
     }
 
@@ -537,5 +541,12 @@ cwist_error_t cwist_db_query_strict(cwist_db *db, const char *sql, cJSON **resul
 
     err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = 0;
+    return err;
+
+oom:
+    cJSON_Delete(all);
+    cJSON_Delete(conforming);
+    err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1;
     return err;
 }

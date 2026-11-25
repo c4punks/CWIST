@@ -449,11 +449,28 @@ static void gql_ws_send_error(cwist_websocket_async *ws, const char *id, const c
         cwist_websocket_async_close(ws);
         return;
     }
-    cJSON_AddStringToObject(err, "type", "error");
-    cJSON_AddStringToObject(err, "id", id ? id : "");
-    cJSON_AddStringToObject(entry, "message", message);
-    cJSON_AddItemToArray(payload, entry);
-    cJSON_AddItemToObject(err, "payload", payload);
+    if (!cJSON_AddStringToObject(err, "type", "error") ||
+        !cJSON_AddStringToObject(err, "id", id ? id : "") ||
+        !cJSON_AddStringToObject(entry, "message", message)) {
+        cJSON_Delete(err);
+        cJSON_Delete(payload);
+        cJSON_Delete(entry);
+        cwist_websocket_async_close(ws);
+        return;
+    }
+    if (!cJSON_AddItemToArray(payload, entry)) {
+        cJSON_Delete(err);
+        cJSON_Delete(payload);
+        cJSON_Delete(entry);
+        cwist_websocket_async_close(ws);
+        return;
+    }
+    if (!cJSON_AddItemToObject(err, "payload", payload)) {
+        cJSON_Delete(err);
+        cJSON_Delete(payload);
+        cwist_websocket_async_close(ws);
+        return;
+    }
     gql_ws_send_json(ws, err);
 }
 
@@ -493,13 +510,14 @@ static char *gql_ws_build_next(const gql_ws_op_t *op, const cJSON *payload) {
     cJSON *data = cJSON_CreateObject();
     cJSON *value = payload ? cJSON_Duplicate(payload, true) : cJSON_CreateNull();
     if (!msg || !pl || !data || !value) goto out;
-    cJSON_AddStringToObject(msg, "type", "next");
-    cJSON_AddStringToObject(msg, "id", op->id);
-    cJSON_AddItemToObject(data, op->field, value);
+    if (!cJSON_AddStringToObject(msg, "type", "next") ||
+        !cJSON_AddStringToObject(msg, "id", op->id))
+        goto out;
+    if (!cJSON_AddItemToObject(data, op->field, value)) goto out;
     value = NULL;
-    cJSON_AddItemToObject(pl, "data", data);
+    if (!cJSON_AddItemToObject(pl, "data", data)) goto out;
     data = NULL;
-    cJSON_AddItemToObject(msg, "payload", pl);
+    if (!cJSON_AddItemToObject(msg, "payload", pl)) goto out;
     pl = NULL;
     printed = cJSON_PrintUnformatted(msg);
 out:

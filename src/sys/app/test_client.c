@@ -8,6 +8,7 @@
 #include <strings.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <time.h>
@@ -450,6 +451,12 @@ cwist_http_response *cwist_test_client_patch(cwist_test_client *client, const ch
     return do_request(client, CWIST_HTTP_PATCH, path, &opts);
 }
 
+static bool multipart_size_add(size_t *total, size_t amount) {
+    if (amount > SIZE_MAX - *total) return false;
+    *total += amount;
+    return true;
+}
+
 /** @brief Send a POST request with a single-file multipart/form-data body.
  * Builds the multipart body with a fixed boundary, including Content-Disposition and
  * Content-Type headers for the file part. The body buffer is freed before returning.
@@ -471,8 +478,26 @@ cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
     const char *boundary = "CWISTTestClientBoundary7MA4YWxkTrZu0gW";
     size_t boundary_len = strlen(boundary);
 
-    size_t body_len = 2 + boundary_len + 2 + 38 + strlen(field_name) + 25 + strlen(file_name) + 16 +
-                      strlen(content_type) + 4 + data_len + 2 + boundary_len + 2 + 2;
+    size_t body_len = 0;
+    const size_t amounts[] = {2,
+                              boundary_len,
+                              2,
+                              38,
+                              strlen(field_name),
+                              25,
+                              strlen(file_name),
+                              16,
+                              strlen(content_type),
+                              4,
+                              data_len,
+                              2,
+                              boundary_len,
+                              2,
+                              2};
+    for (size_t i = 0; i < sizeof(amounts) / sizeof(amounts[0]); i++) {
+        if (!multipart_size_add(&body_len, amounts[i])) return NULL;
+    }
+    if (body_len == SIZE_MAX) return NULL;
     char *body = (char *)cwist_alloc(body_len + 1);
     if (!body) return NULL;
 
