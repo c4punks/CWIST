@@ -764,6 +764,7 @@ void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const
                    size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
     if (strcmp(method, "GET") != 0) return;
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return;
 
     uint64_t req_h = bdr_hash(method, path);
     uint64_t res_h = bdr_hash_data(data, len);
@@ -822,6 +823,7 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
                          size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
     if (strcmp(method, "GET") != 0) return;
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return;
 
     uint64_t req_h = bdr_hash(method, path);
 
@@ -863,6 +865,7 @@ void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const cha
                                  void *arg) {
     if (!bdr || !method || !path || !data || len == 0 || !fn) return;
     if (strcmp(method, "GET") != 0) return;
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return;
 
     uint64_t req_h = bdr_hash(method, path);
 
