@@ -712,6 +712,13 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
         if (grpc_client_read_frame(c, &f, deadline) != 0) goto fail;
         int rc = 0;
         if (f.type == H2_FRAME_SETTINGS && !(f.flags & H2_FLAG_ACK)) {
+            if (f.stream_id != 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = 0x01;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway), deadline);
+                cwist_free(f.payload);
+                goto fail;
+            }
             server_settings = 1;
             rc = grpc_client_apply_settings(c, f.payload, f.len, deadline);
         } else if (f.type == H2_FRAME_SETTINGS) {
@@ -721,8 +728,16 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
                 goto fail;
             }
             our_ack = 1;
-        } else if (f.type == H2_FRAME_PING && !(f.flags & H2_FLAG_ACK) && f.len == 8) {
-            rc = grpc_client_write_frame(c, H2_FRAME_PING, H2_FLAG_ACK, 0, f.payload, 8, deadline);
+        } else if (f.type == H2_FRAME_PING) {
+            if (f.stream_id != 0 || f.len != 8) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = f.stream_id != 0 ? 0x01 : 0x06;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway), deadline);
+                cwist_free(f.payload);
+                goto fail;
+            }
+            if (!(f.flags & H2_FLAG_ACK))
+                rc = grpc_client_write_frame(c, H2_FRAME_PING, H2_FLAG_ACK, 0, f.payload, 8, deadline);
         } else if (f.type == H2_FRAME_GOAWAY) {
             cwist_free(f.payload);
             goto fail;
@@ -996,6 +1011,15 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             break;
         }
         case H2_FRAME_GOAWAY: {
+            if (f.stream_id != 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = 0x01;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+                break;
+            }
             c->goaway = 1;
             uint32_t last = 0;
             if (f.len >= 4) {
@@ -1016,6 +1040,15 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             break;
         }
         case H2_FRAME_RST_STREAM:
+            if (f.len != 4 || f.stream_id == 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = f.len != 4 ? 0x06 : 0x01;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+                break;
+            }
             if (f.stream_id == call->stream_id) {
                 call->stream_ended = 1;
                 if (!call->trailers) {

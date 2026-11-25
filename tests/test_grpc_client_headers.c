@@ -74,8 +74,14 @@ static void *serve(void *arg) {
     do {
         read_frame(fd, &type, &stream);
     } while (type != 4);
-    send_frame(fd, 4, 0, 0, NULL, 0);
+    send_frame(fd, 4, 0, ctx->over_limit == -1 ? 1 : 0, NULL, 0);
     send_frame(fd, 4, 1, 0, NULL, 0);
+    if (ctx->over_limit == -1) {
+        close(fd);
+        close(ctx->fd);
+        free(ctx);
+        return NULL;
+    }
     do {
         read_frame(fd, &type, &stream);
     } while (type != 0);
@@ -95,6 +101,11 @@ static void *serve(void *arg) {
     } else if (ctx->push == 5) {
         static const unsigned char ping[1] = {0};
         send_frame(fd, 6, 0, 0, ping, sizeof(ping));
+    } else if (ctx->push == 6) {
+        static const unsigned char goaway[8] = {0};
+        send_frame(fd, 7, 0, stream, goaway, sizeof(goaway));
+    } else if (ctx->push == 7) {
+        send_frame(fd, 3, 0, stream, NULL, 0);
     }
     if (ctx->over_limit) {
         send_frame(fd, 1, 0, stream, status_ok, sizeof(status_ok));
@@ -162,7 +173,17 @@ static void run_case(int over_limit, int push, int compressed) {
     pthread_join(tid, NULL);
 }
 
+static void run_initial_settings_case(void) {
+    pthread_t tid;
+    uint16_t port = start_server(-1, 0, 0, &tid);
+    cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
+    assert(client == NULL);
+    if (client) cwist_grpc_client_close(client);
+    pthread_join(tid, NULL);
+}
+
 int main(void) {
+    run_initial_settings_case();
     run_case(0, 0, 0);
     run_case(1, 0, 0);
     run_case(0, 1, 0);
@@ -170,6 +191,8 @@ int main(void) {
     run_case(0, 3, 0);
     run_case(0, 4, 0);
     run_case(0, 5, 0);
+    run_case(0, 6, 0);
+    run_case(0, 7, 0);
     run_case(0, 0, 1);
     puts("test_grpc_client_headers: all passed");
     return 0;
