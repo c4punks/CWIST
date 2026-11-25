@@ -168,6 +168,11 @@ static int migrate_is_applied(sqlite3 *db, int version, int *found) {
  */
 int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count) {
     if (!db || !migrations || count <= 0) return CWIST_MIGRATE_ERR_ARGS;
+    for (int i = 0; i < count; i++) {
+        if (migrations[i].version <= 0) return CWIST_MIGRATE_ERR_ARGS;
+        for (int j = i + 1; j < count; j++)
+            if (migrations[i].version == migrations[j].version) return CWIST_MIGRATE_ERR_ARGS;
+    }
 
     if (migrate_ensure_table(db) != CWIST_MIGRATE_OK) return CWIST_MIGRATE_ERR_SQL;
 
@@ -218,6 +223,11 @@ int cwist_migrate_up(sqlite3 *db, const cwist_migration_t *migrations, int count
  */
 int cwist_migrate_down(sqlite3 *db, const cwist_migration_t *migrations, int count, int steps) {
     if (!db || !migrations || count <= 0) return CWIST_MIGRATE_ERR_ARGS;
+    for (int i = 0; i < count; i++) {
+        if (migrations[i].version <= 0) return CWIST_MIGRATE_ERR_ARGS;
+        for (int j = i + 1; j < count; j++)
+            if (migrations[i].version == migrations[j].version) return CWIST_MIGRATE_ERR_ARGS;
+    }
 
     if (migrate_ensure_table(db) != CWIST_MIGRATE_OK) return CWIST_MIGRATE_ERR_SQL;
 

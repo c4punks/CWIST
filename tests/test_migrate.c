@@ -210,10 +210,26 @@ static void test_migrate_extreme_versions(void) {
     const cwist_migration_t extreme[] = {
         {INT_MAX, "last", "CREATE TABLE last_version (id INTEGER);", NULL},
         {1, "first", "CREATE TABLE first_version (id INTEGER);", NULL},
-        {INT_MIN, "skipped", "CREATE TABLE skipped_version (id INTEGER);", NULL},
     };
-    assert(cwist_migrate_up(db, extreme, 3) == CWIST_MIGRATE_OK);
+    assert(cwist_migrate_up(db, extreme, 2) == CWIST_MIGRATE_OK);
     assert(cwist_migrate_version(db) == INT_MAX);
+    const cwist_migration_t invalid[] = {
+        {0, "zero", "CREATE TABLE zero_version (id INTEGER);", NULL},
+        {INT_MIN, "negative", "CREATE TABLE negative_version (id INTEGER);", NULL},
+    };
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++)
+        assert(cwist_migrate_up(db, &invalid[i], 1) == CWIST_MIGRATE_ERR_ARGS);
+    const cwist_migration_t duplicates[] = {
+        {4, "first", "CREATE TABLE duplicate_version (id INTEGER);", NULL},
+        {4, "second", "CREATE TABLE duplicate_version_2 (id INTEGER);", NULL},
+    };
+    assert(cwist_migrate_up(db, duplicates, 2) == CWIST_MIGRATE_ERR_ARGS);
+    sqlite3_stmt *stmt = NULL;
+    const char *duplicate_query =
+        "SELECT count(*) FROM sqlite_master WHERE name LIKE 'duplicate%';";
+    assert(sqlite3_prepare_v2(db, duplicate_query, -1, &stmt, NULL) == SQLITE_OK);
+    assert(sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) == 0);
+    sqlite3_finalize(stmt);
     sqlite3_close(db);
     printf("  Passed.\n");
 }

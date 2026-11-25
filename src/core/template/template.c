@@ -272,6 +272,9 @@ static const char *json_scalar_text(const cJSON *value, char *buf, size_t buf_le
  * @brief Apply a simple filter and return a dynamically sized string.
  * Supported filters: upper, lower, escape, trim, length, default(arg).
  */
+static bool template_append_len(cwist_sstring *output, const char *data, size_t len);
+static bool template_append(cwist_sstring *output, const char *text);
+
 static cwist_sstring *apply_filter(const char *value, const char *filter) {
     if (!filter) return NULL;
     cwist_sstring *out = cwist_sstring_create();
@@ -288,12 +291,15 @@ static cwist_sstring *apply_filter(const char *value, const char *filter) {
                     unsigned char c = (unsigned char)p[i];
                     chunk[i] = (char)(upper ? toupper(c) : tolower(c));
                 }
-                cwist_sstring_append_len(out, chunk, len);
+                if (!template_append_len(out, chunk, len)) goto oom;
                 p += len;
             }
         }
     } else if (strcmp(filter, "escape") == 0 || strcmp(filter, "e") == 0) {
-        cwist_sstring_append_escaped(out, value);
+        cwist_error_t err = cwist_sstring_append_escaped(out, value);
+        bool ok = cwist_error_is_ok(&err);
+        cwist_error_dispose(&err);
+        if (!ok) goto oom;
     } else if (strcmp(filter, "trim") == 0) {
         if (value && *value) {
             const char *s = value;
@@ -301,7 +307,7 @@ static cwist_sstring *apply_filter(const char *value, const char *filter) {
             size_t vlen = strlen(value);
             const char *e = value + vlen - 1;
             while (e > s && isspace((unsigned char)*e)) e--;
-            if (s <= e) cwist_sstring_append_len(out, s, (size_t)(e - s + 1));
+            if (s <= e && !template_append_len(out, s, (size_t)(e - s + 1))) goto oom;
         }
     } else if (strcmp(filter, "length") == 0 || strcmp(filter, "len") == 0) {
         /* Code points, not bytes: UTF-8 continuation bytes are not counted
@@ -311,11 +317,15 @@ static cwist_sstring *apply_filter(const char *value, const char *filter) {
             if ((*c & 0xC0) != 0x80) count++;
         char length[64];
         snprintf(length, sizeof(length), "%zu", count);
-        cwist_sstring_append(out, length);
-    } else if (value) {
-        cwist_sstring_append(out, value);
+        if (!template_append(out, length)) goto oom;
+    } else if (value && !template_append(out, value)) {
+        goto oom;
     }
     return out;
+
+oom:
+    cwist_sstring_destroy(out);
+    return NULL;
 }
 
 /**
@@ -380,13 +390,22 @@ static bool default_argument(const char *filter, const char **arg, size_t *arg_l
  * @param node  The variable's JSON node (NULL when missing); lets length
  *              count array and object members.
  * @param filters Filter chain after the first '|' (modified in place), or NULL.
- * @return Rendered text, or NULL when there is nothing to print.
+ * @param oom Set to true when rendering fails because storage cannot be allocated.
+ * @return Rendered text, or NULL when there is nothing to print or allocation fails.
  */
-static cwist_sstring *apply_filters(const char *value, const cJSON *node, char *filters) {
+static cwist_sstring *apply_filters(const char *value, const cJSON *node, char *filters,
+                                    bool *oom) {
+    *oom = false;
     bool have = value != NULL;
     cwist_sstring *current = cwist_sstring_create();
-    if (!current) return NULL;
-    cwist_sstring_append(current, value ? value : "");
+    if (!current) {
+        *oom = true;
+        return NULL;
+    }
+    if (!template_append(current, value ? value : "")) {
+        cwist_sstring_destroy(current);
+        goto oom;
+    }
 
     bool autoescape = true;
     bool escaped = false;
@@ -403,9 +422,11 @@ static cwist_sstring *apply_filters(const char *value, const cJSON *node, char *
             if (!have || !current->data || !current->data[0]) {
                 cwist_sstring_destroy(current);
                 current = cwist_sstring_create();
-                if (!current) return NULL;
-                cwist_sstring_assign(current, "");
-                cwist_sstring_append_len(current, arg, arg_len);
+                if (!current) goto oom;
+                if (!template_append(current, "") || !template_append_len(current, arg, arg_len)) {
+                    cwist_sstring_destroy(current);
+                    goto oom;
+                }
                 have = true;
             }
         } else if (first && (strcmp(filter, "length") == 0 || strcmp(filter, "len") == 0) &&
@@ -415,14 +436,17 @@ static cwist_sstring *apply_filters(const char *value, const cJSON *node, char *
             snprintf(length, sizeof(length), "%d", node ? cJSON_GetArraySize(node) : 0);
             cwist_sstring_destroy(current);
             current = cwist_sstring_create();
-            if (!current) return NULL;
-            cwist_sstring_assign(current, length);
+            if (!current) goto oom;
+            if (!template_append(current, length)) {
+                cwist_sstring_destroy(current);
+                goto oom;
+            }
             have = true;
         } else if (have) {
             cwist_sstring *next = apply_filter(current->data, filter);
             if (!next) {
                 cwist_sstring_destroy(current);
-                return NULL;
+                goto oom;
             }
             cwist_sstring_destroy(current);
             current = next;
@@ -440,13 +464,23 @@ static cwist_sstring *apply_filters(const char *value, const cJSON *node, char *
         cwist_sstring *next = cwist_sstring_create();
         if (!next) {
             cwist_sstring_destroy(current);
-            return NULL;
+            goto oom;
         }
-        cwist_sstring_append_escaped(next, current->data);
+        cwist_error_t err = cwist_sstring_append_escaped(next, current->data);
+        bool ok = cwist_error_is_ok(&err);
+        cwist_error_dispose(&err);
         cwist_sstring_destroy(current);
+        if (!ok) {
+            cwist_sstring_destroy(next);
+            goto oom;
+        }
         current = next;
     }
     return current;
+
+oom:
+    *oom = true;
+    return NULL;
 }
 
 /**
@@ -576,6 +610,20 @@ static template_block_entry *extract_child_blocks(const char *template_str,
     return head;
 }
 
+static bool template_append_len(cwist_sstring *output, const char *data, size_t len) {
+    cwist_error_t err = cwist_sstring_append_len(output, data, len);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
+static bool template_append(cwist_sstring *output, const char *text) {
+    cwist_error_t err = cwist_sstring_append(output, text);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
 /** @brief Render @p block one level deeper and append it to @p output. */
 static bool append_block(cwist_sstring *output, const char *block, const cJSON *context, int depth,
                          const template_source *source) {
@@ -583,9 +631,10 @@ static bool append_block(cwist_sstring *output, const char *block, const cJSON *
     block_source.extends_allowed = false;
     cwist_sstring *rendered = render_internal(&block, context, depth, &block_source);
     if (!rendered) return false;
-    cwist_sstring_append(output, rendered->data);
+    bool ok = template_append(output, rendered->data);
     cwist_sstring_destroy(rendered);
-    return true;
+    if (!ok) template_report_error(source, block, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+    return ok;
 }
 
 /**
@@ -683,7 +732,10 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
 
         switch (p[1]) {
             case '#': /* Comment: {# ... #} -- skip silently. */
-                cwist_sstring_append_len(output, start, p - start);
+                if (!template_append_len(output, start, (size_t)(p - start))) {
+                    template_report_error(source, p, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                    goto fail;
+                }
                 p += 2;
                 while (*p && !(p[0] == '#' && p[1] == '}')) p++;
                 if (!*p) {
@@ -695,7 +747,10 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 break;
 
             case '{': { /* Variable: {{ key [| filter] }} */
-                cwist_sstring_append_len(output, start, p - start);
+                if (!template_append_len(output, start, (size_t)(p - start))) {
+                    template_report_error(source, p, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                    goto fail;
+                }
                 p += 2;
                 const char *var_start = p;
                 while (*p && (p[0] != '}' || p[1] != '}')) p++;
@@ -730,10 +785,19 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 char num_str[64] = {0};
                 const char *raw = value ? json_scalar_text(value, num_str, sizeof(num_str)) : NULL;
                 if (raw || filter) {
-                    cwist_sstring *filtered = apply_filters(raw, value, filter);
+                    bool filter_oom = false;
+                    cwist_sstring *filtered = apply_filters(raw, value, filter, &filter_oom);
+                    if (filter_oom) {
+                        template_report_error(source, opening, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                        goto fail;
+                    }
                     if (filtered) {
-                        cwist_sstring_append(output, filtered->data);
+                        bool ok = template_append(output, filtered->data);
                         cwist_sstring_destroy(filtered);
+                        if (!ok) {
+                            template_report_error(source, opening, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                            goto fail;
+                        }
                     }
                 }
                 p += 2;
@@ -742,7 +806,10 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
             }
 
             case '%': { /* Tag: {% ... %} */
-                cwist_sstring_append_len(output, start, p - start);
+                if (!template_append_len(output, start, (size_t)(p - start))) {
+                    template_report_error(source, p, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                    goto fail;
+                }
                 p += 2;
                 const char *tag_start = p;
                 while (*p && (p[0] != '%' || p[1] != '}')) p++;
@@ -835,9 +902,9 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         while (*path == ' ' || *path == '\t' || *path == '\n') path++;
                         char *end = path + strlen(path);
                         while (end > path && (end[-1] == ' ' || end[-1] == '\t' ||
-                                              end[-1] == '\n' || end[-1] == '"'))
+                                              end[-1] == '\n' || end[-1] == '"' || end[-1] == '\''))
                             *--end = '\0';
-                        if (path[0] == '"') path++;
+                        if (path[0] == '"' || path[0] == '\'') path++;
                         if (!path[0]) break;
 
                         /* Resolve against the including file's directory so relative
@@ -847,8 +914,12 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         cwist_sstring *included =
                             render_file_internal(resolved, context, depth + 1, source, opening);
                         if (!included) goto fail;
-                        cwist_sstring_append(output, included->data);
+                        bool appended = template_append(output, included->data);
                         cwist_sstring_destroy(included);
+                        if (!appended) {
+                            template_report_error(source, opening, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+                            goto fail;
+                        }
                         break;
                     }
 
@@ -895,7 +966,10 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
         }
     }
 
-    cwist_sstring_append_len(output, start, p - start);
+    if (!template_append_len(output, start, (size_t)(p - start))) {
+        template_report_error(source, p, CWIST_TEMPLATE_ERROR_NO_MEMORY);
+        goto fail;
+    }
     *template_str = p;
     return output;
 

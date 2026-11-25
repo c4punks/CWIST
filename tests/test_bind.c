@@ -331,6 +331,40 @@ static void test_bind_rejects_invalid_numbers_and_shapes(void) {
     cwist_http_request_destroy(req);
 }
 
+static void test_bind_schema_and_bare_form_keys(void) {
+    typedef struct {
+        char flag[8];
+    } flag_t;
+    const cwist_bind_field_t null_rules_fields[] = {
+        {.json_key = "flag",
+         .target_type = CWIST_BIND_STRING,
+         .target_offset = offsetof(flag_t, flag),
+         .target_size = sizeof(((flag_t *)0)->flag),
+         .rules = NULL,
+         .rule_count = 1},
+    };
+    const cwist_bind_schema_t null_rules_schema = {null_rules_fields, 1, sizeof(flag_t)};
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "{\"flag\":\"x\"}");
+    flag_t out = {0};
+    cwist_bind_result_t result;
+    assert(!cwist_app_req_bind_json(req, &null_rules_schema, &out, &result));
+    cwist_http_request_destroy(req);
+
+    const cwist_bind_field_t fields[] = {
+        {.json_key = "flag",
+         .target_type = CWIST_BIND_STRING,
+         .target_offset = offsetof(flag_t, flag),
+         .target_size = sizeof(((flag_t *)0)->flag)},
+    };
+    const cwist_bind_schema_t schema = {fields, 1, sizeof(flag_t)};
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "flag&unused=1");
+    assert(cwist_app_req_bind_form(req, &schema, &out, &result));
+    assert(strcmp(out.flag, "") == 0);
+    cwist_http_request_destroy(req);
+}
+
 static void test_bind_form_decoding_limits(void) {
     typedef struct {
         char value[8192];
@@ -464,6 +498,7 @@ int main(void) {
     test_bind_age_out_of_range();
     test_bind_auto_400_response();
     test_bind_form_data();
+    test_bind_schema_and_bare_form_keys();
     test_bind_form_decoding_limits();
     test_bind_regex();
     test_bind_utf8_length();

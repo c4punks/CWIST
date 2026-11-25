@@ -190,6 +190,8 @@ static void get_shifted_hex(cwist_color_rgb base, float light_shift, char out[8]
     cwist_color_rgb_to_hex(shifted, out);
 }
 
+static bool append_ok(cwist_sstring *s, const char *text);
+
 /**
  * @brief Generate the CSS custom-property block (:root variables) for a config.
  * @param cfg Theme configuration; must not be NULL.
@@ -199,6 +201,7 @@ static void get_shifted_hex(cwist_color_rgb base, float light_shift, char out[8]
 cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
     if (!cfg) return NULL;
     cwist_sstring *css = cwist_sstring_create();
+    if (!css) return NULL;
 
     char p_hex[8], p_hover[8], p_active[8];
     char s_hex[8], s_hover[8], s_active[8];
@@ -239,7 +242,10 @@ cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
              cfg->spacing_base_px, cfg->spacing_base_px * 2.0f, cfg->spacing_base_px * 4.0f,
              cfg->spacing_base_px * 8.0f);
 
-    cwist_sstring_append(css, buf);
+    if (!append_ok(css, buf)) {
+        cwist_sstring_destroy(css);
+        return NULL;
+    }
     return css;
 }
 
@@ -252,6 +258,7 @@ cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
 cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
     (void)cfg; // Currently relying on generated variables
     cwist_sstring *css = cwist_sstring_create();
+    if (!css) return NULL;
 
     const char *utils = "/* Typography */\n"
                         ".text-primary { color: var(--color-primary); }\n"
@@ -285,7 +292,10 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
                         "  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);\n"
                         "}\n";
 
-    cwist_sstring_append(css, utils);
+    if (!append_ok(css, utils)) {
+        cwist_sstring_destroy(css);
+        return NULL;
+    }
     return css;
 }
 
@@ -298,16 +308,16 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
 cwist_sstring *cwist_css_generate_stylesheet(const cwist_css_config *cfg) {
     if (!cfg) return NULL;
     cwist_sstring *final_css = cwist_sstring_create();
-
     cwist_sstring *vars = cwist_css_generate_variables(cfg);
     cwist_sstring *utils = cwist_css_generate_utility_classes(cfg);
-
-    if (vars) cwist_sstring_append(final_css, vars->data);
-    if (utils) cwist_sstring_append(final_css, utils->data);
-
-    if (vars) cwist_sstring_destroy(vars);
-    if (utils) cwist_sstring_destroy(utils);
-
+    bool ok = final_css && vars && utils && append_ok(final_css, vars->data) &&
+              append_ok(final_css, utils->data);
+    cwist_sstring_destroy(vars);
+    cwist_sstring_destroy(utils);
+    if (!ok) {
+        cwist_sstring_destroy(final_css);
+        return NULL;
+    }
     return final_css;
 }
 

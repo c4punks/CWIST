@@ -34,7 +34,9 @@
 #include <nats.h>
 #endif
 #include <stdio.h>
+#include <errno.h>
 #include <limits.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -160,12 +162,13 @@ static uint64_t jq_deadline_after(uint64_t timeout_ms) {
     return timeout_ms > UINT64_MAX - now ? UINT64_MAX : now + timeout_ms;
 }
 
-static unsigned int jq_consumer_seq = 0;
+static _Atomic unsigned int jq_consumer_seq = 0;
 
 /** @brief Build an owned default consumer name "w<pid>-<seq>"; unique per process run. */
 static char *jq_default_consumer(void) {
     char buf[64];
-    snprintf(buf, sizeof(buf), "w%d-%u", (int)getpid(), ++jq_consumer_seq);
+    unsigned int seq = atomic_fetch_add_explicit(&jq_consumer_seq, 1, memory_order_relaxed) + 1;
+    snprintf(buf, sizeof(buf), "w%d-%u", (int)getpid(), seq);
     return cwist_strdup(buf);
 }
 
@@ -250,7 +253,7 @@ static char *jq_key(const char *name, const char *suffix) {
 static cwist_error_t jq_redis_cmd(cwist_redis_t *conn, size_t argc, const void *const *argv,
                                   const size_t *argv_lens, cwist_redis_reply_t **reply) {
     cwist_error_t err = cwist_redis_command_argv_reply(conn, argc, argv, argv_lens, reply);
-    if (!cwist_error_is_ok(&err) || !*reply) {
+    if (!cwist_error_is_ok(&err) || !*reply || (*reply)->type == '-') {
         cwist_redis_reply_free(*reply);
         *reply = NULL;
         return jq_err(CWIST_FAILURE);
@@ -264,12 +267,19 @@ static cwist_error_t jq_redis_int(cwist_redis_t *conn, size_t argc, const void *
     cwist_redis_reply_t *reply = NULL;
     cwist_error_t err = jq_redis_cmd(conn, argc, argv, argv_lens, &reply);
     if (!cwist_error_is_ok(&err)) return err;
-    if (reply->type == ':' || reply->type == '$')
-        *out = reply->integer ? reply->integer : strtoll(reply->str ? reply->str : "0", NULL, 10);
-    else
-        *out = 0;
+    bool ok = true;
+    if (reply->type == ':') {
+        *out = reply->integer;
+    } else if (reply->type == '$' && reply->str) {
+        char *end = NULL;
+        errno = 0;
+        *out = strtoll(reply->str, &end, 10);
+        ok = end != reply->str && end && *end == '\0' && errno != ERANGE;
+    } else {
+        ok = false;
+    }
     cwist_redis_reply_free(reply);
-    return jq_err(0);
+    return jq_err(ok ? 0 : CWIST_FAILURE);
 }
 
 /** Pack [type_len:4BE][attempts:4BE][type][payload] into an owned blob. */
@@ -546,10 +556,10 @@ static cwist_error_t jq_redis_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     cwist_redis_reply_t *reply = NULL;
     cwist_error_t err = jq_redis_cmd(rs->conn, 4, argv, lens, &reply);
     cwist_redis_reply_free(reply);
+    if (!cwist_error_is_ok(&err)) return err;
     const void *dargv[] = {"HDEL", rs->attempts, job->id};
     size_t dlens[] = {4, strlen(rs->attempts), strlen(job->id)};
-    jq_redis_run(rs->conn, 3, dargv, dlens);
-    return err;
+    return jq_redis_run(rs->conn, 3, dargv, dlens) ? jq_err(0) : jq_err(CWIST_FAILURE);
 }
 
 /**

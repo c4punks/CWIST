@@ -896,7 +896,8 @@ static void gql_ws_on_message(cwist_websocket_async *ws, cwist_ws_frame *frame, 
         cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
         return;
     }
-    cJSON *msg = cJSON_ParseWithLength((const char *)frame->payload, frame->payload_len);
+    const char *json = (const char *)frame->payload;
+    cJSON *msg = cJSON_ParseWithLengthOpts(json, frame->payload_len + 1, NULL, true);
     cwist_websocket_frame_destroy(frame);
     if (!cJSON_IsObject(msg)) {
         cJSON_Delete(msg);

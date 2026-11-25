@@ -334,6 +334,7 @@ int main(void) {
     int fd_second_init = attach_conn(reactor); /* duplicate connection_init */
     int fd_binary = attach_conn(reactor);      /* binary GraphQL message */
     int fd_shape = attach_conn(reactor);       /* non-object JSON message */
+    int fd_trailing = attach_conn(reactor);    /* valid prefix with trailing garbage */
     int fd_bad_subscribe = attach_conn(reactor);
     int fd_nul_query = attach_conn(reactor);
     int fd_nul_var = attach_conn(reactor);
@@ -374,6 +375,10 @@ int main(void) {
     expect_close_code(fd_shape, CLOSE_BAD_REQUEST);
     expect_eof(fd_shape);
     close(fd_shape);
+    write_text(fd_trailing, "{\"type\":\"connection_init\"} trailing");
+    expect_close_code(fd_trailing, CLOSE_BAD_REQUEST);
+    expect_eof(fd_trailing);
+    close(fd_trailing);
     write_masked(fd_binary, 0x82, (const uint8_t *)"x", 1);
     expect_close_code(fd_binary, CLOSE_BAD_REQUEST);
     expect_eof(fd_binary);

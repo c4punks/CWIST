@@ -341,13 +341,22 @@ static cJSON *find_fuzzy(cJSON *obj, const char *name, const char **found_key) {
  * @param log_sz Size of @p log in bytes.
  * @return Number of changes (renames + coercions) applied; negative on invalid arguments.
  */
+static bool json_number_is_int(double value) {
+    double intpart;
+    return cwist_number_double_is_finite(value) && modf(value, &intpart) == 0.0 &&
+           value >= -9007199254740991.0 && value <= 9007199254740991.0;
+}
+
 int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log, size_t log_sz) {
-    if (!obj || !schema || !cJSON_IsObject(obj)) return -1;
+    if (!obj || !schema || !cJSON_IsObject(obj) || schema->field_count < 0 ||
+        (schema->field_count > 0 && !schema->fields))
+        return -1;
 
     int changes = 0;
 
     for (int fi = 0; fi < schema->field_count; fi++) {
         const cwist_schema_field_t *fd = &schema->fields[fi];
+        if (!fd->name || !fd->name[0]) return -1;
 
         /* ---- Locate the field in the JSON object ---- */
         cJSON *item = NULL;
@@ -409,7 +418,11 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
         switch (fd->type) {
             case CWIST_FIELD_STRING: type_ok = cJSON_IsString(item); break;
             case CWIST_FIELD_INT:
-            case CWIST_FIELD_FLOAT: type_ok = cJSON_IsNumber(item); break;
+                type_ok = cJSON_IsNumber(item) && json_number_is_int(item->valuedouble);
+                break;
+            case CWIST_FIELD_FLOAT:
+                type_ok = cJSON_IsNumber(item) && cwist_number_double_is_finite(item->valuedouble);
+                break;
             case CWIST_FIELD_BOOL: type_ok = cJSON_IsBool(item); break;
             case CWIST_FIELD_OBJECT: type_ok = cJSON_IsObject(item); break;
             case CWIST_FIELD_ARRAY: type_ok = cJSON_IsArray(item); break;
@@ -426,7 +439,9 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
             char *end = NULL;
             errno = 0;
             double v = strtod(item->valuestring, &end);
-            if (end && *end == '\0' && errno != ERANGE && cwist_number_double_is_finite(v)) {
+            if (end && end != item->valuestring && *end == '\0' && errno != ERANGE &&
+                cwist_number_double_is_finite(v) &&
+                (fd->type == CWIST_FIELD_FLOAT || json_number_is_int(v))) {
                 cJSON *num = cJSON_CreateNumber(v);
                 if (num) {
                     cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, num);
@@ -466,8 +481,9 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
             }
         }
         /* Number 0/1 → Bool */
-        else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsNumber(item)) {
-            cJSON *bj = (item->valuedouble != 0.0) ? cJSON_CreateTrue() : cJSON_CreateFalse();
+        else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsNumber(item) &&
+                 (item->valuedouble == 0.0 || item->valuedouble == 1.0)) {
+            cJSON *bj = item->valuedouble == 1.0 ? cJSON_CreateTrue() : cJSON_CreateFalse();
             if (bj) {
                 cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, bj);
                 snprintf(msg, sizeof(msg), "[L2] '%s': num→bool; ", fd->name);

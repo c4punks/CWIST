@@ -53,7 +53,7 @@ typedef struct cwist_job_queue_opts {
      * Default 30000 ms. */
     uint64_t visibility_timeout_ms;
     /** Deliveries (including the first) before a job is dead-lettered.
-     * Must be >= 1. Default 5. */
+     * Zero selects the default of 5. */
     uint32_t max_retries;
     /** Delay before a nacked job becomes claimable again. Default 0
      * (immediate). */
