@@ -236,7 +236,28 @@ static void test_short_final_chunk_fits_actual_limit(void) {
     printf("  Passed short final chunk limit.\n");
 }
 
+static void test_over_limit_first_chunk_allows_recovery(void) {
+    cwist_seq_assembler_t *a = cwist_seq_assembler_create_limited(4);
+    assert(a != NULL);
+    const uint8_t data[] = {'x', 'y'};
+    cwist_seq_chunk_t bad = {.seq = 2, .total = 2, .payload_len = 2, .chunk_size = 4, .payload = data};
+    assert(!cwist_seq_assembler_feed(a, &bad));
+
+    cwist_seq_message_t split;
+    assert(cwist_seq_split(data, sizeof(data), 2, &split));
+    cwist_seq_chunk_t chunk;
+    assert(cwist_seq_chunk_parse(split.chunks[0], split.chunk_lens[0], &chunk));
+    assert(cwist_seq_assembler_feed(a, &chunk));
+    const uint8_t *assembled = NULL;
+    size_t assembled_len = 0;
+    assert(cwist_seq_assembler_get_data(a, &assembled, &assembled_len));
+    assert(assembled_len == sizeof(data) && memcmp(assembled, data, sizeof(data)) == 0);
+    cwist_seq_assembler_destroy(a);
+    cwist_seq_message_free(&split);
+}
+
 int main(void) {
+    test_over_limit_first_chunk_allows_recovery();
     test_split_and_reassemble();
     test_duplicate_discard();
     test_invalid_chunk();

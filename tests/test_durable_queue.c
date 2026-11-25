@@ -37,6 +37,13 @@ static void sleep_ms(uint64_t ms) {
     nanosleep(&ts, NULL);
 }
 
+static int fail_type_alloc;
+char *__real_cwist_strndup(const char *src, size_t n);
+char *__wrap_cwist_strndup(const char *src, size_t n) {
+    if (fail_type_alloc && n == 5) return NULL;
+    return __real_cwist_strndup(src, n);
+}
+
 static unsigned int name_seq = 0;
 
 static void make_name(char *buf, size_t len, const char *tag) {
@@ -358,6 +365,78 @@ static int t_redis_delivery_count_failure(cwist_redis_t *conn) {
     return 0;
 }
 
+static int t_redis_type_allocation_failure(cwist_redis_t *conn) {
+    char name[96];
+    make_name(name, sizeof(name), "redis-type-oom");
+    cwist_job_queue_t *q = cwist_job_queue_create_redis(
+        conn, &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = 100});
+    CHECK(q != NULL, "queue for type allocation failure test was not created");
+    cwist_error_t err = cwist_job_queue_enqueue(q, "payload", 7, "typed");
+    CHECK(err.error.err_i16 == 0, "enqueue for type allocation failure test failed");
+    fail_type_alloc = 1;
+    cwist_job_t *job = NULL;
+    err = cwist_job_queue_claim(q, 200, &job);
+    fail_type_alloc = 0;
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "type allocation failure returned an untyped job");
+    sleep_ms(200);
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == 0 && job && cwist_job_type(job) &&
+              strcmp(cwist_job_type(job), "typed") == 0,
+          "type did not survive recovery after allocation failure");
+    if (job) err = cwist_job_queue_ack(q, job);
+    CHECK(err.error.err_i16 == 0, "ack after type allocation recovery failed");
+    cwist_job_queue_destroy(q);
+    return 0;
+}
+
+static int t_redis_delivery_count_overflow(cwist_redis_t *conn) {
+    char name[96];
+    make_name(name, sizeof(name), "redis-attempt-overflow");
+    cwist_job_queue_t *q = cwist_job_queue_create_redis(
+        conn,
+        &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = 100, .max_retries = 1});
+    CHECK(q != NULL, "queue for delivery-count overflow test was not created");
+    cwist_error_t err = cwist_job_queue_enqueue(q, "pending", 7, "attempts");
+    CHECK(err.error.err_i16 == 0, "enqueue for delivery-count overflow test failed");
+    cwist_job_t *job = NULL;
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == 0 && job, "initial claim for delivery-count overflow test failed");
+    cwist_job_destroy(job);
+
+    char stream[128], attempts_key[128];
+    snprintf(stream, sizeof(stream), "cwist:jq:%s:s", name);
+    snprintf(attempts_key, sizeof(attempts_key), "cwist:jq:%s:a", name);
+    const void *pending_argv[] = {"XPENDING", stream, "cwist-jq"};
+    size_t pending_lens[] = {8, strlen(stream), 8};
+    cwist_redis_reply_t *reply = NULL;
+    err = cwist_redis_command_argv_reply(conn, 3, pending_argv, pending_lens, &reply);
+    CHECK(cwist_error_is_ok(&err) && reply && reply->element[1] && reply->element[1]->str,
+          "failed to find pending id for delivery-count overflow test");
+    const void *argv[] = {"HSET", attempts_key, reply->element[1]->str, "4294967296"};
+    size_t lens[] = {4, strlen(attempts_key), reply->element[1]->len, 10};
+    char *out = NULL;
+    err = cwist_redis_command_argv(conn, 4, argv, lens, &out, NULL);
+    cwist_free(out);
+    cwist_redis_reply_free(reply);
+    CHECK(cwist_error_is_ok(&err), "failed to set overflowing delivery count");
+    sleep_ms(200);
+    err = cwist_job_queue_claim(q, 300, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "overflowing delivery count returned a job");
+    CHECK(redis_pending_count(conn, name) == 1,
+          "overflowing delivery count removed the original pending job");
+    CHECK(redis_restore_attempts(conn, name) == 0, "failed to restore attempts after overflow");
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "restored delivery count did not retire the job");
+    uint64_t dead = 0;
+    err = cwist_job_queue_dead_count(q, &dead);
+    CHECK(err.error.err_i16 == 0 && dead == 1, "job was not dead-lettered after overflow recovery");
+    cwist_job_queue_destroy(q);
+    return 0;
+}
+
 /* --- Backend factories -------------------------------------------------- */
 
 typedef struct {
@@ -432,6 +511,14 @@ int main(void) {
             }
             if (t_redis_delivery_count_failure(conn) != 0) {
                 fprintf(stderr, "[durable_queue] Redis delivery-count failure test failed.\n");
+                rc = 1;
+            }
+            if (t_redis_type_allocation_failure(conn) != 0) {
+                fprintf(stderr, "[durable_queue] Redis type allocation failure test failed.\n");
+                rc = 1;
+            }
+            if (t_redis_delivery_count_overflow(conn) != 0) {
+                fprintf(stderr, "[durable_queue] Redis delivery-count overflow test failed.\n");
                 rc = 1;
             }
         }

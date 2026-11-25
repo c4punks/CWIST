@@ -18,7 +18,6 @@ cwist_app_use_redis
 cwist_app_ws
 cwist_app_ws_async
 cwist_app_ws_opt
-cwist_bdr_put_revalidatable
 cwist_calloc_shim
 cwist_create_owner
 cwist_db_pool_destroy

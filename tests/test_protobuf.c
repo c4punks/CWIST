@@ -243,7 +243,28 @@ static void test_reader_malformed(void) {
     assert(cwist_pb_read_field(&r, NULL) == 0);
 }
 
+static void test_writer_source_alias(void) {
+    cwist_pb_writer w;
+    cwist_pb_writer_init(&w);
+    uint8_t payload[60];
+    memset(payload, 0x5a, sizeof(payload));
+    assert(cwist_pb_write_bytes_field(&w, 1, payload, sizeof(payload)) == 0);
+    const uint8_t first[2] = {0x0a, 0x3c};
+    assert(memcmp(w.data, first, sizeof(first)) == 0);
+    assert(cwist_pb_write_bytes_field(&w, 2, w.data, w.len) == 0);
+    cwist_pb_reader r;
+    cwist_pb_field f;
+    cwist_pb_reader_init(&r, w.data, w.len);
+    assert(cwist_pb_read_field(&r, &f) == 1 && f.number == 1 && f.len == sizeof(payload));
+    assert(memcmp(f.bytes, payload, sizeof(payload)) == 0);
+    assert(cwist_pb_read_field(&r, &f) == 1 && f.number == 2 && f.len == 62);
+    assert(memcmp(f.bytes, w.data, 2) == 0);
+    assert(memcmp(f.bytes + 2, payload, sizeof(payload)) == 0);
+    cwist_pb_writer_free(&w);
+}
+
 int main(void) {
+    test_writer_source_alias();
     test_varint_vectors();
     test_varint_errors();
     test_zigzag();

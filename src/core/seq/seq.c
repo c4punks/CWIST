@@ -267,6 +267,7 @@ void cwist_seq_assembler_reset(cwist_seq_assembler_t *a) {
  */
 bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t *chunk) {
     if (!a || !chunk) return false;
+    bool fresh = !a->have_state;
 
     /* Validate sequence pair. */
     if (chunk->seq == 0 || chunk->total == 0 || chunk->total > CWIST_SEQ_MAX_CHUNKS ||
@@ -316,7 +317,10 @@ bool cwist_seq_assembler_feed(cwist_seq_assembler_t *a, const cwist_seq_chunk_t 
         return identical;
     }
 
-    if (offset > a->data_cap || chunk->payload_len > a->data_cap - offset) return false;
+    if (offset > a->data_cap || chunk->payload_len > a->data_cap - offset) {
+        if (fresh) cwist_seq_assembler_reset(a);
+        return false;
+    }
 
     memcpy(a->data + offset, chunk->payload, chunk->payload_len);
     a->received[index] = true;

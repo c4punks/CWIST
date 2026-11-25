@@ -188,6 +188,12 @@ void cwist_app_healthz(cwist_http_response *res) {
     cwist_json_end_object(jb);
 
     const char *json = cwist_json_get_raw(jb);
+    if (!json) {
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_sstring_assign(res->body, "health render failed");
+        cwist_json_builder_destroy(jb);
+        return;
+    }
     cwist_sstring_assign(res->body, (char *)json);
     cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 

@@ -488,37 +488,44 @@ int cwist_http2_stream_flow_control_maybe_window_update(
     return 1;
 }
 
-/** @brief Credit the connection send window from a WINDOW_UPDATE frame.
- *
- * Saturating add: credit is capped at CWIST_HTTP2_MAX_WINDOW.
- *
+/** @brief Credit the connection send window without exceeding the protocol maximum.
  * @param flow_control Connection flow-control state.
  * @param increment Send-window increment from the peer.
+ * @return false when the increment would overflow the window.
  */
-void cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_control,
-                                              uint32_t increment) {
-    if (flow_control != NULL) {
-        /* Saturating add: credit is capped at the protocol maximum. */
-        flow_control->send_window = increment > CWIST_HTTP2_MAX_WINDOW - flow_control->send_window
-                                        ? CWIST_HTTP2_MAX_WINDOW
-                                        : flow_control->send_window + increment;
-    }
+bool cwist_http2_flow_control_add_send_window_checked(cwist_http2_flow_control *flow_control,
+                                                      uint32_t increment) {
+    if (!flow_control || increment > CWIST_HTTP2_MAX_WINDOW - flow_control->send_window)
+        return false;
+    flow_control->send_window += increment;
+    return true;
 }
 
-/** @brief Credit a stream send window from a WINDOW_UPDATE frame.
- *
- * Saturating add: credit is capped at CWIST_HTTP2_MAX_WINDOW.
- *
+void cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_control,
+                                              uint32_t increment) {
+    if (flow_control && !cwist_http2_flow_control_add_send_window_checked(flow_control, increment))
+        flow_control->send_window = 0;
+}
+
+/** @brief Credit a stream send window without exceeding the protocol maximum.
  * @param flow_control Stream flow-control state.
  * @param increment Send-window increment from the peer.
+ * @return false when the increment would overflow the window.
  */
+bool cwist_http2_stream_flow_control_add_send_window_checked(
+    cwist_http2_stream_flow_control *flow_control, uint32_t increment) {
+    if (!flow_control) return false;
+    int64_t next = (int64_t)flow_control->send_window + increment;
+    if (next > (int64_t)CWIST_HTTP2_MAX_WINDOW) return false;
+    flow_control->send_window = (int32_t)next;
+    return true;
+}
+
 void cwist_http2_stream_flow_control_add_send_window(cwist_http2_stream_flow_control *flow_control,
                                                      uint32_t increment) {
-    if (flow_control != NULL) {
-        int64_t next = (int64_t)flow_control->send_window + increment;
-        flow_control->send_window =
-            next > (int64_t)CWIST_HTTP2_MAX_WINDOW ? (int32_t)CWIST_HTTP2_MAX_WINDOW : (int32_t)next;
-    }
+    if (flow_control &&
+        !cwist_http2_stream_flow_control_add_send_window_checked(flow_control, increment))
+        flow_control->send_window = 0;
 }
 
 void cwist_http2_stream_flow_control_adjust_send_window(

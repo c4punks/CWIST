@@ -10,6 +10,16 @@
 #include <string.h>
 #include <assert.h>
 
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc > 0) {
+        fail_alloc--;
+        return NULL;
+    }
+    return __real_cwist_alloc(size);
+}
+
 typedef struct {
     char email[128];
     int age;
@@ -365,6 +375,34 @@ static void test_bind_schema_and_bare_form_keys(void) {
     cwist_http_request_destroy(req);
 }
 
+static void test_bind_form_insertion_oom(void) {
+    typedef struct {
+        char value[16];
+    } form_t;
+    const cwist_bind_field_t fields[] = {
+        {.json_key = "value",
+         .target_type = CWIST_BIND_STRING,
+         .target_offset = offsetof(form_t, value),
+         .target_size = sizeof(((form_t *)0)->value)},
+    };
+    const cwist_bind_schema_t schema = {fields, 1, sizeof(form_t)};
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "value=ok");
+    form_t out = {0};
+    cwist_bind_result_t result;
+    fail_alloc = 4;
+    assert(!cwist_app_req_bind_form(req, &schema, &out, &result));
+    fail_alloc = 0;
+    cwist_http_request_destroy(req);
+
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "value=first&value=second");
+    memset(&out, 0, sizeof(out));
+    assert(cwist_app_req_bind_form(req, &schema, &out, &result));
+    assert(strcmp(out.value, "first") == 0);
+    cwist_http_request_destroy(req);
+}
+
 static void test_bind_form_decoding_limits(void) {
     typedef struct {
         char value[8192];
@@ -499,6 +537,7 @@ int main(void) {
     test_bind_auto_400_response();
     test_bind_form_data();
     test_bind_schema_and_bare_form_keys();
+    test_bind_form_insertion_oom();
     test_bind_form_decoding_limits();
     test_bind_regex();
     test_bind_utf8_length();

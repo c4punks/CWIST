@@ -79,6 +79,19 @@ static void test_session_allocation_failures(void) {
     cwist_app_destroy(app);
 }
 
+static void test_session_start_map_allocation_failure(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    fail_alloc = 2;
+    assert(cwist_session_start(app, req, res) == NULL);
+    fail_alloc = 0;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    cwist_app_destroy(app);
+}
+
 static int header_contains(cwist_http_header_node *headers, const char *key, const char *value) {
     cwist_http_header_node *curr = headers;
     while (curr) {
@@ -544,6 +557,7 @@ static void test_session_untouched_and_prefixed_logout(void) {
 
 int main(void) {
     test_entropy_short_reads();
+    test_session_start_map_allocation_failure();
     test_session_allocation_failures();
     test_session_untouched_and_prefixed_logout();
     test_session_deferred_commit();
