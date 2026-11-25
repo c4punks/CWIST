@@ -40,6 +40,18 @@ COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
 
 UNAME_S := $(shell uname -s)
+
+# GNU ld and lld redirect symbol references through --wrap; Apple ld has no
+# equivalent. On Darwin the failure-injection wrappers are compiled out and
+# the affected test cases skip themselves.
+ifeq ($(UNAME_S),Darwin)
+wrap_flag =
+TEST_WRAP_CFLAGS =
+else
+wrap_flag = -Wl,--wrap=$(1)
+TEST_WRAP_CFLAGS = -DCWIST_TEST_WRAP
+endif
+
 CC_VERSION_OUTPUT := $(shell $(CC) --version 2>/dev/null)
 IS_CLANG := $(strip $(findstring clang,$(notdir $(CC))) $(findstring Clang,$(CC_VERSION_OUTPUT)) $(findstring clang,$(CC_VERSION_OUTPUT)))
 ifneq (,$(IS_CLANG))
@@ -2675,7 +2687,7 @@ cli:
 	@echo "CLI ready: ./tools/cli/cwist"
 
 test_scheduler: $(LIB_NAME) tests/test_scheduler.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_realloc -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) $(call wrap_flag,cwist_realloc) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
 	./test_scheduler
 
 ifeq ($(CWIST_NATS),1)
