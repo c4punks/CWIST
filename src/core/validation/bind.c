@@ -520,7 +520,16 @@ static cwist_query_map *bind_parse_form(const char *payload) {
             cwist_query_map_destroy(map);
             return NULL;
         }
-        if (!cwist_query_map_get(map, key)) cwist_query_map_set(map, key, value);
+        if (!cwist_query_map_get(map, key)) {
+            cwist_query_map_set(map, key, value);
+            const char *stored = cwist_query_map_get(map, key);
+            if (!stored || strcmp(stored, value) != 0) {
+                cwist_free(key);
+                cwist_free(value);
+                cwist_query_map_destroy(map);
+                return NULL;
+            }
+        }
         cwist_free(key);
         cwist_free(value);
         cursor = amp ? amp + 1 : NULL;

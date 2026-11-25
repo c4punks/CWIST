@@ -10,6 +10,13 @@
 #include <string.h>
 #include <assert.h>
 
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc) return NULL;
+    return __real_cwist_alloc(size);
+}
+
 /* Stub for cwist_http_header_add to avoid linking full net/http subsystem */
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                     const char *value) {
@@ -102,9 +109,22 @@ static void test_healthz_null_buffer_and_status(void) {
     cwist_healthz_unregister("storage");
 }
 
+static void test_healthz_allocation_failure(void) {
+    cwist_http_response res;
+    memset(&res, 0, sizeof(res));
+    res.body = cwist_sstring_create();
+    fail_alloc = 1;
+    cwist_app_healthz(&res);
+    fail_alloc = 0;
+    assert(res.status_code == CWIST_HTTP_INTERNAL_ERROR);
+    assert(res.body && strcmp(res.body->data, "health render failed") == 0);
+    cwist_sstring_destroy(res.body);
+}
+
 int main(void) {
     test_healthz_basic_and_slot_reuse();
     test_healthz_null_buffer_and_status();
+    test_healthz_allocation_failure();
     printf("All test_healthz tests passed!\n");
     return 0;
 }

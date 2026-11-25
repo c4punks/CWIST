@@ -215,9 +215,15 @@ int cwist_pb_write_double_field(cwist_pb_writer *w, uint32_t field_number, doubl
 int cwist_pb_write_bytes_field(cwist_pb_writer *w, uint32_t field_number, const void *data,
                                size_t len) {
     if (!w || (len > 0 && !data)) return -1;
+    size_t source_offset = 0;
+    uintptr_t source = (uintptr_t)data;
+    uintptr_t base = (uintptr_t)w->data;
+    bool aliases_writer = len > 0 && w->data && source >= base && source - base < w->len;
+    if (aliases_writer) source_offset = (size_t)(source - base);
     if (cwist_pb_write_key(w, field_number, CWIST_PB_LEN) != 0) return -1;
     if (cwist_pb_write_varint(w, (uint64_t)len) != 0) return -1;
     if (cwist_pb_writer_reserve(w, len) != 0) return -1;
+    if (aliases_writer) data = w->data + source_offset;
     if (len > 0) memcpy(w->data + w->len, data, len);
     w->len += len;
     return 0;

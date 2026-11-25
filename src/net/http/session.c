@@ -510,6 +510,10 @@ cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
     session->app = app;
     session->req = req;
     session->data = cwist_query_map_create();
+    if (!session->data) {
+        cwist_free(session);
+        return NULL;
+    }
     session->revocation = NULL;
     session->modified = false;
     session->invalidated = false;

@@ -357,15 +357,13 @@ int cwist_query_map_parse_checked(cwist_query_map *map, const char *raw_query) {
             break;
         }
 
-        if (cwist_query_map_get(map, key_dec) == NULL) {
-            size_t old_count = map->count;
-            cwist_query_map_set(map, key_dec, value_dec);
-            if (map->count == old_count) {
-                status = -1;
-                query_release(map->arena, key_dec);
-                query_release(map->arena, value_dec);
-                break;
-            }
+        cwist_query_map_set(map, key_dec, value_dec);
+        const char *stored = cwist_query_map_get(map, key_dec);
+        if (!stored || strcmp(stored, value_dec) != 0) {
+            status = -1;
+            query_release(map->arena, key_dec);
+            query_release(map->arena, value_dec);
+            break;
         }
 
         query_release(map->arena, key_dec);

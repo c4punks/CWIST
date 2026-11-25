@@ -1,5 +1,6 @@
 #include <cwist/core/html/css_composer.h>
 #include <cwist/core/sstring/sstring.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -278,6 +279,11 @@ static void test_generation_allocation_failures(void) {
     fail_alloc = 1;
     assert(cwist_css_generate_stylesheet(&cfg) == NULL);
     fail_alloc = 0;
+    cfg.roundness_px = (float)NAN;
+    assert(cwist_css_generate_variables(&cfg) == NULL);
+    cfg.roundness_px = 4.0f;
+    cfg.spacing_base_px = (float)INFINITY;
+    assert(cwist_css_generate_variables(&cfg) == NULL);
 }
 
 int main(void) {
