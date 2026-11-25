@@ -32,6 +32,7 @@ cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const 
 }
 #endif
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int fail_add;
 cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
 cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
@@ -44,6 +45,7 @@ cJSON *__wrap_cJSON_AddStringToObject(cJSON *object, const char *string, const c
     if (atomic_load(&fail_string)) return NULL;
     return __real_cJSON_AddStringToObject(object, string, value);
 }
+#endif
 
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/sys/io/reactor.h>
@@ -435,12 +437,14 @@ int main(void) {
     close(fd_second_init);
     printf("4. duplicate connection_init -> close 4429: ok\n");
 
+#ifdef CWIST_TEST_WRAP
     int fd_oom = attach_conn(reactor);
     atomic_store(&fail_string, 1);
     write_text(fd_oom, "{\"type\":\"connection_init\"}");
     expect_eof_after_drain(fd_oom);
     atomic_store(&fail_string, 0);
     close(fd_oom);
+#endif
 
     write_text(fd_bad_subscribe, "{\"type\":\"connection_init\"}");
     cJSON_Delete(read_json_message(fd_bad_subscribe));
@@ -534,10 +538,12 @@ int main(void) {
     write_text(fd, "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
                    "counter(topic: \\\"t1\\\") }\"}}");
     expect_silence(fd, 200); /* no ack for subscribe */
+#ifdef CWIST_TEST_WRAP
     atomic_store(&fail_add, 1);
     assert(cwist_graphql_publish("t1", NULL) == 0);
     expect_silence(fd, 200);
     atomic_store(&fail_add, 0);
+#endif
     publish_and_expect_next(fd, "t1", "1", 1);
     printf("7. subscribe + publish -> next: ok\n");
 

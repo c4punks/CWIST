@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_alloc;
 void *__real_cwist_alloc(size_t size);
 void *__wrap_cwist_alloc(size_t size) {
@@ -20,6 +21,7 @@ static void test_render_allocation_failure(void) {
     fail_alloc = 0;
     cwist_html_element_destroy(el);
 }
+#endif
 
 void test_basic_element(void) {
     cwist_html_element_t *div = cwist_html_element_create("div");
@@ -162,7 +164,9 @@ static void test_raw_text_end_tag_delimiters(void) {
 }
 
 int main(void) {
+#ifdef CWIST_TEST_WRAP
     test_render_allocation_failure();
+#endif
     test_raw_text_end_tag_delimiters();
     test_basic_element();
     test_attribute_escaping();

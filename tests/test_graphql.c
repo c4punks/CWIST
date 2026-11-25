@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_add = -1;
 static int fail_replace;
 cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
@@ -32,6 +33,7 @@ cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *da
     if (fail_assign_len) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign_len(str, data, len);
 }
+#endif
 
 static int query_count;
 static int mutation_count;
@@ -253,6 +255,7 @@ static void test_request_validation_and_operation_selection(void) {
     cwist_graphql_schema_destroy(schema);
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_graphql_allocation_failures(void) {
     cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
     assert(cwist_graphql_add_query(schema, "greet", hello_resolver, NULL));
@@ -303,6 +306,7 @@ static void test_output_allocation_failures(void) {
     cwist_http_request_destroy(req);
     cwist_graphql_schema_destroy(schema);
 }
+#endif
 
 int main(void) {
     cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
@@ -499,8 +503,10 @@ int main(void) {
     test_nested_selection();
     test_number_arguments();
     test_request_validation_and_operation_selection();
+#ifdef CWIST_TEST_WRAP
     test_graphql_allocation_failures();
     test_output_allocation_failures();
+#endif
     puts("All GraphQL advanced tests passed successfully.");
     return 0;
 }

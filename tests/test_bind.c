@@ -10,6 +10,7 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_alloc;
 void *__real_cwist_alloc(size_t size);
 void *__wrap_cwist_alloc(size_t size) {
@@ -19,6 +20,7 @@ void *__wrap_cwist_alloc(size_t size) {
     }
     return __real_cwist_alloc(size);
 }
+#endif
 
 typedef struct {
     char email[128];
@@ -390,9 +392,11 @@ static void test_bind_form_insertion_oom(void) {
     cwist_sstring_assign(req->body, "value=ok");
     form_t out = {0};
     cwist_bind_result_t result;
+#ifdef CWIST_TEST_WRAP
     fail_alloc = 4;
     assert(!cwist_app_req_bind_form(req, &schema, &out, &result));
     fail_alloc = 0;
+#endif
     cwist_http_request_destroy(req);
 
     req = cwist_http_request_create();

@@ -12,6 +12,7 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_body;
 cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
 cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
@@ -19,6 +20,7 @@ cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) 
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign(str, data);
 }
+#endif
 
 void test_metrics_counter(void) {
     printf("test_metrics_counter...\n");
@@ -79,10 +81,12 @@ void test_metrics_http_response(void) {
     cwist_http_response_destroy(res);
 
     res = cwist_http_response_create();
+#ifdef CWIST_TEST_WRAP
     fail_body = 1;
     cwist_metrics_serve_http(res);
     fail_body = 0;
     assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+#endif
     cwist_http_response_destroy(res);
     printf("  OK\n");
 }

@@ -87,6 +87,7 @@ static void test_public_api_declaration(void) {
     printf("PASS: public API field accessible\n");
 }
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int inject_send_eintr;
 static _Atomic int inject_recv_eintr;
 
@@ -107,6 +108,7 @@ ssize_t __wrap_recv(int fd, void *buf, size_t len, int flags) {
     }
     return __real_recv(fd, buf, len, flags);
 }
+#endif
 
 typedef struct {
     int listen_fd;
@@ -139,8 +141,10 @@ static void test_interrupted_probe(void) {
     assert(listen(mock.listen_fd, 1) == 0);
     assert(pthread_create(&mock.thread, NULL, postgres_mock_run, &mock) == 0);
 
+#ifdef CWIST_TEST_WRAP
     atomic_store(&inject_send_eintr, 1);
     atomic_store(&inject_recv_eintr, 1);
+#endif
     assert(cwist_rdbms_probe_port(mock.port) == CWIST_RDBMS_POSTGRES);
     assert(pthread_join(mock.thread, NULL) == 0);
 }

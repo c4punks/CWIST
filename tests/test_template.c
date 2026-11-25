@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_alloc;
 void *__real_cwist_alloc(size_t size);
 void *__wrap_cwist_alloc(size_t size) {
@@ -18,6 +19,7 @@ void *__wrap_cwist_alloc(size_t size) {
     }
     return __real_cwist_alloc(size);
 }
+#endif
 
 static void write_text(const char *path, const char *text) {
     FILE *file = fopen(path, "wb");
@@ -430,11 +432,13 @@ int main(void) {
     rendered = cwist_template_render_file(first, context);
     assert(rendered == NULL);
 
+#ifdef CWIST_TEST_WRAP
     fail_alloc = 3;
     rendered = cwist_template_render_ex("prefix{{ name }}", context, &error);
     fail_alloc = 0;
     assert(rendered == NULL);
     assert_error(&error, CWIST_TEMPLATE_ERROR_NO_MEMORY, 0, "", NULL);
+#endif
 
     cJSON_Delete(context);
     assert(unlink(partial) == 0);

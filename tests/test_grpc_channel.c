@@ -21,12 +21,14 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_alloc;
 void *__real_cwist_alloc(size_t size);
 void *__wrap_cwist_alloc(size_t size) {
     if (fail_alloc) return NULL;
     return __real_cwist_alloc(size);
 }
+#endif
 
 /* --- backends: two loopback h2c servers, one thread per connection --- */
 
@@ -750,6 +752,7 @@ static void test_json_service_config(test_backend *a, test_backend *b, uint16_t 
     cwist_grpc_channel_close(ch);
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_unary_allocation_failure(uint16_t port_a) {
     char target[96];
     snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
@@ -768,6 +771,7 @@ static void test_unary_allocation_failure(uint16_t port_a) {
     cwist_free(req);
     cwist_grpc_channel_close(ch);
 }
+#endif
 
 static void test_unary_response_cardinality(uint16_t port_a) {
     char target[96];
@@ -883,7 +887,9 @@ int main(void) {
     test_pushback_delay(&a, port_a);
     test_throttle(&a, port_a);
     test_deadline_across_attempts(port_a);
+#ifdef CWIST_TEST_WRAP
     test_unary_allocation_failure(port_a);
+#endif
     test_unary_response_cardinality(port_a);
     test_json_service_config(&a, &b, port_a, port_b);
     test_transparent_retry_goaway(port_b);

@@ -30,6 +30,9 @@
 #define REQUESTS 300
 #define LIMIT_US 800.0
 
+/* This suite is built around failure injection; on Apple ld (no --wrap) the
+ * whole test reports a skip, mirroring test_http_chunked_alloc_failure. */
+#ifdef CWIST_TEST_WRAP
 static _Thread_local int fail_alloc;
 void *__real_malloc(size_t size);
 void *__wrap_malloc(size_t size) {
@@ -205,3 +208,9 @@ int main(void) {
     printf("HTTP/3 client latency test passed\n");
     return 0;
 }
+#else
+int main(void) {
+    printf("test_http3_client_latency: skipped (linker has no --wrap)\n");
+    return 0;
+}
+#endif
