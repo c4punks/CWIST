@@ -2803,6 +2803,53 @@ static void test_http2_goaway_nonzero_stream(void) {
     printf("Passed HTTP/2 GOAWAY stream validation.\n");
 }
 
+static void test_http2_empty_headers_frame(void) {
+    printf("Testing HTTP/2 empty HEADERS frame...\n");
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+
+    test_http2_server_ctx server_ctx = {.fd = sv[0], .result = make_error(CWIST_ERR_INT16)};
+    pthread_t tid;
+    assert(pthread_create(&tid, NULL, http2_server_thread, &server_ctx) == 0);
+
+    SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+    assert(client_ctx != NULL);
+    SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+    SSL *client = SSL_new(client_ctx);
+    assert(client != NULL);
+    assert(SSL_set_fd(client, sv[1]) == 1);
+    assert(SSL_connect(client) == 1);
+
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
+                                                   0x00, 0x00, 0x00, 0x00};
+    static const unsigned char empty_headers[] = {0x00, 0x00, 0x00, 0x01, 0x04,
+                                                  0x00, 0x00, 0x00, 0x01};
+
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
+    assert(ssl_write_all(client, empty_headers, sizeof(empty_headers)) == 0);
+
+    unsigned char hdr[9];
+    bool saw_reset = false;
+    for (int i = 0; i < 16 && !saw_reset; ++i) {
+        if (ssl_read_exact(client, hdr, sizeof(hdr)) != 0) break;
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | (uint32_t)hdr[2];
+        unsigned char payload[64];
+        assert(len <= sizeof(payload));
+        if (len > 0) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x03 && len == 4) saw_reset = true;
+    }
+
+    SSL_shutdown(client);
+    SSL_free(client);
+    SSL_CTX_free(client_ctx);
+    close(sv[1]);
+    pthread_join(tid, NULL);
+    assert(saw_reset);
+    printf("Passed HTTP/2 empty HEADERS handling.\n");
+}
+
 static void test_hpack_integer_boundaries(void) {
     static const unsigned char maximum[] = {0x7f, 0x80, 0xff, 0xff, 0xff, 0x0f};
     size_t pos = 0;
@@ -2822,6 +2869,7 @@ int main(void) {
     test_hpack_integer_boundaries();
     test_http2_settings_ack_payload();
     test_http2_goaway_nonzero_stream();
+    test_http2_empty_headers_frame();
     test_http2_roundtrip();
     test_http2_large_body_interleave();
     test_http2_ping();
