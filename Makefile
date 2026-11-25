@@ -1926,7 +1926,7 @@ test_baremetal_arena: tests/test_baremetal_arena.c src/core/mem/arena.c
 	./$@
 
 test_healthz: $(LIB_NAME) tests/test_healthz.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_sstring_assign -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) $(call wrap_flag,cwist_sstring_assign) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
 
 test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
@@ -2914,7 +2914,7 @@ test_proto_desc: $(LIB_NAME) tests/test_proto_gen.c tests/make_sample_descriptor
 	./test_proto_desc
 
 test_css_composer: $(LIB_NAME) tests/test_css_composer.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
 	./test_css_composer
 
 # The following seven had a tests/test_*.c file with no Makefile rule at
@@ -2925,7 +2925,7 @@ test_cwist: $(LIB_NAME) tests/test_cwist.c
 	./test_cwist
 
 test_html_builder: $(LIB_NAME) tests/test_html_builder.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
 	./test_html_builder
 
 test_html_component: $(LIB_NAME) tests/test_html_component.c
