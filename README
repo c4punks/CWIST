@@ -190,19 +190,19 @@ missing optional API does not prevent an HTTP/3 build.
   ./server
 
 <!-- BENCHMARKS:START -->
-Latest automated benchmark: **Linux**: 7.7 M leases/s, 176.75% CPU, 582192 KiB RSS.
+Latest automated benchmark: **Linux**: 2.64 M leases/s, 254.62% CPU, 582112 KiB RSS.
 
 ![CWIST benchmark trends](docs/benchmark-trends.svg)
 <!-- BENCHMARKS:END -->
 
 <!-- WEBSERVER_BENCHMARKS:START -->
 Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):
-- **CWIST Classic pool**: 271391 req/s | Latency 0.89ms (P50 0.55ms, P90 1.97ms, P99 4.54ms, P99.999 34.92ms) | RSS 60248KiB | Csw 2734677
-- **CWIST reactor**: 338035 req/s | Latency 1.32ms (P50 0.99ms, P90 2.90ms, P99 5.22ms, P99.999 14.29ms) | RSS 23256KiB | Csw 392061
-- **Actix**: 323471 req/s | Latency 1.35ms (P50 1.04ms, P90 2.87ms, P99 5.19ms, P99.999 13.71ms) | RSS 12548KiB | Csw 467360
-- **Axum**: 258440 req/s | Latency 1.54ms (P50 1.39ms, P90 2.73ms, P99 4.32ms, P99.999 10.10ms) | RSS 15756KiB | Csw 746730
-- **Gin (Go)**: 202376 req/s | Latency 4.10ms (P50 1.98ms, P90 11.74ms, P99 26.33ms, P99.999 79.67ms) | RSS 28056KiB | Csw 1055458
-- **Spring Boot**: 131161 req/s | Latency 3.07ms (P50 2.71ms, P90 4.45ms, P99 7.66ms, P99.999 43.44ms) | RSS 1289848KiB | Csw 679145
+- **CWIST Classic pool**: 154959 req/s | Latency 1.48ms (P50 1.20ms, P90 3.04ms, P99 5.65ms, P99.999 22.16ms) | RSS 61364KiB | Csw 1505861
+- **CWIST reactor**: 188085 req/s | Latency 2.14ms (P50 1.89ms, P90 4.14ms, P99 6.75ms, P99.999 12.07ms) | RSS 22320KiB | Csw 154522
+- **Actix**: 177360 req/s | Latency 2.25ms (P50 2.04ms, P90 4.13ms, P99 6.70ms, P99.999 13.21ms) | RSS 12632KiB | Csw 204032
+- **Axum**: 153967 req/s | Latency 2.56ms (P50 2.38ms, P90 4.44ms, P99 6.65ms, P99.999 11.96ms) | RSS 16656KiB | Csw 338563
+- **Gin (Go)**: 116983 req/s | Latency 4.96ms (P50 3.22ms, P90 12.24ms, P99 30.82ms, P99.999 74.38ms) | RSS 28428KiB | Csw 395442
+- **Spring Boot**: 78586 req/s | Latency 5.04ms (P50 4.64ms, P90 7.05ms, P99 10.76ms, P99.999 33.61ms) | RSS 1291192KiB | Csw 339054
 
 _Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in docs/cooperative-queuing.md and benchmarks/webserver.json; they are no longer rendered as comparison rows._
 
