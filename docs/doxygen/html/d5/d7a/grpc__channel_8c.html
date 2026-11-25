@@ -491,7 +491,7 @@ Functions</h2></td></tr>
 
 <p>Largest Duration seconds value allowed by google.protobuf.Duration. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01073">1073</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01084">1084</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
 
 </div>
 </div>
@@ -561,7 +561,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01181">1181</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01192">1192</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00031">CWIST_GRPC_LB_PICK_FIRST</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00032">CWIST_GRPC_LB_ROUND_ROBIN</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00063">cwist_grpc_retry_throttle::max_tokens</a>, and <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00064">cwist_grpc_retry_throttle::token_ratio</a>.</p>
 
@@ -806,11 +806,11 @@ Functions</h2></td></tr>
 <p>Close a channel and free all its resources. </p>
 <p>Calls handed out must be destroyed before closing the channel. NULL-safe. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00994">994</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01005">1005</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../d4/d54/grpc__client_8c_source.html#l00745">cwist_grpc_client_close()</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00916">cwist_grpc_channel_connect()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00927">cwist_grpc_channel_connect()</a>.</p>
 
 </div>
 </div>
@@ -850,9 +850,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>the new channel, or NULL on any failure (fully cleaned up) </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00916">916</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00927">927</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00068">cwist_grpc_channel_options::authority</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00072">cwist_grpc_channel_options::connect_timeout_ms</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00994">cwist_grpc_channel_close()</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00031">CWIST_GRPC_LB_PICK_FIRST</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00032">CWIST_GRPC_LB_ROUND_ROBIN</a>, <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00042">GRPC_CHANNEL_DEFAULT_BUFFER_LIMIT</a>, <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00041">GRPC_CHANNEL_MAX_ADDRS</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00073">cwist_grpc_channel_options::lb_policy</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00076">cwist_grpc_channel_options::per_rpc_buffer_limit</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00074">cwist_grpc_channel_options::retry_policy</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00075">cwist_grpc_channel_options::retry_throttle</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00069">cwist_grpc_channel_options::use_tls</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00070">cwist_grpc_channel_options::verify_peer</a>, and <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00078">cwist_grpc_channel_options::wait_for_ready</a>.</p>
+<p class="reference">References <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00068">cwist_grpc_channel_options::authority</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00072">cwist_grpc_channel_options::connect_timeout_ms</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01005">cwist_grpc_channel_close()</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00031">CWIST_GRPC_LB_PICK_FIRST</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00032">CWIST_GRPC_LB_ROUND_ROBIN</a>, <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00042">GRPC_CHANNEL_DEFAULT_BUFFER_LIMIT</a>, <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00041">GRPC_CHANNEL_MAX_ADDRS</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00073">cwist_grpc_channel_options::lb_policy</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00076">cwist_grpc_channel_options::per_rpc_buffer_limit</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00074">cwist_grpc_channel_options::retry_policy</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00075">cwist_grpc_channel_options::retry_throttle</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00069">cwist_grpc_channel_options::use_tls</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00070">cwist_grpc_channel_options::verify_peer</a>, and <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00078">cwist_grpc_channel_options::wait_for_ready</a>.</p>
 
 </div>
 </div>
@@ -875,7 +875,7 @@ Functions</h2></td></tr>
 <p>Aggregate connectivity state across subchannels (load-balancing.md). </p>
 <p>READY if any subchannel is connected, else IDLE while any subchannel may dial, else TRANSIENT_FAILURE. NULL maps to SHUTDOWN. Thread-safe: takes ch-&gt;mu. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01016">1016</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l01027">1027</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00036">CWIST_GRPC_CHANNEL_IDLE</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00038">CWIST_GRPC_CHANNEL_READY</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00040">CWIST_GRPC_CHANNEL_SHUTDOWN</a>, <a class="el" href="../../d3/d4c/grpc__channel_8h_source.html#l00039">CWIST_GRPC_CHANNEL_TRANSIENT_FAILURE</a>, and <a class="el" href="../../d4/d54/grpc__client_8c_source.html#l01401">cwist_grpc_client_dead()</a>.</p>
 
@@ -944,7 +944,7 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p>Convenience blocking unary RPC: start, read one response, finish. </p>
-<p>On CWIST_GRPC_OK the first response message is copied into <code>response</code> (caller-owned; freed with cwist_free) with its length in <code>response_len</code>; extra messages are discarded. On any other status the response is freed and NULL/0 is returned. Output pointers may be NULL to discard the corresponding value. <code>status_message</code>, when non-NULL on entry, receives an allocated copy of the server status message.</p>
+<p>On CWIST_GRPC_OK the response message is copied into <code>response</code> (caller-owned; freed with cwist_free) with its length in <code>response_len</code>. Missing or additional response messages produce CWIST_GRPC_INTERNAL. On any other status the response is freed and NULL/0 is returned. Output pointers may be NULL to discard the corresponding value. <code>status_message</code>, when non-NULL on entry, receives an allocated copy of the server status message.</p>
 <dl class="section return"><dt>Returns</dt><dd>the final gRPC status (CWIST_GRPC_INTERNAL if the call could not start) </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html#l00707">707</a> of file <a class="el" href="../../d5/d7a/grpc__channel_8c_source.html">grpc_channel.c</a>.</p>
