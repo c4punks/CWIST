@@ -36,6 +36,16 @@ static void test_query_map_insert_oom(void) {
     cwist_query_map_destroy(map);
 }
 
+static void test_query_map_duplicate_update_oom(void) {
+    cwist_query_map *map = cwist_query_map_create();
+    assert(map != NULL);
+    assert(cwist_query_map_parse_checked(map, "key=old") == 0);
+    alloc_fail_countdown = 1;
+    assert(cwist_query_map_parse_checked(map, "key=new") == -1);
+    alloc_fail_countdown = -1;
+    cwist_query_map_destroy(map);
+}
+
 static bool ok(cwist_error_t e) {
     return e.errtype == CWIST_ERR_INT8 && e.error.err_i8 == ERR_SSTRING_OKAY;
 }
@@ -171,7 +181,7 @@ static void collect(const char *k, const char *v, void *p) {
 
 static void exercise_query_map(cwist_query_map *m) {
     cwist_query_map_parse(m, "a=1&b=two%20words&c=&a=ignored&noeq&d=%26");
-    assert(strcmp(cwist_query_map_get(m, "a"), "1") == 0); /* first value wins */
+    assert(strcmp(cwist_query_map_get(m, "a"), "ignored") == 0); /* last value wins */
     assert(strcmp(cwist_query_map_get(m, "b"), "two words") == 0);
     assert(strcmp(cwist_query_map_get(m, "c"), "") == 0);
     assert(strcmp(cwist_query_map_get(m, "d"), "&") == 0);
@@ -557,6 +567,7 @@ int main(void) {
     test_query_params_through_request_parser();
     test_query_map_growth();
     test_query_map_insert_oom();
+    test_query_map_duplicate_update_oom();
     test_css_colors();
     test_css_generators();
     test_binary_sstring_and_nonfinite_colors();

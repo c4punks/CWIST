@@ -199,7 +199,9 @@ static bool append_ok(cwist_sstring *s, const char *text);
  *         NULL or allocation fails. Caller owns the returned string.
  */
 cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
-    if (!cfg) return NULL;
+    if (!cfg || !cwist_number_double_is_finite(cfg->roundness_px) ||
+        !cwist_number_double_is_finite(cfg->spacing_base_px))
+        return NULL;
     cwist_sstring *css = cwist_sstring_create();
     if (!css) return NULL;
 

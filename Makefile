@@ -1914,7 +1914,7 @@ test_baremetal_arena: tests/test_baremetal_arena.c src/core/mem/arena.c
 	./$@
 
 test_healthz: $(LIB_NAME) tests/test_healthz.c
-	$(CC) $(CFLAGS) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
 
 test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
@@ -2000,7 +2000,7 @@ endif
 
 ifeq ($(CWIST_DB),1)
 test_json_heal: $(LIB_NAME) tests/test_json_heal.c
-	$(CC) $(CFLAGS) -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_realloc -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_ReplaceItemInObjectCaseSensitive -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
 	./test_json_heal
 else
 # CWIST_DB=0: json_heal's DB round-trip path is compiled out with the module.
@@ -2086,7 +2086,7 @@ test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	./$@
 
 test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
-	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=malloc -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
 	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
@@ -2181,7 +2181,7 @@ test_nuke_missing_user:
 endif
 
 test_bind: $(LIB_NAME) tests/test_bind.c
-	$(CC) $(CFLAGS) -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
 	./test_bind
 
 test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response.c
@@ -2680,7 +2680,7 @@ test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 
 ifeq ($(CWIST_NATS),1)
 test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
-	$(CC) $(CFLAGS) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_strndup -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
 	./test_durable_queue
 else
 # CWIST_NATS=0: the NATS backend and its test are compiled out.
@@ -2806,7 +2806,7 @@ test_grpc_client_windows: $(LIB_NAME) tests/test_grpc_client_windows.c
 	./test_grpc_client_windows
 
 test_grpc_channel: $(LIB_NAME) tests/test_grpc_channel.c
-	$(CC) $(CFLAGS) -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
 	./test_grpc_channel
 
 test_dispatch_memory: $(LIB_NAME) tests/test_dispatch_memory.c

@@ -29,6 +29,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <arpa/inet.h>
+#include <limits.h>
 #include <netdb.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -725,6 +726,10 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char 
     }
     const char *sm = NULL;
     cwist_grpc_status_t status = cwist_grpc_channel_call_finish(cc, &sm);
+    if (status == CWIST_GRPC_OK && msg.len > 0 && !copy) {
+        status = CWIST_GRPC_INTERNAL;
+        sm = "out of memory";
+    }
     if (status_message && sm) *status_message = channel_strdup(sm);
     cwist_grpc_channel_call_destroy(cc);
 
@@ -1125,6 +1130,7 @@ static int grpc_json_retry_policy(const cJSON *obj, cwist_grpc_retry_policy *out
     const cJSON *mult = cJSON_GetObjectItemCaseSensitive(obj, "backoffMultiplier");
     const cJSON *codes = cJSON_GetObjectItemCaseSensitive(obj, "retryableStatusCodes");
     if (!cJSON_IsNumber(max_attempts) || max_attempts->valuedouble < 2 ||
+        max_attempts->valuedouble > 1000 ||
         max_attempts->valuedouble != (double)(int)max_attempts->valuedouble)
         return -1;
     uint64_t initial_ms, max_ms;
@@ -1174,7 +1180,7 @@ static void grpc_json_free_mc_list(grpc_method_config *list) {
  */
 int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const char *json) {
     if (!ch || !json) return -1;
-    cJSON *root = cJSON_Parse(json);
+    cJSON *root = cJSON_ParseWithOpts(json, NULL, true);
     if (!cJSON_IsObject(root)) {
         cJSON_Delete(root);
         return -1;
@@ -1225,7 +1231,8 @@ int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const c
         const cJSON *max_tokens = cJSON_GetObjectItemCaseSensitive(rt, "maxTokens");
         const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(rt, "tokenRatio");
         if (!cJSON_IsNumber(max_tokens) || max_tokens->valuedouble <= 0 ||
-            max_tokens->valuedouble > 1000 || !cJSON_IsNumber(ratio) || ratio->valuedouble <= 0)
+            max_tokens->valuedouble > 1000 || !cJSON_IsNumber(ratio) || ratio->valuedouble <= 0 ||
+            ratio->valuedouble > (double)INT_MAX / 1000.0)
             goto invalid;
         throttle.max_tokens = max_tokens->valuedouble;
         /* A6: decimal places beyond 3 are ignored */

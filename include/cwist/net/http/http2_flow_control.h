@@ -81,8 +81,14 @@ int cwist_http2_stream_flow_control_maybe_window_update(
 void cwist_http2_flow_control_add_send_window(cwist_http2_flow_control *flow_control,
                                               uint32_t increment);
 
+bool cwist_http2_flow_control_add_send_window_checked(cwist_http2_flow_control *flow_control,
+                                                      uint32_t increment);
+
 void cwist_http2_stream_flow_control_add_send_window(cwist_http2_stream_flow_control *flow_control,
                                                      uint32_t increment);
+
+bool cwist_http2_stream_flow_control_add_send_window_checked(
+    cwist_http2_stream_flow_control *flow_control, uint32_t increment);
 
 void cwist_http2_stream_flow_control_adjust_send_window(
     cwist_http2_stream_flow_control *flow_control, int32_t delta);

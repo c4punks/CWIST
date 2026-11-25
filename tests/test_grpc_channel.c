@@ -21,6 +21,13 @@
 #include <time.h>
 #include <unistd.h>
 
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc) return NULL;
+    return __real_cwist_alloc(size);
+}
+
 /* --- backends: two loopback h2c servers, one thread per connection --- */
 
 #define MAX_CONN_THREADS 32
@@ -701,7 +708,35 @@ static void test_json_service_config(test_backend *a, test_backend *b, uint16_t 
                                    "\"maxBackoff\":\"1s\",\"backoffMultiplier\":2,"
                                    "\"retryableStatusCodes\":[1e300]}}]}";
     assert(cwist_grpc_channel_apply_service_config_json(ch, bad_code) == -1);
+    static const char huge_attempts[] = "{\"methodConfig\":[{\"name\":[{\"service\":\"s\"}],"
+                                        "\"retryPolicy\":{\"maxAttempts\":1e300,"
+                                        "\"initialBackoff\":\"0.1s\",\"maxBackoff\":\"1s\","
+                                        "\"backoffMultiplier\":2,"
+                                        "\"retryableStatusCodes\":[\"UNAVAILABLE\"]}}]}";
+    assert(cwist_grpc_channel_apply_service_config_json(ch, huge_attempts) == -1);
+    static const char huge_ratio[] = "{\"retryThrottling\":{\"maxTokens\":10,\"tokenRatio\":1e300}}";
+    assert(cwist_grpc_channel_apply_service_config_json(ch, huge_ratio) == -1);
+    assert(cwist_grpc_channel_apply_service_config_json(ch, "{} trailing") == -1);
 
+    cwist_grpc_channel_close(ch);
+}
+
+static void test_unary_allocation_failure(uint16_t port_a) {
+    char target[96];
+    snprintf(target, sizeof(target), "ipv4:127.0.0.1:%u", (unsigned)port_a);
+    cwist_grpc_channel *ch = cwist_grpc_channel_connect(target, NULL);
+    assert(ch != NULL);
+    size_t req_len = 0;
+    uint8_t *req = build_request("hi", &req_len);
+    uint8_t *response = NULL;
+    size_t response_len = 0;
+    fail_alloc = 1;
+    cwist_grpc_status_t status = cwist_grpc_channel_unary(ch, "/cwist.test.Bk/Who", req, req_len,
+                                                          1000, &response, &response_len, NULL);
+    fail_alloc = 0;
+    assert(status == CWIST_GRPC_INTERNAL);
+    assert(response == NULL && response_len == 0);
+    cwist_free(req);
     cwist_grpc_channel_close(ch);
 }
 
@@ -797,6 +832,7 @@ int main(void) {
     test_pushback_delay(&a, port_a);
     test_throttle(&a, port_a);
     test_deadline_across_attempts(port_a);
+    test_unary_allocation_failure(port_a);
     test_json_service_config(&a, &b, port_a, port_b);
     test_transparent_retry_goaway(port_b);
     test_graceful_goaway();

@@ -130,7 +130,28 @@ static void test_set_limits(void) {
     printf("  OK\n");
 }
 
+static bool refresh_noop(void *arg, void **data, size_t *len, void (**free_fn)(void *)) {
+    (void)arg;
+    (void)data;
+    (void)len;
+    (void)free_fn;
+    return false;
+}
+
+static void test_oversized_blob_is_rejected(void) {
+    cwist_bdr_t *bdr = cwist_bdr_create();
+    assert(bdr != NULL);
+    const char body = 'x';
+    cwist_bdr_put_fixed(bdr, "GET", "/overflow", &body, SIZE_MAX);
+    cwist_bdr_put(bdr, "GET", "/overflow", &body, SIZE_MAX);
+    cwist_bdr_put_revalidatable(bdr, "GET", "/overflow", &body, SIZE_MAX, refresh_noop, NULL);
+    size_t len = 0;
+    assert(cwist_bdr_get(bdr, "GET", "/overflow", &len) == NULL);
+    cwist_bdr_destroy(bdr);
+}
+
 int main(void) {
+    test_oversized_blob_is_rejected();
     test_hash_key_is_not_static();
     test_put_fixed_and_get();
     test_get_method_key();

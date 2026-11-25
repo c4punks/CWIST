@@ -357,7 +357,8 @@ static cwist_job_t *jq_job_from_entry(cwist_job_queue_t *q, const cwist_redis_re
         job->payload = cwist_alloc(job->payload_len);
         if (job->payload) memcpy(job->payload, payload->str, job->payload_len);
     }
-    if (!job->id || (job->payload_len && !job->payload)) {
+    if (!job->id || (type && type->str && type->len && !job->type) ||
+        (job->payload_len && !job->payload)) {
         cwist_job_free(job);
         return NULL;
     }
@@ -373,7 +374,8 @@ static cwist_error_t jq_redis_delivery_count(cwist_job_queue_t *q, const char *i
     size_t lens[] = {7, strlen(rs->attempts), id_len, 1};
     long long n = 0;
     cwist_error_t err = jq_redis_int(rs->conn, 4, argv, lens, &n);
-    if (cwist_error_is_ok(&err)) *out_attempts = n > 0 ? (uint32_t)n : 1;
+    if (n <= 0 || n > (long long)UINT32_MAX) return jq_err(CWIST_FAILURE);
+    if (cwist_error_is_ok(&err)) *out_attempts = (uint32_t)n;
     return err;
 }
 
@@ -804,7 +806,19 @@ cwist_job_queue_t *cwist_job_queue_create_nats(cwist_nats_t *nats,
         cwist_free(consumer);
         goto fail;
     } else {
+        bool compatible = ci && ci->Config && ci->Config->Durable &&
+                          strcmp(ci->Config->Durable, consumer) == 0 &&
+                          ci->Config->FilterSubject &&
+                          strcmp(ci->Config->FilterSubject, ns->subject) == 0 &&
+                          ci->Config->AckPolicy == cc.AckPolicy && ci->Config->AckWait == cc.AckWait &&
+                          ci->Config->MaxDeliver == cc.MaxDeliver &&
+                          ci->Config->DeliverPolicy == cc.DeliverPolicy;
         jsConsumerInfo_Destroy(ci);
+        if (!compatible) {
+            cwist_free(base);
+            cwist_free(consumer);
+            goto fail;
+        }
     }
     if (js_PullSubscribe(&ns->sub, ns->js, ns->subject, consumer, NULL, NULL, &jerr) != NATS_OK ||
         natsConnection_Flush(nc) != NATS_OK) {
@@ -904,6 +918,12 @@ static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cw
                 continue;
             }
             uint64_t delivered = meta->NumDelivered;
+            if (delivered > UINT32_MAX) {
+                natsMsg_Destroy(msg);
+                jsMsgMetaData_Destroy(meta);
+                natsMsgList_Destroy(&list);
+                return jq_err(CWIST_FAILURE);
+            }
             if (delivered > (uint64_t)q->max_retries) {
                 /* Max deliveries exhausted: park and terminate. */
                 jq_nats_dead_letter(ns, msg);
@@ -935,7 +955,7 @@ static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cw
                 j->type = cwist_strdup(type);
             j->attempts = (uint32_t)delivered;
             jsMsgMetaData_Destroy(meta);
-            if (!j->id || (j->payload_len && !j->payload)) {
+            if (!j->id || (type && *type && !j->type) || (j->payload_len && !j->payload)) {
                 cwist_job_free(j);
                 natsMsgList_Destroy(&list);
                 return jq_err(CWIST_ERROR_NOMEM);

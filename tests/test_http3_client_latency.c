@@ -30,6 +30,13 @@
 #define REQUESTS 300
 #define LIMIT_US 800.0
 
+static _Atomic int fail_alloc;
+void *__real_malloc(size_t size);
+void *__wrap_malloc(size_t size) {
+    if (fail_alloc) return NULL;
+    return __real_malloc(size);
+}
+
 static void get_handler(void *user, cwist_http_request *req, cwist_http_response *res) {
     (void)user;
     (void)req;
@@ -76,6 +83,22 @@ int main(void) {
     cwist_http3_client_set_timeout_ms(c, 3000);
 
     int failures = 0, ok = 0;
+    cwist_http_response *res = NULL;
+    cwist_error_t e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    if (e.error.err_i16 != 0 || !res) return 1;
+    cwist_http_response_destroy(res);
+    fail_alloc = 1;
+    res = NULL;
+    e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    fail_alloc = 0;
+    if (res) {
+        cwist_http_response_destroy(res);
+        return 1;
+    }
+    res = NULL;
+    e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    if (e.error.err_i16 != 0 || !res) return 1;
+    cwist_http_response_destroy(res);
     static double lat[REQUESTS];
     for (int i = 0; i < REQUESTS; i++) {
         double t0 = now_us();

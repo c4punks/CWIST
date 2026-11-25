@@ -198,6 +198,7 @@ int main(void) {
 
     /* Cookie jar: set, send, receive from response, send again */
     cwist_test_client_set_cookie(client, "manual", "mv", "/");
+    cwist_test_client_set_cookie(client, "empty-path", "ok", "");
     FAIL_IF(strcmp(cwist_test_client_get_cookie(client, "manual"), "mv") != 0, "manual cookie");
     FAIL_IF(cwist_test_client_get_cookie(client, NULL) != NULL, "get null cookie");
 
@@ -210,6 +211,7 @@ int main(void) {
     FAIL_IF(!res || !res->body, "get-cookie res");
     FAIL_IF(strstr(res->body->data, "tc=jarvalue") == NULL, "jar cookie sent");
     FAIL_IF(strstr(res->body->data, "manual=mv") == NULL, "manual cookie sent");
+    FAIL_IF(strstr(res->body->data, "empty-path=ok") == NULL, "empty path cookie sent");
     cwist_http_response_destroy(res);
 
     /* Test clearing cookie jar */

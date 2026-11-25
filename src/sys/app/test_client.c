@@ -63,7 +63,7 @@ static cwist_test_client_cookie *find_cookie_at(cwist_test_client_cookie *head, 
 /** @brief RFC 6265 section 5.1.4 path-match; a cookie without a path (set by
  *         cwist_test_client_set_cookie() with NULL) matches every path. */
 static bool cookie_path_matches(const char *cookie_path, const char *req_path) {
-    if (!cookie_path) return true;
+    if (!cookie_path || !*cookie_path) return true;
     if (!req_path || !*req_path) req_path = "/";
     size_t n = strlen(cookie_path);
     if (strncmp(req_path, cookie_path, n) != 0) return false;

@@ -111,6 +111,7 @@ static void bdr_blob_retire(bdr_blob_t *blob) {
  * @return New blob on success, NULL on allocation failure.
  */
 static bdr_blob_t *bdr_blob_learn(const void *data, size_t len) {
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return NULL;
     bdr_blob_t *blob = cwist_alloc(sizeof(bdr_blob_t) + len);
     if (!blob) return NULL;
     blob->mem = blob;

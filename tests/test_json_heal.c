@@ -13,6 +13,27 @@
 #include <assert.h>
 #include <stdlib.h>
 
+static int fail_replace;
+static int fail_add;
+static int fail_realloc;
+cJSON_bool __real_cJSON_ReplaceItemInObjectCaseSensitive(cJSON *object, const char *string,
+                                                       cJSON *newitem);
+cJSON_bool __wrap_cJSON_ReplaceItemInObjectCaseSensitive(cJSON *object, const char *string,
+                                                        cJSON *newitem) {
+    if (fail_replace) return 0;
+    return __real_cJSON_ReplaceItemInObjectCaseSensitive(object, string, newitem);
+}
+cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
+    if (fail_add) return 0;
+    return __real_cJSON_AddItemToObject(object, string, item);
+}
+void *__real_cwist_realloc(void *ptr, size_t new_size);
+void *__wrap_cwist_realloc(void *ptr, size_t new_size) {
+    if (fail_realloc) return NULL;
+    return __real_cwist_realloc(ptr, new_size);
+}
+
 /* --------------------------------------------------------------------------
  * Shared schema used by most tests
  * ------------------------------------------------------------------------ */
@@ -604,6 +625,36 @@ static void test_schema_alignment_boundaries(void) {
     cJSON_Delete(obj);
 }
 
+static void test_schema_allocation_failures(void) {
+    static const cwist_schema_field_t fields[] = {
+        {"n", {"alias", NULL}, CWIST_FIELD_INT, true},
+    };
+    static const cwist_schema_t schema = {fields, 1};
+    cJSON *obj = cJSON_Parse("{\"alias\":42}");
+    fail_add = 1;
+    assert(cwist_json_schema_align(obj, &schema, NULL, 0) == 0);
+    fail_add = 0;
+    assert(cJSON_GetObjectItem(obj, "alias") != NULL);
+    assert(cJSON_GetObjectItem(obj, "n") == NULL);
+    cJSON_Delete(obj);
+
+    obj = cJSON_Parse("{\"n\":\"42\"}");
+    fail_replace = 1;
+    assert(cwist_json_schema_align(obj, &schema, NULL, 0) == 0);
+    fail_replace = 0;
+    assert(cJSON_IsString(cJSON_GetObjectItem(obj, "n")));
+    cJSON_Delete(obj);
+
+    char input[201];
+    memset(input, '{', sizeof(input) - 1);
+    input[sizeof(input) - 1] = '\0';
+    fail_realloc = 1;
+    cwist_heal_result_t healed = cwist_json_heal(input, NULL);
+    fail_realloc = 0;
+    assert(healed.json == NULL);
+    cwist_heal_result_free(&healed);
+}
+
 static void test_zod_rejects_invalid_schema(void) {
     cwist_schema_t missing = {.fields = NULL, .field_count = 1};
     assert(!cwist_zod_parse("{\"n\":1}", &missing, NULL).valid);
@@ -680,6 +731,7 @@ int main(void) {
     test_zod_wrong_type();
     test_zod_invalid_json_syntax();
     test_schema_alignment_boundaries();
+    test_schema_allocation_failures();
     test_zod_rejects_invalid_schema();
     test_zod_and_heal_nul_precision();
 
