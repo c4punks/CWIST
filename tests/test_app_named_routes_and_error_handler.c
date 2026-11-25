@@ -14,8 +14,17 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/sys/app/app.h>
 #include <assert.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <string.h>
+
+static _Atomic int fail_assign;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (atomic_load(&fail_assign))
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
 
 /* Minimal placeholder handler -- never invoked, just used as a non-NULL value. */
 static void noop_handler(cwist_http_request *req, cwist_http_response *res) {
@@ -79,6 +88,30 @@ static void test_enable_healthz(void) {
     assert(app != NULL);
 
     cwist_app_enable_healthz(app);
+
+    /* Test normal /live request */
+    cwist_http_request *live_req = cwist_http_request_create();
+    live_req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(live_req->path, "/live");
+    cwist_http_response *live_res = cwist_http_response_create();
+    cwist_app_dispatch(app, live_req, live_res);
+    assert(live_res->status_code == CWIST_HTTP_OK);
+    assert(live_res->body != NULL);
+    assert(strcmp(live_res->body->data, "{\"status\":\"alive\"}") == 0);
+    cwist_http_response_destroy(live_res);
+    cwist_http_request_destroy(live_req);
+
+    /* Test /live allocation failure propagates as HTTP 500 */
+    live_req = cwist_http_request_create();
+    live_req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(live_req->path, "/live");
+    live_res = cwist_http_response_create();
+    atomic_store(&fail_assign, 1);
+    cwist_app_dispatch(app, live_req, live_res);
+    atomic_store(&fail_assign, 0);
+    assert(live_res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_response_destroy(live_res);
+    cwist_http_request_destroy(live_req);
 
     /* The healthz route must be discoverable by its path. */
     char *url = cwist_url_for(app, "/healthz", NULL);
