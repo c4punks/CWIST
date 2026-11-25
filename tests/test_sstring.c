@@ -57,6 +57,12 @@ void test_trim() {
     assert(s->borrows_buffer == false); /* safely detached */
     assert(strcmp(borrowed_copy, orig) == 0); /* original borrowed source remains intact */
 
+    const char exact_borrowed[4] = {' ', 'a', 'b', 'c'};
+    assert(cwist_sstring_borrow(s, exact_borrowed, sizeof(exact_borrowed)).error.err_i8 ==
+           ERR_SSTRING_OKAY);
+    assert(cwist_sstring_ltrim(s).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(s->size == 3 && memcmp(s->data, "abc", 3) == 0 && s->data[3] == '\0');
+
     cwist_sstring_destroy(s);
     printf("Passed trim.\n");
 }
