@@ -770,6 +770,7 @@ void cwist_grpc_client_close(cwist_grpc_client *c) {
  */
 static int grpc_client_queue_msg(void *ctx, const cwist_grpc_message *message) {
     cwist_grpc_call *call = ctx;
+    if (message->compressed) return -1;
     grpc_client_msg *node = cwist_alloc(sizeof(*node));
     if (!node) return -1;
     node->data = cwist_alloc(message->len ? message->len : 1);
