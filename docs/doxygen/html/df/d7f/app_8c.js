@@ -10,7 +10,6 @@ var app_8c =
     [ "CWIST_ROUTE_BUCKETS", "df/d7f/app_8c.html#a32097dd81918632150fe8891edea7dbf", null ],
     [ "CWIST_STATIC_RETIRE_NS", "df/d7f/app_8c.html#a24530f3f4a9311eacdd29df8211cc23b", null ],
     [ "CWIST_STREAM_REQ_EAGER_MAX", "df/d7f/app_8c.html#a7cabe04bf3e5999557a79fd995e8e3dd", null ],
-    [ "PATH_MAX", "df/d7f/app_8c.html#ae688d728e1acdfe5988c7db45d6f0166", null ],
     [ "cwist_route_entry", "df/d7f/app_8c.html#a71c3129ec029cc6b67bcecbe32644d22", null ],
     [ "app_serve_result_t", "df/d7f/app_8c.html#a10a9f44f6730a845f5caa2443a7b53e2", [
       [ "APP_SERVE_CLOSE", "df/d7f/app_8c.html#a10a9f44f6730a845f5caa2443a7b53e2a7c8925666f7ac5ee97911bc9e2cb425d", null ],

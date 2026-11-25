@@ -9,5 +9,6 @@ var dir_220d2bd384b446346a1cdcf02b1b2295 =
     [ "port", "dir_01968536127864c13f60a21fe51e7b13.html", "dir_01968536127864c13f60a21fe51e7b13" ],
     [ "session", "dir_c328493bc59eaad1f66f0bbd56e3f1a7.html", "dir_c328493bc59eaad1f66f0bbd56e3f1a7" ],
     [ "wasi", "dir_1e226848a8a1dda2f32fde461123c2bc.html", "dir_1e226848a8a1dda2f32fde461123c2bc" ],
+    [ "file_confine.h", "d6/d22/file__confine_8h.html", "d6/d22/file__confine_8h" ],
     [ "sys_info.c", "d8/d99/sys__info_8c.html", "d8/d99/sys__info_8c" ]
 ];
