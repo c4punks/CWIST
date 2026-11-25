@@ -349,6 +349,12 @@ static void test_subscription_argument_validation(void) {
     cJSON *limit = cJSON_GetObjectItemCaseSensitive(args, "limit");
     assert(cJSON_IsNumber(limit) && limit->valueint == 1);
     cJSON_Delete(args);
+
+    args = (cJSON *)1;
+    assert(!cwist_graphql_parse_subscription(
+        "subscription { counter(topic: \"prefix\\u0000suffix\") }", NULL, field, sizeof(field),
+        &args));
+    assert(args == NULL);
 }
 
 int main(void) {
@@ -478,7 +484,7 @@ int main(void) {
     cJSON_Delete(read_json_message(fd_escaped_bs));
     write_text(fd_escaped_bs,
                "{\"id\":\"esc\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
-               "counter(topic: \\\"t\\\\u0000suffix\\\") }\"}}");
+               "counter(topic: \\\"t\\\\\\\\u0000suffix\\\") }\"}}");
     expect_silence(fd_escaped_bs, 100);
     write_text(fd_escaped_bs, "{\"id\":\"esc\",\"type\":\"complete\"}");
     write_masked(fd_escaped_bs, 0x88, (const uint8_t *)"\x03\xE8", 2);
