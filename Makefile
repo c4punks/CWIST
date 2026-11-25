@@ -1708,7 +1708,7 @@ test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c src/sys/a
 	./$@
 
 test_app_named_routes_and_error_handler: $(LIB_NAME) tests/test_app_named_routes_and_error_handler.c
-	$(CC) $(CFLAGS) -o $@ tests/test_app_named_routes_and_error_handler.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o $@ tests/test_app_named_routes_and_error_handler.c $(LIB_NAME) $(LIBS)
 	./$@
 
 test_app_route_helpers: $(LIB_NAME) tests/test_app_route_helpers.c
