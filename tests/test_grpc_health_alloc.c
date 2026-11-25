@@ -8,6 +8,11 @@
 #include <stdio.h>
 #include <string.h>
 
+/* This suite exists to exercise allocation-failure paths, and its first
+ * UNIMPLEMENTED assertion depends on the failed registration that the wrapper
+ * forces, so there is no meaningful wrapper-free run. On Apple ld (no --wrap)
+ * the whole test reports a skip, mirroring test_http_chunked_alloc_failure. */
+#ifdef CWIST_TEST_WRAP
 void *__real_cwist_alloc(size_t size);
 
 static int fail_second_route;
@@ -86,3 +91,9 @@ int main(void) {
     puts("test_grpc_health_alloc: all passed");
     return 0;
 }
+#else
+int main(void) {
+    printf("test_grpc_health_alloc: skipped (linker has no --wrap)\n");
+    return 0;
+}
+#endif

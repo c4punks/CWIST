@@ -35,6 +35,7 @@
 #define CLOSED_PORT_TIMEOUT_MS 2000
 
 static int g_failures = 0;
+#ifdef CWIST_TEST_WRAP
 static int fail_body_assign;
 static int fail_header;
 cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
@@ -54,6 +55,7 @@ cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *da
     }
     return __real_cwist_sstring_assign_len(str, data, len);
 }
+#endif
 
 #define CHECK(cond, ...)                                         \
     do {                                                         \
@@ -255,6 +257,7 @@ static cwist_http_response *request(cwist_http_client *client, const char *url,
     return res;
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_body_allocation_failure(cwist_http_client *client, const char *base) {
     int before = g_failures;
     char url[128];
@@ -269,6 +272,7 @@ static void test_body_allocation_failure(cwist_http_client *client, const char *
     fail_body_assign = 0;
     report(before, "response body allocation failure is propagated");
 }
+#endif
 
 static void test_file_head_content_length(cwist_http_client *client) {
     int before = g_failures;
@@ -288,6 +292,7 @@ static void test_file_head_content_length(cwist_http_client *client) {
         CHECK(body_equals(res, "", 0), "HEAD returned a body");
         cwist_http_response_destroy(res);
     }
+#ifdef CWIST_TEST_WRAP
     fail_header = 1;
     res = NULL;
     cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_HEAD, NULL, NULL, 0, &res);
@@ -296,6 +301,7 @@ static void test_file_head_content_length(cwist_http_client *client) {
     cwist_error_dispose(&err);
     CHECK(res == NULL, "file response header allocation failure returned a partial response");
     if (res) cwist_http_response_destroy(res);
+#endif
     unlink(path);
     report(before, "file HEAD includes Content-Length");
 }
@@ -706,7 +712,9 @@ int main(void) {
         test_bdr_query_isolation(client, base);
         test_large_request_header(client, base);
         test_shared_client_threads(client, base);
+#ifdef CWIST_TEST_WRAP
         test_body_allocation_failure(client, base);
+#endif
         test_file_head_content_length(client);
     }
 

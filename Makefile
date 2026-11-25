@@ -1724,7 +1724,7 @@ test_file_confine: $(LIB_NAME) tests/test_file_confine.c
 	./$@
 
 test_redis_protocol: $(LIB_NAME) tests/test_redis_protocol.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_append -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_append) -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
 	./$@
 
 test_sctp_dcep: $(LIB_NAME) tests/test_sctp_dcep.c
@@ -1798,7 +1798,7 @@ bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/re
 
 ifeq ($(CWIST_DB),1)
 test_orm: $(LIB_NAME) tests/test_orm.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_PrintUnformatted -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,recv) $(call wrap_flag,cwist_alloc) $(call wrap_flag,cJSON_PrintUnformatted) -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -1807,11 +1807,11 @@ test_orm:
 endif
 
 test_core_utils: $(LIB_NAME) tests/test_core_utils.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
 	./test_core_utils
 
 test_template: $(LIB_NAME) tests/test_template.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
 	./test_template
 
 test_config: $(LIB_NAME) tests/test_config.c
@@ -1926,7 +1926,7 @@ test_baremetal_arena: tests/test_baremetal_arena.c src/core/mem/arena.c
 	./$@
 
 test_healthz: $(LIB_NAME) tests/test_healthz.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_sstring_assign -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) $(call wrap_flag,cwist_sstring_assign) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
 
 test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
@@ -1988,7 +1988,7 @@ test_mux_param: $(LIB_NAME) tests/test_mux_param.c
 
 ifeq ($(CWIST_JWT),1)
 test_jwt: $(LIB_NAME) tests/test_jwt.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddStringToObject -Wl,--wrap=cJSON_AddNumberToObject -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddStringToObject) $(call wrap_flag,cJSON_AddNumberToObject) -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
 	./test_jwt
 
 test_jwt_asym: $(LIB_NAME) tests/test_jwt_asym.c
@@ -2012,7 +2012,7 @@ endif
 
 ifeq ($(CWIST_DB),1)
 test_json_heal: $(LIB_NAME) tests/test_json_heal.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_realloc -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddItemToArray -Wl,--wrap=cJSON_Duplicate -Wl,--wrap=cJSON_ReplaceItemInObjectCaseSensitive -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_realloc) $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddItemToArray) $(call wrap_flag,cJSON_Duplicate) $(call wrap_flag,cJSON_ReplaceItemInObjectCaseSensitive) -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
 	./test_json_heal
 else
 # CWIST_DB=0: json_heal's DB round-trip path is compiled out with the module.
@@ -2098,7 +2098,7 @@ test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	./$@
 
 test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=malloc -Wl,--wrap=cwist_http_header_add -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,malloc) $(call wrap_flag,cwist_http_header_add) $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
 	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
@@ -2108,7 +2108,7 @@ endif
 
 ifeq ($(CWIST_DB),1)
 test_rdbms_auto_mount: $(LIB_NAME) tests/test_rdbms_auto_mount.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=send -Wl,--wrap=recv -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,send) $(call wrap_flag,recv) -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
 	./test_rdbms_auto_mount
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -2126,7 +2126,7 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 
 ifeq ($(CWIST_WS),1)
 test_websocket: $(LIB_NAME) tests/test_websocket.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
 	./test_websocket
 
 test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
@@ -2134,7 +2134,7 @@ test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
 	./test_websocket_async
 
 test_livemsg: $(LIB_NAME) tests/test_livemsg.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_livemsg tests/test_livemsg.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_livemsg tests/test_livemsg.c $(LIB_NAME) $(LIBS)
 	./test_livemsg
 else
 # CWIST_WS=0: the module and its tests are compiled out.
@@ -2167,7 +2167,7 @@ test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
 	./test_classic_shutdown
 
 test_compress: $(LIB_NAME) tests/test_compress.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
 	./test_compress
 
 test_compress_backends: $(LIB_NAME) tests/test_compress_backends.c
@@ -2193,15 +2193,15 @@ test_nuke_missing_user:
 endif
 
 test_bind: $(LIB_NAME) tests/test_bind.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
 	./test_bind
 
 test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
 	./test_bind_write_error_response
 
 test_metrics: $(LIB_NAME) tests/test_metrics.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
 	./test_metrics
 
 test_access_log: $(LIB_NAME) tests/test_access_log.c
@@ -2545,18 +2545,20 @@ test_http_chunked: $(LIB_NAME) tests/test_http_chunked.c
 	$(CC) $(CFLAGS) -o test_http_chunked tests/test_http_chunked.c $(LIB_NAME) $(LIBS)
 	./test_http_chunked
 
-# Fails one realloc() inside libcwist via the GNU linker's --wrap, so it needs
-# ld/lld (Linux); elsewhere the test is built unwrapped and reports a skip.
+# Fails one realloc() inside libcwist via the linker's --wrap, so it needs
+# ld/lld (Linux); on Apple ld the test is built unwrapped and reports a skip.
 # -fno-lto keeps LTO from resolving realloc() before the wrap applies.
-ifeq ($(UNAME_S),Linux)
-CHUNKED_ALLOC_WRAP = -fno-lto -DCWIST_TEST_WRAP_REALLOC -Wl,--wrap=realloc
+ifeq ($(UNAME_S),Darwin)
+CHUNKED_ALLOC_WRAP =
+else
+CHUNKED_ALLOC_WRAP = -fno-lto -DCWIST_TEST_WRAP_REALLOC $(call wrap_flag,realloc)
 endif
 test_http_chunked_alloc_failure: $(LIB_NAME) tests/test_http_chunked_alloc_failure.c
 	$(CC) $(CFLAGS) $(CHUNKED_ALLOC_WRAP) -o test_http_chunked_alloc_failure tests/test_http_chunked_alloc_failure.c $(LIB_NAME) $(LIBS)
 	./test_http_chunked_alloc_failure
 
 test_http_client: $(LIB_NAME) tests/test_http_client.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_http_header_add -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) $(call wrap_flag,cwist_http_header_add) -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
 	./test_http_client
 
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
@@ -2564,7 +2566,7 @@ test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	./test_static_and_range
 
 test_session: $(LIB_NAME) tests/test_session.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=read -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_AddStringToObject -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,read) $(call wrap_flag,cwist_alloc) $(call wrap_flag,cJSON_AddStringToObject) -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
 	./test_session
 
 test_csrf: $(LIB_NAME) tests/test_csrf.c
@@ -2665,7 +2667,7 @@ test_sse: $(LIB_NAME) tests/test_sse.c
 	./test_sse
 
 test_graphql: $(LIB_NAME) tests/test_graphql.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_ReplaceItemViaPointer -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_ReplaceItemViaPointer) $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
 	./test_graphql
 
 ifeq ($(CWIST_WS),1)
@@ -2692,7 +2694,7 @@ test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 
 ifeq ($(CWIST_NATS),1)
 test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_strndup -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_strndup) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
 	./test_durable_queue
 else
 # CWIST_NATS=0: the NATS backend and its test are compiled out.
@@ -2721,7 +2723,7 @@ test_proxy_transport: $(LIB_NAME) tests/test_proxy_transport.c
 	./test_proxy_transport
 
 test_async_defer: $(LIB_NAME) tests/test_async_defer.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
 	./test_async_defer
 	CWIST_C1M_MODE=0 ./test_async_defer
 
@@ -2739,15 +2741,15 @@ test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	./test_async_file_park
 
 test_test_client: $(LIB_NAME) tests/test_test_client.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=ftell -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,ftell) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
 	./test_test_client
 
 test_openapi: $(LIB_NAME) tests/test_openapi.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
 	./test_openapi
 
 test_otel: $(LIB_NAME) tests/test_otel.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
 	./test_otel
 
 test_multiport: $(LIB_NAME) tests/test_multiport.c
@@ -2773,7 +2775,7 @@ test_builtin_mw_chain:
 endif
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_http_header_add -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) $(call wrap_flag,cwist_alloc) $(call wrap_flag,cwist_http_header_add) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
 	./test_grpc
 
 test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c
@@ -2781,16 +2783,16 @@ test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c
 	./test_grpc_append_error
 
 test_grpc_route_alloc: $(LIB_NAME) tests/test_grpc_route_alloc.c
-	$(CC) $(CFLAGS) -Wl,--wrap=cwist_alloc -o test_grpc_route_alloc tests/test_grpc_route_alloc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) $(call wrap_flag,cwist_alloc) -o test_grpc_route_alloc tests/test_grpc_route_alloc.c $(LIB_NAME) $(LIBS)
 	./test_grpc_route_alloc
 
 test_grpc_health_alloc: CFLAGS += -fno-lto
 test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
 	./test_grpc_health_alloc
 
 test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
 	./test_grpc_stream
 
 test_grpc_client: $(LIB_NAME) tests/test_grpc_client.c
@@ -2818,7 +2820,7 @@ test_grpc_client_windows: $(LIB_NAME) tests/test_grpc_client_windows.c
 	./test_grpc_client_windows
 
 test_grpc_channel: $(LIB_NAME) tests/test_grpc_channel.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
 	./test_grpc_channel
 
 test_dispatch_memory: $(LIB_NAME) tests/test_dispatch_memory.c
@@ -2914,7 +2916,7 @@ test_proto_desc: $(LIB_NAME) tests/test_proto_gen.c tests/make_sample_descriptor
 	./test_proto_desc
 
 test_css_composer: $(LIB_NAME) tests/test_css_composer.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
 	./test_css_composer
 
 # The following seven had a tests/test_*.c file with no Makefile rule at
@@ -2925,7 +2927,7 @@ test_cwist: $(LIB_NAME) tests/test_cwist.c
 	./test_cwist
 
 test_html_builder: $(LIB_NAME) tests/test_html_builder.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
 	./test_html_builder
 
 test_html_component: $(LIB_NAME) tests/test_html_component.c
@@ -2970,7 +2972,7 @@ test_linux_writer_fast: $(LIB_NAME) tests/test_linux_writer_fast.c
 
 ifeq ($(CWIST_DB),1)
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddObjectToObject -Wl,--wrap=cJSON_AddNumberToObject -Wl,--wrap=cJSON_AddStringToObject -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddObjectToObject) $(call wrap_flag,cJSON_AddNumberToObject) $(call wrap_flag,cJSON_AddStringToObject) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
 
 test_orm_socket_sigpipe: $(LIB_NAME) tests/test_orm_socket_sigpipe.c

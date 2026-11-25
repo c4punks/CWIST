@@ -8,11 +8,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
 void *__real_cwist_alloc(size_t size);
 
 static int fail_http_route;
 static int route_seen;
-static int handler_calls;
 
 void *__wrap_cwist_alloc(size_t size) {
     /* sizeof(cwist_grpc_route) */
@@ -23,6 +23,9 @@ void *__wrap_cwist_alloc(size_t size) {
     if (fail_http_route && route_seen) return NULL;
     return __real_cwist_alloc(size);
 }
+#endif
+
+static int handler_calls;
 
 static void unary_handler(cwist_http_request *req, cwist_http_response *res,
                           const cwist_grpc_message *message, void *user_ctx) {
@@ -37,12 +40,14 @@ int main(void) {
     cwist_app *app = cwist_app_create();
     assert(app != NULL);
 
+#ifdef CWIST_TEST_WRAP
     fail_http_route = 1;
     route_seen = 0;
     assert(cwist_app_grpc_unary(app, "cwist.test.Echo", "Call", unary_handler, NULL) == -1);
     fail_http_route = 0;
     assert(route_seen == 1);
     assert(handler_calls == 0);
+#endif
 
     uint8_t *frame = NULL;
     size_t frame_len = 0;

@@ -13,6 +13,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_replace;
 static int fail_add;
 static int fail_realloc;
@@ -45,6 +46,7 @@ cJSON_bool __wrap_cJSON_AddItemToArray(cJSON *array, cJSON *item) {
     if (fail_array) return 0;
     return __real_cJSON_AddItemToArray(array, item);
 }
+#endif
 
 /* --------------------------------------------------------------------------
  * Shared schema used by most tests
@@ -552,6 +554,7 @@ static void test_db_query_strict(void) {
     printf("  Passed.\n");
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_db_query_strict_allocation_failures(void) {
     static const cwist_schema_field_t fields[] = {
         {"n", {NULL}, CWIST_FIELD_STRING, true},
@@ -575,6 +578,7 @@ static void test_db_query_strict_allocation_failures(void) {
     cwist_error_dispose(&err);
     cwist_db_close(db);
 }
+#endif
 
 static void test_strict_json_and_schema_boundaries(void) {
     printf("Strict JSON and schema boundaries...\n");
@@ -661,6 +665,7 @@ static void test_schema_alignment_boundaries(void) {
     cJSON_Delete(obj);
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_schema_allocation_failures(void) {
     static const cwist_schema_field_t fields[] = {
         {"n", {"alias", NULL}, CWIST_FIELD_INT, true},
@@ -690,6 +695,7 @@ static void test_schema_allocation_failures(void) {
     assert(healed.json == NULL);
     cwist_heal_result_free(&healed);
 }
+#endif
 
 static void test_zod_rejects_invalid_schema(void) {
     cwist_schema_t missing = {.fields = NULL, .field_count = 1};
@@ -767,7 +773,9 @@ int main(void) {
     test_zod_wrong_type();
     test_zod_invalid_json_syntax();
     test_schema_alignment_boundaries();
+#ifdef CWIST_TEST_WRAP
     test_schema_allocation_failures();
+#endif
     test_zod_rejects_invalid_schema();
     test_zod_and_heal_nul_precision();
 
@@ -776,7 +784,9 @@ int main(void) {
     test_db_insert_healed_rejects_invalid();
     test_db_insert_healed_escapes_identifiers();
     test_db_query_strict();
+#ifdef CWIST_TEST_WRAP
     test_db_query_strict_allocation_failures();
+#endif
     test_strict_json_and_schema_boundaries();
 
     printf("\nAll json_heal / zod / DB tests passed!\n");

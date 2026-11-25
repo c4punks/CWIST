@@ -13,12 +13,14 @@
 #include <zlib.h>
 #include <brotli/decode.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_assign_len;
 cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
 cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
     if (fail_assign_len) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign_len(str, data, len);
 }
+#endif
 
 static void large_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
@@ -97,11 +99,13 @@ static void test_gzip(void) {
     req->method = CWIST_HTTP_GET;
     cwist_sstring_assign(req->path, "/");
     cwist_http_header_add(&req->headers, "Accept-Encoding", "gzip");
+#ifdef CWIST_TEST_WRAP
     fail_assign_len = 1;
     cwist_app_dispatch(app, req, res);
     fail_assign_len = 0;
     const char *failed_encoding = cwist_http_header_get(res->headers, "Content-Encoding");
     assert(failed_encoding == NULL || strcmp(failed_encoding, "gzip") != 0);
+#endif
     cwist_http_request_destroy(req);
     cwist_http_response_destroy(res);
     cwist_app_destroy(app);

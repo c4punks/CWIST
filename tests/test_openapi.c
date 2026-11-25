@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_assign;
 cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
 cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
@@ -17,6 +18,7 @@ cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) 
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign(str, data);
 }
+#endif
 
 #define FAIL_IF(cond, msg)                      \
     do {                                        \
@@ -136,6 +138,7 @@ int main(void) {
     cwist_test_client_destroy(other_client);
     cwist_app_destroy(other);
 
+#ifdef CWIST_TEST_WRAP
     cwist_http_request *failed_req = cwist_http_request_create();
     failed_req->method = CWIST_HTTP_GET;
     cwist_sstring_assign(failed_req->path, "/spec.json");
@@ -147,6 +150,7 @@ int main(void) {
             "response allocation failure returns 500");
     cwist_http_response_destroy(failed);
     cwist_http_request_destroy(failed_req);
+#endif
 
     cwist_test_client_destroy(client);
     cwist_app_destroy(app);
