@@ -3072,8 +3072,10 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
             if (!s) {
                 if (goaway_sent) return -2;
                 if (refused)
-                    return h2_decode_refused_headers(hc, payload + block_offset, block_len) < 0 ? -1
-                                                                                                : 1;
+                    return h2_decode_refused_headers(hc, block_len ? payload + block_offset : NULL,
+                                                     block_len) < 0
+                               ? -1
+                               : 1;
                 return -1;
             }
         }
@@ -3830,7 +3832,8 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     block_offset += 5;
                     block_len -= 5;
                 }
-                int hdr_rc = h2_begin_headers(hc, stream_id, payload + block_offset, block_len,
+                int hdr_rc = h2_begin_headers(hc, stream_id,
+                                              block_len ? payload + block_offset : NULL, block_len,
                                               flags & CWIST_HTTP2_FLAG_END_HEADERS,
                                               flags & CWIST_HTTP2_FLAG_END_STREAM);
                 if (hdr_rc < 0) {
