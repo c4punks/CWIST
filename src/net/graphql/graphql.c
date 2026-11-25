@@ -153,6 +153,10 @@ static char *gql_decode_string(const char *src, size_t len) {
                 unsigned long cp = 0;
                 (void)gql_hex_quad(src + i + 1, &cp);
                 i += 4;
+                if (cp == 0) {
+                    cwist_free(out);
+                    return NULL;
+                }
                 if (cp >= 0xd800 && cp <= 0xdbff) {
                     unsigned long low = 0;
                     if (i + 6 >= len || src[i + 1] != '\\' || src[i + 2] != 'u' ||
