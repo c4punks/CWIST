@@ -299,6 +299,10 @@ static void test_subscription_argument_validation(void) {
     assert(!cwist_graphql_parse_subscription("subscription { counter(bad: ?) }", NULL, field,
                                              sizeof(field), &args));
     assert(args == NULL);
+    args = (cJSON *)1;
+    assert(!cwist_graphql_parse_subscription("subscription { counter(limit: 1) garbage }", NULL,
+                                             field, sizeof(field), &args));
+    assert(args == NULL);
     assert(cwist_graphql_parse_subscription("subscription { counter(limit: 1) }", NULL, field,
                                             sizeof(field), &args));
     assert(strcmp(field, "counter") == 0);

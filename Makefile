@@ -1392,6 +1392,8 @@ TEST_TARGETS = test_worker_affinity \
                test_regression_batch \
                test_file_confine \
                test_redis_protocol \
+               test_sctp_dcep \
+               test_multipart_overflow \
                test_classic_pool_scaling \
                test_reactor_wake \
                test_reactor_timer \
@@ -1711,6 +1713,14 @@ test_redis_protocol: $(LIB_NAME) tests/test_redis_protocol.c
 	$(CC) $(CFLAGS) -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
 	./$@
 
+test_sctp_dcep: $(LIB_NAME) tests/test_sctp_dcep.c
+	$(CC) $(CFLAGS) -o $@ tests/test_sctp_dcep.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_multipart_overflow: $(LIB_NAME) tests/test_multipart_overflow.c
+	$(CC) $(CFLAGS) -o $@ tests/test_multipart_overflow.c $(LIB_NAME) $(LIBS)
+	./$@
+
 test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
 	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
 	./$@ burst
@@ -1774,7 +1784,7 @@ bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/re
 
 ifeq ($(CWIST_DB),1)
 test_orm: $(LIB_NAME) tests/test_orm.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -Wl,--wrap=cwist_alloc -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -2084,7 +2094,7 @@ endif
 
 ifeq ($(CWIST_DB),1)
 test_rdbms_auto_mount: $(LIB_NAME) tests/test_rdbms_auto_mount.c
-	$(CC) $(CFLAGS) -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=send -Wl,--wrap=recv -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
 	./test_rdbms_auto_mount
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -2532,7 +2542,7 @@ test_http_chunked_alloc_failure: $(LIB_NAME) tests/test_http_chunked_alloc_failu
 	./test_http_chunked_alloc_failure
 
 test_http_client: $(LIB_NAME) tests/test_http_client.c
-	$(CC) $(CFLAGS) -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
 	./test_http_client
 
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
@@ -2540,7 +2550,7 @@ test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	./test_static_and_range
 
 test_session: $(LIB_NAME) tests/test_session.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=read -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=read -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_AddStringToObject -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
 	./test_session
 
 test_csrf: $(LIB_NAME) tests/test_csrf.c
@@ -2901,7 +2911,7 @@ test_cwist: $(LIB_NAME) tests/test_cwist.c
 	./test_cwist
 
 test_html_builder: $(LIB_NAME) tests/test_html_builder.c
-	$(CC) $(CFLAGS) -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
 	./test_html_builder
 
 test_html_component: $(LIB_NAME) tests/test_html_component.c

@@ -30,6 +30,22 @@ static void rdbms_no_sigpipe(int sock) {
 #endif
 }
 
+static ssize_t rdbms_send_retry(int sock, const void *buf, size_t len, int flags) {
+    ssize_t n;
+    do {
+        n = send(sock, buf, len, flags);
+    } while (n < 0 && errno == EINTR);
+    return n;
+}
+
+static ssize_t rdbms_recv_retry(int sock, void *buf, size_t len, int flags) {
+    ssize_t n;
+    do {
+        n = recv(sock, buf, len, flags);
+    } while (n < 0 && errno == EINTR);
+    return n;
+}
+
 /**
  * @brief Send a minimal MS-SQL TDS Pre-Login packet and check for response.
  *
@@ -38,18 +54,16 @@ static void rdbms_no_sigpipe(int sock) {
  */
 static bool probe_mssql(int sock) {
     static const unsigned char tds_prelogin[] = {
-        0x12, 0x01, 0x00, 0x2f, 0x00, 0x00, 0x01, 0x00,
-        0x00, 0x00, 0x1a, 0x00, 0x06, 0x01, 0x00, 0x20,
-        0x00, 0x01, 0x02, 0x00, 0x21, 0x00, 0x01, 0x03,
-        0x00, 0x22, 0x00, 0x04, 0x04, 0x00, 0x26, 0x00,
-        0x01, 0xff, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-    if (send(sock, tds_prelogin, sizeof(tds_prelogin), MSG_NOSIGNAL) != (ssize_t)sizeof(tds_prelogin)) {
+        0x12, 0x01, 0x00, 0x2f, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x1a, 0x00,
+        0x06, 0x01, 0x00, 0x20, 0x00, 0x01, 0x02, 0x00, 0x21, 0x00, 0x01, 0x03,
+        0x00, 0x22, 0x00, 0x04, 0x04, 0x00, 0x26, 0x00, 0x01, 0xff, 0x09, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if (rdbms_send_retry(sock, tds_prelogin, sizeof(tds_prelogin), MSG_NOSIGNAL) !=
+        (ssize_t)sizeof(tds_prelogin)) {
         return false;
     }
     unsigned char resp_hdr[8];
-    ssize_t n = recv(sock, resp_hdr, sizeof(resp_hdr), 0);
+    ssize_t n = rdbms_recv_retry(sock, resp_hdr, sizeof(resp_hdr), 0);
     return (n >= 4 && (resp_hdr[0] == 0x04 || resp_hdr[0] == 0x12));
 }
 
@@ -61,20 +75,16 @@ static bool probe_mssql(int sock) {
  */
 static bool probe_oracle(int sock) {
     static const unsigned char tns_connect[] = {
-        0x00, 0x3a, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-        0x01, 0x39, 0x01, 0x2c, 0x00, 0x00, 0x08, 0x00,
-        0x7f, 0xff, 0x7f, 0x08, 0x00, 0x00, 0x01, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00
-    };
-    if (send(sock, tns_connect, sizeof(tns_connect), MSG_NOSIGNAL) != (ssize_t)sizeof(tns_connect)) {
+        0x00, 0x3a, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x39, 0x01, 0x2c, 0x00, 0x00, 0x08,
+        0x00, 0x7f, 0xff, 0x7f, 0x08, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    if (rdbms_send_retry(sock, tns_connect, sizeof(tns_connect), MSG_NOSIGNAL) !=
+        (ssize_t)sizeof(tns_connect)) {
         return false;
     }
     unsigned char resp[8];
-    ssize_t n = recv(sock, resp, sizeof(resp), 0);
+    ssize_t n = rdbms_recv_retry(sock, resp, sizeof(resp), 0);
     return (n >= 5 && (resp[4] == 0x02 || resp[4] == 0x04 || resp[4] == 0x05 || resp[4] == 0x0b));
 }
 
@@ -102,10 +112,10 @@ static bool probe_postgresql(int sock) {
     /* trailing null already present from memset */
 
     size_t total = 8 + payload;
-    if (send(sock, startup, total, MSG_NOSIGNAL) != (ssize_t)total) return false;
+    if (rdbms_send_retry(sock, startup, total, MSG_NOSIGNAL) != (ssize_t)total) return false;
 
     char resp = 0;
-    ssize_t n = recv(sock, &resp, 1, 0);
+    ssize_t n = rdbms_recv_retry(sock, &resp, 1, 0);
     return (n == 1 && resp == 'R');
 }
 
@@ -170,7 +180,7 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
     }
 
     char buf[512];
-    ssize_t n = recv(sock, buf, sizeof(buf), 0);
+    ssize_t n = rdbms_recv_retry(sock, buf, sizeof(buf), 0);
     if (n > 0) {
         cwist_rdbms_provider_t p = classify_mysql(buf, (size_t)n);
         if (p != CWIST_RDBMS_NONE) {
@@ -274,8 +284,8 @@ const char *cwist_rdbms_provider_name(cwist_rdbms_provider_t provider) {
  * @return true if a runtime is mounted, false on NULL app or allocation failure.
  */
 bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, int port) {
-    if (!app || provider <= CWIST_RDBMS_NONE || provider > CWIST_RDBMS_MSSQL ||
-        port < 1 || port > 65535)
+    if (!app || provider <= CWIST_RDBMS_NONE || provider > CWIST_RDBMS_MSSQL || port < 1 ||
+        port > 65535)
         return false;
 
     if (app->rdbms) {

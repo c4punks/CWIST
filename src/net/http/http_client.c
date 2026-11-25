@@ -625,7 +625,17 @@ static cwist_error_t http_client_request_locked(cwist_http_client *client, const
 
     response->status_code = (cwist_http_status_t)resp_hdrs.status_code;
     if (resp_body.data && resp_body.size > 0) {
-        cwist_sstring_assign_len(response->body, resp_body.data, resp_body.size);
+        cwist_error_t body_err =
+            cwist_sstring_assign_len(response->body, resp_body.data, resp_body.size);
+        if (!cwist_error_is_ok(&body_err)) {
+            cwist_error_dispose(&body_err);
+            free(resp_body.data);
+            cwist_http_header_free_all(resp_hdrs.headers);
+            cwist_http_response_destroy(response);
+            err.error.err_i16 = -1;
+            return err;
+        }
+        cwist_error_dispose(&body_err);
     }
 
     /* Transfer collected headers */

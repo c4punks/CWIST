@@ -95,6 +95,11 @@ cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, siz
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
+    if (len == SIZE_MAX) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
     if (data && len > 0 && sstring_aliases(str, data)) {
         char *copy = (char *)cwist_alloc(len + 1);
         if (!copy) {
@@ -667,23 +672,33 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
  * @param data Source string to append in escaped form.
  * @return ERR_SSTRING_OKAY on success, or an error payload describing the failure.
  */
-cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data) {
+static cwist_error_t sstring_append_escaped_len(cwist_sstring *str, const char *data,
+                                                size_t input_len) {
     if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
-    if (sstring_aliases(str, data))
-        return sstring_with_copy(str, data, cwist_sstring_append_escaped);
-    if (!data) {
-        // Appending nothing is success
+    if (!data || input_len == 0) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
+    if (sstring_aliases(str, data)) {
+        char *copy = cwist_alloc(input_len + 1);
+        if (!copy) {
+            cwist_error_t err = make_error(CWIST_ERR_INT8);
+            err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+            return err;
+        }
+        memcpy(copy, data, input_len);
+        copy[input_len] = '\0';
+        cwist_error_t err = sstring_append_escaped_len(str, copy, input_len);
+        cwist_free(copy);
+        return err;
+    }
 
     size_t current_len = sstring_content_len(str);
-    size_t input_len = strlen(data);
     if (current_len == SIZE_MAX || input_len > (SIZE_MAX - current_len - 1) / 6) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
@@ -751,6 +766,10 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
     return err;
 }
 
+cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data) {
+    return sstring_append_escaped_len(str, data, data ? strlen(data) : 0);
+}
+
 /**
  * @brief Append the contents of one CWIST string onto another.
  * @param str Destination string.
@@ -788,7 +807,7 @@ cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwi
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
-    return cwist_sstring_append_escaped(str, from->data);
+    return sstring_append_escaped_len(str, from->data, sstring_content_len(from));
 }
 
 /**

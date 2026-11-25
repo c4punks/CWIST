@@ -128,12 +128,21 @@ static int orm_exchange(cwist_orm_t *orm, const char *sql, char **out_payload) {
  * @param payload Response string (must be valid JSON).
  * @return The integer status code, or -1 if parsing fails.
  */
+static int orm_status_value(const cJSON *status) {
+    if (!cJSON_IsNumber(status)) return -1;
+    double value = status->valuedouble;
+    if (!cwist_number_double_is_finite(value) || trunc(value) != value || value < INT_MIN ||
+        value > INT_MAX)
+        return -1;
+    return (int)value;
+}
+
 static int orm_parse_status(const char *payload) {
     if (!payload) return -1;
     cJSON *root = cJSON_Parse(payload);
     if (!root) return -1;
     cJSON *status = cJSON_GetObjectItemCaseSensitive(root, "status");
-    int rc = (cJSON_IsNumber(status)) ? (int)status->valuedouble : -1;
+    int rc = orm_status_value(status);
     cJSON_Delete(root);
     return rc;
 }
@@ -339,7 +348,7 @@ cwist_error_t cwist_orm_query(cwist_orm_t *orm, const char *sql, cJSON **result)
     }
 
     cJSON *status = cJSON_GetObjectItemCaseSensitive(root, "status");
-    if (!cJSON_IsNumber(status) || (int)status->valuedouble != 0) {
+    if (!cJSON_IsNumber(status) || orm_status_value(status) != 0) {
         cJSON_Delete(root);
         err.error.err_i16 = CWIST_ERROR_PROTOCOL;
         return err;
@@ -835,8 +844,8 @@ cwist_error_t cwist_orm_delete(cwist_orm_t *orm, const char *table, const char *
 cwist_error_t cwist_orm_select(cwist_orm_t *orm, const char *table, const char *columns,
                                const char *where_clause, cJSON **result) {
     cwist_error_t err = make_error(CWIST_ERR_INT16);
-    *result = NULL;
-    if (!orm || !table || !columns) {
+    if (result) *result = NULL;
+    if (!orm || !table || !columns || !result) {
         err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
         return err;
     }
@@ -1283,7 +1292,12 @@ cwist_error_t cwist_orm_select_one_llong(cwist_orm_t *orm, const char *table, co
 cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, const char *column,
                                           const char *where_clause, double *out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!out) {
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
+    }
+    err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsNumber(val)) {
         *out = val->valuedouble;
@@ -1311,7 +1325,13 @@ cwist_error_t cwist_orm_select_one_double(cwist_orm_t *orm, const char *table, c
 cwist_error_t cwist_orm_select_one_string(cwist_orm_t *orm, const char *table, const char *column,
                                           const char *where_clause, char **out) {
     cJSON *val = NULL;
-    cwist_error_t err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
+    cwist_error_t err = make_error(CWIST_ERR_INT16);
+    if (!out) {
+        err.error.err_i16 = CWIST_ERROR_INVALID_PARAM;
+        return err;
+    }
+    *out = NULL;
+    err = cwist_orm_select_one_json(orm, table, column, where_clause, &val);
     if (err.error.err_i16 != 0) return err;
     if (cJSON_IsString(val)) {
         *out = strdup(val->valuestring);
@@ -1459,7 +1479,7 @@ static cwist_error_t orm_query_first_i64(cwist_orm_t *orm, const char *sql, cons
     cJSON *status = cJSON_GetObjectItemCaseSensitive(root, "status");
     cJSON *first = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(root, "rows"), 0);
     cJSON *val = cJSON_GetObjectItemCaseSensitive(first, key);
-    bool shape_ok = cJSON_IsNumber(status) && (int)status->valuedouble == 0 &&
+    bool shape_ok = cJSON_IsNumber(status) && orm_status_value(status) == 0 &&
                     (cJSON_IsNumber(val) || cJSON_IsString(val));
     cJSON_Delete(root);
 
@@ -1569,6 +1589,12 @@ static unsigned char *orm_b64_decode(const char *in, size_t *out_len) {
                     return NULL;
                 }
             }
+        }
+        if (i + 4 == n &&
+            ((chars == 1 && (v[1] & 0x0f) != 0) || (chars == 2 && (v[2] & 0x03) != 0))) {
+            free(out);
+            *out_len = SIZE_MAX;
+            return NULL;
         }
         unsigned triple = ((unsigned)v[0] << 18) | ((unsigned)v[1] << 12) | ((unsigned)v[2] << 6) |
                           (unsigned)v[3];
@@ -1680,7 +1706,7 @@ cwist_error_t cwist_orm_query_typed(cwist_orm_t *orm, const char *sql,
     cwist_orm_result_t *res = NULL;
 
     cJSON *status = cJSON_GetObjectItemCaseSensitive(root, "status");
-    if (!cJSON_IsNumber(status) || (int)status->valuedouble != 0) goto done;
+    if (!cJSON_IsNumber(status) || orm_status_value(status) != 0) goto done;
 
     cJSON *typed = cJSON_GetObjectItemCaseSensitive(root, "typed");
     cJSON *columns = cJSON_GetObjectItemCaseSensitive(typed, "columns");
