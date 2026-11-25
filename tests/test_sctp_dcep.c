@@ -52,6 +52,13 @@ int main(void) {
     dispatch_message(&conn, 1, PPID_DCEP, truncated, sizeof(truncated));
     assert(open_calls == 0);
 
+    uint8_t valid[13] = {DCEP_OPEN};
+    valid[9] = 1;
+    valid[12] = 'x';
+    dispatch_message(&conn, 1, PPID_DCEP, valid, sizeof(valid));
+    dispatch_message(&conn, 1, PPID_DCEP, valid, sizeof(valid));
+    assert(open_calls == 1);
+
     uint8_t empty = 0;
     dispatch_message(&conn, 1, PPID_STRING_EMPTY, &empty, 1);
     dispatch_message(&conn, 1, PPID_BINARY_EMPTY, &empty, 1);
