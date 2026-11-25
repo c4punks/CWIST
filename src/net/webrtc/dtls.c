@@ -14,6 +14,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 
 /** @brief DTLS record/link MTU assumed for the media path (bytes).
  * Used to size outgoing DTLS records so they fit typical UDP/ICE paths
@@ -110,7 +111,7 @@ int cwist_dtls_verify_fingerprint(SSL *ssl, const char *expected) {
     char actual[128];
     int rc = cwist_dtls_fingerprint(cert, actual, sizeof(actual));
     X509_free(cert);
-    return rc == 0 && strcmp(actual, expected) == 0;
+    return rc == 0 && strcasecmp(actual, expected) == 0;
 }
 
 static int dtls_accept_certificate(int preverify_ok, X509_STORE_CTX *store) {
