@@ -32,6 +32,7 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1190,12 +1191,16 @@ typedef struct proxy_tunnel {
     curl_socket_t up_fd;
 } proxy_tunnel;
 
+#define PROXY_CONNECT_MAX_TUNNELS 256
+static atomic_size_t g_connect_tunnel_count;
+
 static void proxy_tunnel_free(proxy_tunnel *t) {
     if (!t) return;
     if (t->client_fd >= 0) close(t->client_fd);
     if (t->curl) curl_easy_cleanup(t->curl);
     cwist_curl_global_release();
     cwist_free(t);
+    atomic_fetch_sub(&g_connect_tunnel_count, 1);
 }
 
 /* curl_easy_send the whole buffer (TLS-aware), waiting on EAGAIN. */
@@ -1350,8 +1355,18 @@ static void proxy_tunnel_start(cwist_http_request *req, cwist_http_response *res
         }
     }
 
+    size_t active = atomic_fetch_add(&g_connect_tunnel_count, 1) + 1;
+    if (active > PROXY_CONNECT_MAX_TUNNELS) {
+        atomic_fetch_sub(&g_connect_tunnel_count, 1);
+        curl_easy_cleanup(curl);
+        cwist_curl_global_release();
+        proxy_set_text(res, CWIST_HTTP_SERVICE_UNAVAILABLE, "503 Service Unavailable");
+        return;
+    }
+
     proxy_tunnel *t = (proxy_tunnel *)cwist_alloc(sizeof(*t));
     if (!t) {
+        atomic_fetch_sub(&g_connect_tunnel_count, 1);
         curl_easy_cleanup(curl);
         cwist_curl_global_release();
         proxy_set_text(res, CWIST_HTTP_INTERNAL_ERROR, "500 Internal Server Error");
