@@ -2677,7 +2677,7 @@ void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr,
  */
 void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len,
                                               cwist_http_body_cleanup_fn cleanup, void *ctx) {
-    if (!res) return;
+    if (!res || (!ptr && len > 0)) return;
     cwist_http_response_release_file_stream(res);
     cwist_http_response_release_ptr_body(res);
     res->is_ptr_body = true;
@@ -5146,6 +5146,7 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
             body = res->body->data;
             body_len = res->body->size;
         }
+        if (body_len > 0 && !body) return -1;
     }
 
     char *buf = (char *)cwist_alloc(header_len + body_len + 1);
