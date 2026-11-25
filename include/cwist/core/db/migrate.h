@@ -22,7 +22,7 @@
 /**
  * @brief A single migration step.
  *
- * - version : monotonically increasing integer (e.g. 1, 2, 3 …)
+ * - version : positive, monotonically increasing integer (e.g. 1, 2, 3 …)
  * - name    : human-readable label (used in history table)
  * - up_sql  : SQL executed when migrating forward; may contain multiple
  *             statements separated by ';'

@@ -249,7 +249,13 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
  */
 static bool run_rules(const cwist_bind_field_t *f, const char *value, size_t len,
                       cwist_bind_result_t *r) {
-    if (!f->rules) return true;
+    if (!f->rules) {
+        if (f->rule_count > 0) {
+            bind_add_error(r, f->json_key, "rule list is missing");
+            return false;
+        }
+        return true;
+    }
     bool all_ok = true;
     bool terminated = false;
     size_t limit = f->rule_count > 0 && f->rule_count < CWIST_BIND_MAX_ERRORS
@@ -505,19 +511,18 @@ static cwist_query_map *bind_parse_form(const char *payload) {
         const char *amp = strchr(cursor, '&');
         const char *end = amp ? amp : cursor + strlen(cursor);
         const char *eq = memchr(cursor, '=', (size_t)(end - cursor));
-        if (eq) {
-            char *key = bind_form_decode(cursor, (size_t)(eq - cursor));
-            char *value = bind_form_decode(eq + 1, (size_t)(end - eq - 1));
-            if (!key || !value) {
-                cwist_free(key);
-                cwist_free(value);
-                cwist_query_map_destroy(map);
-                return NULL;
-            }
-            if (!cwist_query_map_get(map, key)) cwist_query_map_set(map, key, value);
+        const char *value_start = eq ? eq + 1 : end;
+        char *key = bind_form_decode(cursor, eq ? (size_t)(eq - cursor) : (size_t)(end - cursor));
+        char *value = bind_form_decode(value_start, (size_t)(end - value_start));
+        if (!key || !value) {
             cwist_free(key);
             cwist_free(value);
+            cwist_query_map_destroy(map);
+            return NULL;
         }
+        if (!cwist_query_map_get(map, key)) cwist_query_map_set(map, key, value);
+        cwist_free(key);
+        cwist_free(value);
         cursor = amp ? amp + 1 : NULL;
     }
     return map;

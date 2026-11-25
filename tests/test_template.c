@@ -9,6 +9,16 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc > 0) {
+        fail_alloc--;
+        return NULL;
+    }
+    return __real_cwist_alloc(size);
+}
+
 static void write_text(const char *path, const char *text) {
     FILE *file = fopen(path, "wb");
     assert(file != NULL);
@@ -341,6 +351,11 @@ int main(void) {
     char include_partial[PATH_MAX + 32];
     assert(snprintf(include_partial, sizeof(include_partial), "{%% include \"%s\" %%}", partial) >
            0);
+    char single_quoted[PATH_MAX + 32];
+    assert(snprintf(single_quoted, sizeof(single_quoted), "{%% include '%s' %%}", partial) > 0);
+    rendered = cwist_template_render(single_quoted, context);
+    assert(rendered != NULL && strcmp(rendered->data, "Included world") == 0);
+    cwist_sstring_destroy(rendered);
     char include_first[PATH_MAX + 32];
     char include_second[PATH_MAX + 32];
     assert(snprintf(include_first, sizeof(include_first), "{%% include \"%s\" %%}", first) > 0);
@@ -414,6 +429,12 @@ int main(void) {
     write_text(second, include_first);
     rendered = cwist_template_render_file(first, context);
     assert(rendered == NULL);
+
+    fail_alloc = 3;
+    rendered = cwist_template_render_ex("prefix{{ name }}", context, &error);
+    fail_alloc = 0;
+    assert(rendered == NULL);
+    assert_error(&error, CWIST_TEMPLATE_ERROR_NO_MEMORY, 0, "", NULL);
 
     cJSON_Delete(context);
     assert(unlink(partial) == 0);

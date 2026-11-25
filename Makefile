@@ -382,6 +382,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/livemsg/livemsg.c \
        src/net/http/http2.c \
        src/net/http/http2_flow_control.c \
+       src/net/quic_flow_control.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
        src/net/http/http_client_file.c \
@@ -1433,6 +1434,7 @@ TEST_TARGETS = test_worker_affinity \
                test_assets \
                test_html_parity \
                test_http2_flow_control \
+               test_quic_flow_control \
                test_idle_reaper \
                test_linux_writer_fast \
                test_orm_socket \
@@ -1797,7 +1799,7 @@ test_core_utils: $(LIB_NAME) tests/test_core_utils.c
 	./test_core_utils
 
 test_template: $(LIB_NAME) tests/test_template.c
-	$(CC) $(CFLAGS) -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
 	./test_template
 
 test_config: $(LIB_NAME) tests/test_config.c
@@ -2673,7 +2675,7 @@ cli:
 	@echo "CLI ready: ./tools/cli/cwist"
 
 test_scheduler: $(LIB_NAME) tests/test_scheduler.c
-	$(CC) $(CFLAGS) -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_realloc -o test_scheduler tests/test_scheduler.c $(LIB_NAME) $(LIBS)
 	./test_scheduler
 
 ifeq ($(CWIST_NATS),1)
@@ -2900,7 +2902,7 @@ test_proto_desc: $(LIB_NAME) tests/test_proto_gen.c tests/make_sample_descriptor
 	./test_proto_desc
 
 test_css_composer: $(LIB_NAME) tests/test_css_composer.c
-	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
 	./test_css_composer
 
 # The following seven had a tests/test_*.c file with no Makefile rule at
@@ -2941,6 +2943,10 @@ test_html_parity: $(LIB_NAME) tests/test_html_parity.c tests/html_views_shared.h
 test_http2_flow_control: $(LIB_NAME) tests/test_http2_flow_control.c
 	$(CC) $(CFLAGS) -o test_http2_flow_control tests/test_http2_flow_control.c $(LIB_NAME) $(LIBS)
 	./test_http2_flow_control
+
+test_quic_flow_control: $(LIB_NAME) tests/test_quic_flow_control.c
+	$(CC) $(CFLAGS) -o test_quic_flow_control tests/test_quic_flow_control.c $(LIB_NAME) $(LIBS)
+	./test_quic_flow_control
 
 test_idle_reaper: $(LIB_NAME) tests/test_idle_reaper.c
 	$(CC) $(CFLAGS) -o test_idle_reaper tests/test_idle_reaper.c $(LIB_NAME) $(LIBS)

@@ -91,6 +91,14 @@ static void test_route_order_and_trailing_slash(void) {
 }
 
 /* #983: a group joins prefix and path with exactly one '/'. */
+static void test_literal_colon_route(void) {
+    cwist_mux_router *router = cwist_mux_router_create();
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/time:zone", h_users);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/time:zone", NULL), "users") == 0);
+    assert(cwist_mux_find_route(router, CWIST_HTTP_GET, "/time:zone") != NULL);
+    cwist_mux_router_destroy(router);
+}
+
 static void test_group_join(void) {
     static const char *const prefixes[] = {"/api", "/api/", "api", "/api//"};
     static const char *const paths[] = {"/users", "users", "//users"};
@@ -202,6 +210,7 @@ int main() {
     printf("PASSED\n");
 
     test_route_order_and_trailing_slash();
+    test_literal_colon_route();
     test_group_join();
     return 0;
 }

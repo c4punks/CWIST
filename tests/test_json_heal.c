@@ -612,6 +612,40 @@ static void test_strict_json_and_schema_boundaries(void) {
     printf("  Passed.\n");
 }
 
+static void test_schema_alignment_boundaries(void) {
+    cJSON *obj = cJSON_Parse("{\"n\":\"\",\"b\":2}");
+    assert(obj != NULL);
+    static const cwist_schema_field_t fields[] = {
+        {"n", {NULL}, CWIST_FIELD_INT, true},
+        {"b", {NULL}, CWIST_FIELD_BOOL, true},
+    };
+    static const cwist_schema_t schema = {fields, 2};
+    assert(cwist_json_schema_align(obj, &schema, NULL, 0) == 0);
+    assert(strcmp(cJSON_GetObjectItem(obj, "n")->valuestring, "") == 0);
+    assert(cJSON_GetObjectItem(obj, "b")->valuedouble == 2.0);
+    cJSON_Delete(obj);
+
+    obj = cJSON_Parse("{\"n\":\"1.5\"}");
+    assert(obj != NULL);
+    static const cwist_schema_field_t int_fields[] = {
+        {"n", {NULL}, CWIST_FIELD_INT, true},
+    };
+    static const cwist_schema_t int_schema = {int_fields, 1};
+    assert(cwist_json_schema_align(obj, &int_schema, NULL, 0) == 0);
+    assert(strcmp(cJSON_GetObjectItem(obj, "n")->valuestring, "1.5") == 0);
+    cJSON_Delete(obj);
+
+    cwist_schema_t missing = {.fields = NULL, .field_count = 1};
+    obj = cJSON_CreateObject();
+    assert(cwist_json_schema_align(obj, &missing, NULL, 0) == -1);
+    cwist_schema_field_t unnamed[] = {{.name = NULL, .type = CWIST_FIELD_INT}};
+    cwist_schema_t bad_name = {.fields = unnamed, .field_count = 1};
+    assert(cwist_json_schema_align(obj, &bad_name, NULL, 0) == -1);
+    cwist_schema_t negative = {.fields = unnamed, .field_count = -1};
+    assert(cwist_json_schema_align(obj, &negative, NULL, 0) == -1);
+    cJSON_Delete(obj);
+}
+
 static void test_zod_rejects_invalid_schema(void) {
     cwist_schema_t missing = {.fields = NULL, .field_count = 1};
     assert(!cwist_zod_parse("{\"n\":1}", &missing, NULL).valid);
@@ -687,6 +721,7 @@ int main(void) {
     test_zod_missing_required();
     test_zod_wrong_type();
     test_zod_invalid_json_syntax();
+    test_schema_alignment_boundaries();
     test_zod_rejects_invalid_schema();
     test_zod_and_heal_nul_precision();
 
