@@ -522,6 +522,13 @@ int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key, uin
  * @param res Response object the handler fills in. */
 static void grpc_set_internal_error(cwist_http_response *res, const char *message);
 
+static bool grpc_add_header(cwist_http_response *res, const char *key, const char *value) {
+    cwist_error_t err = cwist_http_header_add(&res->headers, key, value);
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
 static void grpc_dispatch_unary_route(cwist_http_request *req, cwist_http_response *res,
                                       const grpc_route_view *route) {
     if (!route->handler) {
@@ -587,7 +594,8 @@ static void grpc_dispatch_unary_route(cwist_http_request *req, cwist_http_respon
                     } else {
                         cwist_error_dispose(&body_err);
                         cwist_http_header_remove(&res->headers, "grpc-encoding");
-                        cwist_http_header_add(&res->headers, "grpc-encoding", "gzip");
+                        if (!grpc_add_header(res, "grpc-encoding", "gzip"))
+                            grpc_set_internal_error(res, "failed to build gRPC metadata");
                     }
                 }
                 cwist_free(cbuf);
@@ -743,10 +751,16 @@ static void grpc_dispatch_stream_route(cwist_http_request *req, cwist_http_respo
     }
 
     res->status_code = CWIST_HTTP_OK;
-    cwist_http_header_add(&res->headers, "content-type", "application/grpc");
-    cwist_http_header_add(&res->headers, "grpc-accept-encoding", "gzip, identity");
-    if (grpc_client_accepts_gzip(req)) {
-        cwist_http_header_add(&res->headers, "grpc-encoding", "gzip");
+    bool metadata_ok = grpc_add_header(res, "content-type", "application/grpc") &&
+                       grpc_add_header(res, "grpc-accept-encoding", "gzip, identity") &&
+                       (!grpc_client_accepts_gzip(req) || grpc_add_header(res, "grpc-encoding", "gzip"));
+    if (!metadata_ok) {
+        grpc_set_internal_error(res, "failed to build gRPC metadata");
+        if (owned) {
+            for (size_t i = 0; i < count; i++) cwist_free(owned[i]);
+        }
+        cwist_free(messages);
+        return;
     }
     if (res->body) cwist_sstring_assign(res->body, "");
 
@@ -946,10 +960,11 @@ int cwist_grpc_decoder_feed(cwist_grpc_decoder *decoder, const void *data, size_
 
 static void grpc_set_internal_error(cwist_http_response *res, const char *message) {
     res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-    cwist_sstring_assign(res->body, "");
+    cwist_error_t body_err = cwist_sstring_assign(res->body, "");
+    cwist_error_dispose(&body_err);
     cwist_http_header_remove(&res->headers, "grpc-status");
-    cwist_http_header_add(&res->headers, "grpc-status", "13");
-    cwist_http_header_add(&res->headers, "grpc-message", message);
+    grpc_add_header(res, "grpc-status", "13");
+    grpc_add_header(res, "grpc-message", message);
 }
 
 /** @brief Build a complete buffered unary gRPC response.
@@ -967,20 +982,26 @@ void cwist_grpc_set_response(cwist_http_response *res, cwist_grpc_status_t statu
     if (!res) return;
 
     res->status_code = CWIST_HTTP_OK;
-    cwist_http_header_add(&res->headers, "content-type", "application/grpc");
-    cwist_http_header_add(&res->headers, "grpc-accept-encoding", "gzip, identity");
-
     char status_buf[16];
     snprintf(status_buf, sizeof(status_buf), "%d", (int)status);
-    cwist_http_header_add(&res->headers, "grpc-status", status_buf);
+    if (!grpc_add_header(res, "content-type", "application/grpc") ||
+        !grpc_add_header(res, "grpc-accept-encoding", "gzip, identity") ||
+        !grpc_add_header(res, "grpc-status", status_buf)) {
+        grpc_set_internal_error(res, "failed to build gRPC metadata");
+        return;
+    }
     if (message) {
         char *encoded = cwist_grpc_status_message_encode(message);
         if (!encoded) {
             grpc_set_internal_error(res, "failed to encode status message");
             return;
         }
-        cwist_http_header_add(&res->headers, "grpc-message", encoded);
+        bool added = grpc_add_header(res, "grpc-message", encoded);
         cwist_free(encoded);
+        if (!added) {
+            grpc_set_internal_error(res, "failed to build gRPC metadata");
+            return;
+        }
     }
 
     uint8_t *frame = NULL;

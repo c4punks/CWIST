@@ -2126,7 +2126,7 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 
 ifeq ($(CWIST_WS),1)
 test_websocket: $(LIB_NAME) tests/test_websocket.c
-	$(CC) $(CFLAGS) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
 	./test_websocket
 
 test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
@@ -2773,7 +2773,7 @@ test_builtin_mw_chain:
 endif
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_alloc -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_http_header_add -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
 	./test_grpc
 
 test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c
