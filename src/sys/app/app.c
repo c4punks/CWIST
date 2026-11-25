@@ -5509,8 +5509,22 @@ static void cwist_swagger_html_handler(cwist_http_request *req, cwist_http_respo
         "};\n"
         "</script>\n"
         "</body>\n</html>\n";
-    cwist_sstring_assign(res->body, (char *)html);
-    cwist_http_header_add(&res->headers, "Content-Type", "text/html; charset=utf-8");
+    cwist_error_t body_err = cwist_sstring_assign(res->body, (char *)html);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&body_err);
+    cwist_error_t header_err =
+        cwist_http_header_add(&res->headers, "Content-Type", "text/html; charset=utf-8");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&header_err);
+    res->status_code = CWIST_HTTP_OK;
 }
 
 static void cwist_swagger_json_handler(cwist_http_request *req, cwist_http_response *res) {

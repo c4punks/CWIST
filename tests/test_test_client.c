@@ -12,7 +12,7 @@ static int fail_body;
 static int fail_ftell;
 cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
 cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
-    if (fail_body && data && strstr(data, "\"openapi\""))
+    if (fail_body && data && (strstr(data, "\"openapi\"") || strstr(data, "<!DOCTYPE html>")))
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign(str, data);
 }
@@ -278,6 +278,12 @@ int main(void) {
     CWIST_ASSERT_STATUS(res, 200);
     CWIST_ASSERT_HEADER(res, "Content-Type", "text/html; charset=utf-8");
     CWIST_ASSERT_BODY_CONTAINS(res, "CWIST Swagger UI");
+    cwist_http_response_destroy(res);
+
+    fail_body = 1;
+    res = cwist_test_client_get(client, "/docs");
+    fail_body = 0;
+    CWIST_ASSERT_STATUS(res, 500);
     cwist_http_response_destroy(res);
 
     res = cwist_test_client_get(client, "/openapi.json");

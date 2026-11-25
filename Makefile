@@ -2747,7 +2747,7 @@ test_openapi: $(LIB_NAME) tests/test_openapi.c
 	./test_openapi
 
 test_otel: $(LIB_NAME) tests/test_otel.c
-	$(CC) $(CFLAGS) -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
 	./test_otel
 
 test_multiport: $(LIB_NAME) tests/test_multiport.c

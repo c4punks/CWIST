@@ -5148,6 +5148,7 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
         }
     }
 
+    if (body_len > SIZE_MAX - header_len - 1) return -1;
     char *buf = (char *)cwist_alloc(header_len + body_len + 1);
     if (!buf) return -1;
     memcpy(buf, header_buf, header_len);
