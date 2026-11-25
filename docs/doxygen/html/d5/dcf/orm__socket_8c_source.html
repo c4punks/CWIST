@@ -528,157 +528,164 @@ $(document).ready(function(){initNavTree('d5/dcf/orm__socket_8c_source.html','..
 <div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>            <span class="keywordflow">break</span>;</div>
 <div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>        }</div>
 <div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span> </div>
-<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>        cJSON_AddNumberToObject(resp, <span class="stringliteral">&quot;status&quot;</span>, (<span class="keywordtype">double</span>)rc);</div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>        <span class="keywordtype">bool</span> metadata_ok = cJSON_AddNumberToObject(resp, <span class="stringliteral">&quot;status&quot;</span>, (<span class="keywordtype">double</span>)rc) != NULL;</div>
 <div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span>        <span class="keywordflow">if</span> (errmsg) {</div>
-<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>            cJSON_AddStringToObject(resp, <span class="stringliteral">&quot;error&quot;</span>, errmsg);</div>
+<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>            metadata_ok = metadata_ok &amp;&amp; cJSON_AddStringToObject(resp, <span class="stringliteral">&quot;error&quot;</span>, errmsg) != NULL;</div>
 <div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>            cJSON_AddNullToObject(resp, <span class="stringliteral">&quot;error&quot;</span>);</div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>            metadata_ok = metadata_ok &amp;&amp; cJSON_AddNullToObject(resp, <span class="stringliteral">&quot;error&quot;</span>) != NULL;</div>
 <div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>        }</div>
 <div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>        free(errmsg);</div>
-<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>        <span class="keywordflow">if</span> (cJSON_AddItemToObject(resp, <span class="stringliteral">&quot;rows&quot;</span>, acc.rows)) acc.rows = NULL;</div>
-<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>        cJSON *typed = cJSON_AddObjectToObject(resp, <span class="stringliteral">&quot;typed&quot;</span>);</div>
-<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>        <span class="keywordflow">if</span> (typed) {</div>
-<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>            <span class="keywordflow">if</span> (cJSON_AddItemToObject(typed, <span class="stringliteral">&quot;columns&quot;</span>, acc.columns)) acc.columns = NULL;</div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>            <span class="keywordflow">if</span> (cJSON_AddItemToObject(typed, <span class="stringliteral">&quot;rows&quot;</span>, acc.trows)) acc.trows = NULL;</div>
-<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>        }</div>
-<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>        <span class="keywordflow">if</span> (!typed || acc.rows || acc.columns || acc.trows) {</div>
-<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>            cJSON_Delete(resp);</div>
-<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>            cJSON_Delete(acc.rows);</div>
-<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>            cJSON_Delete(acc.columns);</div>
-<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>            cJSON_Delete(acc.trows);</div>
-<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>        <span class="keywordflow">if</span> (!metadata_ok) {</div>
+<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>            cJSON_Delete(resp);</div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>            cJSON_Delete(acc.rows);</div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>            cJSON_Delete(acc.columns);</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>            cJSON_Delete(acc.trows);</div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>        }</div>
+<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>        <span class="keywordflow">if</span> (cJSON_AddItemToObject(resp, <span class="stringliteral">&quot;rows&quot;</span>, acc.rows)) acc.rows = NULL;</div>
+<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>        cJSON *typed = cJSON_AddObjectToObject(resp, <span class="stringliteral">&quot;typed&quot;</span>);</div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>        <span class="keywordflow">if</span> (typed) {</div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>            <span class="keywordflow">if</span> (cJSON_AddItemToObject(typed, <span class="stringliteral">&quot;columns&quot;</span>, acc.columns)) acc.columns = NULL;</div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>            <span class="keywordflow">if</span> (cJSON_AddItemToObject(typed, <span class="stringliteral">&quot;rows&quot;</span>, acc.trows)) acc.trows = NULL;</div>
 <div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>        }</div>
-<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span> </div>
-<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>        <span class="keywordtype">char</span> *payload = cJSON_PrintUnformatted(resp);</div>
-<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>        cJSON_Delete(resp);</div>
-<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>        <span class="keywordflow">if</span> (!payload) <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span> </div>
-<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>        uint32_t payload_len = (uint32_t)strlen(payload);</div>
-<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>        <span class="keywordflow">if</span> (payload_len &gt; UINT32_MAX - 1) {</div>
-<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>            cJSON_free(payload);</div>
-<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>        }</div>
-<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span> </div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>        <span class="comment">/* ---- send framed response ---- */</span></div>
-<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>        uint32_t net_payload = htonl(payload_len);</div>
-<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>        <span class="keywordflow">if</span> (send_all(ctx-&gt;fd, &amp;net_payload, <span class="keyword">sizeof</span>(net_payload)) != 0) {</div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>        <span class="keywordflow">if</span> (!typed || acc.rows || acc.columns || acc.trows) {</div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>            cJSON_Delete(resp);</div>
+<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>            cJSON_Delete(acc.rows);</div>
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>            cJSON_Delete(acc.columns);</div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>            cJSON_Delete(acc.trows);</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>        }</div>
+<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span> </div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>        <span class="keywordtype">char</span> *payload = cJSON_PrintUnformatted(resp);</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>        cJSON_Delete(resp);</div>
+<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>        <span class="keywordflow">if</span> (!payload) <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span> </div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>        uint32_t payload_len = (uint32_t)strlen(payload);</div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>        <span class="keywordflow">if</span> (payload_len &gt; UINT32_MAX - 1) {</div>
 <div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>            cJSON_free(payload);</div>
 <div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>            <span class="keywordflow">break</span>;</div>
 <div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>        }</div>
-<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>        <span class="keywordflow">if</span> (send_all(ctx-&gt;fd, payload, payload_len) != 0) {</div>
-<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>            cJSON_free(payload);</div>
-<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>        }</div>
-<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>        cJSON_free(payload);</div>
-<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>    }</div>
-<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span> </div>
-<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>    sqlite3_close(db);</div>
-<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>    close(ctx-&gt;fd);</div>
-<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>    free_worker_ctx(ctx);</div>
-<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>}</div>
-<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span> </div>
-<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span><span class="comment">/* ------------------------------------------------------------------------- */</span></div>
-<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span><span class="comment">/* Public API                                                                */</span></div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span><span class="comment">/* ------------------------------------------------------------------------- */</span></div>
-<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span> </div>
-<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span><span class="preprocessor">#ifndef SOCK_CLOEXEC</span></div>
-<div class="line"><a id="l00561" name="l00561"></a><span class="lineno"><a class="line" href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">  561</a></span><span class="preprocessor">#define SOCK_CLOEXEC 0</span></div>
-<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span> </div>
-<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span><span class="keyword">static</span> <span class="keywordtype">void</span> set_cloexec(<span class="keywordtype">int</span> fd) {</div>
-<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>    <span class="keywordflow">if</span> (fd &gt;= 0) {</div>
-<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>        <span class="keywordtype">int</span> flags = fcntl(fd, F_GETFD);</div>
-<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>        <span class="keywordflow">if</span> (flags != -1) {</div>
-<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>            fcntl(fd, F_SETFD, flags | FD_CLOEXEC);</div>
-<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>        }</div>
-<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>    }</div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>}</div>
-<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span> </div>
-<div class="foldopen" id="foldopen00573" data-start="{" data-end="}">
-<div class="line"><a id="l00573" name="l00573"></a><span class="lineno"><a class="line" href="../../d0/d11/orm__socket_8h.html#aa28eec9fd7323d02594d68cd79b4abf5">  573</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a>(<span class="keywordtype">int</span> domain, <span class="keywordtype">int</span> type, <span class="keywordtype">int</span> protocol, <span class="keywordtype">int</span> sv[2]) {</div>
-<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    <span class="keywordtype">int</span> res = -1;</div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span><span class="preprocessor">#if defined(SOCK_CLOEXEC) &amp;&amp; SOCK_CLOEXEC != 0</span></div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>    res = socketpair(domain, type | <a class="code hl_define" href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a>, protocol, sv);</div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>    <span class="keywordflow">if</span> (res != 0) {</div>
-<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>        res = socketpair(domain, type &amp; ~<a class="code hl_define" href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a>, protocol, sv);</div>
-<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>        <span class="keywordflow">if</span> (res == 0) {</div>
-<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>            set_cloexec(sv[0]);</div>
-<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>            set_cloexec(sv[1]);</div>
-<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>        }</div>
-<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>        set_cloexec(sv[0]);</div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>        set_cloexec(sv[1]);</div>
-<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>    }</div>
-<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span><span class="preprocessor">#ifdef SO_NOSIGPIPE</span></div>
-<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>    <span class="keywordflow">if</span> (res == 0) {</div>
-<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>        <span class="keywordtype">int</span> one = 1;</div>
-<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>        setsockopt(sv[0], SOL_SOCKET, SO_NOSIGPIPE, &amp;one, <span class="keyword">sizeof</span>(one));</div>
-<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>        setsockopt(sv[1], SOL_SOCKET, SO_NOSIGPIPE, &amp;one, <span class="keyword">sizeof</span>(one));</div>
-<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>    }</div>
-<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span><span class="preprocessor">#endif</span></div>
-<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>    <span class="keywordflow">return</span> res;</div>
-<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>}</div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span> </div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>        <span class="comment">/* ---- send framed response ---- */</span></div>
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>        uint32_t net_payload = htonl(payload_len);</div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>        <span class="keywordflow">if</span> (send_all(ctx-&gt;fd, &amp;net_payload, <span class="keyword">sizeof</span>(net_payload)) != 0) {</div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>            cJSON_free(payload);</div>
+<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>        }</div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>        <span class="keywordflow">if</span> (send_all(ctx-&gt;fd, payload, payload_len) != 0) {</div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>            cJSON_free(payload);</div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>        }</div>
+<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>        cJSON_free(payload);</div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>    }</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span> </div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>    sqlite3_close(db);</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>    close(ctx-&gt;fd);</div>
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>    free_worker_ctx(ctx);</div>
+<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>}</div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span> </div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span><span class="comment">/* ------------------------------------------------------------------------- */</span></div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span><span class="comment">/* Public API                                                                */</span></div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span><span class="comment">/* ------------------------------------------------------------------------- */</span></div>
+<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span> </div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span><span class="preprocessor">#ifndef SOCK_CLOEXEC</span></div>
+<div class="line"><a id="l00568" name="l00568"></a><span class="lineno"><a class="line" href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">  568</a></span><span class="preprocessor">#define SOCK_CLOEXEC 0</span></div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span> </div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span><span class="keyword">static</span> <span class="keywordtype">void</span> set_cloexec(<span class="keywordtype">int</span> fd) {</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>    <span class="keywordflow">if</span> (fd &gt;= 0) {</div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        <span class="keywordtype">int</span> flags = fcntl(fd, F_GETFD);</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>        <span class="keywordflow">if</span> (flags != -1) {</div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>            fcntl(fd, F_SETFD, flags | FD_CLOEXEC);</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>        }</div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>    }</div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>}</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span> </div>
+<div class="foldopen" id="foldopen00580" data-start="{" data-end="}">
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno"><a class="line" href="../../d0/d11/orm__socket_8h.html#aa28eec9fd7323d02594d68cd79b4abf5">  580</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a>(<span class="keywordtype">int</span> domain, <span class="keywordtype">int</span> type, <span class="keywordtype">int</span> protocol, <span class="keywordtype">int</span> sv[2]) {</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>    <span class="keywordtype">int</span> res = -1;</div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span><span class="preprocessor">#if defined(SOCK_CLOEXEC) &amp;&amp; SOCK_CLOEXEC != 0</span></div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>    res = socketpair(domain, type | <a class="code hl_define" href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a>, protocol, sv);</div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    <span class="keywordflow">if</span> (res != 0) {</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>        res = socketpair(domain, type &amp; ~<a class="code hl_define" href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a>, protocol, sv);</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>        <span class="keywordflow">if</span> (res == 0) {</div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>            set_cloexec(sv[0]);</div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>            set_cloexec(sv[1]);</div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>        }</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>        set_cloexec(sv[0]);</div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>        set_cloexec(sv[1]);</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>    }</div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span><span class="preprocessor">#ifdef SO_NOSIGPIPE</span></div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>    <span class="keywordflow">if</span> (res == 0) {</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>        <span class="keywordtype">int</span> one = 1;</div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>        setsockopt(sv[0], SOL_SOCKET, SO_NOSIGPIPE, &amp;one, <span class="keyword">sizeof</span>(one));</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        setsockopt(sv[1], SOL_SOCKET, SO_NOSIGPIPE, &amp;one, <span class="keyword">sizeof</span>(one));</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    }</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span><span class="preprocessor">#endif</span></div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    <span class="keywordflow">return</span> res;</div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>}</div>
 </div>
-<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span> </div>
-<div class="foldopen" id="foldopen00598" data-start="{" data-end="}">
-<div class="line"><a id="l00598" name="l00598"></a><span class="lineno"><a class="line" href="../../d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d">  598</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *db_path) {</div>
-<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    <span class="keywordflow">if</span> (!db_path) {</div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        errno = <a class="code hl_define" href="../../d1/d88/http3__client_8c.html#a2d1678d5a7cc8ce499643f3b8957def4">EINVAL</a>;</div>
-<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>    }</div>
-<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span> </div>
-<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    <span class="keywordtype">int</span> sv[2];</div>
-<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    <span class="comment">/* SOCK_CLOEXEC is not available on every BSD-family system (macOS lacks</span></div>
-<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span><span class="comment">     * it); the helper falls back to fcntl(FD_CLOEXEC) there. */</span></div>
-<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a>(AF_UNIX, SOCK_STREAM, 0, sv) != 0) {</div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span> </div>
+<div class="foldopen" id="foldopen00605" data-start="{" data-end="}">
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno"><a class="line" href="../../d0/d11/orm__socket_8h.html#a075b96d77de4eb6fb2386e826379a04d">  605</a></span><span class="keywordtype">int</span> <a class="code hl_function" href="../../d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *db_path) {</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    <span class="keywordflow">if</span> (!db_path) {</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>        errno = <a class="code hl_define" href="../../d1/d88/http3__client_8c.html#a2d1678d5a7cc8ce499643f3b8957def4">EINVAL</a>;</div>
 <div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>        <span class="keywordflow">return</span> -1;</div>
 <div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>    }</div>
 <div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span> </div>
-<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    cwist_orm_worker_ctx_t *ctx = (cwist_orm_worker_ctx_t *)calloc(1, <span class="keyword">sizeof</span>(*ctx));</div>
-<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>    <span class="keywordflow">if</span> (!ctx) {</div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>        close(sv[0]);</div>
-<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>        close(sv[1]);</div>
+<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>    <span class="keywordtype">int</span> sv[2];</div>
+<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>    <span class="comment">/* SOCK_CLOEXEC is not available on every BSD-family system (macOS lacks</span></div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span><span class="comment">     * it); the helper falls back to fcntl(FD_CLOEXEC) there. */</span></div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a>(AF_UNIX, SOCK_STREAM, 0, sv) != 0) {</div>
 <div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>        <span class="keywordflow">return</span> -1;</div>
 <div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>    }</div>
 <div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span> </div>
-<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>    ctx-&gt;fd = sv[1];</div>
-<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    ctx-&gt;db_path = strdup(db_path);</div>
-<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    <span class="keywordflow">if</span> (!ctx-&gt;db_path) {</div>
-<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>        free(ctx);</div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>        close(sv[0]);</div>
-<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>        close(sv[1]);</div>
-<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    }</div>
-<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span> </div>
-<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    pthread_t tid;</div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    pthread_attr_t attr;</div>
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>    pthread_attr_init(&amp;attr);</div>
-<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>    pthread_attr_setdetachstate(&amp;attr, PTHREAD_CREATE_DETACHED);</div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span> </div>
-<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>    <span class="keywordtype">int</span> rc = pthread_create(&amp;tid, &amp;attr, cwist_orm_socket_worker, ctx);</div>
-<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>    pthread_attr_destroy(&amp;attr);</div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span> </div>
-<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>    <span class="keywordflow">if</span> (rc != 0) {</div>
-<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>        free_worker_ctx(ctx);</div>
-<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>        close(sv[0]);</div>
-<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>        close(sv[1]);</div>
-<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>        errno = rc;</div>
-<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>        <span class="keywordflow">return</span> -1;</div>
-<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>    }</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span> </div>
-<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>    <span class="keywordflow">return</span> sv[0]; <span class="comment">/* caller owns this end */</span></div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>}</div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>    cwist_orm_worker_ctx_t *ctx = (cwist_orm_worker_ctx_t *)calloc(1, <span class="keyword">sizeof</span>(*ctx));</div>
+<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>    <span class="keywordflow">if</span> (!ctx) {</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>        close(sv[0]);</div>
+<div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span>        close(sv[1]);</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    }</div>
+<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span> </div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>    ctx-&gt;fd = sv[1];</div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    ctx-&gt;db_path = strdup(db_path);</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    <span class="keywordflow">if</span> (!ctx-&gt;db_path) {</div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>        free(ctx);</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>        close(sv[0]);</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>        close(sv[1]);</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>    }</div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span> </div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>    pthread_t tid;</div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>    pthread_attr_t attr;</div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>    pthread_attr_init(&amp;attr);</div>
+<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>    pthread_attr_setdetachstate(&amp;attr, PTHREAD_CREATE_DETACHED);</div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span> </div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>    <span class="keywordtype">int</span> rc = pthread_create(&amp;tid, &amp;attr, cwist_orm_socket_worker, ctx);</div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>    pthread_attr_destroy(&amp;attr);</div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span> </div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>    <span class="keywordflow">if</span> (rc != 0) {</div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>        free_worker_ctx(ctx);</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>        close(sv[0]);</div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>        close(sv[1]);</div>
+<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>        errno = rc;</div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>        <span class="keywordflow">return</span> -1;</div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>    }</div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span> </div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>    <span class="keywordflow">return</span> sv[0]; <span class="comment">/* caller owns this end */</span></div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
 <div class="ttc" id="aalloc_8h_html_aeba69949fe17751318e6b5fc84a74096"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a></div><div class="ttdeci">void * cwist_alloc(size_t size)</div><div class="ttdoc">Allocate zeroed memory tracked by libttak.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00017">alloc.c:17</a></div></div>
 <div class="ttc" id="ahttp3__client_8c_html_a2d1678d5a7cc8ce499643f3b8957def4"><div class="ttname"><a href="../../d1/d88/http3__client_8c.html#a2d1678d5a7cc8ce499643f3b8957def4">EINVAL</a></div><div class="ttdeci">#define EINVAL</div><div class="ttdef"><b>Definition</b> <a href="../../d1/d88/http3__client_8c_source.html#l01239">http3_client.c:1239</a></div></div>
 <div class="ttc" id="aorm_8c_html_a9f55d0e90dc8cc6b2287312435cdde48"><div class="ttname"><a href="../../d8/d03/orm_8c.html#a9f55d0e90dc8cc6b2287312435cdde48">MSG_NOSIGNAL</a></div><div class="ttdeci">#define MSG_NOSIGNAL</div><div class="ttdef"><b>Definition</b> <a href="../../d8/d03/orm_8c_source.html#l00030">orm.c:30</a></div></div>
-<div class="ttc" id="aorm__socket_8c_html_a1d377436b68c6d7a8cc963bed96f8b13"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a></div><div class="ttdeci">int cwist_db_transfer_sqlite_to_socket(const char *db_path)</div><div class="ttdoc">Open a SQLite database behind an in-process SQL socket.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00598">orm_socket.c:598</a></div></div>
-<div class="ttc" id="aorm__socket_8c_html_aa28eec9fd7323d02594d68cd79b4abf5"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a></div><div class="ttdeci">int cwist_orm_socketpair_cloexec(int domain, int type, int protocol, int sv[2])</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00573">orm_socket.c:573</a></div></div>
-<div class="ttc" id="aorm__socket_8c_html_ac337901f5606f0cf6f8e9867ef3fc1c4"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a></div><div class="ttdeci">#define SOCK_CLOEXEC</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00561">orm_socket.c:561</a></div></div>
+<div class="ttc" id="aorm__socket_8c_html_a1d377436b68c6d7a8cc963bed96f8b13"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13">cwist_db_transfer_sqlite_to_socket</a></div><div class="ttdeci">int cwist_db_transfer_sqlite_to_socket(const char *db_path)</div><div class="ttdoc">Open a SQLite database behind an in-process SQL socket.</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00605">orm_socket.c:605</a></div></div>
+<div class="ttc" id="aorm__socket_8c_html_aa28eec9fd7323d02594d68cd79b4abf5"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5">cwist_orm_socketpair_cloexec</a></div><div class="ttdeci">int cwist_orm_socketpair_cloexec(int domain, int type, int protocol, int sv[2])</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00580">orm_socket.c:580</a></div></div>
+<div class="ttc" id="aorm__socket_8c_html_ac337901f5606f0cf6f8e9867ef3fc1c4"><div class="ttname"><a href="../../d5/dcf/orm__socket_8c.html#ac337901f5606f0cf6f8e9867ef3fc1c4">SOCK_CLOEXEC</a></div><div class="ttdeci">#define SOCK_CLOEXEC</div><div class="ttdef"><b>Definition</b> <a href="../../d5/dcf/orm__socket_8c_source.html#l00568">orm_socket.c:568</a></div></div>
 <div class="ttc" id="aorm__socket_8h_html"><div class="ttname"><a href="../../d0/d11/orm__socket_8h.html">orm_socket.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->

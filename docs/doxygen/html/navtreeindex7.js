@@ -1,5 +1,7 @@
 var NAVTREEINDEX7 =
 {
+"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md453":[41,3],
+"d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md454":[41,4],
 "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md455":[41,5],
 "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md456":[41,6],
 "d5/d08/md_docs_2ko_2runtime-config.html#autotoc_md457":[41,7],
@@ -247,7 +249,5 @@ var NAVTREEINDEX7 =
 "d5/da9/net_2http_2mux_8h_source.html":[66,0,1,0,2,3,12],
 "d5/dcf/orm__socket_8c.html":[66,0,2,0,5,1],
 "d5/dcf/orm__socket_8c.html#a1d377436b68c6d7a8cc963bed96f8b13":[66,0,2,0,5,1,3],
-"d5/dcf/orm__socket_8c.html#a369266c24eacffb87046522897a570d5":[66,0,2,0,5,1,0],
-"d5/dcf/orm__socket_8c.html#aa28eec9fd7323d02594d68cd79b4abf5":[66,0,2,0,5,1,4],
-"d5/dcf/orm__socket_8c.html#aad0e1b104655825167fa9ad8dcdd97be":[66,0,2,0,5,1,1]
+"d5/dcf/orm__socket_8c.html#a369266c24eacffb87046522897a570d5":[66,0,2,0,5,1,0]
 };
