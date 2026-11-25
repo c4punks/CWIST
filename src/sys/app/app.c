@@ -5522,18 +5522,45 @@ static void cwist_swagger_json_handler(cwist_http_request *req, cwist_http_respo
         cwist_http_header_add(&res->headers, "Content-Type", "application/json");
         return;
     }
-    fseek(f, 0, SEEK_END);
-    long sz = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = (char *)malloc((size_t)sz + 1);
-    if (buf) {
-        size_t rd = fread(buf, 1, (size_t)sz, f);
-        buf[rd] = '\0';
-        cwist_sstring_assign(res->body, buf);
-        free(buf);
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        goto server_error;
     }
+    long sz = ftell(f);
+    if (sz < 0 || (unsigned long)sz > (unsigned long)SIZE_MAX - 1 ||
+        fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        goto server_error;
+    }
+    char *buf = (char *)cwist_alloc((size_t)sz + 1);
+    if (!buf) {
+        fclose(f);
+        goto server_error;
+    }
+    size_t rd = fread(buf, 1, (size_t)sz, f);
     fclose(f);
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (rd != (size_t)sz) {
+        cwist_free(buf);
+        goto server_error;
+    }
+    buf[rd] = '\0';
+    cwist_error_t body_err = cwist_sstring_assign(res->body, buf);
+    cwist_free(buf);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        goto server_error;
+    }
+    cwist_error_dispose(&body_err);
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        goto server_error;
+    }
+    cwist_error_dispose(&header_err);
+    return;
+
+server_error:
+    res->status_code = CWIST_HTTP_INTERNAL_ERROR;
 }
 
 void cwist_app_enable_swagger(cwist_app *app, const char *mount_path,

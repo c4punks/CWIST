@@ -1926,7 +1926,7 @@ test_baremetal_arena: tests/test_baremetal_arena.c src/core/mem/arena.c
 	./$@
 
 test_healthz: $(LIB_NAME) tests/test_healthz.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_sstring_assign -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
 
 test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
@@ -2197,11 +2197,11 @@ test_bind: $(LIB_NAME) tests/test_bind.c
 	./test_bind
 
 test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response.c
-	$(CC) $(CFLAGS) -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
 	./test_bind_write_error_response
 
 test_metrics: $(LIB_NAME) tests/test_metrics.c
-	$(CC) $(CFLAGS) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
 	./test_metrics
 
 test_access_log: $(LIB_NAME) tests/test_access_log.c
@@ -2739,7 +2739,7 @@ test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	./test_async_file_park
 
 test_test_client: $(LIB_NAME) tests/test_test_client.c
-	$(CC) $(CFLAGS) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=ftell -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
 	./test_test_client
 
 test_openapi: $(LIB_NAME) tests/test_openapi.c

@@ -6,6 +6,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
+
+static int fail_body;
+static int fail_ftell;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (fail_body && data && strstr(data, "\"openapi\""))
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+long __real_ftell(FILE *stream);
+long __wrap_ftell(FILE *stream) {
+    if (fail_ftell) return -1;
+    return __real_ftell(stream);
+}
 
 #define FAIL_IF(cond, msg)                      \
     do {                                        \
@@ -251,12 +266,37 @@ int main(void) {
     cwist_http_response_destroy(res);
 
     /* Test Swagger UI Route & Fluent Assertions */
-    cwist_app_enable_swagger(app, "/docs", "openapi.json");
+    char swagger_path[] = "/tmp/cwist-swagger-XXXXXX";
+    int swagger_fd = mkstemp(swagger_path);
+    assert(swagger_fd >= 0);
+    const char swagger_json[] = "{\"openapi\":\"3.0.0\"}";
+    assert(write(swagger_fd, swagger_json, sizeof(swagger_json) - 1) ==
+           (ssize_t)(sizeof(swagger_json) - 1));
+    close(swagger_fd);
+    cwist_app_enable_swagger(app, "/docs", swagger_path);
     res = cwist_test_client_get(client, "/docs");
     CWIST_ASSERT_STATUS(res, 200);
     CWIST_ASSERT_HEADER(res, "Content-Type", "text/html; charset=utf-8");
     CWIST_ASSERT_BODY_CONTAINS(res, "CWIST Swagger UI");
     cwist_http_response_destroy(res);
+
+    res = cwist_test_client_get(client, "/openapi.json");
+    CWIST_ASSERT_STATUS(res, 200);
+    CWIST_ASSERT_BODY_CONTAINS(res, "3.0.0");
+    cwist_http_response_destroy(res);
+
+    fail_body = 1;
+    res = cwist_test_client_get(client, "/openapi.json");
+    fail_body = 0;
+    CWIST_ASSERT_STATUS(res, 500);
+    cwist_http_response_destroy(res);
+
+    fail_ftell = 1;
+    res = cwist_test_client_get(client, "/openapi.json");
+    fail_ftell = 0;
+    CWIST_ASSERT_STATUS(res, 500);
+    cwist_http_response_destroy(res);
+    unlink(swagger_path);
 
     cwist_test_client_destroy(client);
     cwist_app_destroy(app);
