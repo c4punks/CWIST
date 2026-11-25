@@ -504,7 +504,7 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
     return p;
 }
 
-/** Advance past a selection set without treating braces in strings as structure. */
+/** Advance past a selection set without treating strings or comments as structure. */
 static const char *skip_selection_set(const char *p) {
     unsigned int depth = 0;
     bool in_string = false;
@@ -517,12 +517,45 @@ static const char *skip_selection_set(const char *p) {
                 escaped = true;
             else if (*p == '"')
                 in_string = false;
+        } else if (*p == '#') {
+            while (*p && *p != '\n' && *p != '\r') p++;
+            continue;
         } else if (*p == '"') {
             in_string = true;
         } else if (*p == '{') {
             depth++;
         } else if (*p == '}' && --depth == 0) {
             return p + 1;
+        }
+        p++;
+    }
+    return p;
+}
+
+/** Find the operation selection set without entering variable default objects. */
+static const char *skip_operation_prelude(const char *p) {
+    unsigned int parens = 0;
+    bool in_string = false;
+    bool escaped = false;
+    while (*p) {
+        if (in_string) {
+            if (escaped)
+                escaped = false;
+            else if (*p == '\\')
+                escaped = true;
+            else if (*p == '"')
+                in_string = false;
+        } else if (*p == '#') {
+            while (*p && *p != '\n' && *p != '\r') p++;
+            continue;
+        } else if (*p == '"') {
+            in_string = true;
+        } else if (*p == '(') {
+            parens++;
+        } else if (*p == ')' && parens > 0) {
+            parens--;
+        } else if (*p == '{' && parens == 0) {
+            return p;
         }
         p++;
     }
@@ -776,12 +809,12 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
             p += 8;
             p = skip_ws_comments(p);
             /* Skip optional mutation name / variable defs until '{' */
-            while (*p && *p != '{') p++;
+            p = skip_operation_prelude(p);
         } else if (strncmp(p, "query", 5) == 0 && !gql_name_char(p[5], false)) {
             op_type = GQL_OP_QUERY;
             p += 5;
             p = skip_ws_comments(p);
-            while (*p && *p != '{') p++;
+            p = skip_operation_prelude(p);
         }
 
         if (*p != '{') {
@@ -895,8 +928,12 @@ bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables,
 
     cJSON *errors = cJSON_CreateArray();
     if (!errors) return false;
-    (void)parse_arguments(p, variables, args_out, errors);
-    bool valid = cJSON_GetArraySize(errors) == 0;
+    const char *end = parse_arguments(p, variables, args_out, errors);
+    end = skip_ws_comments(end);
+    if (*end == '{') end = skip_selection_set(end);
+    end = skip_ws_comments(end);
+    bool valid =
+        cJSON_GetArraySize(errors) == 0 && *end == '}' && *skip_ws_comments(end + 1) == '\0';
     cJSON_Delete(errors);
     if (!valid) {
         cJSON_Delete(*args_out);

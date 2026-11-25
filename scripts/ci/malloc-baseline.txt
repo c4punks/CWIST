@@ -51,7 +51,7 @@
 1	src/core/orm/orm.c:free(final);
 7	src/core/orm/orm.c:free(literal);
 1	src/core/orm/orm.c:free(orm);
-2	src/core/orm/orm.c:free(out);
+3	src/core/orm/orm.c:free(out);
 5	src/core/orm/orm.c:free(payload);
 3	src/core/orm/orm.c:free(qcol);
 7	src/core/orm/orm.c:free(qid);
@@ -160,7 +160,7 @@
 1	src/net/http/http3_client.c:st->req_body = malloc(body_len);
 1	src/net/http/http3_client.c:st->req_path = strdup(path);
 1	src/net/http/http_client.c:char *tmp = realloc(body->data, new_cap);
-3	src/net/http/http_client.c:free(resp_body.data);
+4	src/net/http/http_client.c:free(resp_body.data);
 1	src/net/http/tls_chain.c:char *url = (char *)malloc((size_t)uri_len + 1);
 1	src/net/http/tls_chain.c:free(buf.data);
 1	src/net/http/tls_chain.c:free(out->data);

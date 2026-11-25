@@ -8,6 +8,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/core/orm/orm.h>
 #include <cwist/core/orm/orm_socket.h>
+#include <cwist/core/db/sql.h>
 #include <cwist/sys/app/app.h>
 #include <cjson/cJSON.h>
 #include <assert.h>
@@ -36,6 +37,13 @@ ssize_t __wrap_recv(int fd, void *buf, size_t len, int flags) {
         return -1;
     }
     return __real_recv(fd, buf, len, flags);
+}
+
+static int fail_cwist_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_cwist_alloc) return NULL;
+    return __real_cwist_alloc(size);
 }
 
 static cwist_orm_t *open_memdb(void) {
@@ -225,6 +233,11 @@ static void test_select_one(void) {
     cJSON *j = (cJSON *)1;
     assert(rc(cwist_orm_select_one_json(orm, NULL, "n", NULL, &j)) == CWIST_ERROR_INVALID_PARAM);
     assert(j == NULL);
+    assert(rc(cwist_orm_select(orm, "s", "n", NULL, NULL)) == CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_select_one_double(orm, "s", "score", NULL, NULL)) ==
+           CWIST_ERROR_INVALID_PARAM);
+    assert(rc(cwist_orm_select_one_string(orm, "s", "name", NULL, NULL)) ==
+           CWIST_ERROR_INVALID_PARAM);
     cwist_orm_close_socket(orm);
 }
 
@@ -662,6 +675,72 @@ static void test_malformed_rows_shape(void) {
     assert(waitpid(pid, &status, 0) == pid && WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 
+static void mock_query_payload(const char *payload, bool typed, bool success) {
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        close(sv[0]);
+        uint32_t net_len;
+        if (peer_read_exact(sv[1], &net_len, sizeof(net_len)) != 0) _exit(2);
+        uint32_t len = ntohl(net_len);
+        char sql[64];
+        if (len >= sizeof(sql) || peer_read_exact(sv[1], sql, len) != 0) _exit(3);
+        size_t payload_len = strlen(payload);
+        uint32_t response_len = htonl((uint32_t)payload_len);
+        int failed = peer_write_exact(sv[1], &response_len, sizeof(response_len)) != 0 ||
+                     peer_write_exact(sv[1], payload, payload_len) != 0;
+        close(sv[1]);
+        _exit(failed ? 4 : 0);
+    }
+    close(sv[1]);
+    cwist_orm_t *orm = cwist_orm_open_socket(sv[0]);
+    assert(orm);
+    if (typed) {
+        cwist_orm_result_t *res = NULL;
+        cwist_error_t err = cwist_orm_query_typed(orm, "SELECT 1;", &res);
+        if (success) {
+            assert(rc(err) == 0 && res && res->row_count == 1 && res->column_count == 1);
+            const cwist_orm_value_t *cell = cwist_orm_result_cell(res, 0, 0);
+            assert(cell && cell->type == CWIST_ORM_TYPE_BLOB && cell->blob_len == 1 &&
+                   cell->blob[0] == 0);
+        } else {
+            assert(rc(err) == CWIST_ERROR_PROTOCOL && res == NULL);
+        }
+        cwist_orm_result_free(res);
+    } else {
+        cJSON *rows = NULL;
+        assert(rc(cwist_orm_query(orm, "SELECT 1;", &rows)) == CWIST_ERROR_PROTOCOL &&
+               rows == NULL);
+    }
+    cwist_orm_close_socket(orm);
+    int status = 0;
+    assert(waitpid(pid, &status, 0) == pid && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+}
+
+static void test_status_and_blob_validation(void) {
+    mock_query_payload("{\"status\":0.5,\"rows\":[]}", false, false);
+    static const char invalid1[] =
+        "{\"status\":0,\"typed\":{\"columns\":[\"b\"],\"rows\":[[{\"t\":\"blob\",\"v\":\"AB==\",\"n\":1}]]},\"rows\":[]}";
+    static const char invalid2[] =
+        "{\"status\":0,\"typed\":{\"columns\":[\"b\"],\"rows\":[[{\"t\":\"blob\",\"v\":\"AAB=\",\"n\":1}]]},\"rows\":[]}";
+    static const char valid[] =
+        "{\"status\":0,\"typed\":{\"columns\":[\"b\"],\"rows\":[[{\"t\":\"blob\",\"v\":\"AA==\",\"n\":1}]]},\"rows\":[]}";
+    mock_query_payload(invalid1, true, false);
+    mock_query_payload(invalid2, true, false);
+    mock_query_payload(valid, true, true);
+}
+
+static void test_db_open_allocation_failure(void) {
+    fail_cwist_alloc = 1;
+    cwist_db *db = (cwist_db *)1;
+    assert(cwist_db_open(&db, ":memory:").error.err_i16 != 0 && db == NULL);
+    db = (cwist_db *)1;
+    assert(cwist_db_open_memory(&db, "x", 1, 0).error.err_i16 != 0 && db == NULL);
+    fail_cwist_alloc = 0;
+}
+
 int main(void) {
     test_query_and_transactions();
     test_insert_returning();
@@ -678,6 +757,8 @@ int main(void) {
     test_numeric_ranges();
     test_typed_multi_statement();
     test_malformed_rows_shape();
+    test_status_and_blob_validation();
+    test_db_open_allocation_failure();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");
     return 0;

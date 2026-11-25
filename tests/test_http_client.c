@@ -35,6 +35,17 @@
 #define CLOSED_PORT_TIMEOUT_MS 2000
 
 static int g_failures = 0;
+static int fail_body_assign;
+
+cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (fail_body_assign) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
+    return __real_cwist_sstring_assign_len(str, data, len);
+}
 
 #define CHECK(cond, ...)                                         \
     do {                                                         \
@@ -234,6 +245,43 @@ static cwist_http_response *request(cwist_http_client *client, const char *url,
         res = NULL;
     }
     return res;
+}
+
+static void test_body_allocation_failure(cwist_http_client *client, const char *base) {
+    int before = g_failures;
+    char url[128];
+    snprintf(url, sizeof(url), "%s/hello", base);
+    fail_body_assign = 1;
+    cwist_http_response *res = NULL;
+    cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    CHECK(!cwist_error_is_ok(&err), "response body allocation failure was reported as success");
+    CHECK(res == NULL, "response body allocation failure returned a partial response");
+    cwist_error_dispose(&err);
+    if (res) cwist_http_response_destroy(res);
+    fail_body_assign = 0;
+    report(before, "response body allocation failure is propagated");
+}
+
+static void test_file_head_content_length(cwist_http_client *client) {
+    int before = g_failures;
+    char path[] = "/tmp/cwist-http-head-XXXXXX";
+    int fd = mkstemp(path);
+    CHECK(fd >= 0, "mkstemp for HEAD fixture failed");
+    if (fd < 0) return;
+    CHECK(write(fd, "abc", 3) == 3, "HEAD fixture write failed");
+    close(fd);
+    CHECK(cwist_http_client_set_file_root(client, "/tmp") == 0, "setting file root failed");
+    char url[256];
+    snprintf(url, sizeof(url), "file://%s", path);
+    cwist_http_response *res = request(client, url, CWIST_HTTP_HEAD, NULL, 0);
+    if (res) {
+        const char *len = cwist_http_header_get(res->headers, "Content-Length");
+        CHECK(len && strcmp(len, "3") == 0, "HEAD: Content-Length is missing or wrong");
+        CHECK(body_equals(res, "", 0), "HEAD returned a body");
+        cwist_http_response_destroy(res);
+    }
+    unlink(path);
+    report(before, "file HEAD includes Content-Length");
 }
 
 typedef struct {
@@ -642,6 +690,8 @@ int main(void) {
         test_bdr_query_isolation(client, base);
         test_large_request_header(client, base);
         test_shared_client_threads(client, base);
+        test_body_allocation_failure(client, base);
+        test_file_head_content_length(client);
     }
 
     g_failures += stop_server(pid);

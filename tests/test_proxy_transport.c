@@ -73,6 +73,8 @@ static void read_all(int fd, void *data, size_t len) {
     }
 }
 
+static void half_close_upstream(int fd);
+
 static void *tcp_upstream_run(void *arg) {
     (void)arg;
     static const char *requests[] = {"PING\r\n", "CONNECT {}\r\n", "version\r\n"};
@@ -88,6 +90,7 @@ static void *tcp_upstream_run(void *arg) {
         write_all(fd, responses[i], strlen(responses[i]));
         close(fd);
     }
+    half_close_upstream(accept(upstream_tcp_fd, NULL, NULL));
     close(upstream_tcp_fd);
     return NULL;
 }
@@ -158,6 +161,31 @@ static void udp_exchange(int fd, const struct sockaddr_in *proxy_addr, const uns
     assert(memcmp(response, request, request_len) == 0);
 }
 
+static void half_close_upstream(int fd) {
+    assert(fd >= 0);
+    char buf[16];
+    read_all(fd, buf, 5);
+    assert(memcmp(buf, "first", 5) == 0);
+    write_all(fd, "answer", 6);
+    assert(shutdown(fd, SHUT_WR) == 0);
+    read_all(fd, buf, 6);
+    assert(memcmp(buf, "second", 6) == 0);
+    close(fd);
+}
+
+static void test_upstream_half_close(void) {
+    int fd = proxy_tcp_connect();
+    assert(fd >= 0);
+    write_all(fd, "first", 5);
+    char answer[6];
+    read_all(fd, answer, sizeof(answer));
+    assert(memcmp(answer, "answer", sizeof(answer)) == 0);
+    write_all(fd, "second", 6);
+    assert(shutdown(fd, SHUT_WR) == 0);
+    assert(recv(fd, answer, 1, 0) == 0);
+    close(fd);
+}
+
 static void test_registration_validation(void) {
     cwist_proxy_reset();
     assert(cwist_proxy_tcp_forward(0, "127.0.0.1", 6379).error.err_i16 == -1);
@@ -177,8 +205,7 @@ static atomic_int eviction_response_sent;
 static atomic_int eviction_requests_seen;
 
 static void wait_eviction_requests(int expected) {
-    for (int i = 0; i < 3000 && atomic_load(&eviction_requests_seen) < expected; i++)
-        usleep(10000);
+    for (int i = 0; i < 3000 && atomic_load(&eviction_requests_seen) < expected; i++) usleep(10000);
     assert(atomic_load(&eviction_requests_seen) == expected);
 }
 
@@ -203,6 +230,79 @@ static void *udp_eviction_upstream_run(void *arg) {
     atomic_store(&eviction_response_sent, 1);
     close(upstream_udp_fd);
     return NULL;
+}
+
+static void *udp_burst_upstream_run(void *arg) {
+    (void)arg;
+    struct sockaddr_storage first_peer;
+    socklen_t first_peer_len = 0;
+    unsigned char byte;
+    for (int i = 0; i < EVICTION_CLIENTS + 1; i++) {
+        struct sockaddr_storage peer;
+        socklen_t peer_len = sizeof(peer);
+        ssize_t n = recvfrom(upstream_udp_fd, &byte, 1, 0, (struct sockaddr *)&peer, &peer_len);
+        assert(n == 1);
+        if (i == 0) {
+            first_peer = peer;
+            first_peer_len = peer_len;
+        }
+    }
+    for (int i = 0; i < 2; i++)
+        assert(sendto(upstream_udp_fd, &byte, 1, MSG_NOSIGNAL, (struct sockaddr *)&first_peer,
+                      first_peer_len) == 1);
+    close(upstream_udp_fd);
+    return NULL;
+}
+
+static void test_udp_burst_reactivation(void) {
+    upstream_udp_fd = loopback_socket(SOCK_DGRAM, &upstream_udp_port);
+    proxy_udp_port = unused_port(SOCK_DGRAM);
+    pthread_t upstream;
+    assert(pthread_create(&upstream, NULL, udp_burst_upstream_run, NULL) == 0);
+    assert(cwist_proxy_udp_forward(proxy_udp_port, "127.0.0.1", upstream_udp_port).error.err_i16 ==
+           0);
+    cwist_shutdown_reset();
+    pthread_t proxy;
+    assert(pthread_create(&proxy, NULL, proxy_run, NULL) == 0);
+    usleep(50000);
+
+    struct sockaddr_in proxy_addr = {
+        .sin_family = AF_INET,
+        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+        .sin_port = htons(proxy_udp_port),
+    };
+    int clients[EVICTION_CLIENTS];
+    unsigned char request = 0x5a;
+    uint16_t client_port;
+    clients[0] = loopback_socket(SOCK_DGRAM, &client_port);
+    assert(sendto(clients[0], &request, 1, MSG_NOSIGNAL, (struct sockaddr *)&proxy_addr,
+                  sizeof(proxy_addr)) == 1);
+    usleep(1000);
+    for (int i = 1; i < EVICTION_CLIENTS - 1; i++) {
+        clients[i] = loopback_socket(SOCK_DGRAM, &client_port);
+        assert(sendto(clients[i], &request, 1, MSG_NOSIGNAL, (struct sockaddr *)&proxy_addr,
+                      sizeof(proxy_addr)) == 1);
+        usleep(1000);
+    }
+    assert(sendto(clients[0], &request, 1, MSG_NOSIGNAL, (struct sockaddr *)&proxy_addr,
+                  sizeof(proxy_addr)) == 1);
+    clients[EVICTION_CLIENTS - 1] = loopback_socket(SOCK_DGRAM, &client_port);
+    assert(sendto(clients[EVICTION_CLIENTS - 1], &request, 1, MSG_NOSIGNAL,
+                  (struct sockaddr *)&proxy_addr, sizeof(proxy_addr)) == 1);
+
+    struct timeval timeout = {.tv_sec = 3};
+    assert(setsockopt(clients[0], SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == 0);
+    for (int i = 0; i < 2; i++) {
+        unsigned char response = 0;
+        assert(recv(clients[0], &response, 1, 0) == 1 && response == request);
+    }
+    for (int i = 0; i < EVICTION_CLIENTS; i++) close(clients[i]);
+    assert(pthread_join(upstream, NULL) == 0);
+    cwist_shutdown_request();
+    assert(pthread_join(proxy, NULL) == 0);
+    assert(proxy_result == 0);
+    cwist_proxy_reset();
+    cwist_shutdown_reset();
 }
 
 static void test_udp_eviction_overlap(void) {
@@ -283,6 +383,7 @@ int main(void) {
     tcp_exchange("PING\r\n", "+PONG\r\n");
     tcp_exchange("CONNECT {}\r\n", "INFO {\"server_id\":\"test\"}\r\n");
     tcp_exchange("version\r\n", "VERSION 1.6.0\r\n");
+    test_upstream_half_close();
 
     int udp = socket(AF_INET, SOCK_DGRAM, 0);
     assert(udp >= 0);
@@ -309,6 +410,7 @@ int main(void) {
     cwist_proxy_reset();
     cwist_shutdown_reset();
     test_udp_eviction_overlap();
+    test_udp_burst_reactivation();
     puts("test_proxy_transport: TCP Redis/NATS/Memcached and UDP DNS/NTP passed");
     return 0;
 }

@@ -149,6 +149,9 @@ static cwist_http_response *file_read_response(file_job *job) {
     response->status_code = CWIST_HTTP_OK;
     cwist_sstring_assign(response->status_text, "OK");
     cwist_http_header_add(&response->headers, "Content-Type", "application/octet-stream");
+    char content_length[32];
+    snprintf(content_length, sizeof(content_length), "%zu", len);
+    cwist_http_header_add(&response->headers, "Content-Length", content_length);
 
     if (job->method != CWIST_HTTP_HEAD && len > 0) {
         char *data = cwist_alloc(len);

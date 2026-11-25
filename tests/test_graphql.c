@@ -150,6 +150,23 @@ static void test_number_arguments(void) {
     cwist_graphql_schema_destroy(schema);
 }
 
+static void test_variable_defaults_and_comments(void) {
+    cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
+    assert(cwist_graphql_add_query(schema, "greet", hello_resolver, NULL));
+    assert(cwist_graphql_add_query(schema, "user", secret_user_resolver, NULL));
+
+    cwist_sstring *out = run_query(schema, "query Q($x: Input = {a: 1}) { greet }");
+    assert(strstr(out->data, "\"greet\":\"hello world\""));
+    assert(!strstr(out->data, "errors"));
+    cwist_sstring_destroy(out);
+
+    out = run_query(schema, "{ user { friends { # a comment with } braces\n id } } }");
+    assert(strstr(out->data, "\"id\":100") && strstr(out->data, "\"id\":101"));
+    assert(!strstr(out->data, "errors"));
+    cwist_sstring_destroy(out);
+    cwist_graphql_schema_destroy(schema);
+}
+
 int main(void) {
     cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
     assert(schema);
@@ -341,6 +358,7 @@ int main(void) {
     assert(out == NULL);
 
     cwist_graphql_schema_destroy(schema);
+    test_variable_defaults_and_comments();
     test_nested_selection();
     test_number_arguments();
     puts("All GraphQL advanced tests passed successfully.");
