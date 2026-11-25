@@ -89,6 +89,12 @@ static void *serve(void *arg) {
         send_frame(fd, 5, 4, stream, push_promise, sizeof(push_promise));
     } else if (ctx->push == 3) {
         send_frame(fd, 4, 0, stream, NULL, 0);
+    } else if (ctx->push == 4) {
+        static const unsigned char ping[8] = {0};
+        send_frame(fd, 6, 0, stream, ping, sizeof(ping));
+    } else if (ctx->push == 5) {
+        static const unsigned char ping[1] = {0};
+        send_frame(fd, 6, 0, 0, ping, sizeof(ping));
     }
     if (ctx->over_limit) {
         send_frame(fd, 1, 0, stream, status_ok, sizeof(status_ok));
@@ -162,6 +168,8 @@ int main(void) {
     run_case(0, 1, 0);
     run_case(0, 2, 0);
     run_case(0, 3, 0);
+    run_case(0, 4, 0);
+    run_case(0, 5, 0);
     run_case(0, 0, 1);
     puts("test_grpc_client_headers: all passed");
     return 0;

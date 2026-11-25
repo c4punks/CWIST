@@ -946,7 +946,14 @@ static int grpc_client_pump(cwist_grpc_call *call) {
                 rc = -1; /* RFC 7540 section 6.5: ack payload must be empty */
             break;
         case H2_FRAME_PING:
-            if (!(f.flags & H2_FLAG_ACK) && f.len == 8)
+            if (f.stream_id != 0 || f.len != 8) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = f.stream_id != 0 ? 0x01 : 0x06;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+            } else if (!(f.flags & H2_FLAG_ACK))
                 rc = grpc_client_write_frame(c, H2_FRAME_PING, H2_FLAG_ACK, 0, f.payload, 8,
                                              call->deadline_ms);
             break;
