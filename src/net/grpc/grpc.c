@@ -520,6 +520,8 @@ int cwist_grpc_metadata_get_binary(cwist_http_request *req, const char *key, uin
  *
  * @param req Incoming unary request.
  * @param res Response object the handler fills in. */
+static void grpc_set_internal_error(cwist_http_response *res, const char *message);
+
 static void grpc_dispatch_unary_route(cwist_http_request *req, cwist_http_response *res,
                                       const grpc_route_view *route) {
     if (!route->handler) {
@@ -576,10 +578,17 @@ static void grpc_dispatch_unary_route(cwist_http_request *req, cwist_http_respon
                 uint8_t *new_frame = NULL;
                 size_t new_frame_len = 0;
                 if (cwist_grpc_encode_message(cbuf, clen, 1, &new_frame, &new_frame_len) == 0) {
-                    cwist_sstring_assign_len(res->body, (char *)new_frame, new_frame_len);
+                    cwist_error_t body_err =
+                        cwist_sstring_assign_len(res->body, (char *)new_frame, new_frame_len);
                     cwist_free(new_frame);
-                    cwist_http_header_remove(&res->headers, "grpc-encoding");
-                    cwist_http_header_add(&res->headers, "grpc-encoding", "gzip");
+                    if (!cwist_error_is_ok(&body_err)) {
+                        cwist_error_dispose(&body_err);
+                        grpc_set_internal_error(res, "failed to store compressed response");
+                    } else {
+                        cwist_error_dispose(&body_err);
+                        cwist_http_header_remove(&res->headers, "grpc-encoding");
+                        cwist_http_header_add(&res->headers, "grpc-encoding", "gzip");
+                    }
                 }
                 cwist_free(cbuf);
             }
@@ -935,6 +944,14 @@ int cwist_grpc_decoder_feed(cwist_grpc_decoder *decoder, const void *data, size_
     return 0;
 }
 
+static void grpc_set_internal_error(cwist_http_response *res, const char *message) {
+    res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+    cwist_sstring_assign(res->body, "");
+    cwist_http_header_remove(&res->headers, "grpc-status");
+    cwist_http_header_add(&res->headers, "grpc-status", "13");
+    cwist_http_header_add(&res->headers, "grpc-message", message);
+}
+
 /** @brief Build a complete buffered unary gRPC response.
  *
  * Sets the HTTP 200 status, gRPC content-type headers, grpc-status/grpc-message
@@ -958,23 +975,28 @@ void cwist_grpc_set_response(cwist_http_response *res, cwist_grpc_status_t statu
     cwist_http_header_add(&res->headers, "grpc-status", status_buf);
     if (message) {
         char *encoded = cwist_grpc_status_message_encode(message);
-        if (encoded) {
-            cwist_http_header_add(&res->headers, "grpc-message", encoded);
-            cwist_free(encoded);
+        if (!encoded) {
+            grpc_set_internal_error(res, "failed to encode status message");
+            return;
         }
+        cwist_http_header_add(&res->headers, "grpc-message", encoded);
+        cwist_free(encoded);
     }
 
     uint8_t *frame = NULL;
     size_t frame_len = 0;
-    if (cwist_grpc_encode_message(payload, payload_len, 0, &frame, &frame_len) == 0) {
-        cwist_sstring_assign_len(res->body, (char *)frame, frame_len);
-        cwist_free(frame);
-    } else {
-        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
-        cwist_sstring_assign(res->body, "");
-        cwist_http_header_add(&res->headers, "grpc-status", "13");
-        cwist_http_header_add(&res->headers, "grpc-message", "failed to encode gRPC response");
+    if (cwist_grpc_encode_message(payload, payload_len, 0, &frame, &frame_len) != 0) {
+        grpc_set_internal_error(res, "failed to encode gRPC response");
+        return;
     }
+    cwist_error_t body_err = cwist_sstring_assign_len(res->body, (char *)frame, frame_len);
+    cwist_free(frame);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        grpc_set_internal_error(res, "failed to store gRPC response");
+        return;
+    }
+    cwist_error_dispose(&body_err);
 }
 
 /** @brief Build a buffered gRPC error response with an empty message.

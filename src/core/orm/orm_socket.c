@@ -503,13 +503,20 @@ static void *cwist_orm_socket_worker(void *arg) {
             break;
         }
 
-        cJSON_AddNumberToObject(resp, "status", (double)rc);
+        bool metadata_ok = cJSON_AddNumberToObject(resp, "status", (double)rc) != NULL;
         if (errmsg) {
-            cJSON_AddStringToObject(resp, "error", errmsg);
+            metadata_ok = metadata_ok && cJSON_AddStringToObject(resp, "error", errmsg) != NULL;
         } else {
-            cJSON_AddNullToObject(resp, "error");
+            metadata_ok = metadata_ok && cJSON_AddNullToObject(resp, "error") != NULL;
         }
         free(errmsg);
+        if (!metadata_ok) {
+            cJSON_Delete(resp);
+            cJSON_Delete(acc.rows);
+            cJSON_Delete(acc.columns);
+            cJSON_Delete(acc.trows);
+            break;
+        }
         if (cJSON_AddItemToObject(resp, "rows", acc.rows)) acc.rows = NULL;
         cJSON *typed = cJSON_AddObjectToObject(resp, "typed");
         if (typed) {

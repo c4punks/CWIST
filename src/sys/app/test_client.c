@@ -84,6 +84,8 @@ static char *cookie_default_path(const char *req_path) {
     return out;
 }
 
+static bool multipart_size_add(size_t *total, size_t amount);
+
 /** @brief Build a Cookie header from the jar and ad-hoc pairs and add it to a request.
  * Does nothing if @p client or @p req is NULL, or if there are no valid cookies to send.
  * @param client Client owning the cookie jar.
@@ -109,13 +111,22 @@ static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
 
     size_t buf_len = 0;
     for (cwist_test_client_cookie *c = client->cookies; c; c = c->next) {
-        if (JAR_SENDS(c)) buf_len += strlen(c->name) + 1 + strlen(c->value) + 2;
+        if (!JAR_SENDS(c)) continue;
+        if (!multipart_size_add(&buf_len, strlen(c->name)) ||
+            !multipart_size_add(&buf_len, 1) || !multipart_size_add(&buf_len, strlen(c->value)) ||
+            !multipart_size_add(&buf_len, 2))
+            return;
     }
     for (size_t i = 0; i < adhoc_count; i++) {
-        if (adhoc && adhoc[i].key && adhoc[i].value)
-            buf_len += strlen(adhoc[i].key) + 1 + strlen(adhoc[i].value) + 2;
+        if (!adhoc || !adhoc[i].key || !adhoc[i].value) continue;
+        if (!multipart_size_add(&buf_len, strlen(adhoc[i].key)) ||
+            !multipart_size_add(&buf_len, 1) ||
+            !multipart_size_add(&buf_len, strlen(adhoc[i].value)) ||
+            !multipart_size_add(&buf_len, 2))
+            return;
     }
 
+    if (buf_len == SIZE_MAX) return;
     char *cookie_header CWIST_DEFER_FREE = (char *)cwist_alloc(buf_len + 1);
     if (!cookie_header) return;
     cookie_header[0] = '\0';

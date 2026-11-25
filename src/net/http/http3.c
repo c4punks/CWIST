@@ -1335,22 +1335,39 @@ static lsquic_stream_ctx_t *cwist_h3_on_new_stream(void *stream_if_ctx, lsquic_s
  * Allocates the query map in @p req 's arena when a query string is present.
  * No query string: the whole value becomes the path.
  */
-static void h3_parse_path(cwist_http_request *req, const char *path) {
+static int h3_parse_path(cwist_http_request *req, const char *path) {
     const char *q = strchr(path, '?');
     if (q) {
-        cwist_sstring_assign_len(req->path, (char *)path, (size_t)(q - path));
-        cwist_sstring_assign(req->query, (char *)(q + 1));
+        cwist_error_t path_err = cwist_sstring_assign_len(req->path, (char *)path, (size_t)(q - path));
+        if (!cwist_error_is_ok(&path_err)) {
+            cwist_error_dispose(&path_err);
+            return -1;
+        }
+        cwist_error_dispose(&path_err);
+        cwist_error_t query_err = cwist_sstring_assign(req->query, (char *)(q + 1));
+        if (!cwist_error_is_ok(&query_err)) {
+            cwist_error_dispose(&query_err);
+            return -1;
+        }
+        cwist_error_dispose(&query_err);
         if (req->query_params) {
             cwist_query_map_clear(req->query_params);
         } else {
             req->query_params = cwist_query_map_create_in_arena(req->arena);
         }
-        if (req->query_params && req->query->size > 0) {
-            cwist_query_map_parse(req->query_params, req->query->data);
-        }
+        if (!req->query_params) return -1;
+        if (req->query->size > 0 &&
+            cwist_query_map_parse_checked(req->query_params, req->query->data) != 0)
+            return -1;
     } else {
-        cwist_sstring_assign(req->path, (char *)path);
+        cwist_error_t path_err = cwist_sstring_assign(req->path, (char *)path);
+        if (!cwist_error_is_ok(&path_err)) {
+            cwist_error_dispose(&path_err);
+            return -1;
+        }
+        cwist_error_dispose(&path_err);
     }
+    return 0;
 }
 
 /**
@@ -1463,13 +1480,16 @@ static int h3_apply_header(h3_stream_ctx_t *st, const char *name, size_t name_le
         req->method = cwist_http_string_to_method(value);
         return 0;
     }
-    if (strcmp(name, ":path") == 0) {
-        h3_parse_path(req, value);
-        return 0;
-    }
+    if (strcmp(name, ":path") == 0) return h3_parse_path(req, value);
     if (strcmp(name, ":authority") == 0 || strcmp(name, "host") == 0) {
-        if (!cwist_http_header_get(req->headers, "host"))
-            cwist_http_header_add(&req->headers, "host", value);
+        if (!cwist_http_header_get(req->headers, "host")) {
+            cwist_error_t err = cwist_http_header_add(&req->headers, "host", value);
+            if (!cwist_error_is_ok(&err)) {
+                cwist_error_dispose(&err);
+                return -1;
+            }
+            cwist_error_dispose(&err);
+        }
         return 0;
     }
     if (name[0] == ':') return 0;
@@ -1486,10 +1506,14 @@ static int h3_apply_header(h3_stream_ctx_t *st, const char *name, size_t name_le
         st->has_content_length = true;
         req->content_length = content_length;
     }
-    if (strcmp(name, "referrer") == 0)
-        cwist_http_header_add(&req->headers, "referer", value);
-    else
-        cwist_http_header_add(&req->headers, name, value);
+    cwist_error_t err = cwist_http_header_add(&req->headers,
+                                               strcmp(name, "referrer") == 0 ? "referer" : name,
+                                               value);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        return -1;
+    }
+    cwist_error_dispose(&err);
     return 0;
 }
 
