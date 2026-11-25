@@ -13,12 +13,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_append;
 cwist_error_t __real_cwist_sstring_append(cwist_sstring *str, const char *data);
 cwist_error_t __wrap_cwist_sstring_append(cwist_sstring *str, const char *data) {
     if (fail_append) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_append(str, data);
 }
+#endif
 
 typedef struct {
     int listen_fd;
@@ -139,6 +141,7 @@ static void test_pubsub_consumes_nested_extras(void) {
     mock_join(&server);
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_command_allocation_failure(void) {
     mock_server server;
     mock_start(&server, "+OK\r\n");
@@ -151,9 +154,12 @@ static void test_command_allocation_failure(void) {
     cwist_redis_close(redis);
     mock_join(&server);
 }
+#endif
 
 int main(void) {
+#ifdef CWIST_TEST_WRAP
     test_command_allocation_failure();
+#endif
     test_malformed_replies();
     test_pubsub_consumes_nested_extras();
     puts("strict RESP and pub/sub framing: ok");

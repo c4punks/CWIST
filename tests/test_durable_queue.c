@@ -37,12 +37,14 @@ static void sleep_ms(uint64_t ms) {
     nanosleep(&ts, NULL);
 }
 
+#ifdef CWIST_TEST_WRAP
 static int fail_type_alloc;
 char *__real_cwist_strndup(const char *src, size_t n);
 char *__wrap_cwist_strndup(const char *src, size_t n) {
     if (fail_type_alloc && n == 5) return NULL;
     return __real_cwist_strndup(src, n);
 }
+#endif
 
 static unsigned int name_seq = 0;
 
@@ -373,12 +375,14 @@ static int t_redis_type_allocation_failure(cwist_redis_t *conn) {
     CHECK(q != NULL, "queue for type allocation failure test was not created");
     cwist_error_t err = cwist_job_queue_enqueue(q, "payload", 7, "typed");
     CHECK(err.error.err_i16 == 0, "enqueue for type allocation failure test failed");
-    fail_type_alloc = 1;
     cwist_job_t *job = NULL;
+#ifdef CWIST_TEST_WRAP
+    fail_type_alloc = 1;
     err = cwist_job_queue_claim(q, 200, &job);
     fail_type_alloc = 0;
     CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
           "type allocation failure returned an untyped job");
+#endif
     sleep_ms(200);
     err = cwist_job_queue_claim(q, 1000, &job);
     CHECK(err.error.err_i16 == 0 && job && cwist_job_type(job) &&

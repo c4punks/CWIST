@@ -23,6 +23,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int fail_assign;
 cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
 cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
@@ -30,6 +31,7 @@ cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) 
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign(str, data);
 }
+#endif
 
 #define TIMEOUT_MS 30000
 
@@ -390,6 +392,7 @@ static void test_signaling_rejects_embedded_nul(void) {
     close(fd);
 
     stop_server(server);
+#ifdef CWIST_TEST_WRAP
     atomic_store(&fail_assign, 1);
     server = start_rtc_server();
     atomic_store(&fail_assign, 0);
@@ -409,6 +412,7 @@ static void test_signaling_rejects_embedded_nul(void) {
     assert(strstr(response, " 500 ") != NULL);
     close(fd);
     stop_server(server);
+#endif
     puts("SDP signaling rejects embedded NUL: ok");
 }
 

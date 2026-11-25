@@ -1724,7 +1724,7 @@ test_file_confine: $(LIB_NAME) tests/test_file_confine.c
 	./$@
 
 test_redis_protocol: $(LIB_NAME) tests/test_redis_protocol.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_append -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_append) -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
 	./$@
 
 test_sctp_dcep: $(LIB_NAME) tests/test_sctp_dcep.c
@@ -2134,7 +2134,7 @@ test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
 	./test_websocket_async
 
 test_livemsg: $(LIB_NAME) tests/test_livemsg.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_livemsg tests/test_livemsg.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_livemsg tests/test_livemsg.c $(LIB_NAME) $(LIBS)
 	./test_livemsg
 else
 # CWIST_WS=0: the module and its tests are compiled out.
@@ -2167,7 +2167,7 @@ test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
 	./test_classic_shutdown
 
 test_compress: $(LIB_NAME) tests/test_compress.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
 	./test_compress
 
 test_compress_backends: $(LIB_NAME) tests/test_compress_backends.c
@@ -2692,7 +2692,7 @@ test_scheduler: $(LIB_NAME) tests/test_scheduler.c
 
 ifeq ($(CWIST_NATS),1)
 test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_strndup -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_strndup) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
 	./test_durable_queue
 else
 # CWIST_NATS=0: the NATS backend and its test are compiled out.
@@ -2743,7 +2743,7 @@ test_test_client: $(LIB_NAME) tests/test_test_client.c
 	./test_test_client
 
 test_openapi: $(LIB_NAME) tests/test_openapi.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
 	./test_openapi
 
 test_otel: $(LIB_NAME) tests/test_otel.c
@@ -2790,7 +2790,7 @@ test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
 	./test_grpc_health_alloc
 
 test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
 	./test_grpc_stream
 
 test_grpc_client: $(LIB_NAME) tests/test_grpc_client.c
@@ -2818,7 +2818,7 @@ test_grpc_client_windows: $(LIB_NAME) tests/test_grpc_client_windows.c
 	./test_grpc_client_windows
 
 test_grpc_channel: $(LIB_NAME) tests/test_grpc_channel.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
 	./test_grpc_channel
 
 test_dispatch_memory: $(LIB_NAME) tests/test_dispatch_memory.c
