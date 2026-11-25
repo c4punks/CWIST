@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int fail_assign;
 cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
 cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
@@ -25,6 +26,7 @@ cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) 
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_sstring_assign(str, data);
 }
+#endif
 
 /* Minimal placeholder handler -- never invoked, just used as a non-NULL value. */
 static void noop_handler(cwist_http_request *req, cwist_http_response *res) {
@@ -101,6 +103,7 @@ static void test_enable_healthz(void) {
     cwist_http_response_destroy(live_res);
     cwist_http_request_destroy(live_req);
 
+#ifdef CWIST_TEST_WRAP
     /* Test /live allocation failure propagates as HTTP 500 */
     live_req = cwist_http_request_create();
     live_req->method = CWIST_HTTP_GET;
@@ -112,6 +115,7 @@ static void test_enable_healthz(void) {
     assert(live_res->status_code == CWIST_HTTP_INTERNAL_ERROR);
     cwist_http_response_destroy(live_res);
     cwist_http_request_destroy(live_req);
+#endif
 
     /* The healthz route must be discoverable by its path. */
     char *url = cwist_url_for(app, "/healthz", NULL);
