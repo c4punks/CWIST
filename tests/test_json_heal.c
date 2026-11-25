@@ -554,6 +554,41 @@ static void test_db_insert_healed_preserves_long_values(void) {
     printf("  Passed.\n");
 }
 
+static void test_db_insert_healed_preserves_long_identifiers(void) {
+    printf("DB: insert_healed preserves long identifiers...\n");
+
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+
+    char column[129];
+    memset(column, 'c', sizeof(column) - 1);
+    column[sizeof(column) - 1] = '\0';
+    char create_sql[256];
+    char json[256];
+    char query_sql[256];
+    assert(snprintf(create_sql, sizeof(create_sql),
+                    "CREATE TABLE long_identifiers (\"%s\" TEXT);", column) > 0);
+    assert(snprintf(json, sizeof(json), "{\"%s\":\"ok\"}", column) > 0);
+    assert(snprintf(query_sql, sizeof(query_sql), "SELECT \"%s\" AS value FROM long_identifiers;",
+                    column) > 0);
+
+    err = cwist_db_exec(db, create_sql);
+    assert(cwist_error_is_ok(&err));
+    err = cwist_db_insert_healed(db, "long_identifiers", json, NULL, NULL);
+    assert(cwist_error_is_ok(&err));
+
+    cJSON *rows = NULL;
+    err = cwist_db_query(db, query_sql, &rows);
+    assert(cwist_error_is_ok(&err));
+    cJSON *row = cJSON_GetArrayItem(rows, 0);
+    assert(strcmp(cJSON_GetObjectItem(row, "value")->valuestring, "ok") == 0);
+
+    cJSON_Delete(rows);
+    cwist_db_close(db);
+    printf("  Passed.\n");
+}
+
 static void test_db_query_strict(void) {
     printf("DB: query_strict filters non-conforming rows...\n");
 
@@ -826,6 +861,7 @@ int main(void) {
     test_db_insert_healed_rejects_invalid();
     test_db_insert_healed_escapes_identifiers();
     test_db_insert_healed_preserves_long_values();
+    test_db_insert_healed_preserves_long_identifiers();
     test_db_query_strict();
 #ifdef CWIST_TEST_WRAP
     test_db_query_strict_allocation_failures();
