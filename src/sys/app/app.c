@@ -2371,9 +2371,24 @@ static void cwist_healthz_route_handler(cwist_http_request *req, cwist_http_resp
 
 static void cwist_liveness_route_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
+    if (!res) return;
+    cwist_error_t err = cwist_sstring_assign(res->body, "{\"status\":\"alive\"}");
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&err);
+
+    err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&err);
+
     res->status_code = CWIST_HTTP_OK;
-    cwist_sstring_assign(res->body, "{\"status\":\"alive\"}");
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
 }
 
 static void cwist_readiness_route_handler(cwist_http_request *req, cwist_http_response *res) {
