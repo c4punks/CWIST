@@ -156,7 +156,7 @@ Quick start</h2>
 <div class="line">    <span class="keywordflow">return</span> 0;</div>
 <div class="line">}</div>
 <div class="ttc" id="aapp_8h_html"><div class="ttname"><a href="d2/d39/app_8h.html">app.h</a></div><div class="ttdoc">Top-level application header.</div></div>
-<div class="ttc" id="acore_2sstring_2sstring_8h_html_a6a0c23aa9b205fc952f848cc925a1a28"><div class="ttname"><a href="d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a></div><div class="ttdeci">cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data)</div><div class="ttdoc">Assign a C string.</div><div class="ttdef"><b>Definition</b> <a href="dd/d79/sstring_8c_source.html#l00557">sstring.c:557</a></div></div>
+<div class="ttc" id="acore_2sstring_2sstring_8h_html_a6a0c23aa9b205fc952f848cc925a1a28"><div class="ttname"><a href="d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a></div><div class="ttdeci">cwist_error_t cwist_sstring_assign(cwist_sstring *str, const char *data)</div><div class="ttdoc">Assign a C string.</div><div class="ttdef"><b>Definition</b> <a href="dd/d79/sstring_8c_source.html#l00583">sstring.c:583</a></div></div>
 <div class="ttc" id="astructcwist__app_html"><div class="ttname"><a href="dc/da0/structcwist__app.html">cwist_app</a></div><div class="ttdoc">Main Application Context.</div><div class="ttdef"><b>Definition</b> <a href="d0/d77/sys_2app_2app_8h_source.html#l00164">app.h:164</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>
 <div class="ttc" id="astructcwist__http__response_html"><div class="ttname"><a href="dd/d22/structcwist__http__response.html">cwist_http_response</a></div><div class="ttdoc">HTTP Response Object. Supports standard string body or Zero-Copy pointer body.</div><div class="ttdef"><b>Definition</b> <a href="dd/d56/http_8h_source.html#l00082">http.h:82</a></div></div>
@@ -441,12 +441,12 @@ Feature notes</h2>
 Latest benchmark run</h2>
 <p>CI regenerates this block from each benchmark run.</p>
 <p>Latest Web Server Benchmark (wrk -t12 -c400 -d10s (after 10s warmup, warmup discarded)):</p><ul>
-<li><b>CWIST Classic pool</b>: 271391 req/s | Latency 0.89ms (P50 0.55ms, P90 1.97ms, P99 4.54ms, P99.999 34.92ms) | RSS 60248KiB | Csw 2734677</li>
-<li><b>CWIST reactor</b>: 338035 req/s | Latency 1.32ms (P50 0.99ms, P90 2.90ms, P99 5.22ms, P99.999 14.29ms) | RSS 23256KiB | Csw 392061</li>
-<li><b>Actix</b>: 323471 req/s | Latency 1.35ms (P50 1.04ms, P90 2.87ms, P99 5.19ms, P99.999 13.71ms) | RSS 12548KiB | Csw 467360</li>
-<li><b>Axum</b>: 258440 req/s | Latency 1.54ms (P50 1.39ms, P90 2.73ms, P99 4.32ms, P99.999 10.10ms) | RSS 15756KiB | Csw 746730</li>
-<li><b>Gin (Go)</b>: 202376 req/s | Latency 4.10ms (P50 1.98ms, P90 11.74ms, P99 26.33ms, P99.999 79.67ms) | RSS 28056KiB | Csw 1055458</li>
-<li><b>Spring Boot</b>: 131161 req/s | Latency 3.07ms (P50 2.71ms, P90 4.45ms, P99 7.66ms, P99.999 43.44ms) | RSS 1289848KiB | Csw 679145</li>
+<li><b>CWIST Classic pool</b>: 154959 req/s | Latency 1.48ms (P50 1.20ms, P90 3.04ms, P99 5.65ms, P99.999 22.16ms) | RSS 61364KiB | Csw 1505861</li>
+<li><b>CWIST reactor</b>: 188085 req/s | Latency 2.14ms (P50 1.89ms, P90 4.14ms, P99 6.75ms, P99.999 12.07ms) | RSS 22320KiB | Csw 154522</li>
+<li><b>Actix</b>: 177360 req/s | Latency 2.25ms (P50 2.04ms, P90 4.13ms, P99 6.70ms, P99.999 13.21ms) | RSS 12632KiB | Csw 204032</li>
+<li><b>Axum</b>: 153967 req/s | Latency 2.56ms (P50 2.38ms, P90 4.44ms, P99 6.65ms, P99.999 11.96ms) | RSS 16656KiB | Csw 338563</li>
+<li><b>Gin (Go)</b>: 116983 req/s | Latency 4.96ms (P50 3.22ms, P90 12.24ms, P99 30.82ms, P99.999 74.38ms) | RSS 28428KiB | Csw 395442</li>
+<li><b>Spring Boot</b>: 78586 req/s | Latency 5.04ms (P50 4.64ms, P90 7.05ms, P99 10.76ms, P99.999 33.61ms) | RSS 1291192KiB | Csw 339054</li>
 </ul>
 <p><em>Settled CWIST-internal tuning variants (glibc arena cap from PR #35, cooperative drain chunk from issue #25) are recorded in <a class="el" href="d9/d15/cooperative-queuing_8md.html">docs/cooperative-queuing.md</a> and benchmarks/webserver.json; they are no longer rendered as comparison rows.</em></p>
 <p><b>Spring runtime environment</b></p>

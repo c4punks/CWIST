@@ -261,7 +261,7 @@ $(document).ready(function(){initNavTree('df/dc8/sctp_8c_source.html','../../');
 <div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>            <span class="keywordflow">if</span> (!label) <span class="keywordflow">return</span>;</div>
 <div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>            memcpy(label, msg + 12, label_len);</div>
 <div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>            label[label_len] = <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>            <span class="keywordflow">if</span> (ch_set(conn, sid, 0) == 0) {</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>            <span class="keywordflow">if</span> (!ch_get(conn, sid, 0) &amp;&amp; ch_set(conn, sid, 0) == 0) {</div>
 <div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>                dcep_send(conn, sid, <a class="code hl_define" href="../../df/dc8/sctp_8c.html#aaaf0c7932469fc54448488ed6c19eeaa">DCEP_ACK</a>, NULL);</div>
 <div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>                <a class="code hl_function" href="../../d3/d90/webrtc_8c.html#a14078fa92a111f838387e5f974705f3a">cwist_webrtc_conn_on_channel_open</a>(conn, sid, label);</div>
 <div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>            }</div>
