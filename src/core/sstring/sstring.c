@@ -397,7 +397,8 @@ cwist_error_t cwist_sstring_ltrim(cwist_sstring *str) {
                 err.error.err_i8 = ERR_SSTRING_NULL_STRING;
                 return err;
             }
-            memcpy(new_data, str->data + start, len - start + 1);
+            memcpy(new_data, str->data + start, len - start);
+            new_data[len - start] = '\0';
             str->data = new_data;
             str->borrows_buffer = false;
         } else {
