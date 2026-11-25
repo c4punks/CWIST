@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
 static int alloc_fail_countdown = -1;
 
 void *__real_cwist_alloc(size_t size);
@@ -45,6 +46,7 @@ static void test_query_map_duplicate_update_oom(void) {
     alloc_fail_countdown = -1;
     cwist_query_map_destroy(map);
 }
+#endif
 
 static bool ok(cwist_error_t e) {
     return e.errtype == CWIST_ERR_INT8 && e.error.err_i8 == ERR_SSTRING_OKAY;
@@ -566,8 +568,10 @@ int main(void) {
     test_query_map_malformed_escapes();
     test_query_params_through_request_parser();
     test_query_map_growth();
+#ifdef CWIST_TEST_WRAP
     test_query_map_insert_oom();
     test_query_map_duplicate_update_oom();
+#endif
     test_css_colors();
     test_css_generators();
     test_binary_sstring_and_nonfinite_colors();

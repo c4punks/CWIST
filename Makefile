@@ -1807,11 +1807,11 @@ test_orm:
 endif
 
 test_core_utils: $(LIB_NAME) tests/test_core_utils.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
 	./test_core_utils
 
 test_template: $(LIB_NAME) tests/test_template.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_template tests/test_template.c $(LIB_NAME) $(LIBS)
 	./test_template
 
 test_config: $(LIB_NAME) tests/test_config.c
@@ -2193,7 +2193,7 @@ test_nuke_missing_user:
 endif
 
 test_bind: $(LIB_NAME) tests/test_bind.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
 	./test_bind
 
 test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response.c
