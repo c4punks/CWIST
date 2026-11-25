@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/net/redis/cwist_redis.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/core/sstring/sstring.h>
 
 #include <arpa/inet.h>
 #include <assert.h>
@@ -11,6 +12,13 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+static int fail_append;
+cwist_error_t __real_cwist_sstring_append(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_append(cwist_sstring *str, const char *data) {
+    if (fail_append) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_append(str, data);
+}
 
 typedef struct {
     int listen_fd;
@@ -131,7 +139,21 @@ static void test_pubsub_consumes_nested_extras(void) {
     mock_join(&server);
 }
 
+static void test_command_allocation_failure(void) {
+    mock_server server;
+    mock_start(&server, "+OK\r\n");
+    cwist_redis_t *redis = mock_connect(&server);
+    char *out = NULL;
+    fail_append = 1;
+    cwist_error_t err = cwist_redis_get(redis, "key", &out);
+    fail_append = 0;
+    assert(err.error.err_i16 != 0 && out == NULL);
+    cwist_redis_close(redis);
+    mock_join(&server);
+}
+
 int main(void) {
+    test_command_allocation_failure();
     test_malformed_replies();
     test_pubsub_consumes_nested_extras();
     puts("strict RESP and pub/sub framing: ok");

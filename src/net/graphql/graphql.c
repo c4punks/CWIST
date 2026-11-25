@@ -955,8 +955,15 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
         cJSON_free(printed);
         return gql_error(-1);
     }
-    cwist_sstring_assign(*out_json, printed);
+    cwist_error_t out_err = cwist_sstring_assign(*out_json, printed);
     cJSON_free(printed);
+    if (!cwist_error_is_ok(&out_err)) {
+        cwist_error_dispose(&out_err);
+        cwist_sstring_destroy(*out_json);
+        *out_json = NULL;
+        return gql_error(-1);
+    }
+    cwist_error_dispose(&out_err);
 
     return gql_error(0);
 }
@@ -1070,9 +1077,21 @@ void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req
         res->status_code = CWIST_HTTP_BAD_REQUEST;
         cwist_sstring_assign(res->body, "{\"errors\":[{\"message\":\"invalid GraphQL request\"}]}");
     } else {
-        res->status_code = CWIST_HTTP_OK;
-        cwist_sstring_assign_len(res->body, json->data, json->size);
+        cwist_error_t body_err = cwist_sstring_assign_len(res->body, json->data, json->size);
         cwist_sstring_destroy(json);
+        if (!cwist_error_is_ok(&body_err)) {
+            cwist_error_dispose(&body_err);
+            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            return;
+        }
+        cwist_error_dispose(&body_err);
+        res->status_code = CWIST_HTTP_OK;
     }
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&header_err);
 }

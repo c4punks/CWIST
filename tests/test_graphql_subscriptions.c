@@ -25,6 +25,12 @@ cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON
     if (atomic_load(&fail_add)) return 0;
     return __real_cJSON_AddItemToObject(object, string, item);
 }
+static _Atomic int fail_string;
+cJSON *__real_cJSON_AddStringToObject(cJSON *object, const char *string, const char *value);
+cJSON *__wrap_cJSON_AddStringToObject(cJSON *object, const char *string, const char *value) {
+    if (atomic_load(&fail_string)) return NULL;
+    return __real_cJSON_AddStringToObject(object, string, value);
+}
 
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/sys/io/reactor.h>
@@ -403,6 +409,13 @@ int main(void) {
     expect_eof(fd_second_init);
     close(fd_second_init);
     printf("4. duplicate connection_init -> close 4429: ok\n");
+
+    int fd_oom = attach_conn(reactor);
+    atomic_store(&fail_string, 1);
+    write_text(fd_oom, "{\"type\":\"connection_init\"}");
+    expect_eof_after_drain(fd_oom);
+    atomic_store(&fail_string, 0);
+    close(fd_oom);
 
     write_text(fd_bad_subscribe, "{\"type\":\"connection_init\"}");
     cJSON_Delete(read_json_message(fd_bad_subscribe));

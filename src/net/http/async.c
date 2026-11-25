@@ -339,9 +339,21 @@ static void cwist_async_apply_result(cwist_async *a) {
     a->r_apply = false;
     cwist_http_response *res = a->res;
     res->status_code = a->r_status;
-    cwist_sstring_assign(res->status_text, (char *)cwist_async_reason(a->r_status));
-    if (a->r_body && a->r_len > 0) cwist_sstring_assign_len(res->body, a->r_body, a->r_len);
-    if (a->r_ctype) cwist_http_header_add(&res->headers, "Content-Type", a->r_ctype);
+    bool ok = true;
+    cwist_error_t status_err = cwist_sstring_assign(res->status_text, (char *)cwist_async_reason(a->r_status));
+    ok = ok && cwist_error_is_ok(&status_err);
+    cwist_error_dispose(&status_err);
+    if (a->r_body && a->r_len > 0) {
+        cwist_error_t body_err = cwist_sstring_assign_len(res->body, a->r_body, a->r_len);
+        ok = ok && cwist_error_is_ok(&body_err);
+        cwist_error_dispose(&body_err);
+    }
+    if (a->r_ctype) {
+        cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", a->r_ctype);
+        ok = ok && cwist_error_is_ok(&header_err);
+        cwist_error_dispose(&header_err);
+    }
+    if (!ok) res->status_code = CWIST_HTTP_INTERNAL_ERROR;
     cwist_free(a->r_block);
     a->r_block = NULL;
     /* Those strings and headers belong to this thread's GC scope; the

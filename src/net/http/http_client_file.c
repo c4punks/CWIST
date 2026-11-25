@@ -147,11 +147,34 @@ static cwist_http_response *file_read_response(file_job *job) {
         return NULL;
     }
     response->status_code = CWIST_HTTP_OK;
-    cwist_sstring_assign(response->status_text, "OK");
-    cwist_http_header_add(&response->headers, "Content-Type", "application/octet-stream");
+    cwist_error_t status_err = cwist_sstring_assign(response->status_text, "OK");
+    if (!cwist_error_is_ok(&status_err)) {
+        cwist_error_dispose(&status_err);
+        close(fd);
+        cwist_http_response_destroy(response);
+        return NULL;
+    }
+    cwist_error_dispose(&status_err);
+    cwist_error_t type_err =
+        cwist_http_header_add(&response->headers, "Content-Type", "application/octet-stream");
+    if (!cwist_error_is_ok(&type_err)) {
+        cwist_error_dispose(&type_err);
+        close(fd);
+        cwist_http_response_destroy(response);
+        return NULL;
+    }
+    cwist_error_dispose(&type_err);
     char content_length[32];
     snprintf(content_length, sizeof(content_length), "%zu", len);
-    cwist_http_header_add(&response->headers, "Content-Length", content_length);
+    cwist_error_t length_err =
+        cwist_http_header_add(&response->headers, "Content-Length", content_length);
+    if (!cwist_error_is_ok(&length_err)) {
+        cwist_error_dispose(&length_err);
+        close(fd);
+        cwist_http_response_destroy(response);
+        return NULL;
+    }
+    cwist_error_dispose(&length_err);
 
     if (job->method != CWIST_HTTP_HEAD && len > 0) {
         char *data = cwist_alloc(len);

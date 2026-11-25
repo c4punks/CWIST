@@ -254,10 +254,22 @@ static void openapi_handler(void *ctx, cwist_http_request *req, cwist_http_respo
         res->status_code = CWIST_HTTP_INTERNAL_ERROR;
         return;
     }
-    cwist_sstring_assign(res->body, json);
+    cwist_error_t body_err = cwist_sstring_assign(res->body, json);
     cJSON_free(json);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&body_err);
     res->status_code = CWIST_HTTP_OK;
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&header_err);
     return;
 
 oom:

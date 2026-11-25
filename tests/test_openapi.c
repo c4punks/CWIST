@@ -10,6 +10,14 @@
 #include <stdio.h>
 #include <string.h>
 
+static int fail_assign;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (fail_assign && data && strncmp(data, "{\"openapi\"", 10) == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+
 #define FAIL_IF(cond, msg)                      \
     do {                                        \
         if (cond) {                             \
@@ -127,6 +135,18 @@ int main(void) {
     cJSON_Delete(doc);
     cwist_test_client_destroy(other_client);
     cwist_app_destroy(other);
+
+    cwist_http_request *failed_req = cwist_http_request_create();
+    failed_req->method = CWIST_HTTP_GET;
+    cwist_sstring_assign(failed_req->path, "/spec.json");
+    cwist_http_response *failed = cwist_http_response_create();
+    fail_assign = 1;
+    cwist_app_dispatch(app, failed_req, failed);
+    fail_assign = 0;
+    FAIL_IF(!failed || failed->status_code != CWIST_HTTP_INTERNAL_ERROR,
+            "response allocation failure returns 500");
+    cwist_http_response_destroy(failed);
+    cwist_http_request_destroy(failed_req);
 
     cwist_test_client_destroy(client);
     cwist_app_destroy(app);

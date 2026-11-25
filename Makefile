@@ -1712,7 +1712,7 @@ test_file_confine: $(LIB_NAME) tests/test_file_confine.c
 	./$@
 
 test_redis_protocol: $(LIB_NAME) tests/test_redis_protocol.c
-	$(CC) $(CFLAGS) -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_append -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
 	./$@
 
 test_sctp_dcep: $(LIB_NAME) tests/test_sctp_dcep.c
@@ -1976,7 +1976,7 @@ test_mux_param: $(LIB_NAME) tests/test_mux_param.c
 
 ifeq ($(CWIST_JWT),1)
 test_jwt: $(LIB_NAME) tests/test_jwt.c
-	$(CC) $(CFLAGS) -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddStringToObject -Wl,--wrap=cJSON_AddNumberToObject -o test_jwt tests/test_jwt.c $(LIB_NAME) $(LIBS)
 	./test_jwt
 
 test_jwt_asym: $(LIB_NAME) tests/test_jwt_asym.c
@@ -2059,7 +2059,7 @@ test_https_metrics: $(LIB_NAME) tests/test_https_metrics.c
 endif
 
 test_http2: $(LIB_NAME) tests/test_http2.c
-	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
 	./test_http2
 
 test_http2_prebuffer: $(LIB_NAME) tests/test_http2_prebuffer.c
@@ -2086,7 +2086,7 @@ test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	./$@
 
 test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=malloc -Wl,--wrap=cwist_http_header_add -Wl,--wrap=cwist_sstring_assign_len -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=malloc -Wl,--wrap=cwist_http_header_add -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
 	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
@@ -2122,7 +2122,7 @@ test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
 	./test_websocket_async
 
 test_livemsg: $(LIB_NAME) tests/test_livemsg.c
-	$(CC) $(CFLAGS) -o test_livemsg tests/test_livemsg.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_livemsg tests/test_livemsg.c $(LIB_NAME) $(LIBS)
 	./test_livemsg
 else
 # CWIST_WS=0: the module and its tests are compiled out.
@@ -2155,7 +2155,7 @@ test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
 	./test_classic_shutdown
 
 test_compress: $(LIB_NAME) tests/test_compress.c
-	$(CC) $(CFLAGS) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
 	./test_compress
 
 test_compress_backends: $(LIB_NAME) tests/test_compress_backends.c
@@ -2544,7 +2544,7 @@ test_http_chunked_alloc_failure: $(LIB_NAME) tests/test_http_chunked_alloc_failu
 	./test_http_chunked_alloc_failure
 
 test_http_client: $(LIB_NAME) tests/test_http_client.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_http_header_add -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
 	./test_http_client
 
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
@@ -2653,12 +2653,12 @@ test_sse: $(LIB_NAME) tests/test_sse.c
 	./test_sse
 
 test_graphql: $(LIB_NAME) tests/test_graphql.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_ReplaceItemViaPointer -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_ReplaceItemViaPointer -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
 	./test_graphql
 
 ifeq ($(CWIST_WS),1)
 test_graphql_subscriptions: $(LIB_NAME) tests/test_graphql_subscriptions.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddStringToObject -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
 	./test_graphql_subscriptions
 else
 # CWIST_WS=0: graphql_ws.c rides on websocket_async, so its test is compiled out.
@@ -2709,7 +2709,7 @@ test_proxy_transport: $(LIB_NAME) tests/test_proxy_transport.c
 	./test_proxy_transport
 
 test_async_defer: $(LIB_NAME) tests/test_async_defer.c
-	$(CC) $(CFLAGS) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
 	./test_async_defer
 	CWIST_C1M_MODE=0 ./test_async_defer
 
@@ -2731,7 +2731,7 @@ test_test_client: $(LIB_NAME) tests/test_test_client.c
 	./test_test_client
 
 test_openapi: $(LIB_NAME) tests/test_openapi.c
-	$(CC) $(CFLAGS) -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_openapi tests/test_openapi.c $(LIB_NAME) $(LIBS)
 	./test_openapi
 
 test_otel: $(LIB_NAME) tests/test_otel.c
@@ -2761,7 +2761,7 @@ test_builtin_mw_chain:
 endif
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
-	$(CC) $(CFLAGS) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_alloc -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
 	./test_grpc
 
 test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c
@@ -2958,7 +2958,7 @@ test_linux_writer_fast: $(LIB_NAME) tests/test_linux_writer_fast.c
 
 ifeq ($(CWIST_DB),1)
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddObjectToObject -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddObjectToObject -Wl,--wrap=cJSON_AddNumberToObject -Wl,--wrap=cJSON_AddStringToObject -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
 
 test_orm_socket_sigpipe: $(LIB_NAME) tests/test_orm_socket_sigpipe.c

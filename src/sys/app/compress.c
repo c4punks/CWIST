@@ -780,10 +780,16 @@ static void cwist_mw_compress_handler_core(cwist_http_request *req, cwist_http_r
     backend->cleanup(state);
 
     if (ok && total_out > 0 && total_out < res->body->size) {
-        cwist_sstring_assign_len(res->body, out_buf, total_out);
-        weaken_strong_etag(res->headers);
-        cwist_http_header_add(&res->headers, "Content-Encoding", backend->encoding_name);
-        remove_header(&res->headers, "Content-Length");
+        cwist_error_t body_err = cwist_sstring_assign_len(res->body, out_buf, total_out);
+        if (!cwist_error_is_ok(&body_err)) {
+            cwist_error_dispose(&body_err);
+            ok = 0;
+        } else {
+            cwist_error_dispose(&body_err);
+            weaken_strong_etag(res->headers);
+            cwist_http_header_add(&res->headers, "Content-Encoding", backend->encoding_name);
+            remove_header(&res->headers, "Content-Length");
+        }
     }
     cwist_free(out_buf);
 }

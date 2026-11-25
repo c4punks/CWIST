@@ -22,6 +22,17 @@ cJSON *__wrap_cJSON_AddObjectToObject(cJSON *object, const char *name) {
     if (__atomic_load_n(&fail_typed, __ATOMIC_SEQ_CST)) return NULL;
     return __real_cJSON_AddObjectToObject(object, name);
 }
+static _Atomic int fail_metadata;
+cJSON *__real_cJSON_AddNumberToObject(cJSON *object, const char *string, double number);
+cJSON *__wrap_cJSON_AddNumberToObject(cJSON *object, const char *string, double number) {
+    if (__atomic_load_n(&fail_metadata, __ATOMIC_SEQ_CST)) return NULL;
+    return __real_cJSON_AddNumberToObject(object, string, number);
+}
+cJSON *__real_cJSON_AddStringToObject(cJSON *object, const char *string, const char *value);
+cJSON *__wrap_cJSON_AddStringToObject(cJSON *object, const char *string, const char *value) {
+    if (__atomic_load_n(&fail_metadata, __ATOMIC_SEQ_CST)) return NULL;
+    return __real_cJSON_AddStringToObject(object, string, value);
+}
 
 /* cwist_db_transfer_sqlite_to_socket() must hand back a usable SQL socket:
  * the ORM helpers round-trip rows through the SQLite worker behind it. */
@@ -97,6 +108,13 @@ static void test_transfer_sqlite_to_socket(void) {
     fail_typed = 1;
     err = cwist_orm_select(orm, "posts", "id", NULL, &rows);
     fail_typed = 0;
+    assert(!cwist_error_is_ok(&err) && rows == NULL);
+    cwist_error_dispose(&err);
+
+    rows = NULL;
+    fail_metadata = 1;
+    err = cwist_orm_select(orm, "posts", "id", NULL, &rows);
+    fail_metadata = 0;
     assert(!cwist_error_is_ok(&err) && rows == NULL);
     cwist_error_dispose(&err);
 

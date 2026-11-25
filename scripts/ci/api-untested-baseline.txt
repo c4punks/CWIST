@@ -28,7 +28,6 @@ cwist_gc_auto_rotated
 cwist_gc_raw
 cwist_gc_rotate
 cwist_gc_shutdown
-cwist_graphql_serve
 cwist_grpc_call_await_headers
 cwist_grpc_call_cancel
 cwist_grpc_call_committed
