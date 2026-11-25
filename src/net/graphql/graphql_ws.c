@@ -37,6 +37,7 @@
 #include <unistd.h>
 
 #include "../websocket/ws_async_internal.h"
+#include "../../core/utils/json_internal.h"
 
 /* graphql-ws close codes (https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md). */
 #define GQL_WS_CLOSE_BAD_REQUEST 4400
@@ -884,6 +885,13 @@ static void gql_ws_on_message(cwist_websocket_async *ws, cwist_ws_frame *frame, 
         return;
     }
     if (frame->opcode != CWIST_WS_FRAME_TEXT) {
+        cwist_websocket_frame_destroy(frame);
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
+        return;
+    }
+    if (frame->payload_len > 0 &&
+        (strlen((const char *)frame->payload) != frame->payload_len ||
+         cwist_json_has_nul_escape((const char *)frame->payload))) {
         cwist_websocket_frame_destroy(frame);
         cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
         return;
