@@ -4238,6 +4238,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
 
             case CWIST_HTTP2_FRAME_GOAWAY: {
+                if (stream_id != 0) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    connected = false;
+                    break;
+                }
                 h2_drain_peer_goaway(conn);
                 connected = false;
                 break;
