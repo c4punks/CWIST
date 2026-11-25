@@ -199,10 +199,11 @@ static int redis_recv_line(cwist_redis_t *r, char *line, size_t line_len) {
                 memmove(r->recv_buf, r->recv_buf + 1, r->recv_len - 1);
                 r->recv_len--;
                 if (c == '\n') {
-                    if (i > 0 && line[i - 1] == '\r') i--;
-                    line[i] = '\0';
+                    if (i == 0 || line[i - 1] != '\r') return -1;
+                    line[--i] = '\0';
                     return 0;
                 }
+                if (i > 0 && line[i - 1] == '\r') return -1;
                 line[i++] = c;
             }
             if (i >= line_len - 1) return -1;
@@ -524,9 +525,8 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
                        : (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
 
         case ':': { /* integer */
-            char *end = NULL;
-            long long v = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0') goto fail;
+            long long v = 0;
+            if (!redis_parse_ll(line + 1, strlen(line + 1), &v)) goto fail;
             node->str = cwist_strdup(line + 1);
             if (!node->str) goto fail;
             node->len = strlen(line + 1);
@@ -535,9 +535,8 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
         }
 
         case '$': { /* bulk string */
-            char *end = NULL;
-            long long blen = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0') goto fail;
+            long long blen = 0;
+            if (!redis_parse_ll(line + 1, strlen(line + 1), &blen)) goto fail;
             if (blen == -1) {
                 node->integer = -1;
                 return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
@@ -567,9 +566,8 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
 
         case '*': { /* array */
             if (depth >= CWIST_REDIS_MAX_REPLY_DEPTH) goto fail;
-            char *end = NULL;
-            long long count = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0' || count < -1 ||
+            long long count = 0;
+            if (!redis_parse_ll(line + 1, strlen(line + 1), &count) || count < -1 ||
                 count > CWIST_REDIS_MAX_REPLY_ELEMENTS)
                 goto fail;
             node->integer = count;
@@ -1097,30 +1095,38 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwi
         char line[CWIST_REDIS_LINE_MAX];
         if (redis_recv_line(r, line, sizeof(line)) != 0) break;
         if (line[0] != '*') continue;
-        char *arr_end = NULL;
-        long long arr_count = strtoll(line + 1, &arr_end, 10);
-        if (arr_end == line + 1 || *arr_end != '\0') continue;
-        if (arr_count < 3) continue;
+        long long arr_count = 0;
+        if (!redis_parse_ll(line + 1, strlen(line + 1), &arr_count) || arr_count < 3 ||
+            arr_count > CWIST_REDIS_MAX_REPLY_ELEMENTS)
+            continue;
 
         char *type = NULL;
-        if (read_reply(r, &type, NULL, NULL).error.err_i16 != 0) break;
-
         char *channel = NULL;
-        if (read_reply(r, &channel, NULL, NULL).error.err_i16 != 0) {
-            cwist_free(type);
-            break;
-        }
-
         char *message = NULL;
-        if (read_reply(r, &message, NULL, NULL).error.err_i16 != 0) {
+        bool read_failed = false;
+        for (long long i = 0; i < arr_count; i++) {
+            char *item = NULL;
+            if (read_reply(r, &item, NULL, NULL).error.err_i16 != 0) {
+                read_failed = true;
+                break;
+            }
+            if (i == 0)
+                type = item;
+            else if (i == 1)
+                channel = item;
+            else if (i == 2)
+                message = item;
+            else
+                cwist_free(item);
+        }
+        if (read_failed) {
             cwist_free(type);
             cwist_free(channel);
+            cwist_free(message);
             break;
         }
 
-        if (type && strcmp(type, "message") == 0) {
-            cb(channel, message, ctx);
-        }
+        if (type && channel && message && strcmp(type, "message") == 0) cb(channel, message, ctx);
         cwist_free(type);
         cwist_free(channel);
         cwist_free(message);

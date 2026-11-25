@@ -33,8 +33,8 @@ static int copy_attr_value(const char *line, const char *prefix, char *dst, size
  * @param info  Output structure; zeroed first, then filled from recognized lines.
  * @return 0 on success, -1 if a recognized value is over-limit or required ICE
  *         credentials are missing or empty.
- * @note If an attribute appears more than once, the last occurrence wins.
- *       Sets info->has_lite when "a=ice-lite" appears.
+ * @note The last occurrence within one scope wins. Session attributes are
+ *       defaults; attributes on the first data section override them.
  */
 int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
     if (!sdp || !info) return -1;
@@ -63,10 +63,12 @@ int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
                                strcmp(section->proto, "UDP/DTLS/SCTP") == 0 &&
                                strcmp(section->fmt, "webrtc-datachannel") == 0;
         } else if (strncmp(line, "a=ice-ufrag:", 12) == 0) {
-            if (copy_attr_value(line, "a=ice-ufrag:", info->ice_ufrag, sizeof(info->ice_ufrag)) < 0)
+            char *value = current >= 0 ? info->sections[current].ice_ufrag : info->ice_ufrag;
+            if (copy_attr_value(line, "a=ice-ufrag:", value, CWIST_WEBRTC_ICE_CREDENTIAL_CAP) < 0)
                 return -1;
         } else if (strncmp(line, "a=ice-pwd:", 10) == 0) {
-            if (copy_attr_value(line, "a=ice-pwd:", info->ice_pwd, sizeof(info->ice_pwd)) < 0)
+            char *value = current >= 0 ? info->sections[current].ice_pwd : info->ice_pwd;
+            if (copy_attr_value(line, "a=ice-pwd:", value, CWIST_WEBRTC_ICE_CREDENTIAL_CAP) < 0)
                 return -1;
         } else if (strncmp(line, "a=fingerprint:", 14) == 0) {
             const char *value = line + 14;
@@ -76,11 +78,13 @@ int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
             if ((size_t)(algorithm_end - value) == 7 && strncasecmp(value, "sha-256", 7) == 0) {
                 value = algorithm_end + 1;
                 while (*value == ' ' || *value == '\t') value++;
-                if (copy_attr_value(value, "", info->fingerprint, sizeof(info->fingerprint)) < 0)
-                    return -1;
+                char *fingerprint =
+                    current >= 0 ? info->sections[current].fingerprint : info->fingerprint;
+                if (copy_attr_value(value, "", fingerprint, 128) < 0) return -1;
             }
         } else if (strncmp(line, "a=setup:", 8) == 0) {
-            if (copy_attr_value(line, "a=setup:", info->setup, sizeof(info->setup)) < 0) return -1;
+            char *value = current >= 0 ? info->sections[current].setup : info->setup;
+            if (copy_attr_value(line, "a=setup:", value, 16) < 0) return -1;
         } else if (strncmp(line, "a=mid:", 6) == 0) {
             char mid[16];
             if (copy_attr_value(line, "a=mid:", mid, sizeof(mid)) < 0) return -1;
@@ -93,6 +97,17 @@ int cwist_sdp_parse(const char *sdp, size_t len, cwist_sdp_info *info) {
         } else if (strcmp(line, "a=ice-lite") == 0) {
             info->has_lite = 1;
         }
+    }
+    for (size_t i = 0; i < info->section_count; i++) {
+        const cwist_sdp_section *section = &info->sections[i];
+        if (!section->is_data) continue;
+        if (section->ice_ufrag[0])
+            memcpy(info->ice_ufrag, section->ice_ufrag, sizeof(info->ice_ufrag));
+        if (section->ice_pwd[0]) memcpy(info->ice_pwd, section->ice_pwd, sizeof(info->ice_pwd));
+        if (section->fingerprint[0])
+            memcpy(info->fingerprint, section->fingerprint, sizeof(info->fingerprint));
+        if (section->setup[0]) memcpy(info->setup, section->setup, sizeof(info->setup));
+        break;
     }
     if (info->ice_ufrag[0] == '\0' || info->ice_pwd[0] == '\0') return -1;
     return 0;

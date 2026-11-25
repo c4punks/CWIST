@@ -252,7 +252,18 @@ static void test_extract_boundary(void) {
     assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"" B) == NULL);
     assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"\"") == NULL);
     assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=") == NULL);
-    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"" B "\" garbage") == NULL);
+    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"" B "\" garbage") ==
+           NULL);
+
+    b = cwist_multipart_extract_boundary("multipart/form-data; boundary=\"a\\\\b\"");
+    assert(b && strcmp(b, "a\\b") == 0);
+    static const char escaped_body[] = "--a\\b\r\n"
+                                       "Content-Disposition: form-data; name=\"x\"\r\n\r\n"
+                                       "value\r\n--a\\b--\r\n";
+    cwist_multipart_result *r = cwist_multipart_parse(escaped_body, sizeof(escaped_body) - 1, b);
+    assert(r && find_field(r, "x") != NULL);
+    cwist_multipart_result_destroy(r);
+    free(b);
     printf("  Passed.\n");
 }
 

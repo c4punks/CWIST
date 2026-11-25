@@ -620,6 +620,11 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
 
     size_t current_len = sstring_content_len(str);
     size_t append_len = strlen(data);
+    if (current_len == SIZE_MAX || append_len > SIZE_MAX - current_len - 1) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
     size_t new_size = current_len + append_len;
 
     if (str->is_fixed) {
@@ -679,6 +684,11 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
 
     size_t current_len = sstring_content_len(str);
     size_t input_len = strlen(data);
+    if (current_len == SIZE_MAX || input_len > (SIZE_MAX - current_len - 1) / 6) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
     size_t new_size = current_len + (input_len * 6) + 1;
 
     if (str->is_fixed) {
@@ -758,7 +768,7 @@ cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstri
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
-    return cwist_sstring_append(str, from->data);
+    return cwist_sstring_append_len(str, from->data, sstring_content_len(from));
 }
 
 /**
@@ -842,7 +852,7 @@ cwist_error_t cwist_sstring_copy_sstring(cwist_sstring *origin, const cwist_sstr
     if (!from) {
         return cwist_sstring_assign(origin, NULL);
     }
-    return cwist_sstring_assign(origin, from->data);
+    return cwist_sstring_assign_len(origin, from->data, sstring_content_len(from));
 }
 
 /**
@@ -913,28 +923,20 @@ int cwist_sstring_compare(cwist_sstring *str, const char *compare_to) {
 cwist_sstring *cwist_sstring_substr(cwist_sstring *str, int start, int length) {
     if (!str || !str->data || start < 0 || length < 0) return NULL;
 
-    size_t current_len = strlen(str->data);
+    size_t current_len = sstring_content_len(str);
     if ((size_t)start >= current_len) return NULL;
 
-    // Adjust length if it goes beyond end
-    if ((size_t)length > current_len - (size_t)start) {
-        length = (int)(current_len - (size_t)start);
-    }
+    size_t out_len = (size_t)length;
+    if (out_len > current_len - (size_t)start) out_len = current_len - (size_t)start;
 
     cwist_sstring *sub = cwist_sstring_create();
     if (!sub) return NULL;
-
-    sub->data = (char *)cwist_alloc(length + 1);
-    if (!sub->data) {
+    cwist_error_t err = cwist_sstring_assign_len(sub, str->data + start, out_len);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
         cwist_sstring_destroy(sub);
         return NULL;
     }
-    sub->base = sub->data;
-    sub->capacity = length;
-    sub->size = length;
-
-    memcpy(sub->data, str->data + start, length);
-    sub->data[length] = '\0';
-
+    cwist_error_dispose(&err);
     return sub;
 }

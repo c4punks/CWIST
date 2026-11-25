@@ -32,6 +32,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 /* Largest name=value a browser keeps (RFC 6265 section 6.1 minimum, and the
  * limit Chrome and Firefox enforce). */
@@ -207,9 +208,19 @@ static char *generate_secret(size_t len) {
             cwist_free(secret);
             return NULL;
         }
-        ssize_t n = read(fd, buf, len);
+        size_t got = 0;
+        while (got < len) {
+            ssize_t n = read(fd, buf + got, len - got);
+            if (n > 0) {
+                got += (size_t)n;
+            } else if (n < 0 && errno == EINTR) {
+                continue;
+            } else {
+                break;
+            }
+        }
         close(fd);
-        if (n == (ssize_t)len) {
+        if (got == len) {
             static const char hex[] = "0123456789abcdef";
             for (size_t i = 0; i < len; i++) {
                 secret[i * 2] = hex[buf[i] >> 4];

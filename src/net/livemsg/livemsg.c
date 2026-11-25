@@ -10,6 +10,7 @@
 #include <cwist/net/websocket/websocket_async.h>
 
 #include "../../sys/app/app_route_internal.h"
+#include "../../core/utils/json_internal.h"
 #include "../websocket/ws_async_internal.h"
 
 #include <errno.h>
@@ -178,6 +179,12 @@ static void dispatch(cwist_livemsg_peer *peer, const uint8_t *data, size_t len) 
     cJSON *json = NULL;
     const void *msg = input;
     if (ctx->config.codec == CWIST_LIVEMSG_CODEC_JSON) {
+        if (cwist_json_has_nul_escape((const char *)input)) {
+#ifdef CWIST_WS
+            if (peer->ws) cwist_websocket_async_close_code(peer->ws, 1007);
+#endif
+            goto done;
+        }
         json = cJSON_ParseWithLengthOpts((const char *)input, len + 1, NULL, true);
         if (!json) {
 #ifdef CWIST_WS
