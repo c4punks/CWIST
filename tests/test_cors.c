@@ -6,6 +6,8 @@
 #include <stdbool.h>
 
 static bool next_called = false;
+
+#ifdef CWIST_TEST_WRAP
 static int fail_header = 0;
 static int fail_header_preflight = 0;
 
@@ -19,6 +21,7 @@ cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const 
     }
     return __real_cwist_http_header_add(head, key, value);
 }
+#endif
 
 void dummy_next(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
@@ -96,6 +99,7 @@ static void test_plain_options_reaches_application(void) {
     cwist_http_response_destroy(res);
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_cors_header_failure(void) {
     cwist_middleware_func cors = cwist_mw_cors();
 
@@ -131,12 +135,17 @@ static void test_cors_header_failure(void) {
     cwist_http_request_destroy(req);
     cwist_http_response_destroy(res);
 }
+#endif
 
 int main() {
     test_cors_options();
     test_cors_simple();
     test_plain_options_reaches_application();
+#ifdef CWIST_TEST_WRAP
     test_cors_header_failure();
+#else
+    printf("Skipped CORS header-failure test (linker has no --wrap).\n");
+#endif
     printf("All CORS tests passed!\n");
     return 0;
 }

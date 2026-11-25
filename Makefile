@@ -2121,7 +2121,7 @@ stress_test: $(LIB_NAME) tests/stress_test.c
 	./stress_test
 
 test_cors: $(LIB_NAME) tests/test_cors.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
 	./test_cors
 
 ifeq ($(CWIST_WS),1)
