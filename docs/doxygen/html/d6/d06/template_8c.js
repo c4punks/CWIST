@@ -1,7 +1,6 @@
 var template_8c =
 [
     [ "CWIST_TEMPLATE_MAX_DEPTH", "d6/d06/template_8c.html#af968837622b7205110fe9c5de074a885", null ],
-    [ "PATH_MAX", "d6/d06/template_8c.html#ae688d728e1acdfe5988c7db45d6f0166", null ],
     [ "TAG_DELIMS", "d6/d06/template_8c.html#a2390e87d3f317fa0ed10c808482c107a", null ],
     [ "TEMPLATE_NOINLINE", "d6/d06/template_8c.html#acab5ace3405dbbb905ad2c10565f5eb7", null ],
     [ "template_block_entry", "d6/d06/template_8c.html#a89eae9250c0c1b231739e32e64b88baa", null ],

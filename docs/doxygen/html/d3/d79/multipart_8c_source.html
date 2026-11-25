@@ -241,7 +241,7 @@ $(document).ready(function(){initNavTree('d3/d79/multipart_8c_source.html','../.
 <div class="line"><a id="l00135" name="l00135"></a><span class="lineno">  135</span>        *out = decoded;</div>
 <div class="line"><a id="l00136" name="l00136"></a><span class="lineno">  136</span>        <span class="keywordflow">return</span> 1;</div>
 <div class="line"><a id="l00137" name="l00137"></a><span class="lineno">  137</span> </div>
-<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>invalid:</div>
+<div class="line"><a id="l00138" name="l00138"></a><span class="lineno">  138</span>    invalid:</div>
 <div class="line"><a id="l00139" name="l00139"></a><span class="lineno">  139</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(decoded);</div>
 <div class="line"><a id="l00140" name="l00140"></a><span class="lineno">  140</span>        <span class="keywordflow">return</span> -1;</div>
 <div class="line"><a id="l00141" name="l00141"></a><span class="lineno">  141</span>    }</div>
@@ -447,32 +447,42 @@ $(document).ready(function(){initNavTree('d3/d79/multipart_8c_source.html','../.
 <div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>                <span class="keywordflow">while</span> (*p &amp;&amp; isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
 <div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *start = p;</div>
 <div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *value_end = NULL;</div>
-<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>                <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
-<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>                    start = ++p;</div>
-<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;&quot;&#39;</span>) p++;</div>
-<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>                    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;&quot;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>                    value_end = p++;</div>
-<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>                } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span> &amp;&amp; !isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
-<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>                    value_end = p;</div>
-<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>                }</div>
-<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>                <span class="keywordtype">size_t</span> len = (size_t)(value_end - start);</div>
-<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>                <span class="keywordflow">if</span> (len == 0) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>                <span class="keywordflow">while</span> (isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
-<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>                <span class="keywordflow">if</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>                <span class="keywordtype">char</span> *boundary = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(len + 1);</div>
-<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>                <span class="keywordflow">if</span> (boundary) {</div>
-<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>                    memcpy(boundary, start, len);</div>
-<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>                    boundary[len] = <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>                }</div>
-<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>                <span class="keywordflow">return</span> boundary;</div>
-<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>            }</div>
-<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>        }</div>
-<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>        p = mp_skip_param(p);</div>
-<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;;&#39;</span>) p++;</div>
-<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>    }</div>
-<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>    <span class="keywordflow">return</span> NULL;</div>
-<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>}</div>
+<div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span>                <span class="keywordtype">bool</span> quoted = *p == <span class="charliteral">&#39;&quot;&#39;</span>;</div>
+<div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span>                <span class="keywordflow">if</span> (quoted) {</div>
+<div class="line"><a id="l00408" name="l00408"></a><span class="lineno">  408</span>                    start = ++p;</div>
+<div class="line"><a id="l00409" name="l00409"></a><span class="lineno">  409</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
+<div class="line"><a id="l00410" name="l00410"></a><span class="lineno">  410</span>                        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\\&#39;</span>) {</div>
+<div class="line"><a id="l00411" name="l00411"></a><span class="lineno">  411</span>                            p++;</div>
+<div class="line"><a id="l00412" name="l00412"></a><span class="lineno">  412</span>                            <span class="keywordflow">if</span> (!*p) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00413" name="l00413"></a><span class="lineno">  413</span>                        }</div>
+<div class="line"><a id="l00414" name="l00414"></a><span class="lineno">  414</span>                        p++;</div>
+<div class="line"><a id="l00415" name="l00415"></a><span class="lineno">  415</span>                    }</div>
+<div class="line"><a id="l00416" name="l00416"></a><span class="lineno">  416</span>                    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;&quot;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00417" name="l00417"></a><span class="lineno">  417</span>                    value_end = p++;</div>
+<div class="line"><a id="l00418" name="l00418"></a><span class="lineno">  418</span>                } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00419" name="l00419"></a><span class="lineno">  419</span>                    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span> &amp;&amp; !isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
+<div class="line"><a id="l00420" name="l00420"></a><span class="lineno">  420</span>                    value_end = p;</div>
+<div class="line"><a id="l00421" name="l00421"></a><span class="lineno">  421</span>                }</div>
+<div class="line"><a id="l00422" name="l00422"></a><span class="lineno">  422</span>                <span class="keywordtype">size_t</span> len = (size_t)(value_end - start);</div>
+<div class="line"><a id="l00423" name="l00423"></a><span class="lineno">  423</span>                <span class="keywordflow">if</span> (len == 0) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00424" name="l00424"></a><span class="lineno">  424</span>                <span class="keywordflow">while</span> (isspace((<span class="keywordtype">unsigned</span> <span class="keywordtype">char</span>)*p)) p++;</div>
+<div class="line"><a id="l00425" name="l00425"></a><span class="lineno">  425</span>                <span class="keywordflow">if</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;;&#39;</span>) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00426" name="l00426"></a><span class="lineno">  426</span>                <span class="keywordtype">char</span> *boundary = (<span class="keywordtype">char</span> *)<a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(len + 1);</div>
+<div class="line"><a id="l00427" name="l00427"></a><span class="lineno">  427</span>                <span class="keywordflow">if</span> (!boundary) <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00428" name="l00428"></a><span class="lineno">  428</span>                <span class="keywordtype">size_t</span> out = 0;</div>
+<div class="line"><a id="l00429" name="l00429"></a><span class="lineno">  429</span>                <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> i = 0; i &lt; len; i++) {</div>
+<div class="line"><a id="l00430" name="l00430"></a><span class="lineno">  430</span>                    <span class="keywordflow">if</span> (quoted &amp;&amp; start[i] == <span class="charliteral">&#39;\\&#39;</span>) i++;</div>
+<div class="line"><a id="l00431" name="l00431"></a><span class="lineno">  431</span>                    boundary[out++] = start[i];</div>
+<div class="line"><a id="l00432" name="l00432"></a><span class="lineno">  432</span>                }</div>
+<div class="line"><a id="l00433" name="l00433"></a><span class="lineno">  433</span>                boundary[out] = <span class="charliteral">&#39;\0&#39;</span>;</div>
+<div class="line"><a id="l00434" name="l00434"></a><span class="lineno">  434</span>                <span class="keywordflow">return</span> boundary;</div>
+<div class="line"><a id="l00435" name="l00435"></a><span class="lineno">  435</span>            }</div>
+<div class="line"><a id="l00436" name="l00436"></a><span class="lineno">  436</span>        }</div>
+<div class="line"><a id="l00437" name="l00437"></a><span class="lineno">  437</span>        p = mp_skip_param(p);</div>
+<div class="line"><a id="l00438" name="l00438"></a><span class="lineno">  438</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;;&#39;</span>) p++;</div>
+<div class="line"><a id="l00439" name="l00439"></a><span class="lineno">  439</span>    }</div>
+<div class="line"><a id="l00440" name="l00440"></a><span class="lineno">  440</span>    <span class="keywordflow">return</span> NULL;</div>
+<div class="line"><a id="l00441" name="l00441"></a><span class="lineno">  441</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
