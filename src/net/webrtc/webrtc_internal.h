@@ -257,6 +257,10 @@ typedef struct {
     char proto[32];
     char fmt[32];
     char mid[16];
+    char ice_ufrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+    char ice_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+    char fingerprint[128];
+    char setup[16];
     int is_data;
 } cwist_sdp_section;
 

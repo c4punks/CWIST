@@ -75,6 +75,7 @@ static int recv_all(int fd, void *buf, size_t n) {
     char *p = (char *)buf;
     while (total < n) {
         ssize_t r = recv(fd, p + total, n - total, MSG_WAITALL);
+        if (r < 0 && errno == EINTR) continue;
         if (r <= 0) return -1;
         total += (size_t)r;
     }
@@ -329,8 +330,8 @@ typedef struct {
  * Iterates the text statement by statement (sqlite3_prepare_v2's tail
  * pointer), so multi-statement requests such as the MySQL-dialect
  * "INSERT ...; SELECT LAST_INSERT_ID() ..." behave like sqlite3_exec
- * did: rows from all statements merge into one array.  Column names for
- * the typed payload come from the last statement that produces columns.
+ * did: rows from all statements merge into one legacy array.  Typed rows
+ * and column names come from the last statement that produces columns.
  *
  * @return SQLITE_OK on success, otherwise the failing statement's code
  *         with @p errmsg set to a heap copy of sqlite3_errmsg().
@@ -347,12 +348,18 @@ static int socket_exec_all(sqlite3 *db, const char *sql, query_accumulator_t *ac
 
         int ncols = sqlite3_column_count(stmt);
         if (ncols > 0 && acc->columns) {
-            /* Re-shape the typed column list for this statement. */
-            cJSON_Delete(acc->columns);
-            acc->columns = cJSON_CreateArray();
-            if (!acc->columns) {
+            /* Keep the typed rows and columns from the same statement. */
+            cJSON *columns = cJSON_CreateArray();
+            cJSON *trows = cJSON_CreateArray();
+            if (!columns || !trows) {
+                cJSON_Delete(columns);
+                cJSON_Delete(trows);
                 rc = SQLITE_NOMEM;
             } else {
+                cJSON_Delete(acc->columns);
+                cJSON_Delete(acc->trows);
+                acc->columns = columns;
+                acc->trows = trows;
                 for (int i = 0; i < ncols; i++) {
                     const char *name = sqlite3_column_name(stmt, i);
                     cJSON *column = cJSON_CreateString(name ? name : "");

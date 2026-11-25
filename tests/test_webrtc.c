@@ -305,6 +305,51 @@ static void unit_checks(void) {
         assert(parsed.sin_port == htons(54321));
         assert(parsed.sin_addr.s_addr == htonl(0x7F000001));
 
+        uint8_t trailing_req[512];
+        memcpy(trailing_req, req, (size_t)len);
+        trailing_req[len] = 0x00;
+        trailing_req[len + 1] = 0x06;
+        trailing_req[len + 2] = 0x00;
+        trailing_req[len + 3] = 0x03;
+        memcpy(trailing_req + len + 4, "r:x", 3);
+        trailing_req[len + 7] = 0;
+        size_t trailing_req_len = (size_t)len + 8;
+        uint16_t trailing_body = (uint16_t)(trailing_req_len - 20);
+        trailing_req[2] = (uint8_t)(trailing_body >> 8);
+        trailing_req[3] = (uint8_t)trailing_body;
+        assert(cwist_ice_stun_validate_request(trailing_req, trailing_req_len,
+                                               "testpassword0123456789") == 1);
+        assert(cwist_ice_stun_get_remote_ufrag(trailing_req, trailing_req_len, rfrag,
+                                               sizeof(rfrag)) == 0);
+        assert(strcmp(rfrag, "lfrag") == 0);
+
+        uint8_t trailing_resp[512];
+        memcpy(trailing_resp, resp, (size_t)rlen);
+        trailing_resp[rlen] = 0x00;
+        trailing_resp[rlen + 1] = 0x20;
+        trailing_resp[rlen + 2] = 0x00;
+        trailing_resp[rlen + 3] = 0x08;
+        trailing_resp[rlen + 4] = 0x00;
+        trailing_resp[rlen + 5] = 0x01;
+        trailing_resp[rlen + 6] = 0x00;
+        trailing_resp[rlen + 7] = 0x00;
+        memset(trailing_resp + rlen + 8, 0, 4);
+        size_t trailing_resp_len = (size_t)rlen + 12;
+        trailing_body = (uint16_t)(trailing_resp_len - 20);
+        trailing_resp[2] = (uint8_t)(trailing_body >> 8);
+        trailing_resp[3] = (uint8_t)trailing_body;
+        memset(&parsed, 0, sizeof(parsed));
+        assert(cwist_ice_stun_parse_response(trailing_resp, trailing_resp_len, txid,
+                                             "testpassword0123456789", &parsed) == 1);
+        assert(parsed.sin_port == htons(54321));
+        assert(parsed.sin_addr.s_addr == htonl(0x7F000001));
+
+        uint8_t *oversized = calloc(1, 65560);
+        assert(oversized);
+        assert(cwist_ice_stun_sign_request(oversized, 65560, 20 + 65508,
+                                           "testpassword0123456789") == -1);
+        free(oversized);
+
         uint8_t truncated_req[19] = {0};
         assert(cwist_ice_stun_build_response(resp, sizeof(resp), truncated_req,
                                              sizeof(truncated_req), &mapped,
@@ -414,30 +459,43 @@ static void unit_checks(void) {
 
     /* Multi-section offers preserve m-line order and negotiate one data channel. */
     {
-        static const char offer[] =
-            "v=0\r\n"
-            "o=- 1234 2 IN IP4 192.0.2.1\r\n"
-            "s=-\r\n"
-            "t=0 0\r\n"
-            "a=group:BUNDLE audio video data\r\n"
-            "m=audio 49170 RTP/AVP 0\r\n"
-            "a=mid:audio\r\n"
-            "a=ice-ufrag:remoteu\r\n"
-            "a=ice-pwd:remotepassword\r\n"
-            "a=fingerprint:sha-512 AA\r\n"
-            "a=fingerprint:SHA-256 BB\r\n"
-            "m=video 51372 RTP/AVP 99\r\n"
-            "a=mid:video\r\n"
-            "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
-            "a=mid:data\r\n"
-            "a=setup:passive\r\n";
+        static const char offer[] = "v=0\r\n"
+                                    "o=- 1234 2 IN IP4 192.0.2.1\r\n"
+                                    "s=-\r\n"
+                                    "t=0 0\r\n"
+                                    "a=group:BUNDLE audio video data\r\n"
+                                    "a=ice-ufrag:sessionu\r\n"
+                                    "a=ice-pwd:sessionpassword\r\n"
+                                    "a=fingerprint:sha-256 DD\r\n"
+                                    "m=audio 49170 RTP/AVP 0\r\n"
+                                    "a=mid:audio\r\n"
+                                    "a=ice-ufrag:remoteu\r\n"
+                                    "a=ice-pwd:remotepassword\r\n"
+                                    "a=fingerprint:sha-512 AA\r\n"
+                                    "a=fingerprint:SHA-256 BB\r\n"
+                                    "m=video 51372 RTP/AVP 99\r\n"
+                                    "a=mid:video\r\n"
+                                    "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+                                    "a=mid:data\r\n"
+                                    "a=setup:passive\r\n"
+                                    "m=audio 49171 RTP/AVP 0\r\n"
+                                    "a=mid:late\r\n"
+                                    "a=ice-ufrag:evilu\r\n"
+                                    "a=ice-pwd:evilpassword\r\n"
+                                    "a=fingerprint:sha-256 EVIL\r\n"
+                                    "a=setup:active\r\n";
         cwist_sdp_info info;
         assert(cwist_sdp_parse(offer, sizeof(offer) - 1, &info) == 0);
-        assert(info.section_count == 3);
+        assert(info.section_count == 4);
         assert(strcmp(info.sections[0].mid, "audio") == 0);
         assert(strcmp(info.sections[1].mid, "video") == 0);
         assert(strcmp(info.sections[2].mid, "data") == 0);
-        assert(strcmp(info.fingerprint, "BB") == 0);
+        assert(strcmp(info.sections[3].mid, "late") == 0);
+        assert(strcmp(info.ice_ufrag, "sessionu") == 0);
+        assert(strcmp(info.ice_pwd, "sessionpassword") == 0);
+        assert(strcmp(info.fingerprint, "DD") == 0);
+        assert(strcmp(info.setup, "passive") == 0);
+        assert(strcmp(info.sections[3].ice_ufrag, "evilu") == 0);
 
         char answer[4096];
         assert(cwist_sdp_write_answer_for_offer(answer, sizeof(answer), "CC", "localu",

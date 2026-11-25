@@ -1,4 +1,5 @@
 #include "cwist/core/template/template.h"
+#include "../../sys/file_confine.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/sys/platform.h>
 #include <stdio.h>
@@ -146,9 +147,9 @@ static template_tag_kind classify_command(const char *cmd, size_t len) {
         const char *name;
         template_tag_kind kind;
     } commands[] = {
-        {"if", TAG_IF},   {"else", TAG_ELSE},     {"endif", TAG_ENDIF},
-        {"for", TAG_FOR}, {"endfor", TAG_ENDFOR}, {"include", TAG_INCLUDE},
-        {"extends", TAG_EXTENDS}, {"block", TAG_BLOCK}, {"endblock", TAG_ENDBLOCK},
+        {"if", TAG_IF},           {"else", TAG_ELSE},     {"endif", TAG_ENDIF},
+        {"for", TAG_FOR},         {"endfor", TAG_ENDFOR}, {"include", TAG_INCLUDE},
+        {"extends", TAG_EXTENDS}, {"block", TAG_BLOCK},   {"endblock", TAG_ENDBLOCK},
     };
     for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
         if (strlen(commands[i].name) == len && strncmp(cmd, commands[i].name, len) == 0)
@@ -195,7 +196,8 @@ static void template_report_error(const template_source *source, const char *pos
 static const char *find_block_end(const char *start, const char *opening,
                                   template_tag_kind open_kind, const char **else_pos,
                                   const template_source *source) {
-    const template_tag_kind close_kind = open_kind == TAG_IF ? TAG_ENDIF : (open_kind == TAG_FOR ? TAG_ENDFOR : TAG_ENDBLOCK);
+    const template_tag_kind close_kind =
+        open_kind == TAG_IF ? TAG_ENDIF : (open_kind == TAG_FOR ? TAG_ENDFOR : TAG_ENDBLOCK);
     int nested = 0;
     const char *scan = start;
     const char *end;
@@ -483,7 +485,7 @@ static const cJSON *get_value_from_context(const cJSON *context, const char *key
 }
 
 static const template_block_entry *find_block_override(const template_block_entry *blocks,
-                                                        const char *name) {
+                                                       const char *name) {
     for (const template_block_entry *b = blocks; b; b = b->next) {
         if (strcmp(b->name, name) == 0) return b;
     }
@@ -505,7 +507,10 @@ static template_block_entry *extract_child_blocks(const char *template_str,
     template_block_entry *head = NULL;
     const char *p = template_str;
     while (*p) {
-        if (p[0] != '{') { p++; continue; }
+        if (p[0] != '{') {
+            p++;
+            continue;
+        }
         if (p[1] == '#') {
             const char *end = strstr(p + 2, "#}");
             if (!end) break;
@@ -540,7 +545,8 @@ static template_block_entry *extract_child_blocks(const char *template_str,
                         return NULL;
                     }
                     size_t blen = (size_t)(block_end - block_body_start);
-                    template_block_entry *entry = (template_block_entry *)cwist_alloc(sizeof(*entry));
+                    template_block_entry *entry =
+                        (template_block_entry *)cwist_alloc(sizeof(*entry));
                     if (!entry) {
                         free_block_list(head);
                         return NULL;
@@ -630,18 +636,23 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                 if (cmd && classify_command(cmd, strlen(cmd)) == TAG_EXTENDS) {
                     char *parent_path = strtok_r(NULL, TAG_DELIMS, &sp);
                     if (parent_path) {
-                        while (*parent_path == ' ' || *parent_path == '\t' || *parent_path == '\n') parent_path++;
+                        while (*parent_path == ' ' || *parent_path == '\t' || *parent_path == '\n')
+                            parent_path++;
                         char *end = parent_path + strlen(parent_path);
-                        while (end > parent_path && (end[-1] == ' ' || end[-1] == '\t' ||
-                                                      end[-1] == '\n' || end[-1] == '"' || end[-1] == '\''))
+                        while (end > parent_path &&
+                               (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\n' ||
+                                end[-1] == '"' || end[-1] == '\''))
                             *--end = '\0';
                         if (parent_path[0] == '"' || parent_path[0] == '\'') parent_path++;
 
                         char resolved[4096];
-                        resolve_include_path(source->base_dir, parent_path, resolved, sizeof(resolved));
+                        resolve_include_path(source->base_dir, parent_path, resolved,
+                                             sizeof(resolved));
 
-                        template_block_entry *child_blocks = extract_child_blocks(tag_end + 2, source);
-                        template_block_entry *inherited_tail = (template_block_entry *)source->blocks;
+                        template_block_entry *child_blocks =
+                            extract_child_blocks(tag_end + 2, source);
+                        template_block_entry *inherited_tail =
+                            (template_block_entry *)source->blocks;
                         while (inherited_tail && inherited_tail->next)
                             inherited_tail = inherited_tail->next;
                         template_source parent_source = *source;
@@ -649,7 +660,8 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         parent_source.extends_allowed = true;
                         if (inherited_tail) inherited_tail->next = child_blocks;
 
-                        cwist_sstring *res = render_file_internal(resolved, context, depth + 1, &parent_source, scan);
+                        cwist_sstring *res = render_file_internal(resolved, context, depth + 1,
+                                                                  &parent_source, scan);
                         if (inherited_tail) inherited_tail->next = NULL;
                         free_block_list(child_blocks);
                         cwist_sstring_destroy(output);
@@ -845,28 +857,28 @@ static cwist_sstring *render_internal(const char **template_str, const cJSON *co
                         const char *block_end = find_block_end(p, opening, TAG_BLOCK, NULL, source);
                         if (!block_end) goto fail;
 
-                        const template_block_entry *override = bname ? find_block_override(source->blocks, bname) : NULL;
+                        const template_block_entry *override =
+                            bname ? find_block_override(source->blocks, bname) : NULL;
                         if (override && override->content) {
                             if (depth >= CWIST_TEMPLATE_MAX_DEPTH) {
                                 template_report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
                                 goto fail;
                             }
-                            if (!append_block(output, override->content, context, depth + 1, source))
+                            if (!append_block(output, override->content, context, depth + 1,
+                                              source))
                                 goto fail;
                         } else {
                             if (depth >= CWIST_TEMPLATE_MAX_DEPTH) {
                                 template_report_error(source, opening, CWIST_TEMPLATE_ERROR_DEPTH);
                                 goto fail;
                             }
-                            if (!append_block(output, p, context, depth + 1, source))
-                                goto fail;
+                            if (!append_block(output, p, context, depth + 1, source)) goto fail;
                         }
                         p = strstr(block_end, "%}") + 2;
                         break;
                     }
 
-                    case TAG_EXTENDS:
-                        break;
+                    case TAG_EXTENDS: break;
 
                     case TAG_ELSE:
                     case TAG_ENDIF:
@@ -978,16 +990,20 @@ static TEMPLATE_NOINLINE FILE *open_confined(const char *root, const char *path,
         *code = CWIST_TEMPLATE_ERROR_IO;
         return NULL;
     }
-    size_t root_len = strlen(root);
-    bool inside = root_len == 1 || /* the root is "/" */
-                  (strncmp(canonical, root, root_len) == 0 &&
-                   (canonical[root_len] == '/' || canonical[root_len] == '\0'));
-    if (!inside) {
+    if (!cwist_file_path_is_inside(canonical, root)) {
         *code = CWIST_TEMPLATE_ERROR_FORBIDDEN;
         return NULL;
     }
-    FILE *f = fopen(canonical, "rb");
-    if (!f) *code = CWIST_TEMPLATE_ERROR_IO;
+    int fd = cwist_file_open_confined(root, canonical);
+    if (fd < 0) {
+        *code = CWIST_TEMPLATE_ERROR_FORBIDDEN;
+        return NULL;
+    }
+    FILE *f = fdopen(fd, "rb");
+    if (!f) {
+        close(fd);
+        *code = CWIST_TEMPLATE_ERROR_IO;
+    }
     return f;
 #endif
 }
@@ -1029,7 +1045,7 @@ static cwist_sstring *render_file_internal(const char *file_path, const cJSON *c
     char dir_buf[4096];
     path_dirname(file_path, dir_buf, sizeof(dir_buf));
 
-    const template_source source = {template_str, file_path, dir_buf, parent->include_root,
+    const template_source source = {template_str,  file_path,      dir_buf, parent->include_root,
                                     parent->error, parent->blocks, true};
     const char *p = template_str;
     cwist_sstring *rendered = render_internal(&p, context, depth, &source);

@@ -5,6 +5,7 @@
 
 #include <cwist/core/html/css_composer.h>
 #include <cwist/core/mem/alloc.h>
+#include "../utils/number_internal.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +76,9 @@ static float hue2rgb(float p, float q, float t) {
  */
 cwist_color_rgb cwist_color_hsl_to_rgb(cwist_color_hsl hsl) {
     cwist_color_rgb rgb = {0, 0, 0};
+    if (!cwist_number_double_is_finite(hsl.h) || !cwist_number_double_is_finite(hsl.s) ||
+        !cwist_number_double_is_finite(hsl.l))
+        return rgb;
     /* Wrap the hue into [0, 360): hue2rgb() only folds one turn. */
     float h = fmodf(hsl.h, 360.0f) / 360.0f;
     if (h < 0.0f) h += 1.0f;
@@ -641,41 +645,41 @@ cwist_sstring *cwist_css_minify(const char *css) {
             verbatim_end = o;
             i = stop;
             continue;
-    }
-    if (css_starts_url(css + i) && (o == 0 || !css_is_word(out[o - 1]))) {
-        size_t j = i + 4;
-        while (j < n && css_is_space(css[j])) j++;
-        if (j < n && css[j] != '"' && css[j] != '\'') {
-                /* Unquoted url(): copy the whole argument as written. */
-            const char *close = strchr(css + j, ')');
-            size_t stop = close ? (size_t)(close - css) + 1 : n;
-            memcpy(out + o, css + i, stop - i);
-            o += stop - i;
-            verbatim_end = o;
-            i = stop;
-            continue;
         }
+        if (css_starts_url(css + i) && (o == 0 || !css_is_word(out[o - 1]))) {
+            size_t j = i + 4;
+            while (j < n && css_is_space(css[j])) j++;
+            if (j < n && css[j] != '"' && css[j] != '\'') {
+                /* Unquoted url(): copy the whole argument as written. */
+                const char *close = strchr(css + j, ')');
+                size_t stop = close ? (size_t)(close - css) + 1 : n;
+                memcpy(out + o, css + i, stop - i);
+                o += stop - i;
+                verbatim_end = o;
+                i = stop;
+                continue;
+            }
+        }
+        if (c == '}' && o > 0 && o != verbatim_end && out[o - 1] == ';') o--;
+
+        out[o++] = c;
+        i++;
     }
-    if (c == '}' && o > 0 && o != verbatim_end && out[o - 1] == ';') o--;
+    out[o] = '\0';
 
-    out[o++] = c;
-    i++;
-}
-out[o] = '\0';
-
-cwist_sstring *result = cwist_sstring_create();
-bool ok = result != NULL;
-if (ok) {
-    cwist_error_t err = cwist_sstring_assign_len(result, out, o);
-    ok = cwist_error_is_ok(&err);
-    cwist_error_dispose(&err);
-}
-cwist_free(out);
-if (!ok) {
-    if (result) cwist_sstring_destroy(result);
-    return NULL;
-}
-return result;
+    cwist_sstring *result = cwist_sstring_create();
+    bool ok = result != NULL;
+    if (ok) {
+        cwist_error_t err = cwist_sstring_assign_len(result, out, o);
+        ok = cwist_error_is_ok(&err);
+        cwist_error_dispose(&err);
+    }
+    cwist_free(out);
+    if (!ok) {
+        if (result) cwist_sstring_destroy(result);
+        return NULL;
+    }
+    return result;
 }
 
 /**

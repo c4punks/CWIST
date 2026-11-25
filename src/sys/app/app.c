@@ -10,6 +10,7 @@
 #include "worker_affinity.h"
 #endif
 #include "assets_internal.h"
+#include "../file_confine.h"
 #include "routes_internal.h"
 #include "app_route_internal.h"
 /* Application headers (external) */
@@ -216,8 +217,11 @@ static cwist_file_t *cwist_mem_claim_entry(cwist_fix_server_mem *mem) {
  * @return true when the payload was loaded and registered successfully.
  */
 static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_path, size_t size,
-                                     void **data_out, ttak_mem_node_t **node_out) {
-    if (!mem || !fs_path || !data_out || !node_out) return false;
+                                     FILE *opened, void **data_out, ttak_mem_node_t **node_out) {
+    if (!mem || !fs_path || !data_out || !node_out) {
+        if (opened) fclose(opened);
+        return false;
+    }
 
     void *buffer =
         ttak_mem_alloc_safe(size ? size : 1, __TTAK_UNSAFE_MEM_FOREVER__, cwist_app_mem_now(), true,
@@ -225,10 +229,11 @@ static bool cwist_mem_create_payload(cwist_fix_server_mem *mem, const char *fs_p
     if (!buffer) {
         fprintf(stderr, "[StaticMem] Failed to allocate %zu bytes via libttak for %s\n", size,
                 fs_path);
+        if (opened) fclose(opened);
         return false;
     }
 
-    FILE *f = fopen(fs_path, "rb");
+    FILE *f = opened ? opened : fopen(fs_path, "rb");
     if (!f) {
         fprintf(stderr, "[StaticMem] Failed to open %s\n", fs_path);
         ttak_mem_free(buffer);
@@ -313,24 +318,30 @@ static bool cwist_mem_attach_entry(cwist_fix_server_mem *mem, cwist_file_t *entr
  * @param mem Static-file memory manager.
  * @param fs_path Filesystem path to cache.
  * @param st Stat information describing the file.
+ * @param opened Optional already-confined stream; consumed on every path.
  * @return true when the file was admitted to the cache.
  */
 static bool cwist_mem_register_file(cwist_fix_server_mem *mem, const char *fs_path,
-                                    const struct stat *st) {
-    if (!mem || !fs_path || !st) return false;
+                                    const struct stat *st, FILE *opened) {
+    if (!mem || !fs_path || !st) {
+        if (opened) fclose(opened);
+        return false;
+    }
     if (!cwist_mem_has_capacity(mem, st->st_size, 0)) {
         fprintf(stderr, "[StaticMem] Skipping %s (size %zu exceeds capacity)\n", fs_path,
                 st->st_size);
+        if (opened) fclose(opened);
         return false;
     }
     cwist_file_t *entry = cwist_mem_claim_entry(mem);
     if (!entry) {
         fprintf(stderr, "[StaticMem] Failed to allocate metadata entry for %s\n", fs_path);
+        if (opened) fclose(opened);
         return false;
     }
     void *data = NULL;
     ttak_mem_node_t *node = NULL;
-    if (!cwist_mem_create_payload(mem, fs_path, st->st_size, &data, &node)) {
+    if (!cwist_mem_create_payload(mem, fs_path, st->st_size, opened, &data, &node)) {
         mem->file_count--;
         return false;
     }
@@ -351,16 +362,39 @@ static bool cwist_mem_register_file(cwist_fix_server_mem *mem, const char *fs_pa
 static bool cwist_mem_refresh_file(cwist_fix_server_mem *mem, cwist_file_t *entry,
                                    const struct stat *st) {
     if (!mem || !entry || !st) return false;
+    char root[PATH_MAX];
+    int root_len = snprintf(root, sizeof(root), "%s", entry->fs_path);
+    char *slash = root_len > 0 ? strrchr(root, '/') : NULL;
+    if (root_len < 0 || root_len >= (int)sizeof(root) || !slash) return false;
+    if (slash == root) {
+        slash[1] = '\0';
+    } else {
+        *slash = '\0';
+    }
+    int fd = cwist_file_open_confined(root, entry->fs_path);
+    if (fd < 0) return false;
+    struct stat verified;
+    if (fstat(fd, &verified) != 0 || !S_ISREG(verified.st_mode)) {
+        close(fd);
+        return false;
+    }
+    FILE *opened = fdopen(fd, "rb");
+    if (!opened) {
+        close(fd);
+        return false;
+    }
+    st = &verified;
     size_t reclaimable = entry->size;
     if (!cwist_mem_has_capacity(mem, st->st_size, reclaimable)) {
         fprintf(stderr, "[StaticMem] OOM reloading %s (%zu bytes)\n", entry->fs_path,
                 (size_t)st->st_size);
+        fclose(opened);
         return false;
     }
 
     void *data = NULL;
     ttak_mem_node_t *node = NULL;
-    if (!cwist_mem_create_payload(mem, entry->fs_path, st->st_size, &data, &node)) {
+    if (!cwist_mem_create_payload(mem, entry->fs_path, st->st_size, opened, &data, &node)) {
         return false;
     }
 
@@ -871,8 +905,16 @@ static void cwist_scan_recursive(const char *fs_root, size_t *total_size, cwist_
             if (dry_run) {
                 if (total_size) *total_size += st.st_size;
             } else if (mem) {
-                if (!cwist_mem_register_file(mem, full_path, &st)) {
-                    fprintf(stderr, "[StaticMem] Failed to load %s\n", full_path);
+                char canonical[PATH_MAX];
+                if (!realpath(full_path, canonical)) continue;
+                int fd = cwist_file_open_confined(fs_root, canonical);
+                FILE *opened = NULL;
+                if (fd >= 0) {
+                    if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)) opened = fdopen(fd, "rb");
+                    if (!opened) close(fd);
+                }
+                if (opened && !cwist_mem_register_file(mem, canonical, &st, opened)) {
+                    fprintf(stderr, "[StaticMem] Failed to load %s\n", canonical);
                 }
             }
         }
@@ -1119,11 +1161,15 @@ static void cwist_static_handler(cwist_http_request *req, cwist_http_response *r
     cwist_file_t *file = cwist_mem_get_file(mem, canonical);
     if (!file) {
         /* The startup scan only saw files that existed then; load a file
-         * added to the static root later on first request. canonical was
-         * already confined to fs_root above. */
+         * added to the static root later through its validated descriptor. */
         struct stat st;
-        if (stat(canonical, &st) == 0 && S_ISREG(st.st_mode) &&
-            cwist_mem_register_file(mem, canonical, &st)) {
+        int fd = cwist_file_open_confined(info->mapping->fs_root, canonical);
+        FILE *opened = NULL;
+        if (fd >= 0) {
+            if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode)) opened = fdopen(fd, "rb");
+            if (!opened) close(fd);
+        }
+        if (opened && cwist_mem_register_file(mem, canonical, &st, opened)) {
             file = cwist_mem_get_file(mem, canonical);
         }
     }
@@ -3074,8 +3120,8 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
 
     bool allowed[CWIST_HTTP_UNKNOWN] = {0};
     for (int method = 0; method < CWIST_HTTP_UNKNOWN; method++) {
-        allowed[method] = cwist_route_table_path_allows(
-            app->router, path, (cwist_http_method_t)method);
+        allowed[method] =
+            cwist_route_table_path_allows(app->router, path, (cwist_http_method_t)method);
     }
     if (allowed[CWIST_HTTP_GET]) allowed[CWIST_HTTP_HEAD] = true;
     char allow[128] = {0};
@@ -3099,7 +3145,8 @@ static void internal_route_handler(cwist_app *app, cwist_http_request *req,
     if (allow_len) {
         res->status_code = CWIST_HTTP_METHOD_NOT_ALLOWED;
         cwist_http_header_add(&res->headers, "Allow", allow);
-        cwist_error_handler_func eh = cwist_app_find_error_handler(app, CWIST_HTTP_METHOD_NOT_ALLOWED);
+        cwist_error_handler_func eh =
+            cwist_app_find_error_handler(app, CWIST_HTTP_METHOD_NOT_ALLOWED);
         if (eh) {
             eh(req, res, CWIST_HTTP_METHOD_NOT_ALLOWED);
         } else {

@@ -446,6 +446,15 @@ static void test_json_server(void) {
     assert(cJSON_IsNumber(value) && value->valueint == 42);
     cJSON_Delete(root);
     frame_free(&response);
+
+    static const char escaped[] = "{\"value\":\"a\\\\b\"}";
+    ws_write(fd, CWIST_WS_FRAME_TEXT, escaped, sizeof(escaped) - 1);
+    response = ws_read(fd);
+    root = cJSON_ParseWithLength((char *)response.payload, response.len);
+    cJSON *string_value = root ? cJSON_GetObjectItem(root, "value") : NULL;
+    assert(cJSON_IsString(string_value) && strcmp(string_value->valuestring, "a\\b") == 0);
+    cJSON_Delete(root);
+    frame_free(&response);
     close(fd);
 
     fd = ws_connect((uint16_t)json_port, "/json");
@@ -453,6 +462,17 @@ static void test_json_server(void) {
     frame_free(&ignored);
     ws_write(fd, CWIST_WS_FRAME_TEXT, "{bad", 4);
     client_frame close_frame = ws_read(fd);
+    assert(close_frame.opcode == CWIST_WS_FRAME_CLOSE && close_frame.len == 2);
+    assert(close_frame.payload[0] == 0x03 && close_frame.payload[1] == 0xef);
+    frame_free(&close_frame);
+    close(fd);
+
+    fd = ws_connect((uint16_t)json_port, "/json");
+    ignored = ws_read(fd);
+    frame_free(&ignored);
+    static const char nul_message[] = "{\"value\":\"prefix\\u0000suffix\"}";
+    ws_write(fd, CWIST_WS_FRAME_TEXT, nul_message, sizeof(nul_message) - 1);
+    close_frame = ws_read(fd);
     assert(close_frame.opcode == CWIST_WS_FRAME_CLOSE && close_frame.len == 2);
     assert(close_frame.payload[0] == 0x03 && close_frame.payload[1] == 0xef);
     frame_free(&close_frame);

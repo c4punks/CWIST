@@ -11,8 +11,11 @@
 #include <cwist/sys/app/app.h>
 #include <cjson/cJSON.h>
 #include <assert.h>
+#include <arpa/inet.h>
+#include <errno.h>
 #include <math.h>
 #include <signal.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,8 +28,35 @@ static int rc(cwist_error_t e) {
     return e.error.err_i16;
 }
 
+static _Atomic int inject_recv_eintr;
+ssize_t __real_recv(int fd, void *buf, size_t len, int flags);
+ssize_t __wrap_recv(int fd, void *buf, size_t len, int flags) {
+    if (atomic_exchange(&inject_recv_eintr, 0)) {
+        errno = EINTR;
+        return -1;
+    }
+    return __real_recv(fd, buf, len, flags);
+}
+
 static cwist_orm_t *open_memdb(void) {
     int sock = cwist_db_transfer_sqlite_to_socket(":memory:");
+    assert(sock >= 0);
+    cwist_orm_t *orm = cwist_orm_open_socket(sock);
+    assert(orm);
+    return orm;
+}
+
+static char shared_db_path[160];
+static int shared_db_generation;
+
+static void next_shared_db(void) {
+    snprintf(shared_db_path, sizeof(shared_db_path), "/tmp/cwist-orm-test-%d-%d.db", getpid(),
+             shared_db_generation++);
+}
+
+static cwist_orm_t *open_shared_memdb(void) {
+    if (!shared_db_path[0]) next_shared_db();
+    int sock = cwist_db_transfer_sqlite_to_socket(shared_db_path);
     assert(sock >= 0);
     cwist_orm_t *orm = cwist_orm_open_socket(sock);
     assert(orm);
@@ -512,6 +542,126 @@ static void test_closed_peer_does_not_raise_sigpipe(void) {
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 
+static void test_commit_scope_and_interrupted_recv(void) {
+    cwist_orm_immediate_commit(true);
+    cwist_orm_t *writer = open_shared_memdb();
+    cwist_orm_t *reader = NULL;
+    cwist_orm_immediate_commit(false);
+    assert(rc(cwist_orm_exec(writer, "CREATE TABLE commits(v INTEGER);")) == 0);
+    assert(rc(cwist_orm_exec(writer, "BEGIN;")) == 0);
+    assert(rc(cwist_orm_exec(writer, "INSERT INTO commits VALUES (1);")) == 0);
+    assert(rc(cwist_orm_exec(writer, "INSERT INTO commits VALUES (2);")) == 0);
+    reader = open_shared_memdb();
+    cJSON *rows = NULL;
+    assert(rc(cwist_orm_query(reader, "SELECT COUNT(*) AS n FROM commits;", &rows)) == 0);
+    assert(cJSON_GetObjectItem(cJSON_GetArrayItem(rows, 0), "n")->valueint == 2);
+    cJSON_Delete(rows);
+    rows = NULL;
+
+    assert(rc(cwist_orm_exec(writer, "BEGIN;")) == 0);
+    assert(rc(cwist_orm_exec(writer, "INSERT INTO commits VALUES (99); ROLLBACK;")) ==
+           CWIST_ERROR_PROTOCOL);
+    inject_recv_eintr = 1;
+    assert(rc(cwist_orm_query(writer, "SELECT 1 AS n;", &rows)) == 0);
+    cJSON_Delete(rows);
+    cwist_orm_close_socket(writer);
+    cwist_orm_close_socket(reader);
+    next_shared_db();
+
+    cwist_orm_t *uncommitted = open_shared_memdb();
+    cwist_orm_immediate_commit(true);
+    assert(rc(cwist_orm_exec(uncommitted, "CREATE TABLE deferred(v INTEGER);")) == 0);
+    reader = open_shared_memdb();
+    assert(rc(cwist_orm_exec(uncommitted, "BEGIN;")) == 0);
+    assert(rc(cwist_orm_exec(uncommitted, "INSERT INTO deferred VALUES (1);")) == 0);
+    assert(rc(cwist_orm_query(reader, "SELECT COUNT(*) AS n FROM deferred;", &rows)) == 0);
+    assert(cJSON_GetObjectItem(cJSON_GetArrayItem(rows, 0), "n")->valueint == 0);
+    cJSON_Delete(rows);
+    cwist_orm_close_socket(uncommitted);
+    cwist_orm_close_socket(reader);
+    cwist_orm_immediate_commit(false);
+}
+
+static void test_numeric_ranges(void) {
+    cwist_orm_t *orm = open_memdb();
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE ranges(v REAL);")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO ranges VALUES (1e100), (-1e100), (1.5);")) == 0);
+    int i = 7;
+    long long ll = 7;
+    assert(rc(cwist_orm_select_one_int(orm, "ranges", "v", "v = 1e100", &i)) ==
+               CWIST_ERROR_PROTOCOL &&
+           i == 7);
+    assert(rc(cwist_orm_select_one_llong(orm, "ranges", "v", "v = -1e100", &ll)) ==
+               CWIST_ERROR_PROTOCOL &&
+           ll == 7);
+    assert(rc(cwist_orm_select_one_int(orm, "ranges", "v", "v = 1.5", &i)) == CWIST_ERROR_PROTOCOL);
+    cwist_orm_close_socket(orm);
+}
+
+static void test_typed_multi_statement(void) {
+    cwist_orm_t *orm = open_memdb();
+    assert(rc(cwist_orm_exec(orm, "CREATE TABLE multi(a INTEGER, b INTEGER);")) == 0);
+    assert(rc(cwist_orm_exec(orm, "INSERT INTO multi VALUES (1, 2), (3, 4);")) == 0);
+    cwist_orm_result_t *res = NULL;
+    assert(rc(cwist_orm_query_typed(orm, "SELECT a, b FROM multi; SELECT b FROM multi;", &res)) ==
+           0);
+    assert(res && res->column_count == 1 && res->row_count == 2);
+    assert(strcmp(res->columns[0], "b") == 0);
+    const cwist_orm_value_t *cell = cwist_orm_result_cell(res, 0, 0);
+    assert(cell && cell->type == CWIST_ORM_TYPE_INTEGER && cell->i64 == 2);
+    cwist_orm_result_free(res);
+    cwist_orm_close_socket(orm);
+}
+
+static int peer_read_exact(int fd, void *buf, size_t len) {
+    size_t done = 0;
+    while (done < len) {
+        ssize_t n = recv(fd, (char *)buf + done, len - done, 0);
+        if (n <= 0) return -1;
+        done += (size_t)n;
+    }
+    return 0;
+}
+
+static int peer_write_exact(int fd, const void *buf, size_t len) {
+    size_t done = 0;
+    while (done < len) {
+        ssize_t n = send(fd, (const char *)buf + done, len - done, MSG_NOSIGNAL);
+        if (n <= 0) return -1;
+        done += (size_t)n;
+    }
+    return 0;
+}
+
+static void test_malformed_rows_shape(void) {
+    int sv[2];
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        close(sv[0]);
+        uint32_t net_len;
+        if (peer_read_exact(sv[1], &net_len, sizeof(net_len)) != 0) _exit(2);
+        uint32_t len = ntohl(net_len);
+        char sql[64];
+        if (len >= sizeof(sql) || peer_read_exact(sv[1], sql, len) != 0) _exit(3);
+        static const char payload[] = "{\"status\":0,\"rows\":\"bad\"}";
+        uint32_t response_len = htonl(sizeof(payload) - 1);
+        int failed = peer_write_exact(sv[1], &response_len, sizeof(response_len)) != 0 ||
+                     peer_write_exact(sv[1], payload, sizeof(payload) - 1) != 0;
+        close(sv[1]);
+        _exit(failed ? 4 : 0);
+    }
+    close(sv[1]);
+    cwist_orm_t *orm = cwist_orm_open_socket(sv[0]);
+    assert(orm);
+    cJSON *rows = NULL;
+    assert(rc(cwist_orm_query(orm, "SELECT 1;", &rows)) == CWIST_ERROR_PROTOCOL && rows == NULL);
+    cwist_orm_close_socket(orm);
+    int status = 0;
+    assert(waitpid(pid, &status, 0) == pid && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+}
+
 int main(void) {
     test_query_and_transactions();
     test_insert_returning();
@@ -524,6 +674,10 @@ int main(void) {
     test_mysql_literal_safety();
     test_json_literal_rejections();
     test_closed_peer_does_not_raise_sigpipe();
+    test_commit_scope_and_interrupted_recv();
+    test_numeric_ranges();
+    test_typed_multi_statement();
+    test_malformed_rows_shape();
     cwist_orm_immediate_commit(false);
     printf("test_orm: ok\n");
     return 0;

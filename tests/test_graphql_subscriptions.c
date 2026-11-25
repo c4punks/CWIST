@@ -293,9 +293,24 @@ static void test_init_timeout(void) {
     cwist_graphql_ws_destroy(gws);
 }
 
+static void test_subscription_argument_validation(void) {
+    char field[32];
+    cJSON *args = (cJSON *)1;
+    assert(!cwist_graphql_parse_subscription("subscription { counter(bad: ?) }", NULL, field,
+                                             sizeof(field), &args));
+    assert(args == NULL);
+    assert(cwist_graphql_parse_subscription("subscription { counter(limit: 1) }", NULL, field,
+                                            sizeof(field), &args));
+    assert(strcmp(field, "counter") == 0);
+    cJSON *limit = cJSON_GetObjectItemCaseSensitive(args, "limit");
+    assert(cJSON_IsNumber(limit) && limit->valueint == 1);
+    cJSON_Delete(args);
+}
+
 int main(void) {
     alarm(60);
     signal(SIGPIPE, SIG_IGN);
+    test_subscription_argument_validation();
 
     g_schema = cwist_graphql_schema_create();
     assert(g_schema);
