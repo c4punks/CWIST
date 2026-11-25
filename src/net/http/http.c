@@ -1827,7 +1827,7 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
     if (!str || len == 0) return CWIST_HTTP_UNKNOWN;
 
     /* Ultra-fast path: SWAR 4-byte magic lookup for GET, POST, PUT, DELETE, HEAD */
-    if (len >= 3) {
+    if (len >= 4) {
         uint32_t m = 0;
         memcpy(&m, str, sizeof(uint32_t));
         switch (m) {

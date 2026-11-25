@@ -18,6 +18,8 @@ void test_methods() {
     assert(cwist_http_string_to_method("POST") == CWIST_HTTP_POST);
     assert(cwist_http_string_to_method_len("POST", 4) == CWIST_HTTP_POST);
     assert(cwist_http_string_to_method_len("GET /", 3) == CWIST_HTTP_GET);
+    const char exact_get[3] = {'G', 'E', 'T'};
+    assert(cwist_http_string_to_method_len(exact_get, sizeof(exact_get)) == CWIST_HTTP_GET);
     assert(strcmp(cwist_http_status_reason(200), "OK") == 0);
     assert(strcmp(cwist_http_status_reason(404), "Not Found") == 0);
     assert(strcmp(cwist_http_status_reason(500), "Internal Server Error") == 0);
