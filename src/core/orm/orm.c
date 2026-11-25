@@ -535,7 +535,7 @@ static char *cwist_orm_json_to_sql_literal(const cwist_orm_t *orm, const cJSON *
 
     /* Fallback: stringify arrays/objects as JSON text. */
     char *raw = cJSON_PrintUnformatted((cJSON *)node);
-    if (!raw) return strdup("NULL");
+    if (!raw) return NULL;
     char *literal = cwist_orm_literal(orm, raw);
     cJSON_free(raw);
     return literal;

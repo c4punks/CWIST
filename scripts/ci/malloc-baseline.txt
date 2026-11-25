@@ -68,7 +68,6 @@
 1	src/core/orm/orm.c:if (!len) free(bytes);
 1	src/core/orm/orm.c:if (!node) return strdup("NULL");
 1	src/core/orm/orm.c:if (!node->valuestring) return strdup("''");
-1	src/core/orm/orm.c:if (!raw) return strdup("NULL");
 1	src/core/orm/orm.c:res = (cwist_orm_result_t *)calloc(1, sizeof(*res));
 1	src/core/orm/orm.c:res->cells = (cwist_orm_value_t *)calloc(res->row_count * res->column_count,
 1	src/core/orm/orm.c:res->columns = (char **)calloc(res->column_count ? res->column_count : 1, sizeof(char *));

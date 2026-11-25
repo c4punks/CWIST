@@ -1798,7 +1798,7 @@ bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/re
 
 ifeq ($(CWIST_DB),1)
 test_orm: $(LIB_NAME) tests/test_orm.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -Wl,--wrap=cwist_alloc -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_PrintUnformatted -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
 else
 # CWIST_DB=0: the module and its test are compiled out.
