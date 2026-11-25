@@ -204,7 +204,7 @@ static void dispatch_message(struct cwist_webrtc_conn *conn, uint16_t sid, uint3
             if (!label) return;
             memcpy(label, msg + 12, label_len);
             label[label_len] = '\0';
-            if (ch_set(conn, sid, 0) == 0) {
+            if (!ch_get(conn, sid, 0) && ch_set(conn, sid, 0) == 0) {
                 dcep_send(conn, sid, DCEP_ACK, NULL);
                 cwist_webrtc_conn_on_channel_open(conn, sid, label);
             }
