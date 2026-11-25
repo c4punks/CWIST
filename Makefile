@@ -2071,7 +2071,7 @@ test_https_metrics: $(LIB_NAME) tests/test_https_metrics.c
 endif
 
 test_http2: $(LIB_NAME) tests/test_http2.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) $(call wrap_flag,cwist_http_header_add) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
 	./test_http2
 
 test_http2_prebuffer: $(LIB_NAME) tests/test_http2_prebuffer.c
