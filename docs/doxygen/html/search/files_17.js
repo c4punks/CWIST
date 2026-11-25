@@ -14,7 +14,7 @@ var searchData=
   ['webrtc_5finternal_2eh_11',['webrtc_internal.h',['../da/d89/webrtc__internal_8h.html',1,'']]],
   ['webserver_2dbenchmark_2emd_12',['webserver-benchmark.md',['../dd/dc3/webserver-benchmark_8md.html',1,'']]],
   ['websocket_2ec_13',['websocket.c',['../d4/de6/websocket_8c.html',1,'']]],
-  ['websocket_2eh_14',['websocket.h',['../dd/dec/net_2websocket_2websocket_8h.html',1,'(Global Namespace)'],['../db/d64/websocket_8h.html',1,'(Global Namespace)']]],
+  ['websocket_2eh_14',['websocket.h',['../db/d64/websocket_8h.html',1,'(Global Namespace)'],['../dd/dec/net_2websocket_2websocket_8h.html',1,'(Global Namespace)']]],
   ['websocket_2emd_15',['websocket.md',['../d2/d1b/ko_2api_2websocket_8md.html',1,'(Global Namespace)'],['../da/d6f/api_2websocket_8md.html',1,'(Global Namespace)']]],
   ['websocket_5fasync_2ec_16',['websocket_async.c',['../d4/d57/websocket__async_8c.html',1,'']]],
   ['websocket_5fasync_2eh_17',['websocket_async.h',['../d6/dad/websocket__async_8h.html',1,'']]],

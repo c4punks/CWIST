@@ -517,7 +517,7 @@ Functions</h2></td></tr>
 <p>CORS middleware. Adds CORS headers and handles OPTIONS requests (returns 204).</p>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function pointer for CORS handling. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00667">667</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00695">695</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00641">cwist_mw_cors_handler()</a>.</p>
 
@@ -557,7 +557,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware wrapper bound to the supplied secret, or NULL on overflow or when the JWT module is compiled out (CWIST_JWT=0). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00796">796</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00824">824</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -595,7 +595,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Active decoded claims, or NULL when the request is not inside JWT auth on this thread. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00834">834</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/dc9/middleware_8c_source.html#l00862">862</a> of file <a class="el" href="../../d9/dc9/middleware_8c_source.html">middleware.c</a>.</p>
 
 </div>
 </div>
@@ -650,7 +650,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>32 lowercase hex characters (the caller's trace id when the request carried a valid <code>traceparent</code>, a fresh one otherwise), or NULL when <code>req</code> is not running behind the middleware on this thread. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/otel_8c_source.html#l00362">362</a> of file <a class="el" href="../../d3/db2/otel_8c_source.html">otel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/otel_8c_source.html#l00370">370</a> of file <a class="el" href="../../d3/db2/otel_8c_source.html">otel.c</a>.</p>
 
 </div>
 </div>
@@ -682,7 +682,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>The middleware, or NULL when memory could not be had. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d3/db2/otel_8c_source.html#l00333">333</a> of file <a class="el" href="../../d3/db2/otel_8c_source.html">otel.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d3/db2/otel_8c_source.html#l00341">341</a> of file <a class="el" href="../../d3/db2/otel_8c_source.html">otel.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00057">batch</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00126">cwist_otel_cfg_t::batch_size</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00021">cwist_alloc_array()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00122">cwist_otel_cfg_t::endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00055">endpoint</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00035">OTEL_DEFAULT_BATCH</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00032">OTEL_DEFAULT_ENDPOINT</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00034">OTEL_DEFAULT_QUEUE</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00033">OTEL_DEFAULT_SERVICE</a>, <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00125">cwist_otel_cfg_t::queue_cap</a>, and <a class="el" href="../../d3/d30/sys_2app_2middleware_8h_source.html#l00124">cwist_otel_cfg_t::service_name</a>.</p>
 
