@@ -792,6 +792,27 @@ static void test_http10_streaming_and_date(void) {
     cwist_http_response_destroy(res);
 }
 
+static void test_null_pointer_body(void) {
+    cwist_http_response *res = cwist_http_response_create();
+    assert(res != NULL);
+
+    /* cwist_http_response_set_body_ptr_managed() rejects NULL with nonzero length */
+    cwist_http_response_set_body_ptr_managed(res, NULL, 32, NULL, NULL);
+    assert(!res->is_ptr_body);
+
+    /* Direct assignment of NULL pointer body with nonzero length must not cause memcpy(..., NULL, ...) */
+    res->is_ptr_body = true;
+    res->ptr_body = NULL;
+    res->ptr_body_len = 32;
+
+    char *out = NULL;
+    size_t out_len = 0;
+    assert(cwist_http_response_serialize(res, &out, &out_len) == -1);
+    assert(out == NULL);
+
+    cwist_http_response_destroy(res);
+}
+
 int main() {
     test_methods();
     test_client_ip_validation();
@@ -813,6 +834,7 @@ int main() {
     test_no_content_statuses();
     test_response_header_overflow();
     test_error_response_long_message();
+    test_null_pointer_body();
     printf("All HTTP tests passed!\n");
     return 0;
 }
