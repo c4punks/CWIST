@@ -487,7 +487,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01061">1061</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01081">1081</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 
@@ -529,7 +529,7 @@ Functions</h2></td></tr>
 <p>Claim one job, waiting up to <code>timeout_ms</code>.</p>
 <dl class="section return"><dt>Returns</dt><dd>0 with *job set (NULL on parameter error); backend errors propagate. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01047">1047</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01067">1067</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 
@@ -564,7 +564,7 @@ Functions</h2></td></tr>
 <p>Create a durable queue over an existing NATS connection. </p>
 <p>Requires a JetStream-enabled server. Ensures the job stream and a durable pull consumer exist. Characters outside [A-Za-z0-9_-] in the queue name become '_' in the stream name; the stream records the original name, and creation fails (NULL) when the stream already belongs to another queue, for example "orders.v1" after "orders_v1", or a queue named "x_DEAD" next to queue "x". Takes no ownership of <code>nats</code>; the connection must outlive the queue. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00988">988</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01008">1008</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 </div>
 </div>
@@ -604,7 +604,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New queue with consumer group ensured, or NULL on invalid opts, ENOMEM, or Redis error. Frees nothing on <em>conn</em>. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00623">623</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00625">625</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l00045">CWIST_JQ_GROUP</a>, and <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>.</p>
 
@@ -644,7 +644,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01092">1092</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01112">1112</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>, and <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00150">CWIST_FAILURE</a>.</p>
 
@@ -669,7 +669,7 @@ Functions</h2></td></tr>
 <p>Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched. </p>
 <p>Destroy the queue handle. Claimed-but-unacked jobs are reclaimed by other workers once their visibility timeout expires. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01000">1000</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01020">1020</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>.</p>
 
@@ -722,7 +722,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01027">1027</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01047">1047</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 
@@ -763,7 +763,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01076">1076</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d0/dbf/durable__queue_8c_source.html#l01096">1096</a> of file <a class="el" href="../../d0/dbf/durable__queue_8c_source.html">durable_queue.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/da1/sys_2err_2cwist__err_8h_source.html#l00153">CWIST_ERROR_INVALID_PARAM</a>.</p>
 

@@ -594,7 +594,7 @@ Functions</h2></td></tr>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00045">CWIST_SESSION_DEFAULT_MAX_AGE</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00044">CWIST_SESSION_DEFAULT_NAME</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00216">cwist_app::session_max_age</a>, <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00214">cwist_app::session_name</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00212">cwist_app::session_secret</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00837">cwist_mw_session()</a>, and <a class="el" href="../../de/d67/session_8c_source.html#l00503">cwist_session_start()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../de/d67/session_8c_source.html#l00841">cwist_mw_session()</a>, and <a class="el" href="../../de/d67/session_8c_source.html#l00503">cwist_session_start()</a>.</p>
 
 </div>
 </div>
@@ -614,7 +614,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00654">654</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00658">658</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d8/d16/gc_8c_source.html#l00515">cwist_full_gc_enabled()</a>, and <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>.</p>
 
@@ -646,7 +646,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Middleware function that starts and commits sessions per request. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00837">837</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00841">841</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../de/d67/session_8c_source.html#l00276">cwist_app_use_session()</a>, <a class="el" href="../../da/dec/core_2macros_8h_source.html#l00023">CWIST_UNUSED</a>, and <a class="el" href="../../d0/d77/sys_2app_2app_8h_source.html#l00212">cwist_app::session_secret</a>.</p>
 
@@ -713,7 +713,7 @@ Functions</h2></td></tr>
 <p>Persist the session to the response cookie. </p>
 <p>The session middleware calls this automatically after the handler. If you are not using the middleware, call it before sending the response. A session that was not modified (no set, delete or invalidate) writes no Set-Cookie. An invalidated session's cookie is removed with the same Path, HttpOnly, Secure and SameSite attributes it was issued with. Returns -1 without setting a cookie when the signed session would make the cookie's name and value exceed 4096 bytes, which browsers silently drop; keep large data server-side and store only a reference in the session. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00661">661</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00665">665</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../de/d49/cookie_8c_source.html#l00229">cwist_cookie_delete_ex()</a>, <a class="el" href="../../de/d49/cookie_8c_source.html#l00193">cwist_cookie_set()</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../d8/d16/gc_8c_source.html#l00766">cwist_gc_scope_disown()</a>, <a class="el" href="../../dd/d7f/query_8c_source.html#l00254">cwist_query_map_foreach()</a>, <a class="el" href="../../de/d67/session_8c_source.html#l00039">CWIST_SESSION_MAX_COOKIE_BYTES</a>, <a class="el" href="../../d9/d39/alloc_8c_source.html#l00032">cwist_strdup()</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00050">cwist_cookie_options::http_only</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00049">cwist_cookie_options::max_age_seconds</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00047">cwist_cookie_options::path</a>, <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00052">cwist_cookie_options::same_site</a>, and <a class="el" href="../../d5/dfd/cookie_8h_source.html#l00051">cwist_cookie_options::secure</a>.</p>
 
@@ -755,7 +755,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00614">614</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00618">618</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00222">cwist_query_map_delete()</a>.</p>
 
@@ -788,7 +788,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00642">642</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00646">646</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00082">cwist_query_map_destroy()</a>.</p>
 
@@ -832,7 +832,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value string, or NULL if session/key is NULL or the key is not set. The returned pointer is owned by the session. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00581">581</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00585">585</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00198">cwist_query_map_get()</a>.</p>
 
@@ -863,7 +863,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00625">625</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00629">629</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 </div>
 </div>
@@ -917,7 +917,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00595">595</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/d67/session_8c_source.html#l00599">599</a> of file <a class="el" href="../../de/d67/session_8c_source.html">session.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d7f/query_8c_source.html#l00198">cwist_query_map_get()</a>, and <a class="el" href="../../dd/d7f/query_8c_source.html#l00147">cwist_query_map_set()</a>.</p>
 
