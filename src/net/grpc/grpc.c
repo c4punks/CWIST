@@ -814,6 +814,7 @@ int cwist_grpc_decode_message(const void *frame, size_t frame_len, cwist_grpc_me
     if ((size_t)len > frame_len - 5) return -1;
     if ((size_t)len != frame_len - 5) return -1;
 
+    if (p[0] > 1) return -1;
     out->compressed = p[0];
     out->data = p + 5;
     out->len = (size_t)len;
@@ -844,6 +845,7 @@ int cwist_grpc_decode_next_message(const void *frames, size_t frames_len, size_t
         ((uint32_t)p[1] << 24) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 8) | (uint32_t)p[4];
     if ((size_t)len > frames_len - pos - 5) return -1;
 
+    if (p[0] > 1) return -1;
     out->compressed = p[0];
     out->data = p + 5;
     out->len = (size_t)len;
