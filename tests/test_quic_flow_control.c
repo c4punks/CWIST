@@ -252,7 +252,29 @@ static int test_max_stream_data_frames(void) {
     return 0;
 }
 
+static int test_varint_overflow_boundaries(void) {
+    quic_conn_fc_t fc;
+    quic_stream_fc_t sfc;
+    uint8_t buf[24];
+    size_t written;
+    quic_flow_control_init(&fc, UINT64_MAX, UINT64_MAX, UINT64_MAX, UINT64_MAX);
+    CHECK(fc.max_data == QMAX && fc.conn_window_size == QMAX);
+    quic_flow_control_consume_conn(&fc, UINT64_MAX);
+    CHECK(fc.conn_consumed == QMAX);
+    CHECK(quic_flow_control_maybe_send_max_data(&fc, buf, sizeof(buf), &written, true) == 1);
+    CHECK(decode_varint(buf + 1, NULL) == QMAX);
+    quic_stream_fc_init(&sfc, UINT64_MAX, UINT64_MAX);
+    CHECK(sfc.stream_id == QMAX && sfc.max_stream_data == QMAX);
+    quic_flow_control_consume_stream(&fc, &sfc, UINT64_MAX);
+    CHECK(sfc.stream_consumed == QMAX);
+    CHECK(quic_flow_control_maybe_send_max_stream_data(&fc, &sfc, buf, sizeof(buf), &written,
+                                                       true) == 1);
+    CHECK(decode_varint(buf + 1, NULL) == QMAX);
+    return 0;
+}
+
 int main(void) {
+    CHECK(test_varint_overflow_boundaries() == 0);
     CHECK(test_initialization_and_clamping() == 0);
     CHECK(test_rtt_quality() == 0);
     CHECK(test_window_adjustment() == 0);

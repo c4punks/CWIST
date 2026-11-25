@@ -107,7 +107,14 @@ static bool ws_origin_allowed(const cwist_http_request *req, const char *const *
 
 bool cwist_websocket_upgrade_response_ex(cwist_http_request *req, cwist_http_response *res,
                                          const char *const *allowed_origins, size_t origin_count) {
-    if (!req || !res) return false;
+    if (!req || !res || req->method != CWIST_HTTP_GET || !req->version || !req->version->data ||
+        strncmp(req->version->data, "HTTP/", 5) != 0)
+        return false;
+    unsigned int major = 0, minor = 0;
+    char trailing = 0;
+    if (sscanf(req->version->data + 5, "%u.%u%c", &major, &minor, &trailing) != 2 || major < 1 ||
+        (major == 1 && minor < 1))
+        return false;
 
     char *connection = cwist_http_header_get(req->headers, "Connection");
     char *upgrade = cwist_http_header_get(req->headers, "Upgrade");

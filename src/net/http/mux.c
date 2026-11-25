@@ -179,7 +179,13 @@ void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, cons
     router->routes = route;
 
     size_t path_len = strlen(path);
-    route->is_parametric = (strchr(path, ':') != NULL);
+    route->is_parametric = false;
+    for (const char *p = path; *p; p++) {
+        if (*p == ':' && (p == path || p[-1] == '/')) {
+            route->is_parametric = true;
+            break;
+        }
+    }
     route->is_wildcard = (path_len > 0 && path[path_len - 1] == '*');
 
     if (route->is_wildcard) {

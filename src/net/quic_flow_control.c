@@ -5,15 +5,15 @@
 #define QUIC_FRAME_MAX_STREAM_DATA 0x11
 
 /**
- * @brief Clamp a flow control window to the protocol minimum.
+ * @brief Clamp a flow control window to the protocol range.
  *
  * @param window Requested window size in bytes.
- * @return window if it is at least QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW,
- *         otherwise QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW.
+ * @return window clamped between QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW and the
+ *         maximum value representable by a QUIC varint.
  */
 static uint64_t clamp_window(uint64_t window) {
-    return window < QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW ? QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW
-                                                         : window;
+    if (window < QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW) return QUIC_FLOW_CONTROL_MIN_INITIAL_WINDOW;
+    return window > QUIC_MAX_VARINT ? QUIC_MAX_VARINT : window;
 }
 
 /**
@@ -24,7 +24,8 @@ static uint64_t clamp_window(uint64_t window) {
  * @return value + increment, or QUIC_MAX_VARINT if the sum would overflow it.
  */
 static uint64_t saturating_add(uint64_t value, uint64_t increment) {
-    return value > QUIC_MAX_VARINT - increment ? QUIC_MAX_VARINT : value + increment;
+    if (value >= QUIC_MAX_VARINT || increment > QUIC_MAX_VARINT - value) return QUIC_MAX_VARINT;
+    return value + increment;
 }
 
 /**
@@ -71,7 +72,7 @@ static void write_varint(uint8_t *buf, uint64_t value, size_t size) {
  * @return Non-zero if an update should be sent, zero otherwise.
  */
 static int should_update(uint64_t consumed, uint64_t maximum, uint64_t window) {
-    return consumed >= maximum || consumed + window / 2 >= maximum;
+    return consumed >= maximum || window / 2 >= maximum - consumed;
 }
 
 /**
@@ -126,6 +127,7 @@ void quic_stream_fc_init(quic_stream_fc_t *sfc, uint64_t stream_id,
     if (!sfc) return;
 
     initial_stream_window = clamp_window(initial_stream_window);
+    if (stream_id > QUIC_MAX_VARINT) stream_id = QUIC_MAX_VARINT;
     *sfc = (quic_stream_fc_t){
         .stream_id = stream_id,
         .max_stream_data = initial_stream_window,
@@ -207,14 +209,15 @@ void quic_flow_control_adjust_windows(quic_conn_fc_t *fc, quic_stream_fc_t *sfc)
     if (!fc || fc->quality < QUIC_NET_QUALITY_HIGH_RTT) return;
 
     if (fc->conn_window_size < fc->conn_max_window) {
-        fc->conn_window_size *= 2;
-        if (fc->conn_window_size > fc->conn_max_window) fc->conn_window_size = fc->conn_max_window;
+        fc->conn_window_size = fc->conn_window_size > fc->conn_max_window / 2
+                                   ? fc->conn_max_window
+                                   : fc->conn_window_size * 2;
     }
 
     if (sfc && sfc->stream_window_size < fc->stream_max_window) {
-        sfc->stream_window_size *= 2;
-        if (sfc->stream_window_size > fc->stream_max_window)
-            sfc->stream_window_size = fc->stream_max_window;
+        sfc->stream_window_size = sfc->stream_window_size > fc->stream_max_window / 2
+                                      ? fc->stream_max_window
+                                      : sfc->stream_window_size * 2;
     }
 }
 

@@ -166,9 +166,25 @@ static cwist_http_request *new_handshake_request(void) {
 
 static void test_handshake_protocol_errors(void) {
     cwist_http_request *req = new_handshake_request();
+    req->method = CWIST_HTTP_POST;
+    cwist_http_response *res = cwist_http_response_create();
+    assert(!cwist_websocket_upgrade_response(req, res));
+    assert(res->status_code != 101);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    req = new_handshake_request();
+    cwist_sstring_assign(req->version, "HTTP/1.0");
+    res = cwist_http_response_create();
+    assert(!cwist_websocket_upgrade_response(req, res));
+    assert(res->status_code != 101);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+
+    req = new_handshake_request();
     cwist_http_header_remove(&req->headers, "Upgrade");
     cwist_http_header_add(&req->headers, "Upgrade", "h2c, websocket");
-    cwist_http_response *res = cwist_http_response_create();
+    res = cwist_http_response_create();
     assert(cwist_websocket_upgrade_response(req, res));
     cwist_http_response_destroy(res);
     cwist_http_request_destroy(req);

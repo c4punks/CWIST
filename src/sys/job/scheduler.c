@@ -231,7 +231,8 @@ static void *scheduler_worker_thread(void *arg) {
  *
  * Waits on @p s->delayed_cond for delayed jobs. When the earliest deadline
  * arrives, the job is submitted to the io queue for execution by a worker;
- * otherwise it sleeps until the deadline with a timed wait. Exits when
+ * transient submission failures leave it on the heap for a short retry.
+ * Otherwise it sleeps until the deadline with a timed wait. Exits when
  * @p s->running becomes false.
  */
 static void *scheduler_timer_thread(void *arg) {
@@ -246,10 +247,14 @@ static void *scheduler_timer_thread(void *arg) {
 
         uint64_t current_ms = now_ms();
         if (s->heap[0].deadline_ms <= current_ms) {
-            scheduled_job_t job = heap_pop(s);
-            pthread_mutex_unlock(&s->delayed_mtx);
-            cwist_io_queue_submit(s->queue, job.func, job.arg);
-            pthread_mutex_lock(&s->delayed_mtx);
+            scheduled_job_t job = s->heap[0];
+            if (cwist_io_queue_submit(s->queue, job.func, job.arg)) {
+                (void)heap_pop(s);
+                continue;
+            }
+            struct timespec retry;
+            cond_deadline_after(1, &retry);
+            pthread_cond_timedwait(&s->delayed_cond, &s->delayed_mtx, &retry);
             continue;
         }
 
@@ -370,8 +375,8 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
 void cwist_scheduler_destroy(cwist_scheduler_t *s) {
     if (!s) return;
 
-    s->running = false;
     pthread_mutex_lock(&s->delayed_mtx);
+    s->running = false;
     pthread_cond_broadcast(&s->delayed_cond);
     pthread_mutex_unlock(&s->delayed_mtx);
 
@@ -401,8 +406,11 @@ void cwist_scheduler_destroy(cwist_scheduler_t *s) {
  *         the queue submission failed.
  */
 bool cwist_scheduler_submit(cwist_scheduler_t *s, cwist_job_func func, void *arg) {
-    if (!s || !func || !s->running) return false;
-    return cwist_io_queue_submit(s->queue, func, arg);
+    if (!s || !func) return false;
+    pthread_mutex_lock(&s->delayed_mtx);
+    bool ok = s->running && cwist_io_queue_submit(s->queue, func, arg);
+    pthread_mutex_unlock(&s->delayed_mtx);
+    return ok;
 }
 
 /**
@@ -422,19 +430,25 @@ bool cwist_scheduler_submit(cwist_scheduler_t *s, cwist_job_func func, void *arg
  */
 bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *arg,
                               uint64_t delay_ms) {
-    if (!s || !func || !s->running) return false;
-    if (delay_ms == 0) {
-        return cwist_io_queue_submit(s->queue, func, arg);
-    }
-
+    if (!s || !func) return false;
     uint64_t current_ms = now_ms();
     if (delay_ms > UINT64_MAX - current_ms) return false;
-    scheduled_job_t job;
-    job.deadline_ms = current_ms + delay_ms;
-    job.func = func;
-    job.arg = arg;
+    scheduled_job_t job = {
+        .deadline_ms = current_ms + delay_ms,
+        .func = func,
+        .arg = arg,
+    };
 
     pthread_mutex_lock(&s->delayed_mtx);
+    if (!s->running) {
+        pthread_mutex_unlock(&s->delayed_mtx);
+        return false;
+    }
+    if (delay_ms == 0) {
+        bool ok = cwist_io_queue_submit(s->queue, func, arg);
+        pthread_mutex_unlock(&s->delayed_mtx);
+        return ok;
+    }
     size_t before = atomic_load_explicit(&s->heap_count, memory_order_relaxed);
     heap_push(s, job);
     if (atomic_load_explicit(&s->heap_count, memory_order_relaxed) != before + 1) {
