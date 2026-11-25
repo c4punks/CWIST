@@ -9,6 +9,7 @@
 #include <string.h>
 #include <zlib.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_body;
 static int fail_message;
 static int fail_header;
@@ -31,6 +32,7 @@ void *__wrap_cwist_alloc(size_t size) {
     if (fail_message && (size == 4 || size == 28)) return NULL;
     return __real_cwist_alloc(size);
 }
+#endif
 
 static void echo_unary(cwist_http_request *req, cwist_http_response *res,
                        const cwist_grpc_message *message, void *user_ctx) {
@@ -491,6 +493,7 @@ static void test_unregister(void) {
     printf("gRPC unregister tests passed.\n");
 }
 
+#ifdef CWIST_TEST_WRAP
 static void test_response_failures(void) {
     cwist_http_response *res = cwist_http_response_create();
     fail_message = 1;
@@ -528,9 +531,12 @@ static void test_response_failures(void) {
     assert(grpc_status && strcmp(grpc_status, "13") == 0);
     cwist_http_response_destroy(res);
 }
+#endif
 
 int main(void) {
+#ifdef CWIST_TEST_WRAP
     test_response_failures();
+#endif
     cwist_pb_writer request_pb;
     cwist_pb_writer_init(&request_pb);
     assert(cwist_pb_write_string_field(&request_pb, 1, "ping") == 0);
@@ -588,6 +594,7 @@ int main(void) {
     static const cwist_test_client_kv accept_gzip[] = {{"grpc-accept-encoding", "gzip"}};
     opts.headers = accept_gzip;
     opts.header_count = 1;
+#ifdef CWIST_TEST_WRAP
     fail_body = 1;
     res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
     fail_body = 0;
@@ -598,6 +605,7 @@ int main(void) {
     const char *encoding = cwist_http_header_get(res->headers, "grpc-encoding");
     assert(encoding == NULL || strcmp(encoding, "gzip") != 0);
     cwist_http_response_destroy(res);
+#endif
     opts.headers = NULL;
     opts.header_count = 0;
 
@@ -615,6 +623,7 @@ int main(void) {
     opts.body = stream_body->data;
     opts.body_len = stream_body->size;
     opts.content_type = "application/grpc";
+#ifdef CWIST_TEST_WRAP
     fail_header = 1;
     res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Chat", &opts);
     fail_header = 0;
@@ -622,6 +631,7 @@ int main(void) {
     grpc_status = cwist_http_header_get(res->headers, "grpc-status");
     assert(grpc_status && strcmp(grpc_status, "13") == 0);
     cwist_http_response_destroy(res);
+#endif
 
     res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Chat", &opts);
     const char *expected_stream[] = {"chunk-1:one", "chunk-2:two"};

@@ -2098,7 +2098,7 @@ test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	./$@
 
 test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=malloc -Wl,--wrap=cwist_http_header_add -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,malloc) $(call wrap_flag,cwist_http_header_add) $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
 	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
@@ -2108,7 +2108,7 @@ endif
 
 ifeq ($(CWIST_DB),1)
 test_rdbms_auto_mount: $(LIB_NAME) tests/test_rdbms_auto_mount.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=send -Wl,--wrap=recv -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,send) $(call wrap_flag,recv) -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
 	./test_rdbms_auto_mount
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -2126,7 +2126,7 @@ test_cors: $(LIB_NAME) tests/test_cors.c
 
 ifeq ($(CWIST_WS),1)
 test_websocket: $(LIB_NAME) tests/test_websocket.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_websocket tests/test_websocket.c $(LIB_NAME) $(LIBS)
 	./test_websocket
 
 test_websocket_async: $(LIB_NAME) tests/test_websocket_async.c
@@ -2201,7 +2201,7 @@ test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response
 	./test_bind_write_error_response
 
 test_metrics: $(LIB_NAME) tests/test_metrics.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
 	./test_metrics
 
 test_access_log: $(LIB_NAME) tests/test_access_log.c
@@ -2556,7 +2556,7 @@ test_http_chunked_alloc_failure: $(LIB_NAME) tests/test_http_chunked_alloc_failu
 	./test_http_chunked_alloc_failure
 
 test_http_client: $(LIB_NAME) tests/test_http_client.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_http_header_add -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) $(call wrap_flag,cwist_http_header_add) -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
 	./test_http_client
 
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
@@ -2564,7 +2564,7 @@ test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	./test_static_and_range
 
 test_session: $(LIB_NAME) tests/test_session.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=read -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_AddStringToObject -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,read) $(call wrap_flag,cwist_alloc) $(call wrap_flag,cJSON_AddStringToObject) -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
 	./test_session
 
 test_csrf: $(LIB_NAME) tests/test_csrf.c
@@ -2665,7 +2665,7 @@ test_sse: $(LIB_NAME) tests/test_sse.c
 	./test_sse
 
 test_graphql: $(LIB_NAME) tests/test_graphql.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_ReplaceItemViaPointer -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_ReplaceItemViaPointer) $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
 	./test_graphql
 
 ifeq ($(CWIST_WS),1)
@@ -2721,7 +2721,7 @@ test_proxy_transport: $(LIB_NAME) tests/test_proxy_transport.c
 	./test_proxy_transport
 
 test_async_defer: $(LIB_NAME) tests/test_async_defer.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=cwist_sstring_assign_len -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
 	./test_async_defer
 	CWIST_C1M_MODE=0 ./test_async_defer
 
@@ -2739,7 +2739,7 @@ test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	./test_async_file_park
 
 test_test_client: $(LIB_NAME) tests/test_test_client.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign -Wl,--wrap=ftell -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,ftell) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
 	./test_test_client
 
 test_openapi: $(LIB_NAME) tests/test_openapi.c
@@ -2747,7 +2747,7 @@ test_openapi: $(LIB_NAME) tests/test_openapi.c
 	./test_openapi
 
 test_otel: $(LIB_NAME) tests/test_otel.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_http_header_add -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_otel tests/test_otel.c $(LIB_NAME) $(LIBS)
 	./test_otel
 
 test_multiport: $(LIB_NAME) tests/test_multiport.c
@@ -2773,7 +2773,7 @@ test_builtin_mw_chain:
 endif
 
 test_grpc: $(LIB_NAME) tests/test_grpc.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_sstring_assign_len -Wl,--wrap=cwist_alloc -Wl,--wrap=cwist_http_header_add -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) $(call wrap_flag,cwist_alloc) $(call wrap_flag,cwist_http_header_add) -o test_grpc tests/test_grpc.c $(LIB_NAME) $(LIBS)
 	./test_grpc
 
 test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c

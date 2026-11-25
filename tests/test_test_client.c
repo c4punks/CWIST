@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <unistd.h>
 
+#ifdef CWIST_TEST_WRAP
 static int fail_body;
 static int fail_ftell;
 cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
@@ -21,6 +22,7 @@ long __wrap_ftell(FILE *stream) {
     if (fail_ftell) return -1;
     return __real_ftell(stream);
 }
+#endif
 
 #define FAIL_IF(cond, msg)                      \
     do {                                        \
@@ -280,17 +282,20 @@ int main(void) {
     CWIST_ASSERT_BODY_CONTAINS(res, "CWIST Swagger UI");
     cwist_http_response_destroy(res);
 
+#ifdef CWIST_TEST_WRAP
     fail_body = 1;
     res = cwist_test_client_get(client, "/docs");
     fail_body = 0;
     CWIST_ASSERT_STATUS(res, 500);
     cwist_http_response_destroy(res);
+#endif
 
     res = cwist_test_client_get(client, "/openapi.json");
     CWIST_ASSERT_STATUS(res, 200);
     CWIST_ASSERT_BODY_CONTAINS(res, "3.0.0");
     cwist_http_response_destroy(res);
 
+#ifdef CWIST_TEST_WRAP
     fail_body = 1;
     res = cwist_test_client_get(client, "/openapi.json");
     fail_body = 0;
@@ -302,6 +307,7 @@ int main(void) {
     fail_ftell = 0;
     CWIST_ASSERT_STATUS(res, 500);
     cwist_http_response_destroy(res);
+#endif
     unlink(swagger_path);
 
     cwist_test_client_destroy(client);
