@@ -107,6 +107,15 @@ void test_seek() {
     cwist_sstring_seek(s, buffer, 2);
     assert(strcmp(buffer, "cdef") == 0);
 
+    const char exact[3] = {'a', 'b', 'c'};
+    assert(cwist_sstring_borrow(s, exact, sizeof(exact)).error.err_i8 == ERR_SSTRING_OKAY);
+    char copy[4];
+    assert(cwist_sstring_copy(s, copy).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(memcmp(copy, "abc", 4) == 0);
+    char suffix[3];
+    assert(cwist_sstring_seek(s, suffix, 1).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(memcmp(suffix, "bc", 3) == 0);
+
     cwist_sstring_destroy(s);
     printf("Passed seek.\n");
 }
@@ -131,6 +140,22 @@ void test_compare() {
     assert(cwist_sstring_compare(empty_assigned, NULL) == 0);
     cwist_sstring_destroy(empty_new);
     cwist_sstring_destroy(empty_assigned);
+
+    const char exact[3] = {'a', 'b', 'c'};
+    cwist_sstring *right = cwist_sstring_create();
+    assert(right != NULL);
+    cwist_sstring_assign(right, "abc");
+    assert(cwist_sstring_borrow(s, exact, sizeof(exact)).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(cwist_sstring_compare(s, "abc") == 0);
+    assert(cwist_sstring_compare_sstring(s, right) == 0);
+
+    const char with_nul[3] = {'a', '\0', 'b'};
+    assert(cwist_sstring_assign_len(s, with_nul, sizeof(with_nul)).error.err_i8 == ERR_SSTRING_OKAY);
+    cwist_sstring_assign(right, "a");
+    assert(cwist_sstring_compare(s, "a") == 0);
+    assert(cwist_sstring_compare(s, "ab") < 0);
+    assert(cwist_sstring_compare_sstring(s, right) == 0);
+    cwist_sstring_destroy(right);
 
     cwist_sstring_destroy(s);
     printf("Passed compare.\n");

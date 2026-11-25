@@ -354,24 +354,49 @@ static inline const char *sstring_as_text(const cwist_sstring *s) {
 }
 
 /**
- * @brief Compare two CWIST string objects using strcmp semantics.
- * @param left Left-hand string.
- * @param right Right-hand string.
- * @return Negative, zero, or positive depending on lexical ordering.
- */
-int cwist_sstring_compare_sstring(cwist_sstring *left, const cwist_sstring *right) {
-    return strcmp(sstring_as_text(left), sstring_as_text(right));
-}
-
-/**
  * @brief Length of the string's payload.
  * @details A growable string's length is str->size, which counts embedded NUL
  *          bytes written by assign_len()/append_len() (#963). A fixed string
  *          uses size as its capacity, so its length is the C string length.
  */
 static size_t sstring_content_len(const cwist_sstring *str) {
-    if (!str->data) return 0;
+    if (!str || !str->data) return 0;
     return str->is_fixed ? strlen(str->data) : str->size;
+}
+
+static size_t sstring_cstr_len(const cwist_sstring *str) {
+    size_t len = sstring_content_len(str);
+    size_t used = 0;
+    while (used < len && str->data[used]) used++;
+    return used;
+}
+
+static int sstring_compare_bounded(const char *left, size_t left_len, const char *right,
+                                   size_t right_len) {
+    size_t i = 0;
+    for (;;) {
+        bool left_end = i >= left_len || left[i] == '\0';
+        bool right_end = i >= right_len || right[i] == '\0';
+        if (left_end || right_end) {
+            if (left_end && right_end) return 0;
+            return left_end ? -1 : 1;
+        }
+        unsigned char l = (unsigned char)left[i];
+        unsigned char r = (unsigned char)right[i];
+        if (l != r) return (int)l - (int)r;
+        i++;
+    }
+}
+
+/**
+ * @brief Compare two CWIST string objects using strcmp semantics.
+ * @param left Left-hand string.
+ * @param right Right-hand string.
+ * @return Negative, zero, or positive depending on lexical ordering.
+ */
+int cwist_sstring_compare_sstring(cwist_sstring *left, const cwist_sstring *right) {
+    return sstring_compare_bounded(sstring_as_text(left), sstring_content_len(left),
+                                   sstring_as_text(right), sstring_content_len(right));
 }
 
 /**
@@ -825,13 +850,15 @@ cwist_error_t cwist_sstring_seek(cwist_sstring *str, char *substr, int location)
         return err;
     }
 
-    size_t len = strlen(str->data);
+    size_t len = sstring_cstr_len(str);
     if (location < 0 || (size_t)location >= len) {
         err.error.err_i8 = ERR_SSTRING_OUTOFBOUND;
         return err;
     }
 
-    strcpy(substr, str->data + location);
+    size_t suffix_len = len - (size_t)location;
+    memcpy(substr, str->data + location, suffix_len);
+    substr[suffix_len] = '\0';
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
@@ -851,7 +878,9 @@ cwist_error_t cwist_sstring_copy(cwist_sstring *origin, char *destination) {
         return err;
     }
 
-    strcpy(destination, origin->data);
+    size_t len = sstring_cstr_len(origin);
+    memcpy(destination, origin->data, len);
+    destination[len] = '\0';
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
@@ -930,7 +959,9 @@ void cwist_sstring_destroy(cwist_sstring *str) {
  * @return Negative, zero, or positive depending on lexical ordering.
  */
 int cwist_sstring_compare(cwist_sstring *str, const char *compare_to) {
-    return strcmp(sstring_as_text(str), compare_to ? compare_to : "");
+    const char *right = compare_to ? compare_to : "";
+    return sstring_compare_bounded(sstring_as_text(str), sstring_content_len(str), right,
+                                   strlen(right));
 }
 
 /**
