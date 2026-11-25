@@ -104,6 +104,7 @@ struct cwist_grpc_client {
     cwist_grpc_call *active;
     uint32_t next_stream_id;
     uint32_t peer_max_frame;
+    uint32_t peer_max_streams;
     uint32_t peer_initial_window;
     int64_t conn_send_window;
     grpc_client_hpack_entry *hpack_head;
@@ -630,6 +631,9 @@ static int grpc_client_apply_settings(cwist_grpc_client *c, const uint8_t *paylo
             case 0x2: /* ENABLE_PUSH: must be 0 for clients */
                 if (value != 0) return -1;
                 break;
+            case 0x3: /* MAX_CONCURRENT_STREAMS */
+                c->peer_max_streams = value;
+                break;
             case 0x4: /* INITIAL_WINDOW_SIZE */
                 if (value > 0x7fffffffu) return -1;
                 if (c->active) c->active->send_window += (int64_t)value - c->peer_initial_window;
@@ -667,6 +671,7 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
     pthread_mutex_init(&c->mu, NULL);
     c->next_stream_id = 1;
     c->peer_max_frame = 16384;
+    c->peer_max_streams = UINT32_MAX;
     c->peer_initial_window = GRPC_CLIENT_DEFAULT_WINDOW;
     c->conn_send_window = GRPC_CLIENT_DEFAULT_WINDOW;
     c->hpack_cap = GRPC_CLIENT_HEADER_TABLE;
@@ -1285,7 +1290,9 @@ cwist_grpc_call *cwist_grpc_call_start(cwist_grpc_client *c, const char *method,
 cwist_grpc_call *cwist_grpc_call_start_ex(cwist_grpc_client *c, const char *method,
                                           const void *request, size_t request_len,
                                           uint64_t timeout_ms, uint32_t previous_attempts) {
-    if (!c || !method || (request_len && !request) || c->dead || c->goaway) return NULL;
+    if (!c || !method || (request_len && !request) || c->dead || c->goaway ||
+        c->peer_max_streams == 0)
+        return NULL;
 
     pthread_mutex_lock(&c->mu);
     if (c->active) {
