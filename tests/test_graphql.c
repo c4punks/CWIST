@@ -5,6 +5,22 @@
 #include <stdlib.h>
 #include <string.h>
 
+static int fail_add = -1;
+static int fail_replace;
+cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
+    if (fail_add == 0) return 0;
+    if (fail_add > 0) fail_add--;
+    return __real_cJSON_AddItemToObject(object, string, item);
+}
+cJSON_bool __real_cJSON_ReplaceItemViaPointer(cJSON *const parent, cJSON *const item,
+                                              cJSON *replacement);
+cJSON_bool __wrap_cJSON_ReplaceItemViaPointer(cJSON *const parent, cJSON *const item,
+                                              cJSON *replacement) {
+    if (fail_replace) return 0;
+    return __real_cJSON_ReplaceItemViaPointer(parent, item, replacement);
+}
+
 static int query_count;
 static int mutation_count;
 static char last_name[128];
@@ -94,6 +110,22 @@ static cwist_sstring *run_query(cwist_graphql_schema_t *schema, const char *quer
     return out;
 }
 
+static cwist_sstring *run_operation(cwist_graphql_schema_t *schema, const char *query,
+                                    const char *operation_name) {
+    cJSON *request = cJSON_CreateObject();
+    assert(request != NULL);
+    cJSON_AddStringToObject(request, "query", query);
+    if (operation_name) cJSON_AddStringToObject(request, "operationName", operation_name);
+    char *raw = cJSON_PrintUnformatted(request);
+    assert(raw != NULL);
+    cwist_sstring *out = NULL;
+    assert(cwist_graphql_execute(schema, raw, &out).error.err_i16 == 0);
+    free(raw);
+    cJSON_Delete(request);
+    assert(out != NULL);
+    return out;
+}
+
 /* #953, #954: nested selections return only the selected fields, read from
  * the parent value, never from a same-named root resolver. */
 static void test_nested_selection(void) {
@@ -163,6 +195,77 @@ static void test_variable_defaults_and_comments(void) {
     out = run_query(schema, "{ user { friends { # a comment with } braces\n id } } }");
     assert(strstr(out->data, "\"id\":100") && strstr(out->data, "\"id\":101"));
     assert(!strstr(out->data, "errors"));
+    cwist_sstring_destroy(out);
+    cwist_graphql_schema_destroy(schema);
+}
+
+static void test_request_validation_and_operation_selection(void) {
+    cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
+    assert(cwist_graphql_add_query(schema, "greet", hello_resolver, NULL));
+    cwist_sstring *out = NULL;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet }\"} trailing", &out)
+               .error.err_i16 != 0);
+    assert(out == NULL);
+
+    out = run_operation(schema, "{ greet(name: \"first\", name: \"second\") }", NULL);
+    assert(strstr(out->data, "Duplicate argument name"));
+    cwist_sstring_destroy(out);
+
+    out = NULL;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet }\",\"variables\":[]}", &out)
+               .error.err_i16 == 0);
+    assert(strstr(out->data, "GraphQL variables must be an object"));
+    cwist_sstring_destroy(out);
+
+    static const char document[] =
+        "query First { greet(name: \"first\") } query Second { greet(name: \"second\") }";
+    out = run_operation(schema, document, "Second");
+    assert(strstr(out->data, "hello second"));
+    assert(!strstr(out->data, "hello first"));
+    cwist_sstring_destroy(out);
+    out = run_operation(schema, document, NULL);
+    assert(strstr(out->data, "operationName is required"));
+    cwist_sstring_destroy(out);
+    out = run_operation(schema, document, "Third");
+    assert(strstr(out->data, "Unknown or duplicate operationName"));
+    cwist_sstring_destroy(out);
+
+    out = NULL;
+    assert(cwist_graphql_execute(schema,
+                                 "{\"query\":\"query One { greet } query Two { greet }\","
+                                 "\"operationName\":2}",
+                                 &out)
+               .error.err_i16 == 0);
+    assert(strstr(out->data, "GraphQL operationName must be a string"));
+    cwist_sstring_destroy(out);
+    cwist_graphql_schema_destroy(schema);
+}
+
+static void test_graphql_allocation_failures(void) {
+    cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
+    assert(cwist_graphql_add_query(schema, "greet", hello_resolver, NULL));
+    cwist_sstring *out = NULL;
+    fail_add = 1;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet }\"}", &out).error.err_i16 != 0);
+    fail_add = -1;
+    assert(out == NULL);
+
+    fail_add = 2;
+    out = run_operation(schema, "{ greet(name: \"alice\") }", NULL);
+    fail_add = -1;
+    assert(strstr(out->data, "Internal memory error inserting argument"));
+    cwist_sstring_destroy(out);
+
+    fail_add = 2;
+    out = run_operation(schema, "{ greet }", NULL);
+    fail_add = -1;
+    assert(strstr(out->data, "Internal memory error merging selection"));
+    cwist_sstring_destroy(out);
+
+    fail_replace = 1;
+    out = run_operation(schema, "{ greet greet }", NULL);
+    fail_replace = 0;
+    assert(strstr(out->data, "Internal memory error merging selection"));
     cwist_sstring_destroy(out);
     cwist_graphql_schema_destroy(schema);
 }
@@ -361,6 +464,8 @@ int main(void) {
     test_variable_defaults_and_comments();
     test_nested_selection();
     test_number_arguments();
+    test_request_validation_and_operation_selection();
+    test_graphql_allocation_failures();
     puts("All GraphQL advanced tests passed successfully.");
     return 0;
 }

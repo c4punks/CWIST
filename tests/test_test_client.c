@@ -117,8 +117,13 @@ int main(void) {
     cwist_test_client *client = cwist_test_client_create(app);
     FAIL_IF(!client, "client_create");
 
+    const char small = 0;
+    cwist_http_response *res = cwist_test_client_post_multipart(
+        client, "/upload", "field", "file", "text/plain", &small, SIZE_MAX);
+    FAIL_IF(res != NULL, "multipart size overflow rejected");
+
     /* GET */
-    cwist_http_response *res = cwist_test_client_get(client, "/");
+    res = cwist_test_client_get(client, "/");
     FAIL_IF(!res || !res->body, "get res");
     FAIL_IF(strcmp(res->body->data, "hello") != 0, "get body");
     cwist_http_response_destroy(res);

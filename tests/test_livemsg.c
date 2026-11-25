@@ -3,7 +3,9 @@
 #endif
 #include <cwist/livemsg.h>
 #include <cwist/core/mem/alloc.h>
+#include <cwist/net/webrtc.h>
 #include <cwist/net/websocket/websocket.h>
+#include "../src/net/webrtc/webrtc_internal.h"
 
 #include <arpa/inet.h>
 #include <assert.h>
@@ -25,6 +27,7 @@
 
 static int raw_port;
 static int json_port;
+static int rtc_port;
 static bool raw_backpressure;
 
 static void sleep_ms(int ms) {
@@ -323,11 +326,62 @@ static pid_t start_json_server(void) {
     return pid;
 }
 
+static cwist_livemsg_config rtc_config(void) {
+    cwist_livemsg_config config;
+    cwist_livemsg_config_init(&config, CWIST_LIVEMSG_TRANSPORT_WEBRTC);
+    config.port = (uint16_t)rtc_port;
+    config.process = raw_process;
+    config.respond = raw_respond;
+    return config;
+}
+
+static pid_t start_rtc_server(void) {
+    pid_t pid = fork();
+    assert(pid >= 0);
+    if (pid == 0) {
+        int rc = cwist_livemsg_serve(rtc_config);
+        _exit(rc == 0 ? 0 : 100);
+    }
+    return pid;
+}
+
 static void stop_server(pid_t pid) {
     assert(kill(pid, SIGTERM) == 0);
     int status;
     assert(waitpid(pid, &status, 0) == pid);
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
+}
+
+static void test_signaling_rejects_embedded_nul(void) {
+    char offer[1024];
+    assert(cwist_sdp_write_offer(offer, sizeof(offer), "00:11:22:33:44:55", "ufrag", "password",
+                                 "0") == 0);
+    pid_t server = start_rtc_server();
+    int fd = connect_retry((uint16_t)rtc_port);
+    char body[2048];
+    size_t offer_len = strlen(offer);
+    memcpy(body, offer, offer_len);
+    body[offer_len] = '\0';
+    memcpy(body + offer_len + 1, "ignored", 7);
+    size_t body_len = offer_len + 8;
+    char request[512];
+    int request_len = snprintf(request, sizeof(request),
+                               "POST /signal HTTP/1.1\r\nHost: localhost\r\n"
+                               "Content-Type: application/sdp\r\nContent-Length: %zu\r\n"
+                               "Connection: close\r\n\r\n",
+                               body_len);
+    send_all(fd, request, (size_t)request_len);
+    send_all(fd, body, body_len);
+    char response[256];
+    struct pollfd pfd = {.fd = fd, .events = POLLIN};
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    ssize_t n = recv(fd, response, sizeof(response) - 1, 0);
+    assert(n > 0);
+    response[n] = '\0';
+    assert(strstr(response, " 400 ") != NULL);
+    close(fd);
+    stop_server(server);
+    puts("SDP signaling rejects embedded NUL: ok");
 }
 
 static void test_invalid_and_lifecycle(void) {
@@ -509,7 +563,9 @@ int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     raw_port = (int)unused_tcp_port();
     json_port = (int)unused_tcp_port();
-    assert(raw_port != json_port);
+    rtc_port = (int)unused_tcp_port();
+    assert(raw_port != json_port && raw_port != rtc_port && json_port != rtc_port);
+    test_signaling_rejects_embedded_nul();
     test_invalid_and_lifecycle();
     test_raw_server();
     test_json_server();

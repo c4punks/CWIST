@@ -695,12 +695,12 @@ uint32_t cwist_grpc_channel_call_attempts(const cwist_grpc_channel_call *cc) {
 
 /** @brief Convenience blocking unary RPC: start, read one response, finish.
  *
- * On CWIST_GRPC_OK the first response message is copied into @p response
- * (caller-owned; freed with cwist_free) with its length in @p response_len;
- * extra messages are discarded.  On any other status the response is freed
- * and NULL/0 is returned.  Output pointers may be NULL to discard the
- * corresponding value.  @p status_message, when non-NULL on entry, receives
- * an allocated copy of the server status message.
+ * On CWIST_GRPC_OK the response message is copied into @p response
+ * (caller-owned; freed with cwist_free) with its length in @p response_len.
+ * Missing or additional response messages produce CWIST_GRPC_INTERNAL. On any
+ * other status the response is freed and NULL/0 is returned. Output pointers
+ * may be NULL to discard the corresponding value. @p status_message, when
+ * non-NULL on entry, receives an allocated copy of the server status message.
  *
  * @return the final gRPC status (CWIST_GRPC_INTERNAL if the call could not start)
  */
@@ -717,16 +717,27 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char 
 
     uint8_t *copy = NULL;
     size_t copy_len = 0;
-    cwist_grpc_message msg;
+    size_t first_len = 0;
+    bool got_message = false;
+    bool multiple_messages = false;
+    cwist_grpc_message msg = {0};
     if (cwist_grpc_channel_call_recv(cc, &msg) == 1) {
+        got_message = true;
+        first_len = msg.len;
         copy = cwist_alloc(msg.len ? msg.len : 1);
         if (copy && msg.len) memcpy(copy, msg.data, msg.len);
         copy_len = copy ? msg.len : 0;
-        while (cwist_grpc_channel_call_recv(cc, &msg) == 1); /* unary: ignore trailing messages */
+        while (cwist_grpc_channel_call_recv(cc, &msg) == 1) multiple_messages = true;
     }
     const char *sm = NULL;
     cwist_grpc_status_t status = cwist_grpc_channel_call_finish(cc, &sm);
-    if (status == CWIST_GRPC_OK && msg.len > 0 && !copy) {
+    if (status == CWIST_GRPC_OK && !got_message) {
+        status = CWIST_GRPC_INTERNAL;
+        sm = "missing unary response message";
+    } else if (status == CWIST_GRPC_OK && multiple_messages) {
+        status = CWIST_GRPC_INTERNAL;
+        sm = "multiple unary response messages";
+    } else if (status == CWIST_GRPC_OK && first_len > 0 && !copy) {
         status = CWIST_GRPC_INTERNAL;
         sm = "out of memory";
     }

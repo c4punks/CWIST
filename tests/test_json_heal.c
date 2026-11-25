@@ -33,6 +33,18 @@ void *__wrap_cwist_realloc(void *ptr, size_t new_size) {
     if (fail_realloc) return NULL;
     return __real_cwist_realloc(ptr, new_size);
 }
+static int fail_duplicate;
+static int fail_array;
+cJSON *__real_cJSON_Duplicate(const cJSON *item, cJSON_bool recurse);
+cJSON *__wrap_cJSON_Duplicate(const cJSON *item, cJSON_bool recurse) {
+    if (fail_duplicate) return NULL;
+    return __real_cJSON_Duplicate(item, recurse);
+}
+cJSON_bool __real_cJSON_AddItemToArray(cJSON *array, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToArray(cJSON *array, cJSON *item) {
+    if (fail_array) return 0;
+    return __real_cJSON_AddItemToArray(array, item);
+}
 
 /* --------------------------------------------------------------------------
  * Shared schema used by most tests
@@ -540,6 +552,30 @@ static void test_db_query_strict(void) {
     printf("  Passed.\n");
 }
 
+static void test_db_query_strict_allocation_failures(void) {
+    static const cwist_schema_field_t fields[] = {
+        {"n", {NULL}, CWIST_FIELD_STRING, true},
+    };
+    static const cwist_schema_t schema = {fields, 1};
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+    cJSON *rows = (cJSON *)1;
+    fail_duplicate = 1;
+    err = cwist_db_query_strict(db, "SELECT 'x' AS n", &rows, &schema);
+    fail_duplicate = 0;
+    assert(!cwist_error_is_ok(&err) && rows == NULL);
+    cwist_error_dispose(&err);
+
+    rows = (cJSON *)1;
+    fail_array = 1;
+    err = cwist_db_query_strict(db, "SELECT 'x' AS n", &rows, &schema);
+    fail_array = 0;
+    assert(!cwist_error_is_ok(&err) && rows == NULL);
+    cwist_error_dispose(&err);
+    cwist_db_close(db);
+}
+
 static void test_strict_json_and_schema_boundaries(void) {
     printf("Strict JSON and schema boundaries...\n");
 
@@ -740,6 +776,7 @@ int main(void) {
     test_db_insert_healed_rejects_invalid();
     test_db_insert_healed_escapes_identifiers();
     test_db_query_strict();
+    test_db_query_strict_allocation_failures();
     test_strict_json_and_schema_boundaries();
 
     printf("\nAll json_heal / zod / DB tests passed!\n");

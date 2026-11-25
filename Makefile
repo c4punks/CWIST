@@ -2000,7 +2000,7 @@ endif
 
 ifeq ($(CWIST_DB),1)
 test_json_heal: $(LIB_NAME) tests/test_json_heal.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_realloc -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_ReplaceItemInObjectCaseSensitive -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cwist_realloc -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddItemToArray -Wl,--wrap=cJSON_Duplicate -Wl,--wrap=cJSON_ReplaceItemInObjectCaseSensitive -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
 	./test_json_heal
 else
 # CWIST_DB=0: json_heal's DB round-trip path is compiled out with the module.
@@ -2086,7 +2086,7 @@ test_http3_client_datagram: $(LIB_NAME) tests/test_http3_client_datagram.c
 	./$@
 
 test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=malloc -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=malloc -Wl,--wrap=cwist_http_header_add -Wl,--wrap=cwist_sstring_assign_len -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
 	./$@
 else
 # CWIST_HTTP3=0: the module and its tests are compiled out.
@@ -2653,12 +2653,12 @@ test_sse: $(LIB_NAME) tests/test_sse.c
 	./test_sse
 
 test_graphql: $(LIB_NAME) tests/test_graphql.c
-	$(CC) $(CFLAGS) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_ReplaceItemViaPointer -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
 	./test_graphql
 
 ifeq ($(CWIST_WS),1)
 test_graphql_subscriptions: $(LIB_NAME) tests/test_graphql_subscriptions.c
-	$(CC) $(CFLAGS) -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
 	./test_graphql_subscriptions
 else
 # CWIST_WS=0: graphql_ws.c rides on websocket_async, so its test is compiled out.
@@ -2958,7 +2958,7 @@ test_linux_writer_fast: $(LIB_NAME) tests/test_linux_writer_fast.c
 
 ifeq ($(CWIST_DB),1)
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
-	$(CC) $(CFLAGS) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddObjectToObject -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
 
 test_orm_socket_sigpipe: $(LIB_NAME) tests/test_orm_socket_sigpipe.c

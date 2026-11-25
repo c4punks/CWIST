@@ -386,6 +386,11 @@ static void test_backpressure(void) {
     printf("async WebSocket parked-output backpressure test passed\n");
 }
 
+static void test_oversized_outgoing_frame(cwist_websocket_async *ws) {
+    uint8_t byte = 0;
+    assert(cwist_websocket_async_send(ws, CWIST_WS_FRAME_BINARY, &byte, SIZE_MAX) == -1);
+}
+
 int main(void) {
     test_backpressure();
     /* Forked first: the child sets the 2s idle timeout, which is cached
@@ -404,7 +409,10 @@ int main(void) {
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_f) == 0);
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, conn_g) == 0);
 
-    assert(cwist_websocket_async_attach(conn_a[0], reactor, on_message, NULL, NULL, 0));
+    cwist_websocket_async *ws_a = cwist_websocket_async_attach_ex(conn_a[0], reactor, on_message,
+                                                                  NULL, NULL, NULL, 0);
+    assert(ws_a);
+    test_oversized_outgoing_frame(ws_a);
     assert(cwist_websocket_async_attach(conn_b[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_c[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_d[0], reactor, on_message, NULL, NULL, 0));
