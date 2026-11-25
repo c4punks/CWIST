@@ -322,6 +322,7 @@ static void signaling_route_handler(void *user, cwist_http_request *req, cwist_h
     cwist_livemsg_ctx *ctx = user;
     char *answer = NULL;
     if (!req->body || !req->body->data || req->body->size > LIVEMSG_MAX_SDP_BYTES ||
+        memchr(req->body->data, '\0', req->body->size) ||
         cwist_livemsg_webrtc_offer(ctx, req->body->data, &answer) < 0) {
         res->status_code = CWIST_HTTP_BAD_REQUEST;
         cwist_sstring_assign(res->body, "invalid SDP offer");

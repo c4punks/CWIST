@@ -10,6 +10,19 @@
 #include <cwist/core/orm/orm.h>
 #include <cwist/core/orm/orm_socket.h>
 
+static _Atomic int fail_add;
+static _Atomic int fail_typed;
+cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
+    if (__atomic_load_n(&fail_add, __ATOMIC_SEQ_CST)) return 0;
+    return __real_cJSON_AddItemToObject(object, string, item);
+}
+cJSON *__real_cJSON_AddObjectToObject(cJSON *object, const char *name);
+cJSON *__wrap_cJSON_AddObjectToObject(cJSON *object, const char *name) {
+    if (__atomic_load_n(&fail_typed, __ATOMIC_SEQ_CST)) return NULL;
+    return __real_cJSON_AddObjectToObject(object, name);
+}
+
 /* cwist_db_transfer_sqlite_to_socket() must hand back a usable SQL socket:
  * the ORM helpers round-trip rows through the SQLite worker behind it. */
 static void test_transfer_sqlite_to_socket(void) {
@@ -72,6 +85,20 @@ static void test_transfer_sqlite_to_socket(void) {
                         "\"e\":\"1.50\",\"f\":1.5,\"g\":42,\"h\":100}") == 0);
     cJSON_free(text);
     cJSON_Delete(rows);
+
+    rows = NULL;
+    fail_add = 1;
+    cwist_error_t err = cwist_orm_select(orm, "posts", "id", NULL, &rows);
+    fail_add = 0;
+    assert(!cwist_error_is_ok(&err) && rows == NULL);
+    cwist_error_dispose(&err);
+
+    rows = NULL;
+    fail_typed = 1;
+    err = cwist_orm_select(orm, "posts", "id", NULL, &rows);
+    fail_typed = 0;
+    assert(!cwist_error_is_ok(&err) && rows == NULL);
+    cwist_error_dispose(&err);
 
     cwist_orm_close_socket(orm);
     printf("cwist_db_transfer_sqlite_to_socket round-trip test passed.\n");

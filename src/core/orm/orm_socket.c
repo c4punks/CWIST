@@ -506,18 +506,22 @@ static void *cwist_orm_socket_worker(void *arg) {
         cJSON_AddNumberToObject(resp, "status", (double)rc);
         if (errmsg) {
             cJSON_AddStringToObject(resp, "error", errmsg);
-            free(errmsg);
         } else {
             cJSON_AddNullToObject(resp, "error");
         }
-        cJSON_AddItemToObject(resp, "rows", acc.rows);
+        free(errmsg);
+        if (cJSON_AddItemToObject(resp, "rows", acc.rows)) acc.rows = NULL;
         cJSON *typed = cJSON_AddObjectToObject(resp, "typed");
         if (typed) {
-            cJSON_AddItemToObject(typed, "columns", acc.columns);
-            cJSON_AddItemToObject(typed, "rows", acc.trows);
-        } else {
+            if (cJSON_AddItemToObject(typed, "columns", acc.columns)) acc.columns = NULL;
+            if (cJSON_AddItemToObject(typed, "rows", acc.trows)) acc.trows = NULL;
+        }
+        if (!typed || acc.rows || acc.columns || acc.trows) {
+            cJSON_Delete(resp);
+            cJSON_Delete(acc.rows);
             cJSON_Delete(acc.columns);
             cJSON_Delete(acc.trows);
+            break;
         }
 
         char *payload = cJSON_PrintUnformatted(resp);

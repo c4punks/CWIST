@@ -19,6 +19,13 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+static _Atomic int fail_add;
+cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
+    if (atomic_load(&fail_add)) return 0;
+    return __real_cJSON_AddItemToObject(object, string, item);
+}
+
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/sys/io/reactor.h>
 
@@ -489,6 +496,10 @@ int main(void) {
     write_text(fd, "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
                    "counter(topic: \\\"t1\\\") }\"}}");
     expect_silence(fd, 200); /* no ack for subscribe */
+    atomic_store(&fail_add, 1);
+    assert(cwist_graphql_publish("t1", NULL) == 0);
+    expect_silence(fd, 200);
+    atomic_store(&fail_add, 0);
     publish_and_expect_next(fd, "t1", "1", 1);
     printf("7. subscribe + publish -> next: ok\n");
 

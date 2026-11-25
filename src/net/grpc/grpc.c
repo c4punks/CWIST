@@ -1268,7 +1268,12 @@ static void grpc_health_watch(cwist_grpc_stream *stream, void *ctx) {
         cwist_grpc_message msg;
         int rc = cwist_grpc_stream_recv(stream, &msg);
         if (rc < 0) return; /* cancelled before the request arrived */
-        if (rc > 0) service = grpc_health_service_copy(&msg, &allocation_failed);
+        if (rc == 0) {
+            stream->status = CWIST_GRPC_INVALID_ARGUMENT;
+            stream->status_message = "missing health check request";
+            return;
+        }
+        service = grpc_health_service_copy(&msg, &allocation_failed);
     } else {
         cwist_grpc_message empty = {0, NULL, 0};
         const cwist_grpc_message *message = stream->message_count ? &stream->messages[0] : &empty;
