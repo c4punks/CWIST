@@ -623,6 +623,33 @@ static int wait_detached(cwist_webrtc_conn *conn, int timeout_ms) {
     return 0;
 }
 
+static void test_lowercase_fingerprint(void) {
+    cwist_webrtc_ctx *server = cwist_webrtc_ctx_new(0);
+    cwist_webrtc_ctx *client = cwist_webrtc_ctx_new(0);
+    assert(server && client);
+    test_peer *sp = calloc(1, sizeof(*sp));
+    test_peer *cp = calloc(1, sizeof(*cp));
+    assert(sp && cp);
+    cwist_webrtc_ctx_set_message_handler(server, &server_on_message, sp);
+    cwist_webrtc_ctx_set_message_handler(client, &client_on_message, cp);
+
+    char lower[128];
+    snprintf(lower, sizeof(lower), "%s", cwist_webrtc_ctx_fingerprint(server));
+    for (char *p = lower; *p; p++) *p = (char)tolower((unsigned char)*p);
+    cwist_webrtc_conn *conn = dial_with_fingerprint(server, client, lower);
+    assert(cwist_webrtc_conn_send(conn, 1, (const uint8_t *)"ping", 4, CWIST_WEBRTC_DATA_BINARY) ==
+           0);
+    assert(wait_flag(&sp->got_ping, 1, 3000) == 0);
+    assert(wait_flag(&cp->got_pong, 1, 3000) == 0);
+
+    cwist_webrtc_conn_close(conn);
+    cwist_webrtc_conn_release(conn);
+    cwist_webrtc_ctx_free(server);
+    cwist_webrtc_ctx_free(client);
+    free(sp);
+    free(cp);
+}
+
 static void test_fingerprint_mismatch(void) {
     cwist_webrtc_ctx *server = cwist_webrtc_ctx_new(0);
     cwist_webrtc_ctx *client = cwist_webrtc_ctx_new(0);
@@ -715,6 +742,7 @@ static void test_external_reactor(void) {
 int main(void) {
     unit_checks();
     test_end_to_end();
+    test_lowercase_fingerprint();
     test_fingerprint_mismatch();
     test_send_queue_cap();
     test_external_reactor();
