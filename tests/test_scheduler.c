@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdatomic.h>
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int fail_alloc;
 static _Atomic int alloc_entered;
 static pthread_mutex_t alloc_gate = PTHREAD_MUTEX_INITIALIZER;
@@ -35,6 +36,7 @@ void *__wrap_cwist_realloc(void *ptr, size_t size) {
     if (fail_alloc == 2) wait_allocation_gate();
     return __real_cwist_realloc(ptr, size);
 }
+#endif
 
 static pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int g_counter = 0;
@@ -110,6 +112,7 @@ static void test_cancel_pending_null_scheduler(void) {
     printf("  OK\n");
 }
 
+#ifdef CWIST_TEST_WRAP
 static void noop_job(void *arg) {
     (void)arg;
 }
@@ -175,6 +178,7 @@ static void test_delayed_submit_allocation_retry(void) {
     pthread_mutex_unlock(&g_mutex);
     cwist_scheduler_destroy(s);
 }
+#endif
 
 /* --- main ---------------------------------------------------------------- */
 
@@ -218,8 +222,12 @@ int main(void) {
     test_cancel_pending_calls_drop_cb();
     test_cancel_pending_null_drop_cb();
     test_cancel_pending_null_scheduler();
+#ifdef CWIST_TEST_WRAP
     test_delayed_submit_allocation_retry();
     test_schedule_destroy_race();
+#else
+    printf("Skipped allocation-injection scheduler tests (linker has no --wrap).\n");
+#endif
 
     printf("All scheduler tests passed.\n");
     return 0;
