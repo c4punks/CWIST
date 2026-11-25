@@ -1,9 +1,15 @@
 <map id="src/core/utils/json_internal.h" name="src/core/utils/json_internal.h">
-<area shape="rect" id="Node000001" title=" " alt="" coords="169,5,305,45"/>
+<area shape="rect" id="Node000001" title=" " alt="" coords="429,5,565,45"/>
 <area shape="rect" id="Node000002" href="$d1/d8b/json__heal_8c.html" title="Multi&#45;stage JSON recovery pipeline with optional schema alignment." alt="" coords="5,93,141,133"/>
-<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="190,54,110,96,108,91,188,49"/>
-<area shape="rect" id="Node000003" href="$d6/d6d/bind_8c.html" title="Implementation of declarative schema validation and binding." alt="" coords="166,93,309,133"/>
-<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="240,59,240,93,235,93,235,59"/>
-<area shape="rect" id="Node000004" href="$dd/d92/graphql_8c.html" title=" " alt="" coords="333,101,515,126"/>
-<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="292,49,400,98,398,103,289,53"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="416,44,154,96,142,99,141,93,153,91,415,39"/>
+<area shape="rect" id="Node000003" href="$d7/d92/zod_8c.html" title="Lightweight schema validation helpers for cJSON payloads." alt="" coords="166,101,309,126"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="428,52,273,103,271,98,426,47"/>
+<area shape="rect" id="Node000004" href="$d6/d6d/bind_8c.html" title="Implementation of declarative schema validation and binding." alt="" coords="333,93,475,133"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="468,57,426,95,423,91,465,53"/>
+<area shape="rect" id="Node000005" href="$dd/d92/graphql_8c.html" title=" " alt="" coords="499,101,682,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="530,53,580,98,576,102,526,57"/>
+<area shape="rect" id="Node000006" href="$d7/d38/graphql__ws_8c.html" title="Experimental GraphQL subscriptions over the graphql&#45;ws WebSocket subprotocol (v3.7 Phase 4)." alt="" coords="707,101,915,126"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="579,46,770,98,768,103,578,51"/>
+<area shape="rect" id="Node000007" href="$d8/d80/jwt_8c.html" title="HS256/ES256/EdDSA JWT signing, verification, and decoded&#45;claims access helpers." alt="" coords="939,101,1095,126"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="579,35,927,91,965,98,964,103,926,96,579,41"/>
 </map>

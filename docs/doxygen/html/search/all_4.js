@@ -13,7 +13,7 @@ var searchData=
   ['4_20pseudo_20raii_20for_20handle_20like_20locals_10',['4. Pseudo-RAII for handle-like locals',['../d9/dd1/md_docs_2GC.html#autotoc_md343',1,'']]],
   ['4_20query_20parsing_11',['4. Query Parsing',['../da/dca/md_docs_2REFERENCE.html#autotoc_md525',1,'']]],
   ['4_20restart_20back_20up_20and_20restore_12',['4. Restart, back up, and restore',['../db/de3/md_docs_2deployment_2wasmtime-appliance.html#autotoc_md309',1,'']]],
-  ['4_20runnable_20examples_13',['4. Runnable examples',['..//home/yjlee/cwist/docs/README.md#autotoc_md517',1,'']]],
+  ['4_20runnable_20examples_13',['4. Runnable examples',['..//home/runner/work/CWIST/CWIST/docs/README.md#autotoc_md517',1,'']]],
   ['4_20test_20the_20api_14',['4. Test the API',['../d4/db0/md_docs_2tutorials_2blog-crud.html#autotoc_md608',1,'']]],
   ['4_20time_20caching_20—_20already_20implemented_15',['1.4 Time caching — ALREADY IMPLEMENTED',['../d0/d34/md_docs_2performance_2issue-297-syscall-audit.html#autotoc_md497',1,'']]],
   ['4_20use_20in_20cwist_3a_20covering_20runtime_20knob_20pairs_20in_20tests_16',['4. Use in CWIST: covering runtime knob pairs in tests',['../df/d22/md_docs_2references_2latin__square__references.html#autotoc_md542',1,'']]],
