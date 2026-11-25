@@ -3417,7 +3417,9 @@ static void http_async_prepare_response(cwist_http_async_conn_t *conn, cwist_htt
     }
     char alt_svc[64];
     snprintf(alt_svc, sizeof(alt_svc), "h3=\":%d\"; ma=86400", port);
-    cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Alt-Svc", alt_svc);
+    if (!cwist_error_is_ok(&err)) res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+    cwist_error_dispose(&err);
 }
 
 static cwist_write_status_t http_async_write_speculative(cwist_http_async_conn_t *conn,

@@ -6,6 +6,18 @@
 #include <assert.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
+static int fail_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_header && strcmp(key, "Allow") == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
+#endif
+
 void test_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
     res->status_code = CWIST_HTTP_OK;
@@ -180,6 +192,15 @@ int main() {
     assert(res3->status_code == CWIST_HTTP_METHOD_NOT_ALLOWED);
     const char *allow = cwist_http_header_get(res3->headers, "Allow");
     assert(allow && strcmp(allow, "GET, HEAD") == 0);
+
+#ifdef CWIST_TEST_WRAP
+    cwist_http_response *failed = cwist_http_response_create();
+    fail_header = 1;
+    assert(cwist_mux_serve(router, req3, failed));
+    fail_header = 0;
+    assert(failed->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_response_destroy(failed);
+#endif
 
     cwist_mux_router_destroy(router);
     cwist_http_request_destroy(req1);

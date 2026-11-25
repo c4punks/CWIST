@@ -1979,7 +1979,7 @@ test_siphash: $(LIB_NAME) tests/test_siphash.c
 	./test_siphash
 
 test_mux: $(LIB_NAME) tests/test_mux.c
-	$(CC) $(CFLAGS) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
 	./test_mux
 
 test_mux_param: $(LIB_NAME) tests/test_mux_param.c
@@ -2670,7 +2670,7 @@ test_graphql: $(LIB_NAME) tests/test_graphql.c
 
 ifeq ($(CWIST_WS),1)
 test_graphql_subscriptions: $(LIB_NAME) tests/test_graphql_subscriptions.c
-	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddStringToObject -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddStringToObject) $(call wrap_flag,cwist_http_header_add) -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
 	./test_graphql_subscriptions
 else
 # CWIST_WS=0: graphql_ws.c rides on websocket_async, so its test is compiled out.

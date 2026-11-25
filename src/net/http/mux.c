@@ -572,8 +572,16 @@ static bool mux_method_not_allowed(cwist_mux_router *router, const char *path,
         allow[len] = '\0';
     }
     if (!len) return false;
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Allow", allow);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_http_response_set_body_ptr(res, "500 Internal Server Error",
+                                         sizeof("500 Internal Server Error") - 1);
+        return true;
+    }
+    cwist_error_dispose(&err);
     res->status_code = CWIST_HTTP_METHOD_NOT_ALLOWED;
-    cwist_http_header_add(&res->headers, "Allow", allow);
     cwist_http_response_set_body_ptr(res, "405 Method Not Allowed",
                                      sizeof("405 Method Not Allowed") - 1);
     return true;
