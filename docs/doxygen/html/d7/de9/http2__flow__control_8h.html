@@ -211,11 +211,15 @@ Functions</h2></td></tr>
 <tr class="memdesc:aa5869ea88923114572747dc766484fec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Emit a stream-level WINDOW_UPDATE when enough credit is due.  <br /></td></tr>
 <tr class="separator:aa5869ea88923114572747dc766484fec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a10c9a98a88b0a7dc742547646cc80142" id="r_a10c9a98a88b0a7dc742547646cc80142"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#a10c9a98a88b0a7dc742547646cc80142">cwist_http2_flow_control_add_send_window</a> (<a class="el" href="../../d1/d92/structcwist__http2__flow__control.html">cwist_http2_flow_control</a> *flow_control, uint32_t increment)</td></tr>
-<tr class="memdesc:a10c9a98a88b0a7dc742547646cc80142"><td class="mdescLeft">&#160;</td><td class="mdescRight">Credit the connection send window from a WINDOW_UPDATE frame.  <br /></td></tr>
 <tr class="separator:a10c9a98a88b0a7dc742547646cc80142"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac6a3c6514652a739dd237f3805627d89" id="r_ac6a3c6514652a739dd237f3805627d89"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#ac6a3c6514652a739dd237f3805627d89">cwist_http2_flow_control_add_send_window_checked</a> (<a class="el" href="../../d1/d92/structcwist__http2__flow__control.html">cwist_http2_flow_control</a> *flow_control, uint32_t increment)</td></tr>
+<tr class="memdesc:ac6a3c6514652a739dd237f3805627d89"><td class="mdescLeft">&#160;</td><td class="mdescRight">Credit the connection send window without exceeding the protocol maximum.  <br /></td></tr>
+<tr class="separator:ac6a3c6514652a739dd237f3805627d89"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0350eabe77ee3c2766becdaad70f313f" id="r_a0350eabe77ee3c2766becdaad70f313f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#a0350eabe77ee3c2766becdaad70f313f">cwist_http2_stream_flow_control_add_send_window</a> (<a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *flow_control, uint32_t increment)</td></tr>
-<tr class="memdesc:a0350eabe77ee3c2766becdaad70f313f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Credit a stream send window from a WINDOW_UPDATE frame.  <br /></td></tr>
 <tr class="separator:a0350eabe77ee3c2766becdaad70f313f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab74dc8b5d893f288725b3b01f56ff65b" id="r_ab74dc8b5d893f288725b3b01f56ff65b"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#ab74dc8b5d893f288725b3b01f56ff65b">cwist_http2_stream_flow_control_add_send_window_checked</a> (<a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *flow_control, uint32_t increment)</td></tr>
+<tr class="memdesc:ab74dc8b5d893f288725b3b01f56ff65b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Credit a stream send window without exceeding the protocol maximum.  <br /></td></tr>
+<tr class="separator:ab74dc8b5d893f288725b3b01f56ff65b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8259cf59641d17ba7f55264447a892be" id="r_a8259cf59641d17ba7f55264447a892be"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#a8259cf59641d17ba7f55264447a892be">cwist_http2_stream_flow_control_adjust_send_window</a> (<a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *flow_control, int32_t delta)</td></tr>
 <tr class="separator:a8259cf59641d17ba7f55264447a892be"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa4645fc8b3bd6eb5cae49fb57edf1312" id="r_aa4645fc8b3bd6eb5cae49fb57edf1312"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/de9/http2__flow__control_8h.html#aa4645fc8b3bd6eb5cae49fb57edf1312">cwist_http2_flow_control_pacing_allowance</a> (<a class="el" href="../../d1/d92/structcwist__http2__flow__control.html">cwist_http2_flow_control</a> *connection_flow_control, const <a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *stream_flow_control, size_t requested, uint64_t now_us)</td></tr>
@@ -382,8 +386,39 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Credit the connection send window from a WINDOW_UPDATE frame. </p>
-<p>Saturating add: credit is capped at CWIST_HTTP2_MAX_WINDOW.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00504">504</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00496">cwist_http2_flow_control_add_send_window_checked()</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::send_window</a>.</p>
+
+</div>
+</div>
+<a id="ac6a3c6514652a739dd237f3805627d89" name="ac6a3c6514652a739dd237f3805627d89"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac6a3c6514652a739dd237f3805627d89">&#9670;&#160;</a></span>cwist_http2_flow_control_add_send_window_checked()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_http2_flow_control_add_send_window_checked </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d1/d92/structcwist__http2__flow__control.html">cwist_http2_flow_control</a> *&#160;</td>
+          <td class="paramname"><em>flow_control</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>increment</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Credit the connection send window without exceeding the protocol maximum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">flow_control</td><td>Connection flow-control state. </td></tr>
@@ -391,10 +426,13 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>false when the increment would overflow the window. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00498">498</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00496">496</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::send_window</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00504">cwist_http2_flow_control_add_send_window()</a>.</p>
 
 </div>
 </div>
@@ -613,11 +651,11 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Allowed byte count; 0 when either flow-control pointer is NULL or no credit of any kind is available. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00550">550</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00557">557</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00037">cwist_http2_flow_control::pacing_last_us</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00036">cwist_http2_flow_control::pacing_rate_bytes_per_sec</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00035">cwist_http2_flow_control::pacing_tokens</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::send_window</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00047">cwist_http2_stream_flow_control::send_window</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00025">cwist_http2_flow_control::target_window</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00616">cwist_http2_flow_control_reserve_send()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00623">cwist_http2_flow_control_reserve_send()</a>.</p>
 
 </div>
 </div>
@@ -728,9 +766,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00616">616</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00623">623</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00550">cwist_http2_flow_control_pacing_allowance()</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00035">cwist_http2_flow_control::pacing_tokens</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::send_window</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00047">cwist_http2_stream_flow_control::send_window</a>.</p>
+<p class="reference">References <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00557">cwist_http2_flow_control_pacing_allowance()</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00035">cwist_http2_flow_control::pacing_tokens</a>, <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00029">cwist_http2_flow_control::send_window</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00047">cwist_http2_stream_flow_control::send_window</a>.</p>
 
 </div>
 </div>
@@ -804,8 +842,39 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p>Credit a stream send window from a WINDOW_UPDATE frame. </p>
-<p>Saturating add: credit is capped at CWIST_HTTP2_MAX_WINDOW.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00524">524</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00515">cwist_http2_stream_flow_control_add_send_window_checked()</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00047">cwist_http2_stream_flow_control::send_window</a>.</p>
+
+</div>
+</div>
+<a id="ab74dc8b5d893f288725b3b01f56ff65b" name="ab74dc8b5d893f288725b3b01f56ff65b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab74dc8b5d893f288725b3b01f56ff65b">&#9670;&#160;</a></span>cwist_http2_stream_flow_control_add_send_window_checked()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool cwist_http2_stream_flow_control_add_send_window_checked </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="../../d0/d2d/structcwist__http2__stream__flow__control.html">cwist_http2_stream_flow_control</a> *&#160;</td>
+          <td class="paramname"><em>flow_control</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>increment</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Credit a stream send window without exceeding the protocol maximum. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">flow_control</td><td>Stream flow-control state. </td></tr>
@@ -813,10 +882,13 @@ Functions</h2></td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section return"><dt>Returns</dt><dd>false when the increment would overflow the window. </dd></dl>
 
 <p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00515">515</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00047">cwist_http2_stream_flow_control::send_window</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00524">cwist_http2_stream_flow_control_add_send_window()</a>.</p>
 
 </div>
 </div>
@@ -846,7 +918,7 @@ Functions</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00524">524</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html#l00531">531</a> of file <a class="el" href="../../d9/d16/http2__flow__control_8c_source.html">http2_flow_control.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00010">CWIST_HTTP2_MAX_WINDOW</a>, and <a class="el" href="../../d7/de9/http2__flow__control_8h_source.html#l00047">cwist_http2_stream_flow_control::send_window</a>.</p>
 

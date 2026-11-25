@@ -15,6 +15,7 @@ var http2__flow__control_8h =
       [ "CWIST_HTTP2_NETWORK_QUALITY_UNSTABLE", "d7/de9/http2__flow__control_8h.html#afa71fca3a849cde3951e2475da3be9a6af91f44e1a871ac8980ddbb3d512bf175", null ]
     ] ],
     [ "cwist_http2_flow_control_add_send_window", "d7/de9/http2__flow__control_8h.html#a10c9a98a88b0a7dc742547646cc80142", null ],
+    [ "cwist_http2_flow_control_add_send_window_checked", "d7/de9/http2__flow__control_8h.html#ac6a3c6514652a739dd237f3805627d89", null ],
     [ "cwist_http2_flow_control_consume", "d7/de9/http2__flow__control_8h.html#a8f715dfebf52ae7593f420f56a6802bf", null ],
     [ "cwist_http2_flow_control_init", "d7/de9/http2__flow__control_8h.html#ae5a28d43a4bd7b516dc530151d82a66f", null ],
     [ "cwist_http2_flow_control_maybe_window_update", "d7/de9/http2__flow__control_8h.html#a0d29c73928d5bb7e0770d3aed6d41f40", null ],
@@ -23,6 +24,7 @@ var http2__flow__control_8h =
     [ "cwist_http2_flow_control_reserve_send", "d7/de9/http2__flow__control_8h.html#a947d19fa7e2aca3e99de73b0f95e7df6", null ],
     [ "cwist_http2_flow_control_update_rtt", "d7/de9/http2__flow__control_8h.html#a610ff8a87c8908bc70fb52bf42880da0", null ],
     [ "cwist_http2_stream_flow_control_add_send_window", "d7/de9/http2__flow__control_8h.html#a0350eabe77ee3c2766becdaad70f313f", null ],
+    [ "cwist_http2_stream_flow_control_add_send_window_checked", "d7/de9/http2__flow__control_8h.html#ab74dc8b5d893f288725b3b01f56ff65b", null ],
     [ "cwist_http2_stream_flow_control_adjust_send_window", "d7/de9/http2__flow__control_8h.html#a8259cf59641d17ba7f55264447a892be", null ],
     [ "cwist_http2_stream_flow_control_consume", "d7/de9/http2__flow__control_8h.html#a1fbab4a381083644f0b838feca679d0d", null ],
     [ "cwist_http2_stream_flow_control_init", "d7/de9/http2__flow__control_8h.html#aa7025676c938d9afa1e86d754517c671", null ],
