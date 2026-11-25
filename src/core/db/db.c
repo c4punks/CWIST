@@ -54,6 +54,7 @@ cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
         return err;
     }
 
+    *db = NULL;
     // if malloc fails, return -1
     *db = (cwist_db *)cwist_alloc(sizeof(cwist_db));
     if (!*db) {
@@ -97,6 +98,7 @@ cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len, i
         return err;
     }
 
+    *db = NULL;
     *db = (cwist_db *)cwist_alloc(sizeof(cwist_db));
     if (!*db) {
         err.error.err_i16 = -1;

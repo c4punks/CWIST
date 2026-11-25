@@ -189,7 +189,7 @@ static void *proxy_tcp_relay(void *arg) {
     bool upstream_open = true;
     uint64_t last_active_ms = proxy_transport_now_ms();
     unsigned char buf[16384];
-    while (upstream_open && proxy_transport_active()) {
+    while ((client_open || upstream_open) && proxy_transport_active()) {
         uint64_t now = proxy_transport_now_ms();
         if (now - last_active_ms >= PROXY_TRANSPORT_IDLE_TIMEOUT_MS) break;
         struct pollfd fds[2] = {
@@ -360,7 +360,20 @@ static void *proxy_udp_listener(void *arg) {
                         sessions = session;
                     }
                 } else {
-                    if (session_count >= PROXY_UDP_MAX_SESSIONS) {
+                    session = NULL;
+                    proxy_udp_session **retired_link = &retired;
+                    while (*retired_link) {
+                        if (proxy_udp_same_client(*retired_link, &client, client_len)) {
+                            session = *retired_link;
+                            *retired_link = session->next;
+                            session->next = sessions;
+                            sessions = session;
+                            session_count++;
+                            break;
+                        }
+                        retired_link = &(*retired_link)->next;
+                    }
+                    if (!session && session_count >= PROXY_UDP_MAX_SESSIONS) {
                         proxy_udp_session **oldest = &sessions;
                         while ((*oldest)->next) oldest = &(*oldest)->next;
                         proxy_udp_session *victim = *oldest;
@@ -369,8 +382,8 @@ static void *proxy_udp_listener(void *arg) {
                         retired = victim;
                         session_count--;
                     }
-                    session = proxy_udp_session_new(rule, &client, client_len, now);
-                    if (session) {
+                    if (!session) session = proxy_udp_session_new(rule, &client, client_len, now);
+                    if (session && !session->next) {
                         session->next = sessions;
                         sessions = session;
                         session_count++;

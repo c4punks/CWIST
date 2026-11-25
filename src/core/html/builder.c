@@ -16,8 +16,8 @@
 static bool html_tag_name_is_valid(const char *tag) {
     if (!tag || !*tag) return true;
     for (const unsigned char *p = (const unsigned char *)tag; *p; p++) {
-        if ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'Z') ||
-            (*p >= 'a' && *p <= 'z') || *p == '-')
+        if ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+            *p == '-')
             continue;
         return false;
     }
@@ -213,7 +213,9 @@ static bool is_raw_text_element(const char *tag) {
  * name (any case) becomes "<\/", which is the same text in JavaScript strings
  * and CSS but no longer an end tag to the HTML parser.
  */
-static void append_raw_text(cwist_sstring *out, const char *text, const char *tag) {
+static bool html_append_ok(cwist_error_t err);
+
+static bool append_raw_text(cwist_sstring *out, const char *text, const char *tag) {
     size_t tag_len = strlen(tag);
     const char *start = text;
     for (const char *p = text; *p; p++) {
@@ -222,13 +224,14 @@ static void append_raw_text(cwist_sstring *out, const char *text, const char *ta
             bool end_tag = next == '>' || next == '/' || next == ' ' || next == '\t' ||
                            next == '\n' || next == '\r' || next == '\f';
             if (!end_tag) continue;
-            cwist_sstring_append_len(out, start, (size_t)(p - start));
-            cwist_sstring_append(out, "<\\/");
+            if (!html_append_ok(cwist_sstring_append_len(out, start, (size_t)(p - start))) ||
+                !html_append_ok(cwist_sstring_append(out, "<\\/")))
+                return false;
             start = p + 2;
             p++;
         }
     }
-    cwist_sstring_append(out, start);
+    return html_append_ok(cwist_sstring_append(out, start));
 }
 
 /**
@@ -236,68 +239,81 @@ static void append_raw_text(cwist_sstring *out, const char *text, const char *ta
  * @param el Current element being rendered.
  * @param out Destination buffer that receives generated markup.
  */
-static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
-    if (!el || !out) return;
+static bool html_append_ok(cwist_error_t err) {
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
+static bool render_element(cwist_html_element_t *el, cwist_sstring *out) {
+    if (!el || !out) return false;
 
     if (el->tag && el->tag->data && *el->tag->data && html_tag_name_is_valid(el->tag->data)) {
-        cwist_sstring_append(out, "<");
-        cwist_sstring_append(out, el->tag->data);
+        if (!html_append_ok(cwist_sstring_append(out, "<")) ||
+            !html_append_ok(cwist_sstring_append(out, el->tag->data)))
+            return false;
         cJSON *attr = NULL;
         cJSON_ArrayForEach(attr, el->attributes) {
             if (!attr || !html_attr_name_is_valid(attr->string)) continue;
             if (cJSON_IsString(attr) && attr->valuestring) {
-                cwist_sstring_append(out, " ");
-                cwist_sstring_append(out, attr->string);
-                cwist_sstring_append(out, "=\"");
-                cwist_sstring_append_escaped(out, attr->valuestring);
-                cwist_sstring_append(out, "\"");
+                if (!html_append_ok(cwist_sstring_append(out, " ")) ||
+                    !html_append_ok(cwist_sstring_append(out, attr->string)) ||
+                    !html_append_ok(cwist_sstring_append(out, "=\"")) ||
+                    !html_append_ok(cwist_sstring_append_escaped(out, attr->valuestring)) ||
+                    !html_append_ok(cwist_sstring_append(out, "\"")))
+                    return false;
             } else if (cJSON_IsTrue(attr)) {
-                cwist_sstring_append(out, " ");
-                cwist_sstring_append(out, attr->string);
+                if (!html_append_ok(cwist_sstring_append(out, " ")) ||
+                    !html_append_ok(cwist_sstring_append(out, attr->string)))
+                    return false;
             } else if (cJSON_IsNumber(attr)) {
                 char num_buf[64];
                 cwist_number_format_double(num_buf, sizeof(num_buf), attr->valuedouble);
-                cwist_sstring_append(out, " ");
-                cwist_sstring_append(out, attr->string);
-                cwist_sstring_append(out, "=\"");
-                cwist_sstring_append(out, num_buf);
-                cwist_sstring_append(out, "\"");
+                if (!html_append_ok(cwist_sstring_append(out, " ")) ||
+                    !html_append_ok(cwist_sstring_append(out, attr->string)) ||
+                    !html_append_ok(cwist_sstring_append(out, "=\"")) ||
+                    !html_append_ok(cwist_sstring_append(out, num_buf)) ||
+                    !html_append_ok(cwist_sstring_append(out, "\"")))
+                    return false;
             }
         }
-        cwist_sstring_append(out, ">");
+        if (!html_append_ok(cwist_sstring_append(out, ">"))) return false;
 
         /* A void element cannot have content; an end tag like </br> would be
          * parsed by browsers as a second element. */
-        if (is_void_element(el->tag->data)) return;
+        if (is_void_element(el->tag->data)) return true;
 
         if (el->inner_text && el->inner_text->data) {
-            if (is_raw_text_element(el->tag->data))
-                append_raw_text(out, el->inner_text->data, el->tag->data);
-            else
-                cwist_sstring_append_escaped(out, el->inner_text->data);
+            if (is_raw_text_element(el->tag->data)) {
+                if (!append_raw_text(out, el->inner_text->data, el->tag->data)) return false;
+            } else if (!html_append_ok(cwist_sstring_append_escaped(out, el->inner_text->data))) {
+                return false;
+            }
         }
 
         if (el->children) {
             for (int i = 0; i < el->child_count; i++) {
-                render_element(el->children[i], out);
+                if (!render_element(el->children[i], out)) return false;
             }
         }
 
-        cwist_sstring_append(out, "</");
-        cwist_sstring_append(out, el->tag->data);
-        cwist_sstring_append(out, ">");
+        if (!html_append_ok(cwist_sstring_append(out, "</")) ||
+            !html_append_ok(cwist_sstring_append(out, el->tag->data)) ||
+            !html_append_ok(cwist_sstring_append(out, ">")))
+            return false;
     } else {
         /* A tagless element is a fragment: its text, then its children
          * (#964). */
-        if (el->inner_text && el->inner_text->data) {
-            cwist_sstring_append_escaped(out, el->inner_text->data);
-        }
+        if (el->inner_text && el->inner_text->data &&
+            !html_append_ok(cwist_sstring_append_escaped(out, el->inner_text->data)))
+            return false;
         if (el->children) {
             for (int i = 0; i < el->child_count; i++) {
-                render_element(el->children[i], out);
+                if (!render_element(el->children[i], out)) return false;
             }
         }
     }
+    return true;
 }
 
 /**
@@ -308,7 +324,10 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
 cwist_sstring *cwist_html_render(cwist_html_element_t *el) {
     if (!el) return NULL;
     cwist_sstring *out = cwist_sstring_create();
-    cwist_sstring_assign(out, "");
-    render_element(el, out);
+    if (!out) return NULL;
+    if (!html_append_ok(cwist_sstring_assign(out, "")) || !render_element(el, out)) {
+        cwist_sstring_destroy(out);
+        return NULL;
+    }
     return out;
 }

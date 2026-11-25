@@ -38,6 +38,47 @@ static void test_entropy_short_reads(void) {
     cwist_app_destroy(app);
 }
 
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc) return NULL;
+    return __real_cwist_alloc(size);
+}
+
+static const char *fail_json_key;
+cJSON *__real_cJSON_AddStringToObject(cJSON *object, const char *name, const char *string);
+cJSON *__wrap_cJSON_AddStringToObject(cJSON *object, const char *name, const char *string) {
+    if (fail_json_key && name && strcmp(name, fail_json_key) == 0) return NULL;
+    return __real_cJSON_AddStringToObject(object, name, string);
+}
+
+static void test_session_allocation_failures(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    assert(cwist_app_use_session(app, "secret") == 0);
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_session_t *session = cwist_session_start(app, req, res);
+    assert(session != NULL);
+
+    fail_alloc = 1;
+    assert(cwist_session_set(session, "role", "admin") == -1);
+    fail_alloc = 0;
+    assert(cwist_session_get(session, "role") == NULL);
+    assert(cwist_session_commit(session, res) == 0);
+    assert(cwist_session_set(session, "role", "admin") == 0);
+    fail_json_key = "role";
+    assert(cwist_session_commit(session, res) == -1);
+    fail_json_key = NULL;
+    assert(cwist_http_header_get(res->headers, "Set-Cookie") == NULL);
+
+    cwist_session_destroy(session);
+    req->session = NULL;
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    cwist_app_destroy(app);
+}
+
 static int header_contains(cwist_http_header_node *headers, const char *key, const char *value) {
     cwist_http_header_node *curr = headers;
     while (curr) {
@@ -503,6 +544,7 @@ static void test_session_untouched_and_prefixed_logout(void) {
 
 int main(void) {
     test_entropy_short_reads();
+    test_session_allocation_failures();
     test_session_untouched_and_prefixed_logout();
     test_session_deferred_commit();
     test_session_repeated_commit_revokes_every_cookie();

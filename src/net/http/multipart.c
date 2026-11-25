@@ -213,8 +213,11 @@ static int mp_on_part_data_begin(multipart_parser *p) {
 static int mp_on_part_data(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     if (len == 0) return 0;
-    if (ctx->data_len + len > ctx->data_cap) {
-        size_t new_cap = (ctx->data_len + len) * 2;
+    if (len > SIZE_MAX - ctx->data_len) return 1;
+    size_t needed = ctx->data_len + len;
+    if (needed > ctx->data_cap) {
+        if (needed > SIZE_MAX / 2) return 1;
+        size_t new_cap = needed * 2;
         if (new_cap < 256) new_cap = 256;
         char *new_data = (char *)cwist_alloc(new_cap);
         if (!new_data) return 1;

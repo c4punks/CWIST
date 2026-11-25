@@ -508,6 +508,20 @@ static void test_binary_sstring_and_nonfinite_colors(void) {
     cwist_sstring_destroy(src);
     cwist_sstring_destroy(dst);
 
+    const char escaped_raw[] = {'<', '\0', '&'};
+    src = cwist_sstring_create();
+    dst = cwist_sstring_create();
+    assert(src && dst);
+    assert(ok(cwist_sstring_assign_len(src, escaped_raw, sizeof(escaped_raw))));
+    assert(ok(cwist_sstring_append_sstring_escaped(dst, src)));
+    const char expected[] = {'&', 'l', 't', ';', '\0', '&', 'a', 'm', 'p', ';'};
+    assert(dst->size == sizeof(expected) && memcmp(dst->data, expected, sizeof(expected)) == 0);
+    cwist_error_t boundary_err = cwist_sstring_assign_len(dst, dst->data, SIZE_MAX);
+    assert(!ok(boundary_err));
+    cwist_error_dispose(&boundary_err);
+    cwist_sstring_destroy(src);
+    cwist_sstring_destroy(dst);
+
     expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){NAN, 1, 0.5f}), 0, 0, 0);
     expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){0, NAN, 0.5f}), 0, 0, 0);
     expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){0, 1, INFINITY}), 0, 0, 0);
