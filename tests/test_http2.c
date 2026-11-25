@@ -26,6 +26,7 @@ cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *da
     return __real_cwist_sstring_assign_len(str, data, len);
 }
 
+#ifdef CWIST_TEST_WRAP
 static _Atomic int fail_header;
 cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                            const char *value);
@@ -35,6 +36,7 @@ cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const 
         return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_http_header_add(head, key, value);
 }
+#endif
 
 #define TEST_CERT "example/othello-web/server.crt"
 #define TEST_KEY "example/othello-web/server.key"
@@ -984,6 +986,7 @@ static void test_http2_server_push(void) {
     assert(failed_body && failed_promise && failed_reset);
     test_http2_stop_client(client, sv[1], tid);
 
+#ifdef CWIST_TEST_WRAP
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
     test_http2_server_ctx failed_hdr = {
         .fd = sv[0], .handler = http2_push_handler, .standard_data = true};
@@ -1012,6 +1015,7 @@ static void test_http2_server_push(void) {
     atomic_store(&fail_header, 0);
     assert(failed_hdr_body && failed_hdr_promise && failed_hdr_reset);
     test_http2_stop_client(client, sv[1], tid);
+#endif
 
     static const unsigned char no_push[] = {0, 2, 0, 0, 0, 0};
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
