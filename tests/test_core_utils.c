@@ -12,6 +12,7 @@
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/query.h>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -482,6 +483,36 @@ static void test_css_generators(void) {
     cwist_sstring_destroy(utils);
 }
 
+static void test_binary_sstring_and_nonfinite_colors(void) {
+    const char raw[] = {'a', '\0', 'b'};
+    cwist_sstring *src = cwist_sstring_create();
+    cwist_sstring *dst = cwist_sstring_create();
+    assert(src && dst);
+    assert(ok(cwist_sstring_assign_len(src, raw, sizeof(raw))));
+    assert(ok(cwist_sstring_assign(dst, "x")));
+    assert(ok(cwist_sstring_append_sstring(dst, src)));
+    assert(dst->size == 4 && memcmp(dst->data, "xa\0b", 4) == 0);
+    assert(ok(cwist_sstring_copy_sstring(dst, src)));
+    assert(dst->size == sizeof(raw) && memcmp(dst->data, raw, sizeof(raw)) == 0);
+    cwist_sstring *sub = cwist_sstring_substr(src, 1, 2);
+    assert(sub && sub->size == 2 && memcmp(sub->data, "\0b", 2) == 0);
+    cwist_sstring_destroy(sub);
+
+    src->size = SIZE_MAX;
+    cwist_error_t err = cwist_sstring_append(src, "x");
+    assert(!ok(err));
+    cwist_error_dispose(&err);
+    err = cwist_sstring_append_escaped(src, "x");
+    assert(!ok(err));
+    cwist_error_dispose(&err);
+    cwist_sstring_destroy(src);
+    cwist_sstring_destroy(dst);
+
+    expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){NAN, 1, 0.5f}), 0, 0, 0);
+    expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){0, NAN, 0.5f}), 0, 0, 0);
+    expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){0, 1, INFINITY}), 0, 0, 0);
+}
+
 /* --- allocator helpers --------------------------------------------------- */
 
 static void test_alloc_helpers(void) {
@@ -514,6 +545,7 @@ int main(void) {
     test_query_map_insert_oom();
     test_css_colors();
     test_css_generators();
+    test_binary_sstring_and_nonfinite_colors();
     test_alloc_helpers();
     printf("test_core_utils: ok\n");
     return 0;

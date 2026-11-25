@@ -10,7 +10,33 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 #include <unistd.h>
+
+static int entropy_read_mode;
+static int entropy_read_calls;
+
+ssize_t __real_read(int fd, void *buf, size_t count);
+ssize_t __wrap_read(int fd, void *buf, size_t count) {
+    if (!entropy_read_mode) return __real_read(fd, buf, count);
+    if (entropy_read_calls++ == 0) {
+        errno = EINTR;
+        return -1;
+    }
+    size_t chunk = count > 3 ? 3 : count;
+    return __real_read(fd, buf, chunk);
+}
+
+static void test_entropy_short_reads(void) {
+    cwist_app *app = cwist_app_create();
+    assert(app != NULL);
+    entropy_read_mode = 1;
+    entropy_read_calls = 0;
+    assert(cwist_app_use_session(app, NULL) == 0);
+    entropy_read_mode = 0;
+    assert(app->session_secret && strlen(app->session_secret) == 64);
+    cwist_app_destroy(app);
+}
 
 static int header_contains(cwist_http_header_node *headers, const char *key, const char *value) {
     cwist_http_header_node *curr = headers;
@@ -464,8 +490,8 @@ static void test_session_untouched_and_prefixed_logout(void) {
     const char *cleared = cwist_http_header_get(res->headers, "Set-Cookie");
     assert(cleared != NULL);
     assert(strncmp(cleared, "__Host-session=;", 16) == 0);
-    assert(strstr(cleared, "Max-Age=0") && strstr(cleared, "Path=/") &&
-           strstr(cleared, "Secure") && strstr(cleared, "HttpOnly"));
+    assert(strstr(cleared, "Max-Age=0") && strstr(cleared, "Path=/") && strstr(cleared, "Secure") &&
+           strstr(cleared, "HttpOnly"));
     cwist_session_destroy(session);
     req->session = NULL;
     cwist_http_response_destroy(res);
@@ -476,6 +502,7 @@ static void test_session_untouched_and_prefixed_logout(void) {
 }
 
 int main(void) {
+    test_entropy_short_reads();
     test_session_untouched_and_prefixed_logout();
     test_session_deferred_commit();
     test_session_repeated_commit_revokes_every_cookie();

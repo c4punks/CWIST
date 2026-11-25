@@ -1390,6 +1390,8 @@ TEST_TARGETS = test_worker_affinity \
                test_app_named_routes_and_error_handler \
                test_app_route_helpers \
                test_regression_batch \
+               test_file_confine \
+               test_redis_protocol \
                test_classic_pool_scaling \
                test_reactor_wake \
                test_reactor_timer \
@@ -1701,6 +1703,14 @@ test_regression_batch: $(LIB_NAME) tests/test_regression_batch.c
 	$(CC) $(CFLAGS) -o $@ tests/test_regression_batch.c $(LIB_NAME) $(LIBS)
 	./$@
 
+test_file_confine: $(LIB_NAME) tests/test_file_confine.c
+	$(CC) $(CFLAGS) -o $@ tests/test_file_confine.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_redis_protocol: $(LIB_NAME) tests/test_redis_protocol.c
+	$(CC) $(CFLAGS) -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
+	./$@
+
 test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
 	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
 	./$@ burst
@@ -1764,7 +1774,7 @@ bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/re
 
 ifeq ($(CWIST_DB),1)
 test_orm: $(LIB_NAME) tests/test_orm.c
-	$(CC) $(CFLAGS) -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=recv -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
 else
 # CWIST_DB=0: the module and its test are compiled out.
@@ -2530,7 +2540,7 @@ test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	./test_static_and_range
 
 test_session: $(LIB_NAME) tests/test_session.c
-	$(CC) $(CFLAGS) -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) -fno-lto -Wl,--wrap=read -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
 	./test_session
 
 test_csrf: $(LIB_NAME) tests/test_csrf.c

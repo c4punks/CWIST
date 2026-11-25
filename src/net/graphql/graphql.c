@@ -895,8 +895,14 @@ bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables,
 
     cJSON *errors = cJSON_CreateArray();
     if (!errors) return false;
-    parse_arguments(p, variables, args_out, errors);
+    (void)parse_arguments(p, variables, args_out, errors);
+    bool valid = cJSON_GetArraySize(errors) == 0;
     cJSON_Delete(errors);
+    if (!valid) {
+        cJSON_Delete(*args_out);
+        *args_out = NULL;
+        return false;
+    }
     /* *args_out stays NULL when the field carries no arguments. */
     return true;
 }
