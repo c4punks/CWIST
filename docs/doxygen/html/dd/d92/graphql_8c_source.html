@@ -516,450 +516,552 @@ $(document).ready(function(){initNavTree('dd/d92/graphql_8c_source.html','../../
 <div class="line"><a id="l00491" name="l00491"></a><span class="lineno">  491</span>            cJSON_Delete(args);</div>
 <div class="line"><a id="l00492" name="l00492"></a><span class="lineno">  492</span>            <span class="keywordflow">return</span> p;</div>
 <div class="line"><a id="l00493" name="l00493"></a><span class="lineno">  493</span>        }</div>
-<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>        cJSON_AddItemToObject(args, arg_name, val);</div>
-<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(arg_name);</div>
-<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>    }</div>
-<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span> </div>
-<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>    <span class="keywordflow">if</span> (!closed) {</div>
-<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>        gql_add_error(errors, <span class="stringliteral">&quot;Unterminated argument list&quot;</span>);</div>
-<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>        cJSON_Delete(args);</div>
-<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>        <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span>    }</div>
-<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>    *out_args = args;</div>
-<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>    <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span>}</div>
-<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span> </div>
-<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span><span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *skip_selection_set(<span class="keyword">const</span> <span class="keywordtype">char</span> *p) {</div>
-<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> depth = 0;</div>
-<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span>    <span class="keywordtype">bool</span> in_string = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>    <span class="keywordtype">bool</span> escaped = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>    <span class="keywordflow">while</span> (*p) {</div>
-<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>        <span class="keywordflow">if</span> (in_string) {</div>
-<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>            <span class="keywordflow">if</span> (escaped)</div>
-<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>                escaped = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\\&#39;</span>)</div>
-<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>                escaped = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>)</div>
-<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span>                in_string = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00520" name="l00520"></a><span class="lineno">  520</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;#&#39;</span>) {</div>
-<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span>            <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; *p != <span class="charliteral">&#39;\r&#39;</span>) p++;</div>
-<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
-<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>            in_string = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;{&#39;</span>) {</div>
-<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>            depth++;</div>
-<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;}&#39;</span> &amp;&amp; --depth == 0) {</div>
-<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>            <span class="keywordflow">return</span> p + 1;</div>
-<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>        }</div>
-<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>        p++;</div>
-<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>    }</div>
-<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>    <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>}</div>
-<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span> </div>
-<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span><span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *skip_operation_prelude(<span class="keyword">const</span> <span class="keywordtype">char</span> *p) {</div>
-<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> parens = 0;</div>
-<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>    <span class="keywordtype">bool</span> in_string = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>    <span class="keywordtype">bool</span> escaped = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>    <span class="keywordflow">while</span> (*p) {</div>
-<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>        <span class="keywordflow">if</span> (in_string) {</div>
-<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>            <span class="keywordflow">if</span> (escaped)</div>
-<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>                escaped = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\\&#39;</span>)</div>
-<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>                escaped = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>)</div>
-<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span>                in_string = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00548" name="l00548"></a><span class="lineno">  548</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;#&#39;</span>) {</div>
-<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span>            <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; *p != <span class="charliteral">&#39;\r&#39;</span>) p++;</div>
-<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>            <span class="keywordflow">continue</span>;</div>
-<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
-<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>            in_string = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;(&#39;</span>) {</div>
-<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>            parens++;</div>
-<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;)&#39;</span> &amp;&amp; parens &gt; 0) {</div>
-<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>            parens--;</div>
-<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;{&#39;</span> &amp;&amp; parens == 0) {</div>
-<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>            <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>        }</div>
-<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>        p++;</div>
-<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>    }</div>
-<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>    <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span>}</div>
-<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span> </div>
-<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span><span class="keyword">static</span> <span class="keywordtype">void</span> gql_add_or_merge(cJSON *parent, <span class="keyword">const</span> <span class="keywordtype">char</span> *key, cJSON *value) {</div>
-<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>    cJSON *existing = cJSON_GetObjectItem(parent, key);</div>
-<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>    <span class="keywordflow">if</span> (!existing) {</div>
-<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>        cJSON_AddItemToObject(parent, key, value);</div>
-<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>    }</div>
-<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>    <span class="keywordflow">if</span> (cJSON_IsObject(existing) &amp;&amp; cJSON_IsObject(value)) {</div>
-<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>        cJSON *child = value-&gt;child;</div>
-<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        <span class="keywordflow">while</span> (child) {</div>
-<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>            cJSON *next = child-&gt;next;</div>
-<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>            cJSON_DetachItemViaPointer(value, child);</div>
-<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>            gql_add_or_merge(existing, child-&gt;string, child);</div>
-<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span>            child = next;</div>
-<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span>        }</div>
-<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>        cJSON_Delete(value);</div>
-<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>        <span class="keywordflow">if</span> (!value-&gt;string) value-&gt;string = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(key);</div>
-<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>        <span class="keywordflow">if</span> (!value-&gt;string) {</div>
-<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>            cJSON_Delete(value);</div>
-<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>            <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>        }</div>
-<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>        cJSON_ReplaceItemViaPointer(parent, existing, value);</div>
-<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>    }</div>
-<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>}</div>
-<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span> </div>
-<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span><span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *parse_selection_set(<span class="keyword">const</span> <span class="keywordtype">char</span> *p, <a class="code hl_typedef" href="../../dd/d92/graphql_8c.html#a86e76c2d912978f67495139681fa5b45">graphql_field_t</a> *schema_fields,</div>
-<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>                                       <span class="keyword">const</span> cJSON *variables, cJSON *parent_data, cJSON *errors,</div>
-<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>                                       <span class="keyword">const</span> cJSON *parent_value, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> depth,</div>
-<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>                                       <span class="keywordtype">bool</span> validate_only) {</div>
-<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>    <span class="keywordflow">if</span> (depth &gt; <a class="code hl_define" href="../../d2/dc2/net_2graphql_2graphql_8h.html#af4cd10db9ed7e02591939f7942cea948">CWIST_GRAPHQL_MAX_DEPTH</a>) {</div>
-<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>        gql_add_error(errors, <span class="stringliteral">&quot;Query selection depth exceeds maximum allowed&quot;</span>);</div>
-<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>        <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>    }</div>
-<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span> </div>
-<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;{&#39;</span>) <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    p++;</div>
-<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span> </div>
-<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>    <span class="keywordtype">size_t</span> field_count = 0;</div>
-<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span>    <span class="keywordtype">bool</span> closed = <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00609" name="l00609"></a><span class="lineno">  609</span>    <span class="keywordflow">while</span> (*p) {</div>
-<div class="line"><a id="l00610" name="l00610"></a><span class="lineno">  610</span>        p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00611" name="l00611"></a><span class="lineno">  611</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;}&#39;</span>) {</div>
-<div class="line"><a id="l00612" name="l00612"></a><span class="lineno">  612</span>            closed = <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span>            p++;</div>
-<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>        }</div>
-<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\0&#39;</span>) <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>        <span class="keywordflow">if</span> (++field_count &gt; <a class="code hl_define" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a059ea05eeaf05479e0f52dbc40cf0047">CWIST_GRAPHQL_MAX_FIELDS</a>) {</div>
-<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>            gql_add_error(errors, <span class="stringliteral">&quot;Field count limit exceeded&quot;</span>);</div>
-<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>        }</div>
+<div class="line"><a id="l00494" name="l00494"></a><span class="lineno">  494</span>        <span class="keywordflow">if</span> (cJSON_GetObjectItemCaseSensitive(args, arg_name)) {</div>
+<div class="line"><a id="l00495" name="l00495"></a><span class="lineno">  495</span>            gql_add_error(errors, <span class="stringliteral">&quot;Duplicate argument name&quot;</span>);</div>
+<div class="line"><a id="l00496" name="l00496"></a><span class="lineno">  496</span>            cJSON_Delete(val);</div>
+<div class="line"><a id="l00497" name="l00497"></a><span class="lineno">  497</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(arg_name);</div>
+<div class="line"><a id="l00498" name="l00498"></a><span class="lineno">  498</span>            cJSON_Delete(args);</div>
+<div class="line"><a id="l00499" name="l00499"></a><span class="lineno">  499</span>            <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00500" name="l00500"></a><span class="lineno">  500</span>        }</div>
+<div class="line"><a id="l00501" name="l00501"></a><span class="lineno">  501</span>        <span class="keywordflow">if</span> (!cJSON_AddItemToObject(args, arg_name, val)) {</div>
+<div class="line"><a id="l00502" name="l00502"></a><span class="lineno">  502</span>            gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error inserting argument&quot;</span>);</div>
+<div class="line"><a id="l00503" name="l00503"></a><span class="lineno">  503</span>            cJSON_Delete(val);</div>
+<div class="line"><a id="l00504" name="l00504"></a><span class="lineno">  504</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(arg_name);</div>
+<div class="line"><a id="l00505" name="l00505"></a><span class="lineno">  505</span>            cJSON_Delete(args);</div>
+<div class="line"><a id="l00506" name="l00506"></a><span class="lineno">  506</span>            <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00507" name="l00507"></a><span class="lineno">  507</span>        }</div>
+<div class="line"><a id="l00508" name="l00508"></a><span class="lineno">  508</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(arg_name);</div>
+<div class="line"><a id="l00509" name="l00509"></a><span class="lineno">  509</span>    }</div>
+<div class="line"><a id="l00510" name="l00510"></a><span class="lineno">  510</span> </div>
+<div class="line"><a id="l00511" name="l00511"></a><span class="lineno">  511</span>    <span class="keywordflow">if</span> (!closed) {</div>
+<div class="line"><a id="l00512" name="l00512"></a><span class="lineno">  512</span>        gql_add_error(errors, <span class="stringliteral">&quot;Unterminated argument list&quot;</span>);</div>
+<div class="line"><a id="l00513" name="l00513"></a><span class="lineno">  513</span>        cJSON_Delete(args);</div>
+<div class="line"><a id="l00514" name="l00514"></a><span class="lineno">  514</span>        <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00515" name="l00515"></a><span class="lineno">  515</span>    }</div>
+<div class="line"><a id="l00516" name="l00516"></a><span class="lineno">  516</span>    *out_args = args;</div>
+<div class="line"><a id="l00517" name="l00517"></a><span class="lineno">  517</span>    <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00518" name="l00518"></a><span class="lineno">  518</span>}</div>
+<div class="line"><a id="l00519" name="l00519"></a><span class="lineno">  519</span> </div>
+<div class="line"><a id="l00521" name="l00521"></a><span class="lineno">  521</span><span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *skip_selection_set(<span class="keyword">const</span> <span class="keywordtype">char</span> *p) {</div>
+<div class="line"><a id="l00522" name="l00522"></a><span class="lineno">  522</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> depth = 0;</div>
+<div class="line"><a id="l00523" name="l00523"></a><span class="lineno">  523</span>    <span class="keywordtype">bool</span> in_string = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00524" name="l00524"></a><span class="lineno">  524</span>    <span class="keywordtype">bool</span> escaped = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00525" name="l00525"></a><span class="lineno">  525</span>    <span class="keywordflow">while</span> (*p) {</div>
+<div class="line"><a id="l00526" name="l00526"></a><span class="lineno">  526</span>        <span class="keywordflow">if</span> (in_string) {</div>
+<div class="line"><a id="l00527" name="l00527"></a><span class="lineno">  527</span>            <span class="keywordflow">if</span> (escaped)</div>
+<div class="line"><a id="l00528" name="l00528"></a><span class="lineno">  528</span>                escaped = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00529" name="l00529"></a><span class="lineno">  529</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\\&#39;</span>)</div>
+<div class="line"><a id="l00530" name="l00530"></a><span class="lineno">  530</span>                escaped = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00531" name="l00531"></a><span class="lineno">  531</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>)</div>
+<div class="line"><a id="l00532" name="l00532"></a><span class="lineno">  532</span>                in_string = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00533" name="l00533"></a><span class="lineno">  533</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;#&#39;</span>) {</div>
+<div class="line"><a id="l00534" name="l00534"></a><span class="lineno">  534</span>            <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; *p != <span class="charliteral">&#39;\r&#39;</span>) p++;</div>
+<div class="line"><a id="l00535" name="l00535"></a><span class="lineno">  535</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00536" name="l00536"></a><span class="lineno">  536</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
+<div class="line"><a id="l00537" name="l00537"></a><span class="lineno">  537</span>            in_string = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00538" name="l00538"></a><span class="lineno">  538</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;{&#39;</span>) {</div>
+<div class="line"><a id="l00539" name="l00539"></a><span class="lineno">  539</span>            depth++;</div>
+<div class="line"><a id="l00540" name="l00540"></a><span class="lineno">  540</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;}&#39;</span> &amp;&amp; --depth == 0) {</div>
+<div class="line"><a id="l00541" name="l00541"></a><span class="lineno">  541</span>            <span class="keywordflow">return</span> p + 1;</div>
+<div class="line"><a id="l00542" name="l00542"></a><span class="lineno">  542</span>        }</div>
+<div class="line"><a id="l00543" name="l00543"></a><span class="lineno">  543</span>        p++;</div>
+<div class="line"><a id="l00544" name="l00544"></a><span class="lineno">  544</span>    }</div>
+<div class="line"><a id="l00545" name="l00545"></a><span class="lineno">  545</span>    <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00546" name="l00546"></a><span class="lineno">  546</span>}</div>
+<div class="line"><a id="l00547" name="l00547"></a><span class="lineno">  547</span> </div>
+<div class="line"><a id="l00549" name="l00549"></a><span class="lineno">  549</span><span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *skip_operation_prelude(<span class="keyword">const</span> <span class="keywordtype">char</span> *p) {</div>
+<div class="line"><a id="l00550" name="l00550"></a><span class="lineno">  550</span>    <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> parens = 0;</div>
+<div class="line"><a id="l00551" name="l00551"></a><span class="lineno">  551</span>    <span class="keywordtype">bool</span> in_string = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00552" name="l00552"></a><span class="lineno">  552</span>    <span class="keywordtype">bool</span> escaped = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00553" name="l00553"></a><span class="lineno">  553</span>    <span class="keywordflow">while</span> (*p) {</div>
+<div class="line"><a id="l00554" name="l00554"></a><span class="lineno">  554</span>        <span class="keywordflow">if</span> (in_string) {</div>
+<div class="line"><a id="l00555" name="l00555"></a><span class="lineno">  555</span>            <span class="keywordflow">if</span> (escaped)</div>
+<div class="line"><a id="l00556" name="l00556"></a><span class="lineno">  556</span>                escaped = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00557" name="l00557"></a><span class="lineno">  557</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\\&#39;</span>)</div>
+<div class="line"><a id="l00558" name="l00558"></a><span class="lineno">  558</span>                escaped = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00559" name="l00559"></a><span class="lineno">  559</span>            <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>)</div>
+<div class="line"><a id="l00560" name="l00560"></a><span class="lineno">  560</span>                in_string = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00561" name="l00561"></a><span class="lineno">  561</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;#&#39;</span>) {</div>
+<div class="line"><a id="l00562" name="l00562"></a><span class="lineno">  562</span>            <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;\n&#39;</span> &amp;&amp; *p != <span class="charliteral">&#39;\r&#39;</span>) p++;</div>
+<div class="line"><a id="l00563" name="l00563"></a><span class="lineno">  563</span>            <span class="keywordflow">continue</span>;</div>
+<div class="line"><a id="l00564" name="l00564"></a><span class="lineno">  564</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;&quot;&#39;</span>) {</div>
+<div class="line"><a id="l00565" name="l00565"></a><span class="lineno">  565</span>            in_string = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00566" name="l00566"></a><span class="lineno">  566</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;(&#39;</span>) {</div>
+<div class="line"><a id="l00567" name="l00567"></a><span class="lineno">  567</span>            parens++;</div>
+<div class="line"><a id="l00568" name="l00568"></a><span class="lineno">  568</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;)&#39;</span> &amp;&amp; parens &gt; 0) {</div>
+<div class="line"><a id="l00569" name="l00569"></a><span class="lineno">  569</span>            parens--;</div>
+<div class="line"><a id="l00570" name="l00570"></a><span class="lineno">  570</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;{&#39;</span> &amp;&amp; parens == 0) {</div>
+<div class="line"><a id="l00571" name="l00571"></a><span class="lineno">  571</span>            <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00572" name="l00572"></a><span class="lineno">  572</span>        }</div>
+<div class="line"><a id="l00573" name="l00573"></a><span class="lineno">  573</span>        p++;</div>
+<div class="line"><a id="l00574" name="l00574"></a><span class="lineno">  574</span>    }</div>
+<div class="line"><a id="l00575" name="l00575"></a><span class="lineno">  575</span>    <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00576" name="l00576"></a><span class="lineno">  576</span>}</div>
+<div class="line"><a id="l00577" name="l00577"></a><span class="lineno">  577</span> </div>
+<div class="line"><a id="l00578" name="l00578"></a><span class="lineno">  578</span><span class="keyword">static</span> <span class="keywordtype">bool</span> gql_add_or_merge(cJSON *parent, <span class="keyword">const</span> <span class="keywordtype">char</span> *key, cJSON *value) {</div>
+<div class="line"><a id="l00579" name="l00579"></a><span class="lineno">  579</span>    cJSON *existing = cJSON_GetObjectItem(parent, key);</div>
+<div class="line"><a id="l00580" name="l00580"></a><span class="lineno">  580</span>    <span class="keywordflow">if</span> (!existing) {</div>
+<div class="line"><a id="l00581" name="l00581"></a><span class="lineno">  581</span>        <span class="keywordflow">if</span> (cJSON_AddItemToObject(parent, key, value)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00582" name="l00582"></a><span class="lineno">  582</span>        cJSON_Delete(value);</div>
+<div class="line"><a id="l00583" name="l00583"></a><span class="lineno">  583</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00584" name="l00584"></a><span class="lineno">  584</span>    }</div>
+<div class="line"><a id="l00585" name="l00585"></a><span class="lineno">  585</span>    <span class="keywordflow">if</span> (cJSON_IsObject(existing) &amp;&amp; cJSON_IsObject(value)) {</div>
+<div class="line"><a id="l00586" name="l00586"></a><span class="lineno">  586</span>        cJSON *child = value-&gt;child;</div>
+<div class="line"><a id="l00587" name="l00587"></a><span class="lineno">  587</span>        <span class="keywordflow">while</span> (child) {</div>
+<div class="line"><a id="l00588" name="l00588"></a><span class="lineno">  588</span>            cJSON *next = child-&gt;next;</div>
+<div class="line"><a id="l00589" name="l00589"></a><span class="lineno">  589</span>            cJSON_DetachItemViaPointer(value, child);</div>
+<div class="line"><a id="l00590" name="l00590"></a><span class="lineno">  590</span>            <span class="keywordflow">if</span> (!gql_add_or_merge(existing, child-&gt;string, child)) {</div>
+<div class="line"><a id="l00591" name="l00591"></a><span class="lineno">  591</span>                cJSON_Delete(value);</div>
+<div class="line"><a id="l00592" name="l00592"></a><span class="lineno">  592</span>                <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00593" name="l00593"></a><span class="lineno">  593</span>            }</div>
+<div class="line"><a id="l00594" name="l00594"></a><span class="lineno">  594</span>            child = next;</div>
+<div class="line"><a id="l00595" name="l00595"></a><span class="lineno">  595</span>        }</div>
+<div class="line"><a id="l00596" name="l00596"></a><span class="lineno">  596</span>        cJSON_Delete(value);</div>
+<div class="line"><a id="l00597" name="l00597"></a><span class="lineno">  597</span>        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00598" name="l00598"></a><span class="lineno">  598</span>    }</div>
+<div class="line"><a id="l00599" name="l00599"></a><span class="lineno">  599</span>    <span class="keywordflow">if</span> (!value-&gt;string) value-&gt;string = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a59e88ae09b889a715cfdec6966d9cb43">cwist_strdup</a>(key);</div>
+<div class="line"><a id="l00600" name="l00600"></a><span class="lineno">  600</span>    <span class="keywordflow">if</span> (!value-&gt;string) {</div>
+<div class="line"><a id="l00601" name="l00601"></a><span class="lineno">  601</span>        cJSON_Delete(value);</div>
+<div class="line"><a id="l00602" name="l00602"></a><span class="lineno">  602</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00603" name="l00603"></a><span class="lineno">  603</span>    }</div>
+<div class="line"><a id="l00604" name="l00604"></a><span class="lineno">  604</span>    <span class="keywordflow">if</span> (cJSON_ReplaceItemViaPointer(parent, existing, value)) <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00605" name="l00605"></a><span class="lineno">  605</span>    cJSON_Delete(value);</div>
+<div class="line"><a id="l00606" name="l00606"></a><span class="lineno">  606</span>    <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00607" name="l00607"></a><span class="lineno">  607</span>}</div>
+<div class="line"><a id="l00608" name="l00608"></a><span class="lineno">  608</span> </div>
+<div class="line"><a id="l00613" name="l00613"></a><span class="lineno">  613</span><span class="keyword">static</span> <span class="keyword">const</span> <span class="keywordtype">char</span> *parse_selection_set(<span class="keyword">const</span> <span class="keywordtype">char</span> *p, <a class="code hl_typedef" href="../../dd/d92/graphql_8c.html#a86e76c2d912978f67495139681fa5b45">graphql_field_t</a> *schema_fields,</div>
+<div class="line"><a id="l00614" name="l00614"></a><span class="lineno">  614</span>                                       <span class="keyword">const</span> cJSON *variables, cJSON *parent_data, cJSON *errors,</div>
+<div class="line"><a id="l00615" name="l00615"></a><span class="lineno">  615</span>                                       <span class="keyword">const</span> cJSON *parent_value, <span class="keywordtype">unsigned</span> <span class="keywordtype">int</span> depth,</div>
+<div class="line"><a id="l00616" name="l00616"></a><span class="lineno">  616</span>                                       <span class="keywordtype">bool</span> validate_only) {</div>
+<div class="line"><a id="l00617" name="l00617"></a><span class="lineno">  617</span>    <span class="keywordflow">if</span> (depth &gt; <a class="code hl_define" href="../../d2/dc2/net_2graphql_2graphql_8h.html#af4cd10db9ed7e02591939f7942cea948">CWIST_GRAPHQL_MAX_DEPTH</a>) {</div>
+<div class="line"><a id="l00618" name="l00618"></a><span class="lineno">  618</span>        gql_add_error(errors, <span class="stringliteral">&quot;Query selection depth exceeds maximum allowed&quot;</span>);</div>
+<div class="line"><a id="l00619" name="l00619"></a><span class="lineno">  619</span>        <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00620" name="l00620"></a><span class="lineno">  620</span>    }</div>
 <div class="line"><a id="l00621" name="l00621"></a><span class="lineno">  621</span> </div>
-<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *name_start = p;</div>
-<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>        <span class="keywordflow">if</span> (!gql_name_char(*p, <span class="keyword">true</span>)) {</div>
-<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>            gql_add_error(errors, <span class="stringliteral">&quot;Invalid field name syntax&quot;</span>);</div>
-<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>        }</div>
-<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>        <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
-<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>        <span class="keywordtype">size_t</span> name_len = (size_t)(p - name_start);</div>
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>        <span class="keywordtype">char</span> *token1 = gql_name_dup(name_start, name_len);</div>
-<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>        <span class="keywordtype">char</span> *field_name = token1 ? gql_name_dup(name_start, name_len) : NULL;</div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>        <span class="keywordtype">char</span> *output_key = token1 ? gql_name_dup(name_start, name_len) : NULL;</div>
-<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>        <span class="keywordflow">if</span> (!token1 || !field_name || !output_key) {</div>
-<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>            gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error parsing field name&quot;</span>);</div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
-<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
-<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
-<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>            <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>        }</div>
-<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span> </div>
-<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span>        p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;:&#39;</span>) {</div>
-<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>            p++;</div>
-<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>            p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>            <span class="keyword">const</span> <span class="keywordtype">char</span> *field_start = p;</div>
-<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>            <span class="keywordflow">if</span> (!gql_name_char(*p, <span class="keyword">true</span>)) {</div>
-<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>                gql_add_error(errors, <span class="stringliteral">&quot;Invalid field name after alias&quot;</span>);</div>
-<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
-<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
-<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
-<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>            }</div>
-<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>            <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
-<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>            <span class="keywordtype">char</span> *alias_name = gql_name_dup(field_start, (<span class="keywordtype">size_t</span>)(p - field_start));</div>
-<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>            <span class="keywordflow">if</span> (!alias_name) {</div>
-<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>                gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error parsing aliased field&quot;</span>);</div>
-<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
-<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
-<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
-<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>                <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>            }</div>
-<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
-<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>            field_name = alias_name;</div>
-<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>        }</div>
-<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span> </div>
-<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>        cJSON *args = NULL;</div>
-<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>        p = parse_arguments(p, variables, &amp;args, errors);</div>
-<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span> </div>
-<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>        cJSON *val = NULL;</div>
-<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>        <span class="comment">/* Root resolvers answer only at the operation root. Below it a field</span></div>
-<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span><span class="comment">         * is read from the object its parent returned (#954). */</span></div>
-<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>        <a class="code hl_typedef" href="../../dd/d92/graphql_8c.html#a86e76c2d912978f67495139681fa5b45">graphql_field_t</a> *f = parent_value ? NULL : gql_lookup(schema_fields, field_name);</div>
-<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>        <span class="keywordtype">bool</span> parent_has_field = parent_value &amp;&amp; cJSON_HasObjectItem(parent_value, field_name);</div>
-<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>        <span class="keywordflow">if</span> (validate_only) {</div>
-<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>            <span class="keywordflow">if</span> (!f &amp;&amp; !parent_value) {</div>
-<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>                <span class="keywordtype">size_t</span> err_len = strlen(field_name) + 32;</div>
-<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>                <span class="keywordtype">char</span> *err_buf = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(err_len);</div>
-<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>                <span class="keywordflow">if</span> (err_buf) {</div>
-<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>                    snprintf(err_buf, err_len, <span class="stringliteral">&quot;Cannot query field &#39;%s&#39; on schema&quot;</span>, field_name);</div>
-<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>                    gql_add_error(errors, err_buf);</div>
-<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(err_buf);</div>
-<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>                }</div>
-<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>            }</div>
-<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span>            val = cJSON_CreateObject();</div>
-<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (!f &amp;&amp; parent_has_field) {</div>
-<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>            val = cJSON_Duplicate(cJSON_GetObjectItem(parent_value, field_name), <span class="keyword">true</span>);</div>
-<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (!f) {</div>
-<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>            <span class="keywordtype">size_t</span> err_len = strlen(field_name) + 32;</div>
-<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>            <span class="keywordtype">char</span> *err_buf = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(err_len);</div>
-<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span>            <span class="keywordflow">if</span> (err_buf) {</div>
-<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>                snprintf(err_buf, err_len, <span class="stringliteral">&quot;Cannot query field &#39;%s&#39; on schema&quot;</span>, field_name);</div>
-<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>                gql_add_error(errors, err_buf);</div>
-<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(err_buf);</div>
-<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>            }</div>
-<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>            val = cJSON_CreateNull();</div>
-<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>            val = f-&gt;fn(args, variables, f-&gt;ctx);</div>
-<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>            <span class="keywordflow">if</span> (!val) val = cJSON_CreateNull();</div>
-<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>        }</div>
-<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>        <span class="keywordflow">if</span> (args) cJSON_Delete(args);</div>
-<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span> </div>
-<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>        p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;{&#39;</span>) {</div>
-<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>            <span class="comment">/* The response holds only the selected fields, built from the</span></div>
-<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span><span class="comment">             * resolved value; unselected members are never copied (#953). */</span></div>
-<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>            <span class="keywordflow">if</span> (cJSON_IsObject(val)) {</div>
-<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>                cJSON *selected = cJSON_CreateObject();</div>
-<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>                <span class="keywordflow">if</span> (selected) {</div>
-<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>                    p = parse_selection_set(p, schema_fields, variables, selected, errors, val,</div>
-<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>                                            depth + 1, validate_only);</div>
-<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>                } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>                    gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error building selection&quot;</span>);</div>
-<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>                    p = skip_selection_set(p);</div>
-<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>                }</div>
-<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>                cJSON_Delete(val);</div>
-<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>                val = selected ? selected : cJSON_CreateNull();</div>
-<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cJSON_IsArray(val)) {</div>
-<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>                cJSON *list = cJSON_CreateArray();</div>
-<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *sel = p;</div>
-<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *end = skip_selection_set(p);</div>
-<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>                cJSON *item = NULL;</div>
-<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>                cJSON_ArrayForEach(item, val) {</div>
-<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>                    <span class="keywordflow">if</span> (!list) <span class="keywordflow">break</span>;</div>
-<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span>                    cJSON *entry = NULL;</div>
-<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>                    <span class="keywordflow">if</span> (cJSON_IsObject(item)) {</div>
-<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>                        entry = cJSON_CreateObject();</div>
-<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>                        <span class="keywordflow">if</span> (entry)</div>
-<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>                            end = parse_selection_set(sel, schema_fields, variables, entry, errors,</div>
-<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>                                                      item, depth + 1, validate_only);</div>
-<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>                    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cJSON_IsNull(item)) {</div>
-<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>                        entry = cJSON_CreateNull();</div>
-<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>                    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                        gql_add_error(errors, <span class="stringliteral">&quot;Selection set cannot be applied to a scalar value&quot;</span>);</div>
-<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>                        entry = cJSON_CreateNull();</div>
-<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>                    }</div>
-<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>                    <span class="keywordflow">if</span> (!entry || !cJSON_AddItemToArray(list, entry)) {</div>
-<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>                        cJSON_Delete(entry);</div>
-<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>                        cJSON_Delete(list);</div>
-<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>                        list = NULL;</div>
-<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>                    }</div>
-<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>                }</div>
-<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>                <span class="keywordflow">if</span> (!list) gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error building selection&quot;</span>);</div>
-<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>                p = end;</div>
-<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>                cJSON_Delete(val);</div>
-<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>                val = list ? list : cJSON_CreateNull();</div>
-<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cJSON_IsNull(val)) {</div>
-<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>                p = skip_selection_set(p);</div>
-<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>                gql_add_error(errors, <span class="stringliteral">&quot;Selection set cannot be applied to a scalar value&quot;</span>);</div>
-<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>                p = skip_selection_set(p);</div>
-<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>            }</div>
-<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>        }</div>
-<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span> </div>
-<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>        <span class="keywordflow">if</span> (val) gql_add_or_merge(parent_data, output_key, val);</div>
-<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
-<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
-<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
-<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>    }</div>
-<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span> </div>
-<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>    <span class="keywordflow">if</span> (!closed) gql_add_error(errors, <span class="stringliteral">&quot;Unterminated selection set&quot;</span>);</div>
-<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>    <span class="keywordflow">return</span> p;</div>
-<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>}</div>
-<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span> </div>
-<div class="foldopen" id="foldopen00775" data-start="{" data-end="}">
-<div class="line"><a id="l00775" name="l00775"></a><span class="lineno"><a class="line" href="../../d2/dc2/net_2graphql_2graphql_8h.html#ad95cc529195e192da4d756c8a3d2ca04">  775</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d92/graphql_8c.html#ad95cc529195e192da4d756c8a3d2ca04">cwist_graphql_execute</a>(<a class="code hl_typedef" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a2ad7bf57076b9d6d435512dea37b8b6f">cwist_graphql_schema_t</a> *schema, <span class="keyword">const</span> <span class="keywordtype">char</span> *request_json,</div>
-<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>                                    <a class="code hl_struct" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> **out_json) {</div>
-<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>    <span class="keywordflow">if</span> (!schema || !request_json || !out_json) <span class="keywordflow">return</span> gql_error(-1);</div>
-<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span>    *out_json = NULL;</div>
-<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>    <span class="keywordflow">if</span> (cwist_json_has_nul_escape(request_json)) <span class="keywordflow">return</span> gql_error(-1);</div>
-<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span> </div>
-<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>    cJSON *request = cJSON_Parse(request_json);</div>
-<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span>    cJSON *root = cJSON_CreateObject();</div>
-<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span>    cJSON *data = cJSON_CreateObject();</div>
-<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    cJSON *errors = cJSON_CreateArray();</div>
-<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span> </div>
-<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>    <span class="keywordflow">if</span> (!request || !root || !data || !errors) {</div>
-<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>        cJSON_Delete(request);</div>
-<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span>        cJSON_Delete(root);</div>
-<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span>        cJSON_Delete(data);</div>
-<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>        cJSON_Delete(errors);</div>
-<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>        <span class="keywordflow">return</span> gql_error(-1);</div>
-<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>    }</div>
-<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    cJSON_AddItemToObject(root, <span class="stringliteral">&quot;data&quot;</span>, data);</div>
-<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>    cJSON_AddItemToObject(root, <span class="stringliteral">&quot;errors&quot;</span>, errors);</div>
-<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span> </div>
-<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>    cJSON *query = cJSON_GetObjectItemCaseSensitive(request, <span class="stringliteral">&quot;query&quot;</span>);</div>
-<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>    cJSON *variables = cJSON_GetObjectItemCaseSensitive(request, <span class="stringliteral">&quot;variables&quot;</span>);</div>
-<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span> </div>
-<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>    <span class="keywordflow">if</span> (!cJSON_IsString(query) || !query-&gt;valuestring) {</div>
-<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>        gql_add_error(errors, <span class="stringliteral">&quot;GraphQL request must contain a string &#39;query&#39;&quot;</span>);</div>
-<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (strlen(query-&gt;valuestring) &gt; <a class="code hl_define" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a6f3c4dc396d26348b477f1678603b6d8">CWIST_GRAPHQL_MAX_QUERY_SIZE</a>) {</div>
-<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        gql_add_error(errors, <span class="stringliteral">&quot;Query string exceeds maximum allowed size&quot;</span>);</div>
-<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *p = skip_ws_comments(query-&gt;valuestring);</div>
-<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>        <a class="code hl_enumeration" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737">gql_op_type_t</a> op_type = <a class="code hl_enumvalue" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737ad2747d22ef2b2aab0da35e6a07b9e048">GQL_OP_QUERY</a>;</div>
-<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span> </div>
-<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>        <span class="keywordflow">if</span> (strncmp(p, <span class="stringliteral">&quot;mutation&quot;</span>, 8) == 0 &amp;&amp; !gql_name_char(p[8], <span class="keyword">false</span>)) {</div>
-<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>            op_type = <a class="code hl_enumvalue" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737a57d16abc77fd32fb079fc86a9af5d18d">GQL_OP_MUTATION</a>;</div>
-<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>            p += 8;</div>
-<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>            p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>            <span class="comment">/* Skip optional mutation name / variable defs until &#39;{&#39; */</span></div>
-<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>            p = skip_operation_prelude(p);</div>
-<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (strncmp(p, <span class="stringliteral">&quot;query&quot;</span>, 5) == 0 &amp;&amp; !gql_name_char(p[5], <span class="keyword">false</span>)) {</div>
-<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>            op_type = <a class="code hl_enumvalue" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737ad2747d22ef2b2aab0da35e6a07b9e048">GQL_OP_QUERY</a>;</div>
-<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>            p += 5;</div>
-<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>            p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>            p = skip_operation_prelude(p);</div>
-<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>        }</div>
-<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span> </div>
-<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>        <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;{&#39;</span>) {</div>
-<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>            gql_add_error(errors, <span class="stringliteral">&quot;Expected &#39;{&#39; to begin selection set&quot;</span>);</div>
-<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>        } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>            <a class="code hl_typedef" href="../../dd/d92/graphql_8c.html#a86e76c2d912978f67495139681fa5b45">graphql_field_t</a> *target_schema =</div>
-<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>                (op_type == <a class="code hl_enumvalue" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737a57d16abc77fd32fb079fc86a9af5d18d">GQL_OP_MUTATION</a>) ? schema-&gt;mutations : schema-&gt;queries;</div>
-<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>            cJSON *validated = cJSON_CreateObject();</div>
-<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>            <span class="keywordflow">if</span> (!validated) {</div>
-<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>                gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error validating query&quot;</span>);</div>
-<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>            } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *end = parse_selection_set(p, target_schema, variables, validated,</div>
-<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>                                                      errors, NULL, 1, <span class="keyword">true</span>);</div>
-<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>                end = skip_ws_comments(end);</div>
-<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>                <span class="keywordflow">if</span> (*end) gql_add_error(errors, <span class="stringliteral">&quot;Unexpected trailing content after operation&quot;</span>);</div>
-<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>                <span class="keywordflow">if</span> (cJSON_GetArraySize(errors) == 0)</div>
-<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>                    (void)parse_selection_set(p, target_schema, variables, data, errors, NULL, 1,</div>
-<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>                                              <span class="keyword">false</span>);</div>
-<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>                cJSON_Delete(validated);</div>
-<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>            }</div>
-<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        }</div>
+<div class="line"><a id="l00622" name="l00622"></a><span class="lineno">  622</span>    p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00623" name="l00623"></a><span class="lineno">  623</span>    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;{&#39;</span>) <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00624" name="l00624"></a><span class="lineno">  624</span>    p++;</div>
+<div class="line"><a id="l00625" name="l00625"></a><span class="lineno">  625</span> </div>
+<div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>    <span class="keywordtype">size_t</span> field_count = 0;</div>
+<div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>    <span class="keywordtype">bool</span> closed = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>    <span class="keywordflow">while</span> (*p) {</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>        p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;}&#39;</span>) {</div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>            closed = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>            p++;</div>
+<div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>        }</div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;\0&#39;</span>) <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>        <span class="keywordflow">if</span> (++field_count &gt; <a class="code hl_define" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a059ea05eeaf05479e0f52dbc40cf0047">CWIST_GRAPHQL_MAX_FIELDS</a>) {</div>
+<div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>            gql_add_error(errors, <span class="stringliteral">&quot;Field count limit exceeded&quot;</span>);</div>
+<div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>        }</div>
+<div class="line"><a id="l00640" name="l00640"></a><span class="lineno">  640</span> </div>
+<div class="line"><a id="l00641" name="l00641"></a><span class="lineno">  641</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *name_start = p;</div>
+<div class="line"><a id="l00642" name="l00642"></a><span class="lineno">  642</span>        <span class="keywordflow">if</span> (!gql_name_char(*p, <span class="keyword">true</span>)) {</div>
+<div class="line"><a id="l00643" name="l00643"></a><span class="lineno">  643</span>            gql_add_error(errors, <span class="stringliteral">&quot;Invalid field name syntax&quot;</span>);</div>
+<div class="line"><a id="l00644" name="l00644"></a><span class="lineno">  644</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00645" name="l00645"></a><span class="lineno">  645</span>        }</div>
+<div class="line"><a id="l00646" name="l00646"></a><span class="lineno">  646</span>        <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
+<div class="line"><a id="l00647" name="l00647"></a><span class="lineno">  647</span>        <span class="keywordtype">size_t</span> name_len = (size_t)(p - name_start);</div>
+<div class="line"><a id="l00648" name="l00648"></a><span class="lineno">  648</span>        <span class="keywordtype">char</span> *token1 = gql_name_dup(name_start, name_len);</div>
+<div class="line"><a id="l00649" name="l00649"></a><span class="lineno">  649</span>        <span class="keywordtype">char</span> *field_name = token1 ? gql_name_dup(name_start, name_len) : NULL;</div>
+<div class="line"><a id="l00650" name="l00650"></a><span class="lineno">  650</span>        <span class="keywordtype">char</span> *output_key = token1 ? gql_name_dup(name_start, name_len) : NULL;</div>
+<div class="line"><a id="l00651" name="l00651"></a><span class="lineno">  651</span>        <span class="keywordflow">if</span> (!token1 || !field_name || !output_key) {</div>
+<div class="line"><a id="l00652" name="l00652"></a><span class="lineno">  652</span>            gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error parsing field name&quot;</span>);</div>
+<div class="line"><a id="l00653" name="l00653"></a><span class="lineno">  653</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
+<div class="line"><a id="l00654" name="l00654"></a><span class="lineno">  654</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
+<div class="line"><a id="l00655" name="l00655"></a><span class="lineno">  655</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
+<div class="line"><a id="l00656" name="l00656"></a><span class="lineno">  656</span>            <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00657" name="l00657"></a><span class="lineno">  657</span>        }</div>
+<div class="line"><a id="l00658" name="l00658"></a><span class="lineno">  658</span> </div>
+<div class="line"><a id="l00659" name="l00659"></a><span class="lineno">  659</span>        p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00660" name="l00660"></a><span class="lineno">  660</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;:&#39;</span>) {</div>
+<div class="line"><a id="l00661" name="l00661"></a><span class="lineno">  661</span>            p++;</div>
+<div class="line"><a id="l00662" name="l00662"></a><span class="lineno">  662</span>            p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00663" name="l00663"></a><span class="lineno">  663</span>            <span class="keyword">const</span> <span class="keywordtype">char</span> *field_start = p;</div>
+<div class="line"><a id="l00664" name="l00664"></a><span class="lineno">  664</span>            <span class="keywordflow">if</span> (!gql_name_char(*p, <span class="keyword">true</span>)) {</div>
+<div class="line"><a id="l00665" name="l00665"></a><span class="lineno">  665</span>                gql_add_error(errors, <span class="stringliteral">&quot;Invalid field name after alias&quot;</span>);</div>
+<div class="line"><a id="l00666" name="l00666"></a><span class="lineno">  666</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
+<div class="line"><a id="l00667" name="l00667"></a><span class="lineno">  667</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
+<div class="line"><a id="l00668" name="l00668"></a><span class="lineno">  668</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
+<div class="line"><a id="l00669" name="l00669"></a><span class="lineno">  669</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00670" name="l00670"></a><span class="lineno">  670</span>            }</div>
+<div class="line"><a id="l00671" name="l00671"></a><span class="lineno">  671</span>            <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
+<div class="line"><a id="l00672" name="l00672"></a><span class="lineno">  672</span>            <span class="keywordtype">char</span> *alias_name = gql_name_dup(field_start, (<span class="keywordtype">size_t</span>)(p - field_start));</div>
+<div class="line"><a id="l00673" name="l00673"></a><span class="lineno">  673</span>            <span class="keywordflow">if</span> (!alias_name) {</div>
+<div class="line"><a id="l00674" name="l00674"></a><span class="lineno">  674</span>                gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error parsing aliased field&quot;</span>);</div>
+<div class="line"><a id="l00675" name="l00675"></a><span class="lineno">  675</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
+<div class="line"><a id="l00676" name="l00676"></a><span class="lineno">  676</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
+<div class="line"><a id="l00677" name="l00677"></a><span class="lineno">  677</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
+<div class="line"><a id="l00678" name="l00678"></a><span class="lineno">  678</span>                <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00679" name="l00679"></a><span class="lineno">  679</span>            }</div>
+<div class="line"><a id="l00680" name="l00680"></a><span class="lineno">  680</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
+<div class="line"><a id="l00681" name="l00681"></a><span class="lineno">  681</span>            field_name = alias_name;</div>
+<div class="line"><a id="l00682" name="l00682"></a><span class="lineno">  682</span>        }</div>
+<div class="line"><a id="l00683" name="l00683"></a><span class="lineno">  683</span> </div>
+<div class="line"><a id="l00684" name="l00684"></a><span class="lineno">  684</span>        cJSON *args = NULL;</div>
+<div class="line"><a id="l00685" name="l00685"></a><span class="lineno">  685</span>        p = parse_arguments(p, variables, &amp;args, errors);</div>
+<div class="line"><a id="l00686" name="l00686"></a><span class="lineno">  686</span> </div>
+<div class="line"><a id="l00687" name="l00687"></a><span class="lineno">  687</span>        cJSON *val = NULL;</div>
+<div class="line"><a id="l00688" name="l00688"></a><span class="lineno">  688</span>        <span class="comment">/* Root resolvers answer only at the operation root. Below it a field</span></div>
+<div class="line"><a id="l00689" name="l00689"></a><span class="lineno">  689</span><span class="comment">         * is read from the object its parent returned (#954). */</span></div>
+<div class="line"><a id="l00690" name="l00690"></a><span class="lineno">  690</span>        <a class="code hl_typedef" href="../../dd/d92/graphql_8c.html#a86e76c2d912978f67495139681fa5b45">graphql_field_t</a> *f = parent_value ? NULL : gql_lookup(schema_fields, field_name);</div>
+<div class="line"><a id="l00691" name="l00691"></a><span class="lineno">  691</span>        <span class="keywordtype">bool</span> parent_has_field = parent_value &amp;&amp; cJSON_HasObjectItem(parent_value, field_name);</div>
+<div class="line"><a id="l00692" name="l00692"></a><span class="lineno">  692</span>        <span class="keywordflow">if</span> (validate_only) {</div>
+<div class="line"><a id="l00693" name="l00693"></a><span class="lineno">  693</span>            <span class="keywordflow">if</span> (!f &amp;&amp; !parent_value) {</div>
+<div class="line"><a id="l00694" name="l00694"></a><span class="lineno">  694</span>                <span class="keywordtype">size_t</span> err_len = strlen(field_name) + 32;</div>
+<div class="line"><a id="l00695" name="l00695"></a><span class="lineno">  695</span>                <span class="keywordtype">char</span> *err_buf = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(err_len);</div>
+<div class="line"><a id="l00696" name="l00696"></a><span class="lineno">  696</span>                <span class="keywordflow">if</span> (err_buf) {</div>
+<div class="line"><a id="l00697" name="l00697"></a><span class="lineno">  697</span>                    snprintf(err_buf, err_len, <span class="stringliteral">&quot;Cannot query field &#39;%s&#39; on schema&quot;</span>, field_name);</div>
+<div class="line"><a id="l00698" name="l00698"></a><span class="lineno">  698</span>                    gql_add_error(errors, err_buf);</div>
+<div class="line"><a id="l00699" name="l00699"></a><span class="lineno">  699</span>                    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(err_buf);</div>
+<div class="line"><a id="l00700" name="l00700"></a><span class="lineno">  700</span>                }</div>
+<div class="line"><a id="l00701" name="l00701"></a><span class="lineno">  701</span>            }</div>
+<div class="line"><a id="l00702" name="l00702"></a><span class="lineno">  702</span>            val = cJSON_CreateObject();</div>
+<div class="line"><a id="l00703" name="l00703"></a><span class="lineno">  703</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (!f &amp;&amp; parent_has_field) {</div>
+<div class="line"><a id="l00704" name="l00704"></a><span class="lineno">  704</span>            val = cJSON_Duplicate(cJSON_GetObjectItem(parent_value, field_name), <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00705" name="l00705"></a><span class="lineno">  705</span>        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (!f) {</div>
+<div class="line"><a id="l00706" name="l00706"></a><span class="lineno">  706</span>            <span class="keywordtype">size_t</span> err_len = strlen(field_name) + 32;</div>
+<div class="line"><a id="l00707" name="l00707"></a><span class="lineno">  707</span>            <span class="keywordtype">char</span> *err_buf = <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#aeba69949fe17751318e6b5fc84a74096">cwist_alloc</a>(err_len);</div>
+<div class="line"><a id="l00708" name="l00708"></a><span class="lineno">  708</span>            <span class="keywordflow">if</span> (err_buf) {</div>
+<div class="line"><a id="l00709" name="l00709"></a><span class="lineno">  709</span>                snprintf(err_buf, err_len, <span class="stringliteral">&quot;Cannot query field &#39;%s&#39; on schema&quot;</span>, field_name);</div>
+<div class="line"><a id="l00710" name="l00710"></a><span class="lineno">  710</span>                gql_add_error(errors, err_buf);</div>
+<div class="line"><a id="l00711" name="l00711"></a><span class="lineno">  711</span>                <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(err_buf);</div>
+<div class="line"><a id="l00712" name="l00712"></a><span class="lineno">  712</span>            }</div>
+<div class="line"><a id="l00713" name="l00713"></a><span class="lineno">  713</span>            val = cJSON_CreateNull();</div>
+<div class="line"><a id="l00714" name="l00714"></a><span class="lineno">  714</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00715" name="l00715"></a><span class="lineno">  715</span>            val = f-&gt;fn(args, variables, f-&gt;ctx);</div>
+<div class="line"><a id="l00716" name="l00716"></a><span class="lineno">  716</span>            <span class="keywordflow">if</span> (!val) val = cJSON_CreateNull();</div>
+<div class="line"><a id="l00717" name="l00717"></a><span class="lineno">  717</span>        }</div>
+<div class="line"><a id="l00718" name="l00718"></a><span class="lineno">  718</span>        <span class="keywordflow">if</span> (args) cJSON_Delete(args);</div>
+<div class="line"><a id="l00719" name="l00719"></a><span class="lineno">  719</span> </div>
+<div class="line"><a id="l00720" name="l00720"></a><span class="lineno">  720</span>        p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00721" name="l00721"></a><span class="lineno">  721</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;{&#39;</span>) {</div>
+<div class="line"><a id="l00722" name="l00722"></a><span class="lineno">  722</span>            <span class="comment">/* The response holds only the selected fields, built from the</span></div>
+<div class="line"><a id="l00723" name="l00723"></a><span class="lineno">  723</span><span class="comment">             * resolved value; unselected members are never copied (#953). */</span></div>
+<div class="line"><a id="l00724" name="l00724"></a><span class="lineno">  724</span>            <span class="keywordflow">if</span> (cJSON_IsObject(val)) {</div>
+<div class="line"><a id="l00725" name="l00725"></a><span class="lineno">  725</span>                cJSON *selected = cJSON_CreateObject();</div>
+<div class="line"><a id="l00726" name="l00726"></a><span class="lineno">  726</span>                <span class="keywordflow">if</span> (selected) {</div>
+<div class="line"><a id="l00727" name="l00727"></a><span class="lineno">  727</span>                    p = parse_selection_set(p, schema_fields, variables, selected, errors, val,</div>
+<div class="line"><a id="l00728" name="l00728"></a><span class="lineno">  728</span>                                            depth + 1, validate_only);</div>
+<div class="line"><a id="l00729" name="l00729"></a><span class="lineno">  729</span>                } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00730" name="l00730"></a><span class="lineno">  730</span>                    gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error building selection&quot;</span>);</div>
+<div class="line"><a id="l00731" name="l00731"></a><span class="lineno">  731</span>                    p = skip_selection_set(p);</div>
+<div class="line"><a id="l00732" name="l00732"></a><span class="lineno">  732</span>                }</div>
+<div class="line"><a id="l00733" name="l00733"></a><span class="lineno">  733</span>                cJSON_Delete(val);</div>
+<div class="line"><a id="l00734" name="l00734"></a><span class="lineno">  734</span>                val = selected ? selected : cJSON_CreateNull();</div>
+<div class="line"><a id="l00735" name="l00735"></a><span class="lineno">  735</span>            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cJSON_IsArray(val)) {</div>
+<div class="line"><a id="l00736" name="l00736"></a><span class="lineno">  736</span>                cJSON *list = cJSON_CreateArray();</div>
+<div class="line"><a id="l00737" name="l00737"></a><span class="lineno">  737</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *sel = p;</div>
+<div class="line"><a id="l00738" name="l00738"></a><span class="lineno">  738</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *end = skip_selection_set(p);</div>
+<div class="line"><a id="l00739" name="l00739"></a><span class="lineno">  739</span>                cJSON *item = NULL;</div>
+<div class="line"><a id="l00740" name="l00740"></a><span class="lineno">  740</span>                cJSON_ArrayForEach(item, val) {</div>
+<div class="line"><a id="l00741" name="l00741"></a><span class="lineno">  741</span>                    <span class="keywordflow">if</span> (!list) <span class="keywordflow">break</span>;</div>
+<div class="line"><a id="l00742" name="l00742"></a><span class="lineno">  742</span>                    cJSON *entry = NULL;</div>
+<div class="line"><a id="l00743" name="l00743"></a><span class="lineno">  743</span>                    <span class="keywordflow">if</span> (cJSON_IsObject(item)) {</div>
+<div class="line"><a id="l00744" name="l00744"></a><span class="lineno">  744</span>                        entry = cJSON_CreateObject();</div>
+<div class="line"><a id="l00745" name="l00745"></a><span class="lineno">  745</span>                        <span class="keywordflow">if</span> (entry)</div>
+<div class="line"><a id="l00746" name="l00746"></a><span class="lineno">  746</span>                            end = parse_selection_set(sel, schema_fields, variables, entry, errors,</div>
+<div class="line"><a id="l00747" name="l00747"></a><span class="lineno">  747</span>                                                      item, depth + 1, validate_only);</div>
+<div class="line"><a id="l00748" name="l00748"></a><span class="lineno">  748</span>                    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cJSON_IsNull(item)) {</div>
+<div class="line"><a id="l00749" name="l00749"></a><span class="lineno">  749</span>                        entry = cJSON_CreateNull();</div>
+<div class="line"><a id="l00750" name="l00750"></a><span class="lineno">  750</span>                    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00751" name="l00751"></a><span class="lineno">  751</span>                        gql_add_error(errors, <span class="stringliteral">&quot;Selection set cannot be applied to a scalar value&quot;</span>);</div>
+<div class="line"><a id="l00752" name="l00752"></a><span class="lineno">  752</span>                        entry = cJSON_CreateNull();</div>
+<div class="line"><a id="l00753" name="l00753"></a><span class="lineno">  753</span>                    }</div>
+<div class="line"><a id="l00754" name="l00754"></a><span class="lineno">  754</span>                    <span class="keywordflow">if</span> (!entry || !cJSON_AddItemToArray(list, entry)) {</div>
+<div class="line"><a id="l00755" name="l00755"></a><span class="lineno">  755</span>                        cJSON_Delete(entry);</div>
+<div class="line"><a id="l00756" name="l00756"></a><span class="lineno">  756</span>                        cJSON_Delete(list);</div>
+<div class="line"><a id="l00757" name="l00757"></a><span class="lineno">  757</span>                        list = NULL;</div>
+<div class="line"><a id="l00758" name="l00758"></a><span class="lineno">  758</span>                    }</div>
+<div class="line"><a id="l00759" name="l00759"></a><span class="lineno">  759</span>                }</div>
+<div class="line"><a id="l00760" name="l00760"></a><span class="lineno">  760</span>                <span class="keywordflow">if</span> (!list) gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error building selection&quot;</span>);</div>
+<div class="line"><a id="l00761" name="l00761"></a><span class="lineno">  761</span>                p = end;</div>
+<div class="line"><a id="l00762" name="l00762"></a><span class="lineno">  762</span>                cJSON_Delete(val);</div>
+<div class="line"><a id="l00763" name="l00763"></a><span class="lineno">  763</span>                val = list ? list : cJSON_CreateNull();</div>
+<div class="line"><a id="l00764" name="l00764"></a><span class="lineno">  764</span>            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cJSON_IsNull(val)) {</div>
+<div class="line"><a id="l00765" name="l00765"></a><span class="lineno">  765</span>                p = skip_selection_set(p);</div>
+<div class="line"><a id="l00766" name="l00766"></a><span class="lineno">  766</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00767" name="l00767"></a><span class="lineno">  767</span>                gql_add_error(errors, <span class="stringliteral">&quot;Selection set cannot be applied to a scalar value&quot;</span>);</div>
+<div class="line"><a id="l00768" name="l00768"></a><span class="lineno">  768</span>                p = skip_selection_set(p);</div>
+<div class="line"><a id="l00769" name="l00769"></a><span class="lineno">  769</span>            }</div>
+<div class="line"><a id="l00770" name="l00770"></a><span class="lineno">  770</span>        }</div>
+<div class="line"><a id="l00771" name="l00771"></a><span class="lineno">  771</span> </div>
+<div class="line"><a id="l00772" name="l00772"></a><span class="lineno">  772</span>        <span class="keywordflow">if</span> (val &amp;&amp; !gql_add_or_merge(parent_data, output_key, val))</div>
+<div class="line"><a id="l00773" name="l00773"></a><span class="lineno">  773</span>            gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error merging selection&quot;</span>);</div>
+<div class="line"><a id="l00774" name="l00774"></a><span class="lineno">  774</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token1);</div>
+<div class="line"><a id="l00775" name="l00775"></a><span class="lineno">  775</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(field_name);</div>
+<div class="line"><a id="l00776" name="l00776"></a><span class="lineno">  776</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(output_key);</div>
+<div class="line"><a id="l00777" name="l00777"></a><span class="lineno">  777</span>    }</div>
+<div class="line"><a id="l00778" name="l00778"></a><span class="lineno">  778</span> </div>
+<div class="line"><a id="l00779" name="l00779"></a><span class="lineno">  779</span>    <span class="keywordflow">if</span> (!closed) gql_add_error(errors, <span class="stringliteral">&quot;Unterminated selection set&quot;</span>);</div>
+<div class="line"><a id="l00780" name="l00780"></a><span class="lineno">  780</span>    <span class="keywordflow">return</span> p;</div>
+<div class="line"><a id="l00781" name="l00781"></a><span class="lineno">  781</span>}</div>
+<div class="line"><a id="l00782" name="l00782"></a><span class="lineno">  782</span> </div>
+<div class="line"><a id="l00783" name="l00783"></a><span class="lineno">  783</span><span class="keyword">typedef</span> <span class="keyword">struct </span>{</div>
+<div class="line"><a id="l00784" name="l00784"></a><span class="lineno">  784</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *selection;</div>
+<div class="line"><a id="l00785" name="l00785"></a><span class="lineno">  785</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *end;</div>
+<div class="line"><a id="l00786" name="l00786"></a><span class="lineno">  786</span>    <a class="code hl_enumeration" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737">gql_op_type_t</a> type;</div>
+<div class="line"><a id="l00787" name="l00787"></a><span class="lineno">  787</span>} gql_operation_selection;</div>
+<div class="line"><a id="l00788" name="l00788"></a><span class="lineno">  788</span> </div>
+<div class="line"><a id="l00789" name="l00789"></a><span class="lineno">  789</span><span class="keyword">static</span> <span class="keywordtype">bool</span> gql_select_operation(<span class="keyword">const</span> <span class="keywordtype">char</span> *document, <span class="keyword">const</span> <span class="keywordtype">char</span> *name,</div>
+<div class="line"><a id="l00790" name="l00790"></a><span class="lineno">  790</span>                                 gql_operation_selection *selected, <span class="keyword">const</span> <span class="keywordtype">char</span> **error) {</div>
+<div class="line"><a id="l00791" name="l00791"></a><span class="lineno">  791</span>    <span class="keywordtype">size_t</span> <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> = 0, matches = 0;</div>
+<div class="line"><a id="l00792" name="l00792"></a><span class="lineno">  792</span>    <span class="keywordtype">bool</span> has_anonymous = <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00793" name="l00793"></a><span class="lineno">  793</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *p = skip_ws_comments(document);</div>
+<div class="line"><a id="l00794" name="l00794"></a><span class="lineno">  794</span>    <span class="keywordflow">while</span> (*p) {</div>
+<div class="line"><a id="l00795" name="l00795"></a><span class="lineno">  795</span>        <a class="code hl_enumeration" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737">gql_op_type_t</a> type = <a class="code hl_enumvalue" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737ad2747d22ef2b2aab0da35e6a07b9e048">GQL_OP_QUERY</a>;</div>
+<div class="line"><a id="l00796" name="l00796"></a><span class="lineno">  796</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *candidate = NULL;</div>
+<div class="line"><a id="l00797" name="l00797"></a><span class="lineno">  797</span>        <span class="keywordtype">size_t</span> candidate_len = 0;</div>
+<div class="line"><a id="l00798" name="l00798"></a><span class="lineno">  798</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *selection = NULL;</div>
+<div class="line"><a id="l00799" name="l00799"></a><span class="lineno">  799</span>        <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;{&#39;</span>) {</div>
+<div class="line"><a id="l00800" name="l00800"></a><span class="lineno">  800</span>            selection = p;</div>
+<div class="line"><a id="l00801" name="l00801"></a><span class="lineno">  801</span>            has_anonymous = <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00802" name="l00802"></a><span class="lineno">  802</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00803" name="l00803"></a><span class="lineno">  803</span>            <span class="keywordflow">if</span> (strncmp(p, <span class="stringliteral">&quot;mutation&quot;</span>, 8) == 0 &amp;&amp; !gql_name_char(p[8], <span class="keyword">false</span>)) {</div>
+<div class="line"><a id="l00804" name="l00804"></a><span class="lineno">  804</span>                type = <a class="code hl_enumvalue" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737a57d16abc77fd32fb079fc86a9af5d18d">GQL_OP_MUTATION</a>;</div>
+<div class="line"><a id="l00805" name="l00805"></a><span class="lineno">  805</span>                p += 8;</div>
+<div class="line"><a id="l00806" name="l00806"></a><span class="lineno">  806</span>            } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (strncmp(p, <span class="stringliteral">&quot;query&quot;</span>, 5) == 0 &amp;&amp; !gql_name_char(p[5], <span class="keyword">false</span>)) {</div>
+<div class="line"><a id="l00807" name="l00807"></a><span class="lineno">  807</span>                p += 5;</div>
+<div class="line"><a id="l00808" name="l00808"></a><span class="lineno">  808</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00809" name="l00809"></a><span class="lineno">  809</span>                *error = <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> ? <span class="stringliteral">&quot;Unexpected trailing content after operation&quot;</span></div>
+<div class="line"><a id="l00810" name="l00810"></a><span class="lineno">  810</span>                               : <span class="stringliteral">&quot;Expected query or mutation operation&quot;</span>;</div>
+<div class="line"><a id="l00811" name="l00811"></a><span class="lineno">  811</span>                <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00812" name="l00812"></a><span class="lineno">  812</span>            }</div>
+<div class="line"><a id="l00813" name="l00813"></a><span class="lineno">  813</span>            p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00814" name="l00814"></a><span class="lineno">  814</span>            <span class="keywordflow">if</span> (gql_name_char(*p, <span class="keyword">true</span>)) {</div>
+<div class="line"><a id="l00815" name="l00815"></a><span class="lineno">  815</span>                candidate = p;</div>
+<div class="line"><a id="l00816" name="l00816"></a><span class="lineno">  816</span>                <span class="keywordflow">do</span> {</div>
+<div class="line"><a id="l00817" name="l00817"></a><span class="lineno">  817</span>                    p++;</div>
+<div class="line"><a id="l00818" name="l00818"></a><span class="lineno">  818</span>                } <span class="keywordflow">while</span> (gql_name_char(*p, <span class="keyword">false</span>));</div>
+<div class="line"><a id="l00819" name="l00819"></a><span class="lineno">  819</span>                candidate_len = (size_t)(p - candidate);</div>
+<div class="line"><a id="l00820" name="l00820"></a><span class="lineno">  820</span>                p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00821" name="l00821"></a><span class="lineno">  821</span>            }</div>
+<div class="line"><a id="l00822" name="l00822"></a><span class="lineno">  822</span>            selection = skip_operation_prelude(p);</div>
+<div class="line"><a id="l00823" name="l00823"></a><span class="lineno">  823</span>        }</div>
+<div class="line"><a id="l00824" name="l00824"></a><span class="lineno">  824</span>        <span class="keywordflow">if</span> (!selection || *selection != <span class="charliteral">&#39;{&#39;</span>) {</div>
+<div class="line"><a id="l00825" name="l00825"></a><span class="lineno">  825</span>            *error = <span class="stringliteral">&quot;Expected &#39;{&#39; to begin selection set&quot;</span>;</div>
+<div class="line"><a id="l00826" name="l00826"></a><span class="lineno">  826</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00827" name="l00827"></a><span class="lineno">  827</span>        }</div>
+<div class="line"><a id="l00828" name="l00828"></a><span class="lineno">  828</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *end = skip_selection_set(selection);</div>
+<div class="line"><a id="l00829" name="l00829"></a><span class="lineno">  829</span>        <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a>++;</div>
+<div class="line"><a id="l00830" name="l00830"></a><span class="lineno">  830</span>        <span class="keywordflow">if</span> ((!name &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> == 1) ||</div>
+<div class="line"><a id="l00831" name="l00831"></a><span class="lineno">  831</span>            (name &amp;&amp; candidate &amp;&amp; strlen(name) == candidate_len &amp;&amp;</div>
+<div class="line"><a id="l00832" name="l00832"></a><span class="lineno">  832</span>             strncmp(name, candidate, candidate_len) == 0)) {</div>
+<div class="line"><a id="l00833" name="l00833"></a><span class="lineno">  833</span>            selected-&gt;selection = selection;</div>
+<div class="line"><a id="l00834" name="l00834"></a><span class="lineno">  834</span>            selected-&gt;end = end;</div>
+<div class="line"><a id="l00835" name="l00835"></a><span class="lineno">  835</span>            selected-&gt;type = type;</div>
+<div class="line"><a id="l00836" name="l00836"></a><span class="lineno">  836</span>            matches++;</div>
+<div class="line"><a id="l00837" name="l00837"></a><span class="lineno">  837</span>        }</div>
+<div class="line"><a id="l00838" name="l00838"></a><span class="lineno">  838</span>        p = skip_ws_comments(end);</div>
 <div class="line"><a id="l00839" name="l00839"></a><span class="lineno">  839</span>    }</div>
-<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span> </div>
-<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>    <span class="keywordflow">if</span> (cJSON_GetArraySize(errors) == 0) {</div>
-<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        cJSON_DeleteItemFromObjectCaseSensitive(root, <span class="stringliteral">&quot;errors&quot;</span>);</div>
+<div class="line"><a id="l00840" name="l00840"></a><span class="lineno">  840</span>    <span class="keywordflow">if</span> (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> == 0) {</div>
+<div class="line"><a id="l00841" name="l00841"></a><span class="lineno">  841</span>        *error = <span class="stringliteral">&quot;Expected query or mutation operation&quot;</span>;</div>
+<div class="line"><a id="l00842" name="l00842"></a><span class="lineno">  842</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00843" name="l00843"></a><span class="lineno">  843</span>    }</div>
-<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span> </div>
-<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>    <span class="keywordtype">char</span> *printed = cJSON_PrintUnformatted(root);</div>
-<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>    cJSON_Delete(request);</div>
-<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>    cJSON_Delete(root);</div>
-<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span> </div>
-<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>    <span class="keywordflow">if</span> (!printed) <span class="keywordflow">return</span> gql_error(-1);</div>
-<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span> </div>
-<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>    *out_json = <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a2dd44ec61439b8a7ef388330198e5fc0">cwist_sstring_create</a>();</div>
-<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>    <span class="keywordflow">if</span> (!*out_json) {</div>
-<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>        cJSON_free(printed);</div>
-<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>        <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00844" name="l00844"></a><span class="lineno">  844</span>    <span class="keywordflow">if</span> (<a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> &gt; 1 &amp;&amp; has_anonymous) {</div>
+<div class="line"><a id="l00845" name="l00845"></a><span class="lineno">  845</span>        *error = <span class="stringliteral">&quot;Anonymous operation must be the only operation&quot;</span>;</div>
+<div class="line"><a id="l00846" name="l00846"></a><span class="lineno">  846</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00847" name="l00847"></a><span class="lineno">  847</span>    }</div>
+<div class="line"><a id="l00848" name="l00848"></a><span class="lineno">  848</span>    <span class="keywordflow">if</span> (name &amp;&amp; matches != 1) {</div>
+<div class="line"><a id="l00849" name="l00849"></a><span class="lineno">  849</span>        *error = <span class="stringliteral">&quot;Unknown or duplicate operationName&quot;</span>;</div>
+<div class="line"><a id="l00850" name="l00850"></a><span class="lineno">  850</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00851" name="l00851"></a><span class="lineno">  851</span>    }</div>
+<div class="line"><a id="l00852" name="l00852"></a><span class="lineno">  852</span>    <span class="keywordflow">if</span> (!name &amp;&amp; <a class="code hl_variable" href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a> != 1) {</div>
+<div class="line"><a id="l00853" name="l00853"></a><span class="lineno">  853</span>        *error = <span class="stringliteral">&quot;operationName is required for documents with multiple operations&quot;</span>;</div>
+<div class="line"><a id="l00854" name="l00854"></a><span class="lineno">  854</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line"><a id="l00855" name="l00855"></a><span class="lineno">  855</span>    }</div>
-<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>    <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a>(*out_json, printed);</div>
-<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>    cJSON_free(printed);</div>
+<div class="line"><a id="l00856" name="l00856"></a><span class="lineno">  856</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00857" name="l00857"></a><span class="lineno">  857</span>}</div>
 <div class="line"><a id="l00858" name="l00858"></a><span class="lineno">  858</span> </div>
-<div class="line"><a id="l00859" name="l00859"></a><span class="lineno">  859</span>    <span class="keywordflow">return</span> gql_error(0);</div>
-<div class="line"><a id="l00860" name="l00860"></a><span class="lineno">  860</span>}</div>
-</div>
-<div class="line"><a id="l00861" name="l00861"></a><span class="lineno">  861</span> </div>
-<div class="foldopen" id="foldopen00878" data-start="{" data-end="}">
-<div class="line"><a id="l00878" name="l00878"></a><span class="lineno"><a class="line" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a693bf250b425aac6b6bd211e30a443b9">  878</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/d92/graphql_8c.html#a693bf250b425aac6b6bd211e30a443b9">cwist_graphql_parse_subscription</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *query, <span class="keyword">const</span> cJSON *variables, <span class="keywordtype">char</span> *field_out,</div>
-<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>                                      <span class="keywordtype">size_t</span> field_cap, cJSON **args_out) {</div>
-<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>    <span class="keywordflow">if</span> (!query || !field_out || field_cap == 0 || !args_out) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span>    *args_out = NULL;</div>
-<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>    field_out[0] = <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span> </div>
-<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *p = skip_ws_comments(query);</div>
-<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>    <span class="keywordflow">if</span> (strncmp(p, <span class="stringliteral">&quot;subscription&quot;</span>, 12) != 0 || gql_name_char(p[12], <span class="keyword">false</span>)) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>    p += 12;</div>
-<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>    p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>    <span class="comment">/* Skip optional operation name / variable definitions until &#39;{&#39; (same</span></div>
-<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span><span class="comment">     * treatment as the query/mutation keyword in cwist_graphql_execute). */</span></div>
-<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;{&#39;</span>) p++;</div>
-<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;{&#39;</span>) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>    p++;</div>
-<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>    p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>    <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;}&#39;</span> || !gql_name_char(*p, <span class="keyword">true</span>)) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span> </div>
-<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *name_start = p;</div>
-<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>    <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
-<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>    <span class="keywordtype">size_t</span> name_len = (size_t)(p - name_start);</div>
-<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>    <span class="keywordtype">char</span> *token = gql_name_dup(name_start, name_len);</div>
-<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>    <span class="keywordflow">if</span> (!token) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span> </div>
-<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span>    p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;:&#39;</span>) {</div>
-<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>        p++;</div>
-<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>        p = skip_ws_comments(p);</div>
-<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span>        name_start = p;</div>
-<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>        <span class="keywordflow">if</span> (!gql_name_char(*p, <span class="keyword">true</span>)) {</div>
-<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
-<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>        }</div>
-<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>        <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
-<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>        <span class="keywordtype">char</span> *alias = gql_name_dup(name_start, (<span class="keywordtype">size_t</span>)(p - name_start));</div>
-<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>        <span class="keywordflow">if</span> (!alias) {</div>
-<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
-<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>        }</div>
-<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
-<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>        token = alias;</div>
-<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>    }</div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span> </div>
-<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>    <span class="keywordtype">size_t</span> out_len = strlen(token);</div>
-<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>    <span class="keywordflow">if</span> (out_len &gt;= field_cap) {</div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
-<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>    }</div>
-<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    memcpy(field_out, token, out_len + 1);</div>
-<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
-<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span> </div>
-<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>    cJSON *errors = cJSON_CreateArray();</div>
-<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>    <span class="keywordflow">if</span> (!errors) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *end = parse_arguments(p, variables, args_out, errors);</div>
-<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>    end = skip_ws_comments(end);</div>
-<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>    <span class="keywordflow">if</span> (*end == <span class="charliteral">&#39;{&#39;</span>) end = skip_selection_set(end);</div>
-<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>    end = skip_ws_comments(end);</div>
-<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>    <span class="keywordtype">bool</span> valid =</div>
-<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>        cJSON_GetArraySize(errors) == 0 &amp;&amp; *end == <span class="charliteral">&#39;}&#39;</span> &amp;&amp; *skip_ws_comments(end + 1) == <span class="charliteral">&#39;\0&#39;</span>;</div>
-<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>    cJSON_Delete(errors);</div>
-<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>    <span class="keywordflow">if</span> (!valid) {</div>
-<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>        cJSON_Delete(*args_out);</div>
-<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        *args_out = NULL;</div>
-<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
-<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span>    }</div>
-<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    <span class="comment">/* *args_out stays NULL when the field carries no arguments. */</span></div>
-<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>}</div>
-</div>
+<div class="foldopen" id="foldopen00871" data-start="{" data-end="}">
+<div class="line"><a id="l00871" name="l00871"></a><span class="lineno"><a class="line" href="../../d2/dc2/net_2graphql_2graphql_8h.html#ad95cc529195e192da4d756c8a3d2ca04">  871</a></span><a class="code hl_struct" href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a> <a class="code hl_function" href="../../dd/d92/graphql_8c.html#ad95cc529195e192da4d756c8a3d2ca04">cwist_graphql_execute</a>(<a class="code hl_typedef" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a2ad7bf57076b9d6d435512dea37b8b6f">cwist_graphql_schema_t</a> *schema, <span class="keyword">const</span> <span class="keywordtype">char</span> *request_json,</div>
+<div class="line"><a id="l00872" name="l00872"></a><span class="lineno">  872</span>                                    <a class="code hl_struct" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> **out_json) {</div>
+<div class="line"><a id="l00873" name="l00873"></a><span class="lineno">  873</span>    <span class="keywordflow">if</span> (!schema || !request_json || !out_json) <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00874" name="l00874"></a><span class="lineno">  874</span>    *out_json = NULL;</div>
+<div class="line"><a id="l00875" name="l00875"></a><span class="lineno">  875</span>    <span class="keywordflow">if</span> (cwist_json_has_nul_escape(request_json)) <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00876" name="l00876"></a><span class="lineno">  876</span> </div>
+<div class="line"><a id="l00877" name="l00877"></a><span class="lineno">  877</span>    cJSON *request = cJSON_ParseWithOpts(request_json, NULL, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00878" name="l00878"></a><span class="lineno">  878</span>    cJSON *root = cJSON_CreateObject();</div>
+<div class="line"><a id="l00879" name="l00879"></a><span class="lineno">  879</span>    cJSON *data = cJSON_CreateObject();</div>
+<div class="line"><a id="l00880" name="l00880"></a><span class="lineno">  880</span>    cJSON *errors = cJSON_CreateArray();</div>
+<div class="line"><a id="l00881" name="l00881"></a><span class="lineno">  881</span> </div>
+<div class="line"><a id="l00882" name="l00882"></a><span class="lineno">  882</span>    <span class="keywordflow">if</span> (!request || !root || !data || !errors) {</div>
+<div class="line"><a id="l00883" name="l00883"></a><span class="lineno">  883</span>        cJSON_Delete(request);</div>
+<div class="line"><a id="l00884" name="l00884"></a><span class="lineno">  884</span>        cJSON_Delete(root);</div>
+<div class="line"><a id="l00885" name="l00885"></a><span class="lineno">  885</span>        cJSON_Delete(data);</div>
+<div class="line"><a id="l00886" name="l00886"></a><span class="lineno">  886</span>        cJSON_Delete(errors);</div>
+<div class="line"><a id="l00887" name="l00887"></a><span class="lineno">  887</span>        <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00888" name="l00888"></a><span class="lineno">  888</span>    }</div>
+<div class="line"><a id="l00889" name="l00889"></a><span class="lineno">  889</span>    <span class="keywordflow">if</span> (!cJSON_AddItemToObject(root, <span class="stringliteral">&quot;data&quot;</span>, data)) {</div>
+<div class="line"><a id="l00890" name="l00890"></a><span class="lineno">  890</span>        cJSON_Delete(request);</div>
+<div class="line"><a id="l00891" name="l00891"></a><span class="lineno">  891</span>        cJSON_Delete(root);</div>
+<div class="line"><a id="l00892" name="l00892"></a><span class="lineno">  892</span>        cJSON_Delete(data);</div>
+<div class="line"><a id="l00893" name="l00893"></a><span class="lineno">  893</span>        cJSON_Delete(errors);</div>
+<div class="line"><a id="l00894" name="l00894"></a><span class="lineno">  894</span>        <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00895" name="l00895"></a><span class="lineno">  895</span>    }</div>
+<div class="line"><a id="l00896" name="l00896"></a><span class="lineno">  896</span>    <span class="keywordflow">if</span> (!cJSON_AddItemToObject(root, <span class="stringliteral">&quot;errors&quot;</span>, errors)) {</div>
+<div class="line"><a id="l00897" name="l00897"></a><span class="lineno">  897</span>        cJSON_Delete(request);</div>
+<div class="line"><a id="l00898" name="l00898"></a><span class="lineno">  898</span>        cJSON_Delete(root);</div>
+<div class="line"><a id="l00899" name="l00899"></a><span class="lineno">  899</span>        cJSON_Delete(errors);</div>
+<div class="line"><a id="l00900" name="l00900"></a><span class="lineno">  900</span>        <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00901" name="l00901"></a><span class="lineno">  901</span>    }</div>
+<div class="line"><a id="l00902" name="l00902"></a><span class="lineno">  902</span> </div>
+<div class="line"><a id="l00903" name="l00903"></a><span class="lineno">  903</span>    cJSON *query = cJSON_GetObjectItemCaseSensitive(request, <span class="stringliteral">&quot;query&quot;</span>);</div>
+<div class="line"><a id="l00904" name="l00904"></a><span class="lineno">  904</span>    cJSON *variables = cJSON_GetObjectItemCaseSensitive(request, <span class="stringliteral">&quot;variables&quot;</span>);</div>
+<div class="line"><a id="l00905" name="l00905"></a><span class="lineno">  905</span>    cJSON *operation_name_json = cJSON_GetObjectItemCaseSensitive(request, <span class="stringliteral">&quot;operationName&quot;</span>);</div>
+<div class="line"><a id="l00906" name="l00906"></a><span class="lineno">  906</span> </div>
+<div class="line"><a id="l00907" name="l00907"></a><span class="lineno">  907</span>    <span class="keywordflow">if</span> (variables &amp;&amp; !cJSON_IsObject(variables) &amp;&amp; !cJSON_IsNull(variables)) {</div>
+<div class="line"><a id="l00908" name="l00908"></a><span class="lineno">  908</span>        gql_add_error(errors, <span class="stringliteral">&quot;GraphQL variables must be an object&quot;</span>);</div>
+<div class="line"><a id="l00909" name="l00909"></a><span class="lineno">  909</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (operation_name_json &amp;&amp; !cJSON_IsString(operation_name_json) &amp;&amp;</div>
+<div class="line"><a id="l00910" name="l00910"></a><span class="lineno">  910</span>               !cJSON_IsNull(operation_name_json)) {</div>
+<div class="line"><a id="l00911" name="l00911"></a><span class="lineno">  911</span>        gql_add_error(errors, <span class="stringliteral">&quot;GraphQL operationName must be a string&quot;</span>);</div>
+<div class="line"><a id="l00912" name="l00912"></a><span class="lineno">  912</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (!cJSON_IsString(query) || !query-&gt;valuestring) {</div>
+<div class="line"><a id="l00913" name="l00913"></a><span class="lineno">  913</span>        gql_add_error(errors, <span class="stringliteral">&quot;GraphQL request must contain a string &#39;query&#39;&quot;</span>);</div>
+<div class="line"><a id="l00914" name="l00914"></a><span class="lineno">  914</span>    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (strlen(query-&gt;valuestring) &gt; <a class="code hl_define" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a6f3c4dc396d26348b477f1678603b6d8">CWIST_GRAPHQL_MAX_QUERY_SIZE</a>) {</div>
+<div class="line"><a id="l00915" name="l00915"></a><span class="lineno">  915</span>        gql_add_error(errors, <span class="stringliteral">&quot;Query string exceeds maximum allowed size&quot;</span>);</div>
+<div class="line"><a id="l00916" name="l00916"></a><span class="lineno">  916</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *operation_name =</div>
+<div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>            cJSON_IsString(operation_name_json) ? operation_name_json-&gt;valuestring : NULL;</div>
+<div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span>        gql_operation_selection selected = {0};</div>
+<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>        <span class="keyword">const</span> <span class="keywordtype">char</span> *selection_error = NULL;</div>
+<div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span>        <span class="keywordflow">if</span> (!gql_select_operation(query-&gt;valuestring, operation_name, &amp;selected, &amp;selection_error)) {</div>
+<div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span>            gql_add_error(errors, selection_error);</div>
+<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>        } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span>            <a class="code hl_typedef" href="../../dd/d92/graphql_8c.html#a86e76c2d912978f67495139681fa5b45">graphql_field_t</a> *target_schema =</div>
+<div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span>                (selected.type == <a class="code hl_enumvalue" href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737a57d16abc77fd32fb079fc86a9af5d18d">GQL_OP_MUTATION</a>) ? schema-&gt;mutations : schema-&gt;queries;</div>
+<div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>            cJSON *validated = cJSON_CreateObject();</div>
+<div class="line"><a id="l00927" name="l00927"></a><span class="lineno">  927</span>            <span class="keywordflow">if</span> (!validated) {</div>
+<div class="line"><a id="l00928" name="l00928"></a><span class="lineno">  928</span>                gql_add_error(errors, <span class="stringliteral">&quot;Internal memory error validating query&quot;</span>);</div>
+<div class="line"><a id="l00929" name="l00929"></a><span class="lineno">  929</span>            } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00930" name="l00930"></a><span class="lineno">  930</span>                <span class="keyword">const</span> <span class="keywordtype">char</span> *end = parse_selection_set(selected.selection, target_schema, variables,</div>
+<div class="line"><a id="l00931" name="l00931"></a><span class="lineno">  931</span>                                                      validated, errors, NULL, 1, <span class="keyword">true</span>);</div>
+<div class="line"><a id="l00932" name="l00932"></a><span class="lineno">  932</span>                end = skip_ws_comments(end);</div>
+<div class="line"><a id="l00933" name="l00933"></a><span class="lineno">  933</span>                <span class="keywordflow">if</span> (end != selected.end)</div>
+<div class="line"><a id="l00934" name="l00934"></a><span class="lineno">  934</span>                    gql_add_error(errors, <span class="stringliteral">&quot;Unexpected trailing content after operation&quot;</span>);</div>
+<div class="line"><a id="l00935" name="l00935"></a><span class="lineno">  935</span>                <span class="keywordflow">if</span> (cJSON_GetArraySize(errors) == 0)</div>
+<div class="line"><a id="l00936" name="l00936"></a><span class="lineno">  936</span>                    (void)parse_selection_set(selected.selection, target_schema, variables, data,</div>
+<div class="line"><a id="l00937" name="l00937"></a><span class="lineno">  937</span>                                              errors, NULL, 1, <span class="keyword">false</span>);</div>
+<div class="line"><a id="l00938" name="l00938"></a><span class="lineno">  938</span>                cJSON_Delete(validated);</div>
+<div class="line"><a id="l00939" name="l00939"></a><span class="lineno">  939</span>            }</div>
+<div class="line"><a id="l00940" name="l00940"></a><span class="lineno">  940</span>        }</div>
+<div class="line"><a id="l00941" name="l00941"></a><span class="lineno">  941</span>    }</div>
+<div class="line"><a id="l00942" name="l00942"></a><span class="lineno">  942</span> </div>
+<div class="line"><a id="l00943" name="l00943"></a><span class="lineno">  943</span>    <span class="keywordflow">if</span> (cJSON_GetArraySize(errors) == 0) {</div>
+<div class="line"><a id="l00944" name="l00944"></a><span class="lineno">  944</span>        cJSON_DeleteItemFromObjectCaseSensitive(root, <span class="stringliteral">&quot;errors&quot;</span>);</div>
+<div class="line"><a id="l00945" name="l00945"></a><span class="lineno">  945</span>    }</div>
 <div class="line"><a id="l00946" name="l00946"></a><span class="lineno">  946</span> </div>
-<div class="foldopen" id="foldopen00957" data-start="{" data-end="}">
-<div class="line"><a id="l00957" name="l00957"></a><span class="lineno"><a class="line" href="../../d2/dc2/net_2graphql_2graphql_8h.html#ae5a84ed3af00bc1ce0421669b1e8879d">  957</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/d92/graphql_8c.html#ae5a84ed3af00bc1ce0421669b1e8879d">cwist_graphql_serve</a>(<a class="code hl_typedef" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a2ad7bf57076b9d6d435512dea37b8b6f">cwist_graphql_schema_t</a> *schema, <a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req,</div>
-<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>                         <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>
-<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>    <span class="keywordflow">if</span> (!schema || !req || !res || req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#afa70fc531f9a23cfef539b091f2d7559">method</a> != <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683da91bd7e5b9d07b584daff0aab3e2118dc">CWIST_HTTP_POST</a>) {</div>
-<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span>        <span class="keywordflow">if</span> (res) res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d">status_code</a> = <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4da768402a6dd9af9218af371e78b2c7184">CWIST_HTTP_BAD_REQUEST</a>;</div>
-<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>        <span class="keywordflow">return</span>;</div>
-<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>    }</div>
+<div class="line"><a id="l00947" name="l00947"></a><span class="lineno">  947</span>    <span class="keywordtype">char</span> *printed = cJSON_PrintUnformatted(root);</div>
+<div class="line"><a id="l00948" name="l00948"></a><span class="lineno">  948</span>    cJSON_Delete(request);</div>
+<div class="line"><a id="l00949" name="l00949"></a><span class="lineno">  949</span>    cJSON_Delete(root);</div>
+<div class="line"><a id="l00950" name="l00950"></a><span class="lineno">  950</span> </div>
+<div class="line"><a id="l00951" name="l00951"></a><span class="lineno">  951</span>    <span class="keywordflow">if</span> (!printed) <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00952" name="l00952"></a><span class="lineno">  952</span> </div>
+<div class="line"><a id="l00953" name="l00953"></a><span class="lineno">  953</span>    *out_json = <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a2dd44ec61439b8a7ef388330198e5fc0">cwist_sstring_create</a>();</div>
+<div class="line"><a id="l00954" name="l00954"></a><span class="lineno">  954</span>    <span class="keywordflow">if</span> (!*out_json) {</div>
+<div class="line"><a id="l00955" name="l00955"></a><span class="lineno">  955</span>        cJSON_free(printed);</div>
+<div class="line"><a id="l00956" name="l00956"></a><span class="lineno">  956</span>        <span class="keywordflow">return</span> gql_error(-1);</div>
+<div class="line"><a id="l00957" name="l00957"></a><span class="lineno">  957</span>    }</div>
+<div class="line"><a id="l00958" name="l00958"></a><span class="lineno">  958</span>    <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a>(*out_json, printed);</div>
+<div class="line"><a id="l00959" name="l00959"></a><span class="lineno">  959</span>    cJSON_free(printed);</div>
+<div class="line"><a id="l00960" name="l00960"></a><span class="lineno">  960</span> </div>
+<div class="line"><a id="l00961" name="l00961"></a><span class="lineno">  961</span>    <span class="keywordflow">return</span> gql_error(0);</div>
+<div class="line"><a id="l00962" name="l00962"></a><span class="lineno">  962</span>}</div>
+</div>
 <div class="line"><a id="l00963" name="l00963"></a><span class="lineno">  963</span> </div>
-<div class="line"><a id="l00964" name="l00964"></a><span class="lineno">  964</span>    <a class="code hl_struct" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *json = NULL;</div>
-<div class="line"><a id="l00965" name="l00965"></a><span class="lineno">  965</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *body = req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1">body</a> ? req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1">body</a>-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a> : NULL;</div>
-<div class="line"><a id="l00966" name="l00966"></a><span class="lineno">  966</span> </div>
-<div class="line"><a id="l00967" name="l00967"></a><span class="lineno">  967</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../dd/d92/graphql_8c.html#ad95cc529195e192da4d756c8a3d2ca04">cwist_graphql_execute</a>(schema, body, &amp;json).error.err_i16 != 0) {</div>
-<div class="line"><a id="l00968" name="l00968"></a><span class="lineno">  968</span>        res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d">status_code</a> = <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4da768402a6dd9af9218af371e78b2c7184">CWIST_HTTP_BAD_REQUEST</a>;</div>
-<div class="line"><a id="l00969" name="l00969"></a><span class="lineno">  969</span>        <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a>(res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">body</a>, <span class="stringliteral">&quot;{\&quot;errors\&quot;:[{\&quot;message\&quot;:\&quot;invalid GraphQL request\&quot;}]}&quot;</span>);</div>
-<div class="line"><a id="l00970" name="l00970"></a><span class="lineno">  970</span>    } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00971" name="l00971"></a><span class="lineno">  971</span>        res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d">status_code</a> = <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4daa09679670b837c107e83024d1df2f676">CWIST_HTTP_OK</a>;</div>
-<div class="line"><a id="l00972" name="l00972"></a><span class="lineno">  972</span>        <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a652db21824d157b0fb7ba3b71ef19d96">cwist_sstring_assign_len</a>(res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">body</a>, json-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a>, json-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5c28462dd26584de37a7bc0a9c139f97">size</a>);</div>
-<div class="line"><a id="l00973" name="l00973"></a><span class="lineno">  973</span>        <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a94c24bf2288f664859ecefedf6c1d234">cwist_sstring_destroy</a>(json);</div>
-<div class="line"><a id="l00974" name="l00974"></a><span class="lineno">  974</span>    }</div>
-<div class="line"><a id="l00975" name="l00975"></a><span class="lineno">  975</span>    <a class="code hl_function" href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a>(&amp;res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a6cb73c494e78ce41b88b785c8c8d3e9b">headers</a>, <span class="stringliteral">&quot;Content-Type&quot;</span>, <span class="stringliteral">&quot;application/json&quot;</span>);</div>
-<div class="line"><a id="l00976" name="l00976"></a><span class="lineno">  976</span>}</div>
+<div class="foldopen" id="foldopen00980" data-start="{" data-end="}">
+<div class="line"><a id="l00980" name="l00980"></a><span class="lineno"><a class="line" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a693bf250b425aac6b6bd211e30a443b9">  980</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="../../dd/d92/graphql_8c.html#a693bf250b425aac6b6bd211e30a443b9">cwist_graphql_parse_subscription</a>(<span class="keyword">const</span> <span class="keywordtype">char</span> *query, <span class="keyword">const</span> cJSON *variables, <span class="keywordtype">char</span> *field_out,</div>
+<div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>                                      <span class="keywordtype">size_t</span> field_cap, cJSON **args_out) {</div>
+<div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>    <span class="keywordflow">if</span> (!query || !field_out || field_cap == 0 || !args_out) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>    *args_out = NULL;</div>
+<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>    field_out[0] = <span class="charliteral">&#39;\0&#39;</span>;</div>
+<div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span> </div>
+<div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *p = skip_ws_comments(query);</div>
+<div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>    <span class="keywordflow">if</span> (strncmp(p, <span class="stringliteral">&quot;subscription&quot;</span>, 12) != 0 || gql_name_char(p[12], <span class="keyword">false</span>)) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00988" name="l00988"></a><span class="lineno">  988</span>    p += 12;</div>
+<div class="line"><a id="l00989" name="l00989"></a><span class="lineno">  989</span>    p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00990" name="l00990"></a><span class="lineno">  990</span>    <span class="comment">/* Skip optional operation name / variable definitions until &#39;{&#39; (same</span></div>
+<div class="line"><a id="l00991" name="l00991"></a><span class="lineno">  991</span><span class="comment">     * treatment as the query/mutation keyword in cwist_graphql_execute). */</span></div>
+<div class="line"><a id="l00992" name="l00992"></a><span class="lineno">  992</span>    <span class="keywordflow">while</span> (*p &amp;&amp; *p != <span class="charliteral">&#39;{&#39;</span>) p++;</div>
+<div class="line"><a id="l00993" name="l00993"></a><span class="lineno">  993</span>    <span class="keywordflow">if</span> (*p != <span class="charliteral">&#39;{&#39;</span>) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00994" name="l00994"></a><span class="lineno">  994</span>    p++;</div>
+<div class="line"><a id="l00995" name="l00995"></a><span class="lineno">  995</span>    p = skip_ws_comments(p);</div>
+<div class="line"><a id="l00996" name="l00996"></a><span class="lineno">  996</span>    <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;}&#39;</span> || !gql_name_char(*p, <span class="keyword">true</span>)) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l00997" name="l00997"></a><span class="lineno">  997</span> </div>
+<div class="line"><a id="l00998" name="l00998"></a><span class="lineno">  998</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *name_start = p;</div>
+<div class="line"><a id="l00999" name="l00999"></a><span class="lineno">  999</span>    <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
+<div class="line"><a id="l01000" name="l01000"></a><span class="lineno"> 1000</span>    <span class="keywordtype">size_t</span> name_len = (size_t)(p - name_start);</div>
+<div class="line"><a id="l01001" name="l01001"></a><span class="lineno"> 1001</span>    <span class="keywordtype">char</span> *token = gql_name_dup(name_start, name_len);</div>
+<div class="line"><a id="l01002" name="l01002"></a><span class="lineno"> 1002</span>    <span class="keywordflow">if</span> (!token) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01003" name="l01003"></a><span class="lineno"> 1003</span> </div>
+<div class="line"><a id="l01004" name="l01004"></a><span class="lineno"> 1004</span>    p = skip_ws_comments(p);</div>
+<div class="line"><a id="l01005" name="l01005"></a><span class="lineno"> 1005</span>    <span class="keywordflow">if</span> (*p == <span class="charliteral">&#39;:&#39;</span>) {</div>
+<div class="line"><a id="l01006" name="l01006"></a><span class="lineno"> 1006</span>        p++;</div>
+<div class="line"><a id="l01007" name="l01007"></a><span class="lineno"> 1007</span>        p = skip_ws_comments(p);</div>
+<div class="line"><a id="l01008" name="l01008"></a><span class="lineno"> 1008</span>        name_start = p;</div>
+<div class="line"><a id="l01009" name="l01009"></a><span class="lineno"> 1009</span>        <span class="keywordflow">if</span> (!gql_name_char(*p, <span class="keyword">true</span>)) {</div>
+<div class="line"><a id="l01010" name="l01010"></a><span class="lineno"> 1010</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
+<div class="line"><a id="l01011" name="l01011"></a><span class="lineno"> 1011</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01012" name="l01012"></a><span class="lineno"> 1012</span>        }</div>
+<div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>        <span class="keywordflow">while</span> (*p &amp;&amp; gql_name_char(*p, <span class="keyword">false</span>)) p++;</div>
+<div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>        <span class="keywordtype">char</span> *alias = gql_name_dup(name_start, (<span class="keywordtype">size_t</span>)(p - name_start));</div>
+<div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>        <span class="keywordflow">if</span> (!alias) {</div>
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>            <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
+<div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>        }</div>
+<div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
+<div class="line"><a id="l01020" name="l01020"></a><span class="lineno"> 1020</span>        token = alias;</div>
+<div class="line"><a id="l01021" name="l01021"></a><span class="lineno"> 1021</span>    }</div>
+<div class="line"><a id="l01022" name="l01022"></a><span class="lineno"> 1022</span> </div>
+<div class="line"><a id="l01023" name="l01023"></a><span class="lineno"> 1023</span>    <span class="keywordtype">size_t</span> out_len = strlen(token);</div>
+<div class="line"><a id="l01024" name="l01024"></a><span class="lineno"> 1024</span>    <span class="keywordflow">if</span> (out_len &gt;= field_cap) {</div>
+<div class="line"><a id="l01025" name="l01025"></a><span class="lineno"> 1025</span>        <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
+<div class="line"><a id="l01026" name="l01026"></a><span class="lineno"> 1026</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01027" name="l01027"></a><span class="lineno"> 1027</span>    }</div>
+<div class="line"><a id="l01028" name="l01028"></a><span class="lineno"> 1028</span>    memcpy(field_out, token, out_len + 1);</div>
+<div class="line"><a id="l01029" name="l01029"></a><span class="lineno"> 1029</span>    <a class="code hl_function" href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a>(token);</div>
+<div class="line"><a id="l01030" name="l01030"></a><span class="lineno"> 1030</span> </div>
+<div class="line"><a id="l01031" name="l01031"></a><span class="lineno"> 1031</span>    cJSON *errors = cJSON_CreateArray();</div>
+<div class="line"><a id="l01032" name="l01032"></a><span class="lineno"> 1032</span>    <span class="keywordflow">if</span> (!errors) <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01033" name="l01033"></a><span class="lineno"> 1033</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *end = parse_arguments(p, variables, args_out, errors);</div>
+<div class="line"><a id="l01034" name="l01034"></a><span class="lineno"> 1034</span>    end = skip_ws_comments(end);</div>
+<div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>    <span class="keywordflow">if</span> (*end == <span class="charliteral">&#39;{&#39;</span>) end = skip_selection_set(end);</div>
+<div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span>    end = skip_ws_comments(end);</div>
+<div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>    <span class="keywordtype">bool</span> valid =</div>
+<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>        cJSON_GetArraySize(errors) == 0 &amp;&amp; *end == <span class="charliteral">&#39;}&#39;</span> &amp;&amp; *skip_ws_comments(end + 1) == <span class="charliteral">&#39;\0&#39;</span>;</div>
+<div class="line"><a id="l01039" name="l01039"></a><span class="lineno"> 1039</span>    cJSON_Delete(errors);</div>
+<div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span>    <span class="keywordflow">if</span> (!valid) {</div>
+<div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>        cJSON_Delete(*args_out);</div>
+<div class="line"><a id="l01042" name="l01042"></a><span class="lineno"> 1042</span>        *args_out = NULL;</div>
+<div class="line"><a id="l01043" name="l01043"></a><span class="lineno"> 1043</span>        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
+<div class="line"><a id="l01044" name="l01044"></a><span class="lineno"> 1044</span>    }</div>
+<div class="line"><a id="l01045" name="l01045"></a><span class="lineno"> 1045</span>    <span class="comment">/* *args_out stays NULL when the field carries no arguments. */</span></div>
+<div class="line"><a id="l01046" name="l01046"></a><span class="lineno"> 1046</span>    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l01047" name="l01047"></a><span class="lineno"> 1047</span>}</div>
+</div>
+<div class="line"><a id="l01048" name="l01048"></a><span class="lineno"> 1048</span> </div>
+<div class="foldopen" id="foldopen01059" data-start="{" data-end="}">
+<div class="line"><a id="l01059" name="l01059"></a><span class="lineno"><a class="line" href="../../d2/dc2/net_2graphql_2graphql_8h.html#ae5a84ed3af00bc1ce0421669b1e8879d"> 1059</a></span><span class="keywordtype">void</span> <a class="code hl_function" href="../../dd/d92/graphql_8c.html#ae5a84ed3af00bc1ce0421669b1e8879d">cwist_graphql_serve</a>(<a class="code hl_typedef" href="../../d2/dc2/net_2graphql_2graphql_8h.html#a2ad7bf57076b9d6d435512dea37b8b6f">cwist_graphql_schema_t</a> *schema, <a class="code hl_struct" href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a> *req,</div>
+<div class="line"><a id="l01060" name="l01060"></a><span class="lineno"> 1060</span>                         <a class="code hl_struct" href="../../dd/d22/structcwist__http__response.html">cwist_http_response</a> *res) {</div>
+<div class="line"><a id="l01061" name="l01061"></a><span class="lineno"> 1061</span>    <span class="keywordflow">if</span> (!schema || !req || !res || req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#afa70fc531f9a23cfef539b091f2d7559">method</a> != <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683da91bd7e5b9d07b584daff0aab3e2118dc">CWIST_HTTP_POST</a>) {</div>
+<div class="line"><a id="l01062" name="l01062"></a><span class="lineno"> 1062</span>        <span class="keywordflow">if</span> (res) res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d">status_code</a> = <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4da768402a6dd9af9218af371e78b2c7184">CWIST_HTTP_BAD_REQUEST</a>;</div>
+<div class="line"><a id="l01063" name="l01063"></a><span class="lineno"> 1063</span>        <span class="keywordflow">return</span>;</div>
+<div class="line"><a id="l01064" name="l01064"></a><span class="lineno"> 1064</span>    }</div>
+<div class="line"><a id="l01065" name="l01065"></a><span class="lineno"> 1065</span> </div>
+<div class="line"><a id="l01066" name="l01066"></a><span class="lineno"> 1066</span>    <a class="code hl_struct" href="../../d5/ddc/structcwist__sstring.html">cwist_sstring</a> *json = NULL;</div>
+<div class="line"><a id="l01067" name="l01067"></a><span class="lineno"> 1067</span>    <span class="keyword">const</span> <span class="keywordtype">char</span> *body = req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1">body</a> ? req-&gt;<a class="code hl_variable" href="../../dd/d68/structcwist__http__request.html#a91ec3900626efc7889a2a2ff2d52adf1">body</a>-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a> : NULL;</div>
+<div class="line"><a id="l01068" name="l01068"></a><span class="lineno"> 1068</span> </div>
+<div class="line"><a id="l01069" name="l01069"></a><span class="lineno"> 1069</span>    <span class="keywordflow">if</span> (<a class="code hl_function" href="../../dd/d92/graphql_8c.html#ad95cc529195e192da4d756c8a3d2ca04">cwist_graphql_execute</a>(schema, body, &amp;json).error.err_i16 != 0) {</div>
+<div class="line"><a id="l01070" name="l01070"></a><span class="lineno"> 1070</span>        res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d">status_code</a> = <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4da768402a6dd9af9218af371e78b2c7184">CWIST_HTTP_BAD_REQUEST</a>;</div>
+<div class="line"><a id="l01071" name="l01071"></a><span class="lineno"> 1071</span>        <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a6a0c23aa9b205fc952f848cc925a1a28">cwist_sstring_assign</a>(res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">body</a>, <span class="stringliteral">&quot;{\&quot;errors\&quot;:[{\&quot;message\&quot;:\&quot;invalid GraphQL request\&quot;}]}&quot;</span>);</div>
+<div class="line"><a id="l01072" name="l01072"></a><span class="lineno"> 1072</span>    } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l01073" name="l01073"></a><span class="lineno"> 1073</span>        res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a501dbd60856eb6710143dd87acd64b2d">status_code</a> = <a class="code hl_enumvalue" href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4daa09679670b837c107e83024d1df2f676">CWIST_HTTP_OK</a>;</div>
+<div class="line"><a id="l01074" name="l01074"></a><span class="lineno"> 1074</span>        <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a652db21824d157b0fb7ba3b71ef19d96">cwist_sstring_assign_len</a>(res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a342acf59fe7ce906f6d80a01bfdc1e6e">body</a>, json-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5db1637d58cb0690522ba232d49e8189">data</a>, json-&gt;<a class="code hl_variable" href="../../d5/ddc/structcwist__sstring.html#a5c28462dd26584de37a7bc0a9c139f97">size</a>);</div>
+<div class="line"><a id="l01075" name="l01075"></a><span class="lineno"> 1075</span>        <a class="code hl_function" href="../../d4/dbd/core_2sstring_2sstring_8h.html#a94c24bf2288f664859ecefedf6c1d234">cwist_sstring_destroy</a>(json);</div>
+<div class="line"><a id="l01076" name="l01076"></a><span class="lineno"> 1076</span>    }</div>
+<div class="line"><a id="l01077" name="l01077"></a><span class="lineno"> 1077</span>    <a class="code hl_function" href="../../dd/d56/http_8h.html#ab75bffc747ca7b55ac62f581702f1e2a">cwist_http_header_add</a>(&amp;res-&gt;<a class="code hl_variable" href="../../dd/d22/structcwist__http__response.html#a6cb73c494e78ce41b88b785c8c8d3e9b">headers</a>, <span class="stringliteral">&quot;Content-Type&quot;</span>, <span class="stringliteral">&quot;application/json&quot;</span>);</div>
+<div class="line"><a id="l01078" name="l01078"></a><span class="lineno"> 1078</span>}</div>
 </div>
 <div class="ttc" id="aalloc_8h_html"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html">alloc.h</a></div><div class="ttdoc">Memory allocation wrappers backed by libttak.</div></div>
 <div class="ttc" id="aalloc_8h_html_a220abeebe2823e72511d1690fc561306"><div class="ttname"><a href="../../d2/dfe/alloc_8h.html#a220abeebe2823e72511d1690fc561306">cwist_free</a></div><div class="ttdeci">void cwist_free(void *ptr)</div><div class="ttdoc">Free memory obtained via cwist_alloc/cwist_strdup/etc.</div><div class="ttdef"><b>Definition</b> <a href="../../d9/d39/alloc_8c_source.html#l00052">alloc.c:52</a></div></div>
@@ -972,16 +1074,16 @@ $(document).ready(function(){initNavTree('dd/d92/graphql_8c_source.html','../../
 <div class="ttc" id="acore_2sstring_2sstring_8h_html_a94c24bf2288f664859ecefedf6c1d234"><div class="ttname"><a href="../../d4/dbd/core_2sstring_2sstring_8h.html#a94c24bf2288f664859ecefedf6c1d234">cwist_sstring_destroy</a></div><div class="ttdeci">void cwist_sstring_destroy(cwist_sstring *str)</div><div class="ttdoc">Destroy an sstring instance.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d79/sstring_8c_source.html#l00902">sstring.c:902</a></div></div>
 <div class="ttc" id="aerr_2cwist__err_8h_html_a5d9104925cd11ab0ded2ddfcef4375baa7ddc038cc3ea431cfc59c528e375e518"><div class="ttname"><a href="../../d3/d73/err_2cwist__err_8h.html#a5d9104925cd11ab0ded2ddfcef4375baa7ddc038cc3ea431cfc59c528e375e518">CWIST_ERR_INT16</a></div><div class="ttdeci">@ CWIST_ERR_INT16</div><div class="ttdoc">used when checking common errcodes in Unix/Linux</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">cwist_err.h:16</a></div></div>
 <div class="ttc" id="agraphql_8c_html_a29a32f1de6afeb671c35a24ebc11b7d8"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#a29a32f1de6afeb671c35a24ebc11b7d8">cwist_graphql_add_mutation</a></div><div class="ttdeci">bool cwist_graphql_add_mutation(cwist_graphql_schema_t *schema, const char *field, cwist_graphql_resolver_fn resolver, void *ctx)</div><div class="ttdoc">Register a resolver for a GraphQL mutation field.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00279">graphql.c:279</a></div></div>
-<div class="ttc" id="agraphql_8c_html_a693bf250b425aac6b6bd211e30a443b9"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#a693bf250b425aac6b6bd211e30a443b9">cwist_graphql_parse_subscription</a></div><div class="ttdeci">bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables, char *field_out, size_t field_cap, cJSON **args_out)</div><div class="ttdoc">Extract the root field name and parsed arguments of a subscription operation.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00878">graphql.c:878</a></div></div>
+<div class="ttc" id="agraphql_8c_html_a693bf250b425aac6b6bd211e30a443b9"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#a693bf250b425aac6b6bd211e30a443b9">cwist_graphql_parse_subscription</a></div><div class="ttdeci">bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables, char *field_out, size_t field_cap, cJSON **args_out)</div><div class="ttdoc">Extract the root field name and parsed arguments of a subscription operation.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00980">graphql.c:980</a></div></div>
 <div class="ttc" id="agraphql_8c_html_a86e76c2d912978f67495139681fa5b45"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#a86e76c2d912978f67495139681fa5b45">graphql_field_t</a></div><div class="ttdeci">struct graphql_field graphql_field_t</div></div>
 <div class="ttc" id="agraphql_8c_html_a8d77f5660b9ae4bb9519778028ff385e"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#a8d77f5660b9ae4bb9519778028ff385e">cwist_graphql_add_query</a></div><div class="ttdeci">bool cwist_graphql_add_query(cwist_graphql_schema_t *schema, const char *field, cwist_graphql_resolver_fn resolver, void *ctx)</div><div class="ttdoc">Register a resolver for a GraphQL query field.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00264">graphql.c:264</a></div></div>
 <div class="ttc" id="agraphql_8c_html_ac1c75490929296ac38afe227fe4776f7"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ac1c75490929296ac38afe227fe4776f7">cwist_graphql_schema_destroy</a></div><div class="ttdeci">void cwist_graphql_schema_destroy(cwist_graphql_schema_t *schema)</div><div class="ttdoc">Destroy a schema and all registered query/mutation fields.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00212">graphql.c:212</a></div></div>
 <div class="ttc" id="agraphql_8c_html_ac46b8a6639c5677c326f2dd5d2ffe737"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737">gql_op_type_t</a></div><div class="ttdeci">gql_op_type_t</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00011">graphql.c:11</a></div></div>
 <div class="ttc" id="agraphql_8c_html_ac46b8a6639c5677c326f2dd5d2ffe737a57d16abc77fd32fb079fc86a9af5d18d"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737a57d16abc77fd32fb079fc86a9af5d18d">GQL_OP_MUTATION</a></div><div class="ttdeci">@ GQL_OP_MUTATION</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00011">graphql.c:11</a></div></div>
 <div class="ttc" id="agraphql_8c_html_ac46b8a6639c5677c326f2dd5d2ffe737ad2747d22ef2b2aab0da35e6a07b9e048"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ac46b8a6639c5677c326f2dd5d2ffe737ad2747d22ef2b2aab0da35e6a07b9e048">GQL_OP_QUERY</a></div><div class="ttdeci">@ GQL_OP_QUERY</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00011">graphql.c:11</a></div></div>
-<div class="ttc" id="agraphql_8c_html_ad95cc529195e192da4d756c8a3d2ca04"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ad95cc529195e192da4d756c8a3d2ca04">cwist_graphql_execute</a></div><div class="ttdeci">cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json, cwist_sstring **out_json)</div><div class="ttdoc">Execute a GraphQL query or mutation from a JSON request body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00775">graphql.c:775</a></div></div>
+<div class="ttc" id="agraphql_8c_html_ad95cc529195e192da4d756c8a3d2ca04"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ad95cc529195e192da4d756c8a3d2ca04">cwist_graphql_execute</a></div><div class="ttdeci">cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *request_json, cwist_sstring **out_json)</div><div class="ttdoc">Execute a GraphQL query or mutation from a JSON request body.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00871">graphql.c:871</a></div></div>
 <div class="ttc" id="agraphql_8c_html_adac75f0155455b477bddd6182c4baf59"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#adac75f0155455b477bddd6182c4baf59">cwist_graphql_schema_create</a></div><div class="ttdeci">cwist_graphql_schema_t * cwist_graphql_schema_create(void)</div><div class="ttdoc">Allocate an empty GraphQL schema with no query or mutation fields.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00186">graphql.c:186</a></div></div>
-<div class="ttc" id="agraphql_8c_html_ae5a84ed3af00bc1ce0421669b1e8879d"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ae5a84ed3af00bc1ce0421669b1e8879d">cwist_graphql_serve</a></div><div class="ttdeci">void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">HTTP handler serving GraphQL requests over POST.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l00957">graphql.c:957</a></div></div>
+<div class="ttc" id="agraphql_8c_html_ae5a84ed3af00bc1ce0421669b1e8879d"><div class="ttname"><a href="../../dd/d92/graphql_8c.html#ae5a84ed3af00bc1ce0421669b1e8879d">cwist_graphql_serve</a></div><div class="ttdeci">void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req, cwist_http_response *res)</div><div class="ttdoc">HTTP handler serving GraphQL requests over POST.</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d92/graphql_8c_source.html#l01059">graphql.c:1059</a></div></div>
 <div class="ttc" id="ahttp_8h_html_a99b5ad0e71431205a397a336983f4f4da768402a6dd9af9218af371e78b2c7184"><div class="ttname"><a href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4da768402a6dd9af9218af371e78b2c7184">CWIST_HTTP_BAD_REQUEST</a></div><div class="ttdeci">@ CWIST_HTTP_BAD_REQUEST</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00031">http.h:31</a></div></div>
 <div class="ttc" id="ahttp_8h_html_a99b5ad0e71431205a397a336983f4f4daa09679670b837c107e83024d1df2f676"><div class="ttname"><a href="../../dd/d56/http_8h.html#a99b5ad0e71431205a397a336983f4f4daa09679670b837c107e83024d1df2f676">CWIST_HTTP_OK</a></div><div class="ttdeci">@ CWIST_HTTP_OK</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00028">http.h:28</a></div></div>
 <div class="ttc" id="ahttp_8h_html_aa7eeb74d97e9a5416ffc3cd53366683da91bd7e5b9d07b584daff0aab3e2118dc"><div class="ttname"><a href="../../dd/d56/http_8h.html#aa7eeb74d97e9a5416ffc3cd53366683da91bd7e5b9d07b584daff0aab3e2118dc">CWIST_HTTP_POST</a></div><div class="ttdeci">@ CWIST_HTTP_POST</div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00018">http.h:18</a></div></div>
@@ -993,6 +1095,7 @@ $(document).ready(function(){initNavTree('dd/d92/graphql_8c_source.html','../../
 <div class="ttc" id="anet_2graphql_2graphql_8h_html_a6f3c4dc396d26348b477f1678603b6d8"><div class="ttname"><a href="../../d2/dc2/net_2graphql_2graphql_8h.html#a6f3c4dc396d26348b477f1678603b6d8">CWIST_GRAPHQL_MAX_QUERY_SIZE</a></div><div class="ttdeci">#define CWIST_GRAPHQL_MAX_QUERY_SIZE</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dc2/net_2graphql_2graphql_8h_source.html#l00015">graphql.h:15</a></div></div>
 <div class="ttc" id="anet_2graphql_2graphql_8h_html_af4cd10db9ed7e02591939f7942cea948"><div class="ttname"><a href="../../d2/dc2/net_2graphql_2graphql_8h.html#af4cd10db9ed7e02591939f7942cea948">CWIST_GRAPHQL_MAX_DEPTH</a></div><div class="ttdeci">#define CWIST_GRAPHQL_MAX_DEPTH</div><div class="ttdef"><b>Definition</b> <a href="../../d2/dc2/net_2graphql_2graphql_8h_source.html#l00017">graphql.h:17</a></div></div>
 <div class="ttc" id="aotel_8c_html_a75844ce74940ef333d11ae090e07c9af"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a75844ce74940ef333d11ae090e07c9af">head</a></div><div class="ttdeci">size_t head</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00060">otel.c:60</a></div></div>
+<div class="ttc" id="aotel_8c_html_a76d971a3c552bc58ba9f0d5fceae9806"><div class="ttname"><a href="../../d3/db2/otel_8c.html#a76d971a3c552bc58ba9f0d5fceae9806">count</a></div><div class="ttdeci">size_t count</div><div class="ttdef"><b>Definition</b> <a href="../../d3/db2/otel_8c_source.html#l00061">otel.c:61</a></div></div>
 <div class="ttc" id="astructcwist__error__t_html"><div class="ttname"><a href="../../d4/d50/structcwist__error__t.html">cwist_error_t</a></div><div class="ttdoc">Integrated error structure used throughout the system.</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00072">cwist_err.h:72</a></div></div>
 <div class="ttc" id="astructcwist__error__t_html_a9d2eb8f5526877f744a642ae0aa04e23"><div class="ttname"><a href="../../d4/d50/structcwist__error__t.html#a9d2eb8f5526877f744a642ae0aa04e23">cwist_error_t::errtype</a></div><div class="ttdeci">cwist_errtype_t errtype</div><div class="ttdef"><b>Definition</b> <a href="../../d3/d73/err_2cwist__err_8h_source.html#l00073">cwist_err.h:73</a></div></div>
 <div class="ttc" id="astructcwist__http__request_html"><div class="ttname"><a href="../../dd/d68/structcwist__http__request.html">cwist_http_request</a></div><div class="ttdef"><b>Definition</b> <a href="../../dd/d56/http_8h_source.html#l00065">http.h:65</a></div></div>

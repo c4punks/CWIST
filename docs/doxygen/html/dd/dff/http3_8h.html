@@ -474,7 +474,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Releases the process-wide lsquic reference taken at init. Must not be called concurrently with <a class="el" href="../../dd/dff/http3_8h.html#a8d60b85d41105c404f177a04a03f0d51" title="Run the HTTP/3 server event loop.">cwist_http3_server_loop()</a> on the same context. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03418">3418</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03432">3432</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00052">cwist_free()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00123">cwist_h3_global_release()</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00038">cwist_http3_context::engine</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">cwist_http3_context::ssl_ctx</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00068">cwist_http3_context::ssl_ctx_handout</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">cwist_http3_context::ssl_ctx_lock</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00069">cwist_http3_context::ticket_key</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00080">cwist_http3_context::tls_groups</a>.</p>
 
@@ -536,7 +536,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>err.error.err_i16 == 0 on success; -1 on bad arguments, TLS setup failure, or OOM. On failure all partial state is unwound and *ctx is untouched.</dd></dl>
 <p>Takes a process-wide lsquic reference (released by <a class="el" href="../../dd/dff/http3_8h.html#a3b8be16f94dac189c5f2a8b360dea4f0" title="Destroy an HTTP/3 context.">cwist_http3_destroy_context()</a>). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03243">3243</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03257">3257</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00109">cwist_h3_global_acquire()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00123">cwist_h3_global_release()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>.</p>
 
@@ -569,7 +569,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>err.error.err_i16 == 0 on success; -1 on TLS setup failure or OOM. On failure all partial state is unwound.</dd></dl>
 <p>Intended for tests and local deployments where provisioning a real certificate is impractical. Takes a process-wide lsquic reference (released by <a class="el" href="../../dd/dff/http3_8h.html#a3b8be16f94dac189c5f2a8b360dea4f0" title="Destroy an HTTP/3 context.">cwist_http3_destroy_context()</a>). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03291">3291</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03305">3305</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d9/d39/alloc_8c_source.html#l00017">cwist_alloc()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00109">cwist_h3_global_acquire()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00123">cwist_h3_global_release()</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00025">EVP_sha256</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, and <a class="el" href="../../df/d6d/ssl_8h_source.html#l00098">SSL_CTX_new</a>.</p>
 
@@ -652,7 +652,7 @@ Functions</h2></td></tr>
 </dl>
 <p>The engine thread publishes the fields with a release store of last_close_received, which this reads with acquire. A later close frame rewrites them, so read them once the serve loop has stopped. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03516">3516</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03530">3530</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00075">cwist_http3_context::last_close_app_error</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00076">cwist_http3_context::last_close_code</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00077">cwist_http3_context::last_close_reason</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00074">cwist_http3_context::last_close_received</a>.</p>
 
@@ -719,7 +719,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Builds a request header set (:method GET, :scheme https, :path from <code>path</code>, :authority copied from the original request's Host or "localhost"). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04161">4161</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04175">4175</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/d34/h3__hdr__out_8h_source.html#l00019">h3_hdr_out::arr</a>, <a class="el" href="../../dd/d34/h3__hdr__out_8h_source.html#l00020">h3_hdr_out::count</a>, <a class="el" href="../../dd/d43/http_8c_source.html#l02133">cwist_http_header_get()</a>, <a class="el" href="../../dd/d56/http_8h_source.html#l00072">cwist_http_request::headers</a>, and <a class="el" href="../../dd/d56/http_8h_source.html#l00078">cwist_http_request::private_data</a>.</p>
 
@@ -771,7 +771,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>err.error.err_i16 == 0 on success; on failure the old certificate keeps serving.</dd></dl>
 <p>Hot-reload the certificate chain and key of a live HTTP/3 context. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03465">3465</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03479">3479</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00044">cwist_http3_context::early_data_enabled</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">cwist_http3_context::ssl_ctx</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00099">SSL_CTX_free</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">cwist_http3_context::ssl_ctx_lock</a>, <a class="el" href="../../df/d6d/ssl_8h_source.html#l00126">SSL_CTX_set1_groups_list</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00069">cwist_http3_context::ticket_key</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00080">cwist_http3_context::tls_groups</a>.</p>
 
@@ -840,7 +840,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Thread-safe: the payload is copied and appended to the connection's own mutex-guarded queue, so concurrent sends on different connections never share state and concurrent sends on one connection queue instead of clobbering each other. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04526">4526</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04540">4540</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -896,7 +896,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>err.error.err_i16 == 0 when the loop exits cleanly (ctx-&gt;running cleared or process shutdown); -1 on invalid arguments or setup failure (socket flags, epoll, memory).</dd></dl>
 <p>Configures lsquic engine settings from the context's knobs (push, WebTransport, datagrams, flow-control windows, timeout set), then polls the socket (epoll on Linux, poll elsewhere; recvmmsg batching when available), feeds packets to the engine, and processes connections until shutdown. Linux receive batches and the packet buffer are heap-allocated so the loop does not require an oversized thread stack. On exit the engine is gracefully stopped and destroyed. CWIST_H3_DEBUG=1 routes lsquic's logger to stderr. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03583">3583</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l03597">3597</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00046">cwist_http3_context::allow_migration</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00079">cwist_http3_context::async_queue</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00016">CWIST_ERR_INT16</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00333">cwist_h3_async_queue_release()</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00047">cwist_http3_context::datagram_enabled</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00038">cwist_http3_context::engine</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00049">__prim_cwist_error_t::err_i16</a>, <a class="el" href="../../d3/d73/err_2cwist__err_8h_source.html#l00074">cwist_error_t::error</a>, <a class="el" href="../../d3/db2/shutdown_8c_source.html#l00017">g_cwist_running</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00039">cwist_http3_context::handler</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00055">cwist_http3_context::handshake_timeout_ms</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00054">cwist_http3_context::idle_timeout_ms</a>, <a class="el" href="../../db/dcc/error_8c_source.html#l00014">make_error()</a>, <a class="el" href="../../de/daf/http3_8c_source.html#l00089">MSG_DONTWAIT</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00057">cwist_http3_context::noprogress_timeout_ms</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00056">cwist_http3_context::ping_period_ms</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00043">cwist_http3_context::push_enabled</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00041">cwist_http3_context::running</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00037">cwist_http3_context::udp_fd</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00040">cwist_http3_context::user_ctx</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00050">cwist_http3_context::wt_handler</a>.</p>
 
@@ -951,7 +951,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04491">4491</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04505">4505</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00048">cwist_http3_context::datagram_cb</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00049">cwist_http3_context::datagram_user_ctx</a>.</p>
 
@@ -1000,7 +1000,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04500">4500</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04514">4514</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00082">cwist_http3_context::datagram_conn_cb</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00083">cwist_http3_context::datagram_conn_user_ctx</a>.</p>
 
@@ -1038,7 +1038,7 @@ Functions</h2></td></tr>
 <p>Enable or disable QUIC datagram extension on the given context.</p>
 <p>Note: enabling WebTransport forces the datagram engine settings on regardless of this knob. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04483">4483</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04497">4497</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00047">cwist_http3_context::datagram_enabled</a>.</p>
 
@@ -1085,7 +1085,7 @@ Functions</h2></td></tr>
 <p>Enable or disable server-side 0-RTT early data on the given context.</p>
 <p>Enabling also arms the replay guard (only idempotent methods are accepted as early data) unless the application overrides it with <a class="el" href="../../dd/dff/http3_8h.html#a265f06e9373148103e277107a8984b12" title="Enable or disable the 0-RTT replay guard (default ON when early data is enabled).">cwist_http3_set_early_data_guard()</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04108">4108</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04122">4122</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00044">cwist_http3_context::early_data_enabled</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00045">cwist_http3_context::early_data_guard</a>, <a class="el" href="../../dd/dff/http3_8h_source.html#l00036">cwist_http3_context::ssl_ctx</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00067">cwist_http3_context::ssl_ctx_lock</a>.</p>
 
@@ -1129,7 +1129,7 @@ Functions</h2></td></tr>
 <p>Enable or disable the 0-RTT replay guard (default ON when early data is enabled).</p>
 <p>While armed, requests received while the QUIC handshake is still in progress are refused with 425 unless their method is idempotent (RFC 8470). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04130">4130</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04144">4144</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00045">cwist_http3_context::early_data_guard</a>.</p>
 
@@ -1172,7 +1172,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Set the handshake timeout. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04453">4453</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04467">4467</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00055">cwist_http3_context::handshake_timeout_ms</a>.</p>
 
@@ -1216,7 +1216,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Set the idle timeout for QUIC connections. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04445">4445</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04459">4459</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00054">cwist_http3_context::idle_timeout_ms</a>.</p>
 
@@ -1259,7 +1259,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Set the no-progress timeout. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04469">4469</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04483">4483</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00057">cwist_http3_context::noprogress_timeout_ms</a>.</p>
 
@@ -1302,7 +1302,7 @@ Functions</h2></td></tr>
 </dl>
 <p>Set the keep-alive PING period. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04461">4461</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04475">4475</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00056">cwist_http3_context::ping_period_ms</a>.</p>
 
@@ -1338,7 +1338,7 @@ Functions</h2></td></tr>
 <p>Push is disabled by default. When enabled, the handler can push resources by calling <a class="el" href="../../dd/dff/http3_8h.html#afe2dc023265c7f47f7f311b79e48973a" title="Push a resource to the client.">cwist_http3_push_resource()</a>.</p>
 <p>Enable or disable HTTP/3 server push on the given context. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04097">4097</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04111">4111</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00043">cwist_http3_context::push_enabled</a>.</p>
 
@@ -1377,7 +1377,7 @@ Functions</h2></td></tr>
 <p>Set stream priority for the current response.</p>
 <p>lsquic_stream_set_priority() on a request stream emits a PRIORITY_UPDATE frame on the control stream, which violates RFC 9218 (PRIORITY_UPDATE may only reference client-opened streams). Strict stacks (Firefox/neqo) then kill the connection with H3_FRAME_UNEXPECTED. Use the RFC 9218 <code>Priority</code> header instead. See the deprecation note in <a class="el" href="../../dd/dff/http3_8h.html" title="HTTP/3 (QUIC-based) Protocol Definitions for CWIST.">include/cwist/net/http/http3.h</a>. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04200">4200</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04214">4214</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d7/d7f/log_8h_source.html#l00056">CWIST_LOG_WARN</a>.</p>
 
@@ -1421,7 +1421,7 @@ Functions</h2></td></tr>
 <p>Register a WebTransport session handler on the given HTTP/3 context.</p>
 <p>When set, the server loop enables the lsquic WebTransport settings and extended-CONNECT requests with :protocol "webtransport" are handed to this handler via cwist_h3_wt_on_session_open(). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04219">4219</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04233">4233</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00050">cwist_http3_context::wt_handler</a>.</p>
 
@@ -1464,7 +1464,7 @@ Functions</h2></td></tr>
 <p>Close a WebTransport session with an application error code. </p>
 <p>Close a WebTransport session with an application error code. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04713">4713</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04727">4727</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1494,7 +1494,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on error.</dd></dl>
 <p>Close a WebTransport stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04414">4414</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04428">4428</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1524,7 +1524,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on error.</dd></dl>
 <p>Flush any buffered data on a WebTransport stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04406">4406</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04420">4420</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1547,7 +1547,7 @@ Functions</h2></td></tr>
 <p>Return the current maximum WebTransport datagram payload size. </p>
 <p>Return the current maximum WebTransport datagram payload size. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04705">4705</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04719">4719</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1578,7 +1578,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure.</dd></dl>
 <p>Request a new server-initiated bidirectional WebTransport stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04422">4422</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04436">4436</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1609,7 +1609,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>0 on success, -1 on failure.</dd></dl>
 <p>Request a new server-initiated unidirectional WebTransport stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04430">4430</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04444">4444</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1658,7 +1658,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Number of bytes read, 0 if none available, or -1 on error.</dd></dl>
 <p>Read data from a WebTransport stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04386">4386</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04400">4400</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1706,7 +1706,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Number of bytes queued, or -1 on error.</dd></dl>
 <p>Send an unreliable WebTransport datagram in session context. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04695">4695</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04709">4709</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
@@ -1760,7 +1760,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04228">4228</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04242">4242</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../dd/dff/http3_8h_source.html#l00053">cwist_http3_context::wt_new_stream_ctx</a>, and <a class="el" href="../../dd/dff/http3_8h_source.html#l00051">cwist_http3_context::wt_new_stream_handler</a>.</p>
 
@@ -1811,7 +1811,7 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>Number of bytes buffered, or -1 on error.</dd></dl>
 <p>Write data to a WebTransport stream. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04396">4396</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../de/daf/http3_8c_source.html#l04410">4410</a> of file <a class="el" href="../../de/daf/http3_8c_source.html">http3.c</a>.</p>
 
 </div>
 </div>
