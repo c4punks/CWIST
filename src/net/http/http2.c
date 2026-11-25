@@ -4409,7 +4409,16 @@ int cwist_http2_push_resource(cwist_http_request *req, const char *path, const c
     }
     res->status_code = CWIST_HTTP_OK;
     if (content_type) cwist_http_header_add(&res->headers, "content-type", content_type);
-    if (data && data_len > 0) cwist_sstring_assign_len(res->body, (const char *)data, data_len);
+    if (data && data_len > 0) {
+        cwist_error_t body_err = cwist_sstring_assign_len(res->body, (const char *)data, data_len);
+        if (!cwist_error_is_ok(&body_err)) {
+            cwist_error_dispose(&body_err);
+            cwist_http_response_destroy(res);
+            h2_send_rst_stream(hc, promised_stream_id, 0x08);
+            return -1;
+        }
+        cwist_error_dispose(&body_err);
+    }
 
     h2_stream *s = h2_stream_create(hc, promised_stream_id);
     if (!s) {

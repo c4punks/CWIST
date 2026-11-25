@@ -328,9 +328,21 @@ static void signaling_route_handler(void *user, cwist_http_request *req, cwist_h
         cwist_sstring_assign(res->body, "invalid SDP offer");
         return;
     }
-    cwist_http_header_add(&res->headers, "Content-Type", "application/sdp");
-    cwist_sstring_assign(res->body, answer);
+    cwist_error_t body_err = cwist_sstring_assign(res->body, answer);
     cwist_free(answer);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&body_err);
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/sdp");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&header_err);
 }
 #endif
 

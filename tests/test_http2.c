@@ -18,6 +18,14 @@
 #include <time.h>
 #include <unistd.h>
 
+static _Atomic int fail_assign_len;
+cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (atomic_load(&fail_assign_len) && len == 6 && memcmp(data, "body{}", 6) == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign_len(str, data, len);
+}
+
 #define TEST_CERT "example/othello-web/server.crt"
 #define TEST_KEY "example/othello-web/server.key"
 
@@ -935,6 +943,35 @@ static void test_http2_server_push(void) {
         }
     }
     assert(promised && pushed_body && main_body);
+    test_http2_stop_client(client, sv[1], tid);
+
+    assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+    test_http2_server_ctx failed = {
+        .fd = sv[0], .handler = http2_push_handler, .standard_data = true};
+    client = test_http2_start_client(sv, &failed, &tid);
+    assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+    atomic_store(&fail_assign_len, 1);
+    test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
+    test_http2_write_frame(client, 0x1, 0x5, 1, initial, sizeof(initial));
+    bool failed_body = false, failed_promise = false, failed_reset = false;
+    for (int i = 0; i < 20 && !(failed_body && failed_reset); i++) {
+        unsigned char hdr[9];
+        assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+        uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+        uint32_t stream_id = (((uint32_t)hdr[5] & 0x7f) << 24) | ((uint32_t)hdr[6] << 16) |
+                             ((uint32_t)hdr[7] << 8) | hdr[8];
+        unsigned char payload[4096];
+        assert(len <= sizeof(payload));
+        if (len) assert(ssl_read_exact(client, payload, len) == 0);
+        if (hdr[3] == 0x5) failed_promise = true;
+        if (hdr[3] == 0x3 && stream_id == 2) failed_reset = true;
+        if (hdr[3] == 0x0 && stream_id == 1) {
+            assert(len == 13 && memcmp(payload, "push disabled", 13) == 0);
+            failed_body = true;
+        }
+    }
+    atomic_store(&fail_assign_len, 0);
+    assert(failed_body && failed_promise && failed_reset);
     test_http2_stop_client(client, sv[1], tid);
 
     static const unsigned char no_push[] = {0, 2, 0, 0, 0, 0};

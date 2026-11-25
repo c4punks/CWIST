@@ -23,6 +23,14 @@
 #include <time.h>
 #include <unistd.h>
 
+static _Atomic int fail_assign;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (atomic_load(&fail_assign) && data && strncmp(data, "v=0", 3) == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+
 #define TIMEOUT_MS 30000
 
 static int raw_port;
@@ -379,6 +387,26 @@ static void test_signaling_rejects_embedded_nul(void) {
     assert(n > 0);
     response[n] = '\0';
     assert(strstr(response, " 400 ") != NULL);
+    close(fd);
+
+    stop_server(server);
+    atomic_store(&fail_assign, 1);
+    server = start_rtc_server();
+    atomic_store(&fail_assign, 0);
+    fd = connect_retry((uint16_t)rtc_port);
+    request_len = snprintf(request, sizeof(request),
+                           "POST /signal HTTP/1.1\r\nHost: localhost\r\n"
+                           "Content-Type: application/sdp\r\nContent-Length: %zu\r\n"
+                           "Connection: close\r\n\r\n",
+                           offer_len);
+    send_all(fd, request, (size_t)request_len);
+    send_all(fd, offer, offer_len);
+    pfd.fd = fd;
+    assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+    n = recv(fd, response, sizeof(response) - 1, 0);
+    assert(n > 0);
+    response[n] = '\0';
+    assert(strstr(response, " 500 ") != NULL);
     close(fd);
     stop_server(server);
     puts("SDP signaling rejects embedded NUL: ok");

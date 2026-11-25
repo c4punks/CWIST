@@ -547,10 +547,12 @@ static char *jwt_sign_common(jwt_alg_t alg, const char *payload_json, const char
     /* --- Build header JSON ------------------------------------------------ */
     cJSON *header = cJSON_CreateObject();
     if (!header) return NULL;
-    cJSON_AddStringToObject(header, "alg", jwt_alg_name(alg));
-    cJSON_AddStringToObject(header, "typ", "JWT");
-    if (kid) {
-        cJSON_AddStringToObject(header, "kid", kid);
+    bool header_ok = cJSON_AddStringToObject(header, "alg", jwt_alg_name(alg)) &&
+                     cJSON_AddStringToObject(header, "typ", "JWT") &&
+                     (!kid || cJSON_AddStringToObject(header, "kid", kid));
+    if (!header_ok) {
+        cJSON_Delete(header);
+        return NULL;
     }
     char *header_json = cJSON_PrintUnformatted(header);
     cJSON_Delete(header);
@@ -572,11 +574,13 @@ static char *jwt_sign_common(jwt_alg_t alg, const char *payload_json, const char
             return NULL;
         }
         /* Only add if not already present */
-        if (!cJSON_GetObjectItemCaseSensitive(payload, "iat")) {
-            cJSON_AddNumberToObject(payload, "iat", (double)now);
-        }
-        if (!cJSON_GetObjectItemCaseSensitive(payload, "exp")) {
-            cJSON_AddNumberToObject(payload, "exp", (double)(now + exp_seconds));
+        if ((!cJSON_GetObjectItemCaseSensitive(payload, "iat") &&
+             !cJSON_AddNumberToObject(payload, "iat", (double)now)) ||
+            (!cJSON_GetObjectItemCaseSensitive(payload, "exp") &&
+             !cJSON_AddNumberToObject(payload, "exp", (double)(now + exp_seconds)))) {
+            cJSON_Delete(payload);
+            cJSON_free(header_json);
+            return NULL;
         }
     }
 

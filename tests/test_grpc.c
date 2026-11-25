@@ -9,6 +9,20 @@
 #include <string.h>
 #include <zlib.h>
 
+static int fail_body;
+static int fail_message;
+cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (fail_body && data && len >= 5 && (unsigned char)data[0] <= 1)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign_len(str, data, len);
+}
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_message && (size == 4 || size == 28)) return NULL;
+    return __real_cwist_alloc(size);
+}
+
 static void echo_unary(cwist_http_request *req, cwist_http_response *res,
                        const cwist_grpc_message *message, void *user_ctx) {
     (void)req;
@@ -468,7 +482,37 @@ static void test_unregister(void) {
     printf("gRPC unregister tests passed.\n");
 }
 
+static void test_response_failures(void) {
+    cwist_http_response *res = cwist_http_response_create();
+    fail_message = 1;
+    cwist_grpc_set_response(res, CWIST_GRPC_OK, "x", NULL, 0);
+    fail_message = 0;
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    const char *grpc_status = cwist_http_header_get(res->headers, "grpc-status");
+    assert(grpc_status == NULL || strcmp(grpc_status, "13") == 0);
+    cwist_http_response_destroy(res);
+
+    res = cwist_http_response_create();
+    fail_body = 1;
+    cwist_grpc_set_response(res, CWIST_GRPC_OK, NULL, "x", 1);
+    fail_body = 0;
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    grpc_status = cwist_http_header_get(res->headers, "grpc-status");
+    assert(grpc_status == NULL || strcmp(grpc_status, "13") == 0);
+    cwist_http_response_destroy(res);
+
+    res = cwist_http_response_create();
+    fail_message = 1;
+    cwist_grpc_set_response(res, CWIST_GRPC_INVALID_ARGUMENT, "bad input", NULL, 0);
+    fail_message = 0;
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    grpc_status = cwist_http_header_get(res->headers, "grpc-status");
+    assert(grpc_status == NULL || strcmp(grpc_status, "13") == 0);
+    cwist_http_response_destroy(res);
+}
+
 int main(void) {
+    test_response_failures();
     cwist_pb_writer request_pb;
     cwist_pb_writer_init(&request_pb);
     assert(cwist_pb_write_string_field(&request_pb, 1, "ping") == 0);
@@ -522,6 +566,22 @@ int main(void) {
         cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
     decode_response(res, "reply:ping");
     cwist_http_response_destroy(res);
+
+    static const cwist_test_client_kv accept_gzip[] = {{"grpc-accept-encoding", "gzip"}};
+    opts.headers = accept_gzip;
+    opts.header_count = 1;
+    fail_body = 1;
+    res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);
+    fail_body = 0;
+    assert(res != NULL);
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    const char *grpc_status = cwist_http_header_get(res->headers, "grpc-status");
+    assert(grpc_status == NULL || strcmp(grpc_status, "13") == 0);
+    const char *encoding = cwist_http_header_get(res->headers, "grpc-encoding");
+    assert(encoding == NULL || strcmp(encoding, "gzip") != 0);
+    cwist_http_response_destroy(res);
+    opts.headers = NULL;
+    opts.header_count = 0;
 
     opts.content_type = "application/octet-stream";
     res = cwist_test_client_request_ex(client, CWIST_HTTP_POST, "/cwist.test.Echo/Say", &opts);

@@ -39,13 +39,22 @@ void *__wrap_malloc(size_t size) {
 static _Thread_local int fail_header;
 static _Thread_local int fail_client_body;
 static _Atomic int fail_server_body;
+static _Atomic int fail_server_header;
+static _Atomic int fail_server_path;
 static _Atomic int handler_calls;
 cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                            const char *value);
 cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                            const char *value) {
-    if (fail_header) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    if (fail_header || (fail_server_header && strcmp(key, "host") == 0))
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
     return __real_cwist_http_header_add(head, key, value);
+}
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (fail_server_path && data && strcmp(data, "/") == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
 }
 cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
 cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
@@ -140,6 +149,26 @@ int main(void) {
     e = cwist_http3_client_request(c, "/", CWIST_HTTP_POST, NULL, "hello", 5, &res);
     fail_server_body = 0;
     if (e.error.err_i16 != 0 || !res || res->status_code != CWIST_HTTP_INTERNAL_ERROR ||
+        atomic_load(&handler_calls) != before)
+        return 1;
+    cwist_http_response_destroy(res);
+
+    before = atomic_load(&handler_calls);
+    fail_server_header = 1;
+    res = NULL;
+    e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    fail_server_header = 0;
+    if (e.error.err_i16 != 0 || !res || res->status_code != CWIST_HTTP_BAD_REQUEST ||
+        atomic_load(&handler_calls) != before)
+        return 1;
+    cwist_http_response_destroy(res);
+
+    before = atomic_load(&handler_calls);
+    fail_server_path = 1;
+    res = NULL;
+    e = cwist_http3_client_request(c, "/", CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    fail_server_path = 0;
+    if (e.error.err_i16 != 0 || !res || res->status_code != CWIST_HTTP_BAD_REQUEST ||
         atomic_load(&handler_calls) != before)
         return 1;
     cwist_http_response_destroy(res);

@@ -469,16 +469,52 @@ void cwist_redis_reply_free(cwist_redis_reply_t *reply);
 
 /** Append one RESP2 bulk string ("$<len>\r\n<payload>\r\n") to a frame being
  * built. A NULL @p s is encoded as an empty string.
- * @return Always 0 (appends to the sstring unconditionally). */
+ * @return 0 on success, -1 on allocation failure. */
 static int write_bulk_string(cwist_sstring *out, const char *s) {
     char prefix[32];
     size_t len = s ? strlen(s) : 0;
     snprintf(prefix, sizeof(prefix), "$%zu\r\n", len);
-    cwist_sstring_append(out, prefix);
-    if (len) cwist_sstring_append(out, s);
-    cwist_sstring_append(out, "\r\n");
+    cwist_error_t err = cwist_sstring_append(out, prefix);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        return -1;
+    }
+    cwist_error_dispose(&err);
+    if (len) {
+        err = cwist_sstring_append(out, s);
+        if (!cwist_error_is_ok(&err)) {
+            cwist_error_dispose(&err);
+            return -1;
+        }
+        cwist_error_dispose(&err);
+    }
+    err = cwist_sstring_append(out, "\r\n");
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        return -1;
+    }
+    cwist_error_dispose(&err);
     return 0;
 }
+
+#define WRITE_BULK_OR_FAIL(out, value)                 \
+    do {                                               \
+        if (write_bulk_string(out, value) != 0) {      \
+            cwist_sstring_destroy(out);                \
+            return redis_fail(-ENOMEM);                \
+        }                                              \
+    } while (0)
+
+#define APPEND_OR_FAIL(out, value)                              \
+    do {                                                        \
+        cwist_error_t append_err = cwist_sstring_append(out, value); \
+        if (!cwist_error_is_ok(&append_err)) {                  \
+            cwist_error_dispose(&append_err);                   \
+            cwist_sstring_destroy(out);                         \
+            return redis_fail(-ENOMEM);                         \
+        }                                                       \
+        cwist_error_dispose(&append_err);                       \
+    } while (0)
 
 /** Flatten a reply tree into the legacy out_value/out_len contract. */
 static void flatten_reply(const cwist_redis_reply_t *tree, char **out_value, size_t *out_len) {
@@ -941,9 +977,9 @@ cwist_error_t cwist_redis_get(cwist_redis_t *r, const char *key, char **out_valu
     if (!r || !key || !out_value) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*2\r\n");
-    write_bulk_string(cmd, "GET");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*2\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "GET");
+    WRITE_BULK_OR_FAIL(cmd, key);
     cwist_error_t err = cwist_redis_command(r, cmd->data, out_value);
     cwist_sstring_destroy(cmd);
     return err;
@@ -958,10 +994,10 @@ cwist_error_t cwist_redis_set(cwist_redis_t *r, const char *key, const char *val
     if (!r || !key || !value) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*3\r\n");
-    write_bulk_string(cmd, "SET");
-    write_bulk_string(cmd, key);
-    write_bulk_string(cmd, value);
+    APPEND_OR_FAIL(cmd, "*3\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "SET");
+    WRITE_BULK_OR_FAIL(cmd, key);
+    WRITE_BULK_OR_FAIL(cmd, value);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -979,13 +1015,13 @@ cwist_error_t cwist_redis_setex(cwist_redis_t *r, const char *key, const char *v
     if (!r || !key || !value || seconds <= 0) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*4\r\n");
-    write_bulk_string(cmd, "SETEX");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*4\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "SETEX");
+    WRITE_BULK_OR_FAIL(cmd, key);
     char sec[32];
     snprintf(sec, sizeof(sec), "%d", seconds);
-    write_bulk_string(cmd, sec);
-    write_bulk_string(cmd, value);
+    WRITE_BULK_OR_FAIL(cmd, sec);
+    WRITE_BULK_OR_FAIL(cmd, value);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -1001,9 +1037,9 @@ cwist_error_t cwist_redis_del(cwist_redis_t *r, const char *key) {
     if (!r || !key) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*2\r\n");
-    write_bulk_string(cmd, "DEL");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*2\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "DEL");
+    WRITE_BULK_OR_FAIL(cmd, key);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -1020,12 +1056,12 @@ cwist_error_t cwist_redis_expire(cwist_redis_t *r, const char *key, int seconds)
     if (!r || !key || seconds <= 0) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*3\r\n");
-    write_bulk_string(cmd, "EXPIRE");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*3\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "EXPIRE");
+    WRITE_BULK_OR_FAIL(cmd, key);
     char sec[32];
     snprintf(sec, sizeof(sec), "%d", seconds);
-    write_bulk_string(cmd, sec);
+    WRITE_BULK_OR_FAIL(cmd, sec);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -1042,10 +1078,10 @@ cwist_error_t cwist_redis_publish(cwist_redis_t *r, const char *channel, const c
     if (!r || !channel || !message) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*3\r\n");
-    write_bulk_string(cmd, "PUBLISH");
-    write_bulk_string(cmd, channel);
-    write_bulk_string(cmd, message);
+    APPEND_OR_FAIL(cmd, "*3\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "PUBLISH");
+    WRITE_BULK_OR_FAIL(cmd, channel);
+    WRITE_BULK_OR_FAIL(cmd, message);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -1073,10 +1109,10 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwi
     while (channels[count]) count++;
     char prefix[32];
     snprintf(prefix, sizeof(prefix), "*%zu\r\n", count + 1);
-    cwist_sstring_append(cmd, prefix);
-    write_bulk_string(cmd, "SUBSCRIBE");
+    APPEND_OR_FAIL(cmd, prefix);
+    WRITE_BULK_OR_FAIL(cmd, "SUBSCRIBE");
     for (size_t i = 0; i < count; i++) {
-        write_bulk_string(cmd, channels[i]);
+        WRITE_BULK_OR_FAIL(cmd, channels[i]);
     }
     cwist_error_t err = send_command(r, cmd->data);
     cwist_sstring_destroy(cmd);

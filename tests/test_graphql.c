@@ -20,6 +20,18 @@ cJSON_bool __wrap_cJSON_ReplaceItemViaPointer(cJSON *const parent, cJSON *const 
     if (fail_replace) return 0;
     return __real_cJSON_ReplaceItemViaPointer(parent, item, replacement);
 }
+static int fail_assign;
+static int fail_assign_len;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (fail_assign) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (fail_assign_len) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign_len(str, data, len);
+}
 
 static int query_count;
 static int mutation_count;
@@ -270,6 +282,28 @@ static void test_graphql_allocation_failures(void) {
     cwist_graphql_schema_destroy(schema);
 }
 
+static void test_output_allocation_failures(void) {
+    cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
+    assert(cwist_graphql_add_query(schema, "greet", hello_resolver, NULL));
+    cwist_sstring *out = NULL;
+    fail_assign = 1;
+    assert(cwist_graphql_execute(schema, "{\"query\":\"{ greet }\"}", &out).error.err_i16 != 0);
+    fail_assign = 0;
+    assert(out == NULL);
+
+    cwist_http_request *req = cwist_http_request_create();
+    req->method = CWIST_HTTP_POST;
+    cwist_sstring_assign(req->body, "{\"query\":\"{ greet }\"}");
+    cwist_http_response *res = cwist_http_response_create();
+    fail_assign_len = 1;
+    cwist_graphql_serve(schema, req, res);
+    fail_assign_len = 0;
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_response_destroy(res);
+    cwist_http_request_destroy(req);
+    cwist_graphql_schema_destroy(schema);
+}
+
 int main(void) {
     cwist_graphql_schema_t *schema = cwist_graphql_schema_create();
     assert(schema);
@@ -466,6 +500,7 @@ int main(void) {
     test_number_arguments();
     test_request_validation_and_operation_selection();
     test_graphql_allocation_failures();
+    test_output_allocation_failures();
     puts("All GraphQL advanced tests passed successfully.");
     return 0;
 }

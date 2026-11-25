@@ -36,6 +36,14 @@
 
 static int g_failures = 0;
 static int fail_body_assign;
+static int fail_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_header) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
 
 cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
 cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
@@ -280,6 +288,14 @@ static void test_file_head_content_length(cwist_http_client *client) {
         CHECK(body_equals(res, "", 0), "HEAD returned a body");
         cwist_http_response_destroy(res);
     }
+    fail_header = 1;
+    res = NULL;
+    cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_HEAD, NULL, NULL, 0, &res);
+    fail_header = 0;
+    CHECK(!cwist_error_is_ok(&err), "file response header allocation failure was reported as success");
+    cwist_error_dispose(&err);
+    CHECK(res == NULL, "file response header allocation failure returned a partial response");
+    if (res) cwist_http_response_destroy(res);
     unlink(path);
     report(before, "file HEAD includes Content-Length");
 }

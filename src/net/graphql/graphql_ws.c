@@ -773,9 +773,21 @@ static void gql_ws_handle_keepalive(cwist_websocket_async *ws, const cJSON *msg,
         cwist_websocket_async_close(ws);
         return;
     }
-    cJSON_AddStringToObject(pong, "type", "pong");
+    if (!cJSON_AddStringToObject(pong, "type", "pong")) {
+        cJSON_Delete(pong);
+        cwist_websocket_async_close(ws);
+        return;
+    }
     const cJSON *payload = cJSON_GetObjectItemCaseSensitive(msg, "payload");
-    if (payload) cJSON_AddItemToObject(pong, "payload", cJSON_Duplicate(payload, true));
+    if (payload) {
+        cJSON *copy = cJSON_Duplicate(payload, true);
+        if (!copy || !cJSON_AddItemToObject(pong, "payload", copy)) {
+            cJSON_Delete(copy);
+            cJSON_Delete(pong);
+            cwist_websocket_async_close(ws);
+            return;
+        }
+    }
     gql_ws_send_json(ws, pong);
 }
 
@@ -805,7 +817,11 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
                 cwist_websocket_async_close(ws);
                 return;
             }
-            cJSON_AddStringToObject(ack, "type", "connection_ack");
+            if (!cJSON_AddStringToObject(ack, "type", "connection_ack")) {
+                cJSON_Delete(ack);
+                cwist_websocket_async_close(ws);
+                return;
+            }
             gql_ws_send_json(ws, ack);
         } else {
             cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_UNAUTHORIZED);
