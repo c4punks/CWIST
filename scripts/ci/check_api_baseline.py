@@ -36,6 +36,13 @@ from api_baseline import render  # noqa: E402
 
 BASELINE = "docs/api/v4.0-api-baseline.txt"
 DEFAULT_REF = "v4"
+GUARANTEE_RENAMES = {"__prim_cwist_error_t": "prim__cwist_error_t"}
+
+
+def canonical_guarantee_line(line: str) -> str:
+    for old, new in GUARANTEE_RENAMES.items():
+        line = re.sub(rf"\b{re.escape(old)}\b", new, line)
+    return line
 
 
 def guaranteed_lines(text: str) -> dict[str, set[str]]:
@@ -59,11 +66,12 @@ def guaranteed_lines(text: str) -> dict[str, set[str]]:
 
 def removed_guaranteed(old: str, new: str) -> list[str]:
     old_s, new_s = guaranteed_lines(old), guaranteed_lines(new)
-    new_all = set().union(*new_s.values()) if new_s else set()
+    new_all = {canonical_guarantee_line(line) for lines in new_s.values() for line in lines}
     out = []
     for title, lines in sorted(old_s.items()):
-        for line in sorted(lines - new_all):
-            out.append(f"{title}: {line}")
+        for line in sorted(lines):
+            if canonical_guarantee_line(line) not in new_all:
+                out.append(f"{title}: {line}")
     return out
 
 

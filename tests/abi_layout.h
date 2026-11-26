@@ -96,20 +96,20 @@
     _Static_assert(CWIST_ERR_STRING == 8 && CWIST_ERR_JSON == 9 && CWIST_ERR_FLOAT == 10 &&  \
                        CWIST_ERR_DOUBLE == 11,                                               \
                    "ABI: complex cwist_errtype_t values");                                   \
-    ABI_FIRST(__prim_cwist_error_t, err_i8, int8_t);                                         \
-    ABI_NEXT(__prim_cwist_error_t, err_i8, err_i16, int16_t);                                \
-    ABI_NEXT(__prim_cwist_error_t, err_i16, err_i32, int32_t);                               \
-    ABI_NEXT(__prim_cwist_error_t, err_i32, err_i64, int64_t);                               \
-    ABI_NEXT(__prim_cwist_error_t, err_i64, err_u8, uint8_t);                                \
-    ABI_NEXT(__prim_cwist_error_t, err_u8, err_u16, uint16_t);                               \
-    ABI_NEXT(__prim_cwist_error_t, err_u16, err_u32, uint32_t);                              \
-    ABI_NEXT(__prim_cwist_error_t, err_u32, err_u64, uint64_t);                              \
-    ABI_NEXT(__prim_cwist_error_t, err_u64, err_string, struct cwist_sstring *);             \
-    ABI_NEXT(__prim_cwist_error_t, err_string, err_json, cJSON *);                           \
-    ABI_END(__prim_cwist_error_t, err_json, ABI_MAX(_Alignof(int64_t), _Alignof(void *)));   \
+    ABI_FIRST(prim__cwist_error_t, err_i8, int8_t);                                         \
+    ABI_NEXT(prim__cwist_error_t, err_i8, err_i16, int16_t);                                \
+    ABI_NEXT(prim__cwist_error_t, err_i16, err_i32, int32_t);                               \
+    ABI_NEXT(prim__cwist_error_t, err_i32, err_i64, int64_t);                               \
+    ABI_NEXT(prim__cwist_error_t, err_i64, err_u8, uint8_t);                                \
+    ABI_NEXT(prim__cwist_error_t, err_u8, err_u16, uint16_t);                               \
+    ABI_NEXT(prim__cwist_error_t, err_u16, err_u32, uint32_t);                              \
+    ABI_NEXT(prim__cwist_error_t, err_u32, err_u64, uint64_t);                              \
+    ABI_NEXT(prim__cwist_error_t, err_u64, err_string, struct cwist_sstring *);             \
+    ABI_NEXT(prim__cwist_error_t, err_string, err_json, cJSON *);                           \
+    ABI_END(prim__cwist_error_t, err_json, ABI_MAX(_Alignof(int64_t), _Alignof(void *)));   \
     ABI_FIRST(cwist_error_t, errtype, cwist_errtype_t);                                      \
-    ABI_NEXT(cwist_error_t, errtype, error, __prim_cwist_error_t);                           \
-    ABI_END(cwist_error_t, error, _Alignof(__prim_cwist_error_t))
+    ABI_NEXT(cwist_error_t, errtype, error, prim__cwist_error_t);                           \
+    ABI_END(cwist_error_t, error, _Alignof(prim__cwist_error_t))
 #endif
 
 /* --- cwist_sstring -------------------------------------------------------------
