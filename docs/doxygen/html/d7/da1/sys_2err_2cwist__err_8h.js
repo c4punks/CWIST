@@ -1,6 +1,6 @@
 var sys_2err_2cwist__err_8h =
 [
-    [ "__prim_cwist_error_t", "d8/dca/struct____prim__cwist__error__t.html", "d8/dca/struct____prim__cwist__error__t" ],
+    [ "prim__cwist_error_t", "d6/d55/structprim____cwist__error__t.html", "d6/d55/structprim____cwist__error__t" ],
     [ "cwist_error_t", "d4/d50/structcwist__error__t.html", "d4/d50/structcwist__error__t" ],
     [ "CWIST_ERROR_INVALID_PARAM", "d7/da1/sys_2err_2cwist__err_8h.html#a0ae92b5d5f56c49cfeb670fdd09ed70f", null ],
     [ "CWIST_ERROR_IO", "d7/da1/sys_2err_2cwist__err_8h.html#a7d0e537dfbd1d613eaa8be67e939a319", null ],
@@ -9,9 +9,9 @@ var sys_2err_2cwist__err_8h =
     [ "CWIST_ERROR_TIMEOUT", "d7/da1/sys_2err_2cwist__err_8h.html#a09a8293c484896a8ed953ae3d51c06db", null ],
     [ "CWIST_FAILURE", "d7/da1/sys_2err_2cwist__err_8h.html#a737041a7381dd355528fb63ac7e46be2", null ],
     [ "CWIST_SUCCESS", "d7/da1/sys_2err_2cwist__err_8h.html#aba063bda68650916867b86c4492eecef", null ],
-    [ "__prim_cwist_error_t", "d7/da1/sys_2err_2cwist__err_8h.html#ad0d5cab227e2aac13618fbc09c6dadf7", null ],
     [ "cwist_error_t", "d7/da1/sys_2err_2cwist__err_8h.html#abfe12f19aa6b9893e39fd7bb87c81edc", null ],
     [ "cwist_errtype_t", "d7/da1/sys_2err_2cwist__err_8h.html#aada6e137c3dc65aa2136d5204f4d9094", null ],
+    [ "prim__cwist_error_t", "d7/da1/sys_2err_2cwist__err_8h.html#a99f6aa22acd49df0a7f83a1fe8b86995", null ],
     [ "cwist_errtype_t", "d7/da1/sys_2err_2cwist__err_8h.html#a5d9104925cd11ab0ded2ddfcef4375ba", [
       [ "CWIST_ERR_INT8", "d7/da1/sys_2err_2cwist__err_8h.html#a5d9104925cd11ab0ded2ddfcef4375baa8ab2740215b1dc5ad6c79c02a357fe23", null ],
       [ "CWIST_ERR_INT16", "d7/da1/sys_2err_2cwist__err_8h.html#a5d9104925cd11ab0ded2ddfcef4375baa7ddc038cc3ea431cfc59c528e375e518", null ],

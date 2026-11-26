@@ -1,11 +1,11 @@
 var indexSectionsWithContent =
 {
   0: "0123456789:_abcdefghijklmnopqrstuvwyz—洛개거검것게결계곱공교구그기내대덧덮데도동띄라런레마만매메모목문미및밖방백버범보복비빌사상서설세소수스시실쌍쓰아안않암양에엔역연예외요운원웹유응의인읽임입정제조종주지진차참처첫최침카코쿠쿼크클키테템통튜파펌포표푸풀프하함합핵핸헤홀확훅",
-  1: "_bchqs",
+  1: "bchpqs",
   2: "0abcdefghijklmnopqrstuvwz",
   3: "_bcghmqs",
   4: "abcdefghijklmnopqrstuvw",
-  5: "_abceghjnopqrstw",
+  5: "abceghjnopqrstw",
   6: "acfgjlqt",
   7: "acefghjlqt",
   8: "_abcdeghijklmnopqrstuw",

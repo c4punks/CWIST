@@ -124,8 +124,7 @@ var menudata={children:[
 {text:"r",url:"globals_vars.html#index_r"},
 {text:"s",url:"globals_vars.html#index_s"}]},
 {text:"Typedefs",url:"globals_type.html",children:[
-{text:"_",url:"globals_type.html#index__5F"},
-{text:"a",url:"globals_type_a.html#index_a"},
+{text:"a",url:"globals_type.html#index_a"},
 {text:"b",url:"globals_type_b.html#index_b"},
 {text:"c",url:"globals_type_c.html#index_c"},
 {text:"e",url:"globals_type_e.html#index_e"},

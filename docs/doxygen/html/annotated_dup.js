@@ -1,6 +1,5 @@
 var annotated_dup =
 [
-    [ "__prim_cwist_error_t", "d8/dca/struct____prim__cwist__error__t.html", "d8/dca/struct____prim__cwist__error__t" ],
     [ "bdr_blob_t", "d3/dac/structbdr__blob__t.html", "d3/dac/structbdr__blob__t" ],
     [ "bdr_entry_t", "d5/d26/structbdr__entry__t.html", "d5/d26/structbdr__entry__t" ],
     [ "cwist_app", "dc/da0/structcwist__app.html", "dc/da0/structcwist__app" ],
@@ -116,6 +115,7 @@ var annotated_dup =
     [ "cwist_zod_error", "dc/d5f/structcwist__zod__error.html", "dc/d5f/structcwist__zod__error" ],
     [ "cwist_zod_result", "dd/d71/structcwist__zod__result.html", "dd/d71/structcwist__zod__result" ],
     [ "h3_hdr_out", "dc/dda/structh3__hdr__out.html", "dc/dda/structh3__hdr__out" ],
+    [ "prim__cwist_error_t", "d6/d55/structprim____cwist__error__t.html", "d6/d55/structprim____cwist__error__t" ],
     [ "quic_conn_fc", "d0/dba/structquic__conn__fc.html", "d0/dba/structquic__conn__fc" ],
     [ "quic_stream_fc", "d9/d1b/structquic__stream__fc.html", "d9/d1b/structquic__stream__fc" ],
     [ "session_arena", "d4/d6b/structsession__arena.html", "d4/d6b/structsession__arena" ],
