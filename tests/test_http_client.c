@@ -34,6 +34,27 @@
 #define CLOSED_PORT_TIMEOUT_MS 2000
 
 static int g_failures = 0;
+#ifdef CWIST_TEST_WRAP
+static int fail_body_assign;
+static int fail_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_header) return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
+
+cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (fail_body_assign) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
+    return __real_cwist_sstring_assign_len(str, data, len);
+}
+#endif
 
 #define CHECK(cond, ...)                                         \
     do {                                                         \
@@ -235,6 +256,23 @@ static cwist_http_response *request(cwist_http_client *client, const char *url,
     return res;
 }
 
+#ifdef CWIST_TEST_WRAP
+static void test_body_allocation_failure(cwist_http_client *client, const char *base) {
+    int before = g_failures;
+    char url[128];
+    snprintf(url, sizeof(url), "%s/hello", base);
+    fail_body_assign = 1;
+    cwist_http_response *res = NULL;
+    cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
+    CHECK(!cwist_error_is_ok(&err), "response body allocation failure was reported as success");
+    CHECK(res == NULL, "response body allocation failure returned a partial response");
+    cwist_error_dispose(&err);
+    if (res) cwist_http_response_destroy(res);
+    fail_body_assign = 0;
+    report(before, "response body allocation failure is propagated");
+}
+#endif
+
 typedef struct {
     cwist_http_client *client;
     const char *base;
@@ -270,8 +308,7 @@ static void test_shared_client_threads(cwist_http_client *client, const char *ba
     }
     for (int i = 0; i < 4; i++) {
         pthread_join(threads[i], NULL);
-        CHECK(args[i].ok == 20, "shared client: thread %d got %d/20 good responses", i,
-              args[i].ok);
+        CHECK(args[i].ok == 20, "shared client: thread %d got %d/20 good responses", i, args[i].ok);
     }
     report(before, "one client shared by four threads");
 }
@@ -455,6 +492,7 @@ static void test_closed_port(cwist_http_client *client) {
     snprintf(url, sizeof(url), "http://127.0.0.1:%d/hello", port);
 
     cwist_http_client_set_timeout_ms(client, CLOSED_PORT_TIMEOUT_MS);
+    cwist_http_client_set_timeout_ms(client, -1); /* Invalid values keep the prior timeout. */
     cwist_http_response *res = NULL;
     long start = now_ms();
     cwist_error_t err = cwist_http_client_request(client, url, CWIST_HTTP_GET, NULL, NULL, 0, &res);
@@ -528,6 +566,9 @@ int main(void) {
         test_redirect_not_followed(client, base);
         test_custom_headers_not_forwarded_on_redirect(client, base);
         test_shared_client_threads(client, base);
+#ifdef CWIST_TEST_WRAP
+        test_body_allocation_failure(client, base);
+#endif
     }
 
     g_failures += stop_server(pid);

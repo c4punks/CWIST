@@ -5,8 +5,8 @@ Motivation: multiple PRs in a row added a new tests/test_*.c file without
 a matching Makefile build rule or TEST_TARGETS entry - `make test` never
 ran them, so a green CI check on those PRs never actually covered the new
 test. A repo-wide sweep on 2026-09-13 found 12 such files accumulated over
-time (most had simply been forgotten; test_quic_flow_control turned out to
-be genuinely incomplete - see EXPECTED_UNWIRED below). This script is the
+time (most had simply been forgotten; genuinely incomplete cases belong in
+EXPECTED_UNWIRED below). This script is the
 gate that should have caught each of those the first time.
 
 Usage: python3 scripts/ci/check_test_wiring.py [repo_root]
@@ -34,19 +34,14 @@ EXPECTED_UNWIRED = {
     "test_cwist": _MAIN_ONLY_UNWIRED,
     "test_graphql": _MAIN_ONLY_UNWIRED,
     "test_http2_flow_control": _MAIN_ONLY_UNWIRED,
+    "test_http3_client_latency": "requires main-specific HTTP/3 client/server failure-injection behavior not present on this LTS line.",
     "test_https_full_gc": _MAIN_ONLY_UNWIRED,
     "test_idle_reaper": _MAIN_ONLY_UNWIRED,
     "test_linux_writer_fast": _MAIN_ONLY_UNWIRED,
     "test_orm_socket": _MAIN_ONLY_UNWIRED,
     "test_sse": _MAIN_ONLY_UNWIRED,
+    "test_template": "requires template diagnostics and rooted-render APIs not present on this LTS line.",
     "test_webtransport": _MAIN_ONLY_UNWIRED,
-    "test_quic_flow_control": (
-        "links against quic_stream_fc_init()/quic_flow_control_*() which "
-        "are not implemented anywhere in the tree yet (undefined reference "
-        "at link time) - the test file is ahead of the feature, not "
-        "forgotten. Wire it in once cwist/net/quic_flow_control.h has a "
-        "real implementation to link against."
-    ),
 }
 
 

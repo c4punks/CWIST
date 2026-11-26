@@ -98,7 +98,14 @@ static bool ws_valid_handshake_key(const char *key) {
  * @return true when the handshake is valid and @p res carries the 101 reply.
  */
 bool cwist_websocket_upgrade_response(cwist_http_request *req, cwist_http_response *res) {
-    if (!req || !res) return false;
+    if (!req || !res || req->method != CWIST_HTTP_GET || !req->version || !req->version->data ||
+        strncmp(req->version->data, "HTTP/", 5) != 0)
+        return false;
+    unsigned int major = 0, minor = 0;
+    char trailing = 0;
+    if (sscanf(req->version->data + 5, "%u.%u%c", &major, &minor, &trailing) != 2 || major < 1 ||
+        (major == 1 && minor < 1))
+        return false;
 
     // Validate Headers
     char *connection = cwist_http_header_get(req->headers, "Connection");

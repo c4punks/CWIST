@@ -1,5 +1,6 @@
 #include <cwist/core/utils/zod.h>
 #include "number_internal.h"
+#include "json_internal.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -40,8 +41,8 @@ static bool type_matches(const cJSON *item, cwist_field_type_t t) {
                 return false;
             double intpart;
             return modf(item->valuedouble, &intpart) == 0.0 &&
-                   item->valuedouble >= -9223372036854775808.0 &&
-                   item->valuedouble < 9223372036854775808.0;
+                   item->valuedouble >= -9007199254740991.0 &&
+                   item->valuedouble <= 9007199254740991.0;
         case CWIST_FIELD_FLOAT:
             return cJSON_IsNumber(item) && cwist_number_double_is_finite(item->valuedouble);
         case CWIST_FIELD_BOOL: return cJSON_IsBool(item);
@@ -85,9 +86,17 @@ cwist_zod_result_t cwist_zod_validate(const cJSON *json, const cwist_schema_t *s
         add_error(&r, "(root)", "expected a JSON object at root");
         return r;
     }
+    if (schema->field_count < 0 || (schema->field_count > 0 && !schema->fields)) {
+        add_error(&r, "(schema)", "invalid field array");
+        return r;
+    }
 
     for (int fi = 0; fi < schema->field_count; fi++) {
         const cwist_schema_field_t *fd = &schema->fields[fi];
+        if (!fd->name || !fd->name[0]) {
+            add_error(&r, "(schema)", "field name is missing");
+            return r;
+        }
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(json, fd->name);
 
         /* Missing field */
@@ -127,6 +136,11 @@ cwist_zod_result_t cwist_zod_parse(const char *raw, const cwist_schema_t *schema
 
     if (!raw) {
         add_error(&r, "(root)", "null input string");
+        return r;
+    }
+
+    if (cwist_json_has_nul_escape(raw)) {
+        add_error(&r, "(root)", "embedded NUL is not allowed");
         return r;
     }
 

@@ -121,18 +121,21 @@ static int mp_disposition_param(const char *value, const char *key, char **out) 
                 decoded[out_len++] = *p++;
             }
             if (!closed) goto invalid;
+            p++;
         } else {
             while (*p && *p != ';' && !isspace((unsigned char)*p)) {
                 if (!mp_token_char((unsigned char)*p) || out_len + 1 >= cap) goto invalid;
                 decoded[out_len++] = *p++;
             }
         }
+        while (isspace((unsigned char)*p)) p++;
+        if (*p && *p != ';') goto invalid;
         decoded[out_len] = '\0';
         cwist_free(*out);
         *out = decoded;
         return 1;
 
-invalid:
+    invalid:
         cwist_free(decoded);
         return -1;
     }
@@ -210,8 +213,11 @@ static int mp_on_part_data_begin(multipart_parser *p) {
 static int mp_on_part_data(multipart_parser *p, const char *at, size_t len) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
     if (len == 0) return 0;
-    if (ctx->data_len + len > ctx->data_cap) {
-        size_t new_cap = (ctx->data_len + len) * 2;
+    if (len > SIZE_MAX - ctx->data_len) return 1;
+    size_t needed = ctx->data_len + len;
+    if (needed > ctx->data_cap) {
+        if (needed > SIZE_MAX / 2) return 1;
+        size_t new_cap = needed * 2;
         if (new_cap < 256) new_cap = 256;
         char *new_data = (char *)cwist_alloc(new_cap);
         if (!new_data) return 1;
@@ -250,7 +256,13 @@ static int mp_on_part_data_end(multipart_parser *p) {
     ctx->filename = NULL;
     if (ctx->content_type[0]) {
         field->content_type = (char *)cwist_alloc(strlen(ctx->content_type) + 1);
-        if (field->content_type) strcpy(field->content_type, ctx->content_type);
+        if (!field->content_type) {
+            cwist_free(field->name);
+            cwist_free(field->filename);
+            cwist_free(field);
+            return 1;
+        }
+        strcpy(field->content_type, ctx->content_type);
     }
     field->data = ctx->data;
     field->data_len = ctx->data_len;
@@ -393,18 +405,35 @@ char *cwist_multipart_extract_boundary(const char *content_type) {
                 p++;
                 while (*p && isspace((unsigned char)*p)) p++;
                 const char *start = p;
-                if (*p == '"') {
+                const char *value_end = NULL;
+                bool quoted = *p == '"';
+                if (quoted) {
                     start = ++p;
-                    while (*p && *p != '"') p++;
+                    while (*p && *p != '"') {
+                        if (*p == '\\') {
+                            p++;
+                            if (!*p) return NULL;
+                        }
+                        p++;
+                    }
+                    if (*p != '"') return NULL;
+                    value_end = p++;
                 } else {
                     while (*p && *p != ';' && !isspace((unsigned char)*p)) p++;
+                    value_end = p;
                 }
-                size_t len = (size_t)(p - start);
+                size_t len = (size_t)(value_end - start);
+                if (len == 0) return NULL;
+                while (isspace((unsigned char)*p)) p++;
+                if (*p && *p != ';') return NULL;
                 char *boundary = (char *)cwist_alloc(len + 1);
-                if (boundary) {
-                    memcpy(boundary, start, len);
-                    boundary[len] = '\0';
+                if (!boundary) return NULL;
+                size_t out = 0;
+                for (size_t i = 0; i < len; i++) {
+                    if (quoted && start[i] == '\\') i++;
+                    boundary[out++] = start[i];
                 }
+                boundary[out] = '\0';
                 return boundary;
             }
         }

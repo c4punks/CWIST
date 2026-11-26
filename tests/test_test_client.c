@@ -6,6 +6,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
+
+#ifdef CWIST_TEST_WRAP
+static int fail_body;
+static int fail_ftell;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (fail_body && data && (strstr(data, "\"openapi\"") || strstr(data, "<!DOCTYPE html>")))
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+long __real_ftell(FILE *stream);
+long __wrap_ftell(FILE *stream) {
+    if (fail_ftell) return -1;
+    return __real_ftell(stream);
+}
+#endif
 
 #define FAIL_IF(cond, msg)                      \
     do {                                        \
@@ -117,8 +134,13 @@ int main(void) {
     cwist_test_client *client = cwist_test_client_create(app);
     FAIL_IF(!client, "client_create");
 
+    const char small = 0;
+    cwist_http_response *res = cwist_test_client_post_multipart(
+        client, "/upload", "field", "file", "text/plain", &small, SIZE_MAX);
+    FAIL_IF(res != NULL, "multipart size overflow rejected");
+
     /* GET */
-    cwist_http_response *res = cwist_test_client_get(client, "/");
+    res = cwist_test_client_get(client, "/");
     FAIL_IF(!res || !res->body, "get res");
     FAIL_IF(strcmp(res->body->data, "hello") != 0, "get body");
     cwist_http_response_destroy(res);
@@ -198,6 +220,7 @@ int main(void) {
 
     /* Cookie jar: set, send, receive from response, send again */
     cwist_test_client_set_cookie(client, "manual", "mv", "/");
+    cwist_test_client_set_cookie(client, "empty-path", "ok", "");
     FAIL_IF(strcmp(cwist_test_client_get_cookie(client, "manual"), "mv") != 0, "manual cookie");
     FAIL_IF(cwist_test_client_get_cookie(client, NULL) != NULL, "get null cookie");
 
@@ -210,6 +233,7 @@ int main(void) {
     FAIL_IF(!res || !res->body, "get-cookie res");
     FAIL_IF(strstr(res->body->data, "tc=jarvalue") == NULL, "jar cookie sent");
     FAIL_IF(strstr(res->body->data, "manual=mv") == NULL, "manual cookie sent");
+    FAIL_IF(strstr(res->body->data, "empty-path=ok") == NULL, "empty path cookie sent");
     cwist_http_response_destroy(res);
 
     /* Test adhoc cookies with NULL key/value safety */
@@ -239,12 +263,47 @@ int main(void) {
     cwist_http_response_destroy(res);
 
     /* Test Swagger UI Route & Fluent Assertions */
-    cwist_app_enable_swagger(app, "/docs", "openapi.json");
+    char swagger_path[] = "/tmp/cwist-swagger-XXXXXX";
+    int swagger_fd = mkstemp(swagger_path);
+    assert(swagger_fd >= 0);
+    const char swagger_json[] = "{\"openapi\":\"3.0.0\"}";
+    assert(write(swagger_fd, swagger_json, sizeof(swagger_json) - 1) ==
+           (ssize_t)(sizeof(swagger_json) - 1));
+    close(swagger_fd);
+    cwist_app_enable_swagger(app, "/docs", swagger_path);
     res = cwist_test_client_get(client, "/docs");
     CWIST_ASSERT_STATUS(res, 200);
     CWIST_ASSERT_HEADER(res, "Content-Type", "text/html; charset=utf-8");
     CWIST_ASSERT_BODY_CONTAINS(res, "CWIST Swagger UI");
     cwist_http_response_destroy(res);
+
+#ifdef CWIST_TEST_WRAP
+    fail_body = 1;
+    res = cwist_test_client_get(client, "/docs");
+    fail_body = 0;
+    CWIST_ASSERT_STATUS(res, 500);
+    cwist_http_response_destroy(res);
+#endif
+
+    res = cwist_test_client_get(client, "/openapi.json");
+    CWIST_ASSERT_STATUS(res, 200);
+    CWIST_ASSERT_BODY_CONTAINS(res, "3.0.0");
+    cwist_http_response_destroy(res);
+
+#ifdef CWIST_TEST_WRAP
+    fail_body = 1;
+    res = cwist_test_client_get(client, "/openapi.json");
+    fail_body = 0;
+    CWIST_ASSERT_STATUS(res, 500);
+    cwist_http_response_destroy(res);
+
+    fail_ftell = 1;
+    res = cwist_test_client_get(client, "/openapi.json");
+    fail_ftell = 0;
+    CWIST_ASSERT_STATUS(res, 500);
+    cwist_http_response_destroy(res);
+#endif
+    unlink(swagger_path);
 
     cwist_test_client_destroy(client);
     cwist_app_destroy(app);

@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 #include "../websocket/ws_async_internal.h"
+#include "../../core/utils/json_internal.h"
 
 /* graphql-ws close codes (https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md). */
 #define GQL_WS_CLOSE_BAD_REQUEST 4400
@@ -377,11 +378,28 @@ static void gql_ws_send_error(cwist_websocket_async *ws, const char *id, const c
         cwist_websocket_async_close(ws);
         return;
     }
-    cJSON_AddStringToObject(err, "type", "error");
-    cJSON_AddStringToObject(err, "id", id ? id : "");
-    cJSON_AddStringToObject(entry, "message", message);
-    cJSON_AddItemToArray(payload, entry);
-    cJSON_AddItemToObject(err, "payload", payload);
+    if (!cJSON_AddStringToObject(err, "type", "error") ||
+        !cJSON_AddStringToObject(err, "id", id ? id : "") ||
+        !cJSON_AddStringToObject(entry, "message", message)) {
+        cJSON_Delete(err);
+        cJSON_Delete(payload);
+        cJSON_Delete(entry);
+        cwist_websocket_async_close(ws);
+        return;
+    }
+    if (!cJSON_AddItemToArray(payload, entry)) {
+        cJSON_Delete(err);
+        cJSON_Delete(payload);
+        cJSON_Delete(entry);
+        cwist_websocket_async_close(ws);
+        return;
+    }
+    if (!cJSON_AddItemToObject(err, "payload", payload)) {
+        cJSON_Delete(err);
+        cJSON_Delete(payload);
+        cwist_websocket_async_close(ws);
+        return;
+    }
     gql_ws_send_json(ws, err);
 }
 
@@ -421,13 +439,14 @@ static char *gql_ws_build_next(const gql_ws_op_t *op, const cJSON *payload) {
     cJSON *data = cJSON_CreateObject();
     cJSON *value = payload ? cJSON_Duplicate(payload, true) : cJSON_CreateNull();
     if (!msg || !pl || !data || !value) goto out;
-    cJSON_AddStringToObject(msg, "type", "next");
-    cJSON_AddStringToObject(msg, "id", op->id);
-    cJSON_AddItemToObject(data, op->field, value);
+    if (!cJSON_AddStringToObject(msg, "type", "next") ||
+        !cJSON_AddStringToObject(msg, "id", op->id))
+        goto out;
+    if (!cJSON_AddItemToObject(data, op->field, value)) goto out;
     value = NULL;
-    cJSON_AddItemToObject(pl, "data", data);
+    if (!cJSON_AddItemToObject(pl, "data", data)) goto out;
     data = NULL;
-    cJSON_AddItemToObject(msg, "payload", pl);
+    if (!cJSON_AddItemToObject(msg, "payload", pl)) goto out;
     pl = NULL;
     printed = cJSON_PrintUnformatted(msg);
 out:
@@ -683,9 +702,21 @@ static void gql_ws_handle_keepalive(cwist_websocket_async *ws, const cJSON *msg,
         cwist_websocket_async_close(ws);
         return;
     }
-    cJSON_AddStringToObject(pong, "type", "pong");
+    if (!cJSON_AddStringToObject(pong, "type", "pong")) {
+        cJSON_Delete(pong);
+        cwist_websocket_async_close(ws);
+        return;
+    }
     const cJSON *payload = cJSON_GetObjectItemCaseSensitive(msg, "payload");
-    if (payload) cJSON_AddItemToObject(pong, "payload", cJSON_Duplicate(payload, true));
+    if (payload) {
+        cJSON *copy = cJSON_Duplicate(payload, true);
+        if (!copy || !cJSON_AddItemToObject(pong, "payload", copy)) {
+            cJSON_Delete(copy);
+            cJSON_Delete(pong);
+            cwist_websocket_async_close(ws);
+            return;
+        }
+    }
     gql_ws_send_json(ws, pong);
 }
 
@@ -714,7 +745,11 @@ static void gql_ws_dispatch(cwist_websocket_async *ws, gql_ws_conn_t *conn, cJSO
                 cwist_websocket_async_close(ws);
                 return;
             }
-            cJSON_AddStringToObject(ack, "type", "connection_ack");
+            if (!cJSON_AddStringToObject(ack, "type", "connection_ack")) {
+                cJSON_Delete(ack);
+                cwist_websocket_async_close(ws);
+                return;
+            }
             gql_ws_send_json(ws, ack);
         } else {
             cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_UNAUTHORIZED);
@@ -800,7 +835,15 @@ static void gql_ws_on_message(cwist_websocket_async *ws, cwist_ws_frame *frame, 
         cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
         return;
     }
-    cJSON *msg = cJSON_ParseWithLength((const char *)frame->payload, frame->payload_len);
+    if (frame->payload_len > 0 &&
+        (strlen((const char *)frame->payload) != frame->payload_len ||
+         cwist_json_has_nul_escape((const char *)frame->payload))) {
+        cwist_websocket_frame_destroy(frame);
+        cwist_websocket_async_close_code(ws, GQL_WS_CLOSE_BAD_REQUEST);
+        return;
+    }
+    const char *json = (const char *)frame->payload;
+    cJSON *msg = cJSON_ParseWithLengthOpts(json, frame->payload_len + 1, NULL, true);
     cwist_websocket_frame_destroy(frame);
     if (!cJSON_IsObject(msg)) {
         cJSON_Delete(msg);

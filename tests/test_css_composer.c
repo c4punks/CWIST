@@ -1,8 +1,21 @@
 #include <cwist/core/html/css_composer.h>
 #include <cwist/core/sstring/sstring.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+
+#ifdef CWIST_TEST_WRAP
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc > 0) {
+        fail_alloc--;
+        return NULL;
+    }
+    return __real_cwist_alloc(size);
+}
+#endif
 
 void test_hex_parsing_6digit(void) {
     cwist_color_rgb white = cwist_color_hex_to_rgb("#FFFFFF");
@@ -255,7 +268,32 @@ void test_bundle(void) {
     printf("Passed test_bundle\n");
 }
 
+#ifdef CWIST_TEST_WRAP
+static void test_generation_allocation_failures(void) {
+    cwist_css_config cfg;
+    cwist_css_config_init(&cfg);
+    for (int i = 1; i <= 2; i++) {
+        fail_alloc = i;
+        assert(cwist_css_generate_variables(&cfg) == NULL);
+        fail_alloc = i;
+        assert(cwist_css_generate_utility_classes(&cfg) == NULL);
+        fail_alloc = 0;
+    }
+    fail_alloc = 1;
+    assert(cwist_css_generate_stylesheet(&cfg) == NULL);
+    fail_alloc = 0;
+    cfg.roundness_px = (float)NAN;
+    assert(cwist_css_generate_variables(&cfg) == NULL);
+    cfg.roundness_px = 4.0f;
+    cfg.spacing_base_px = (float)INFINITY;
+    assert(cwist_css_generate_variables(&cfg) == NULL);
+}
+#endif
+
 int main(void) {
+#ifdef CWIST_TEST_WRAP
+    test_generation_allocation_failures();
+#endif
     test_hex_parsing_6digit();
     test_hex_parsing_3digit();
     test_hex_parsing_invalid();

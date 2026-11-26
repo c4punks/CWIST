@@ -12,9 +12,22 @@
 #include <cwist/net/http/http.h>
 #include <cwist/net/http/query.h>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef CWIST_TEST_WRAP
+static int alloc_fail_countdown = -1;
+
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (alloc_fail_countdown == 0) return NULL;
+    if (alloc_fail_countdown > 0) alloc_fail_countdown--;
+    return __real_cwist_alloc(size);
+}
+
+#endif
 
 static bool ok(cwist_error_t e) {
     return e.errtype == CWIST_ERR_INT8 && e.error.err_i8 == ERR_SSTRING_OKAY;
@@ -116,7 +129,8 @@ static void test_sstring_escaped_and_adopt(void) {
     assert(strcmp(s.data, "&lt;b&gt;&quot;x&quot; &amp; &#39;y&#39;&lt;/b&gt;") == 0);
     assert(s.size == strlen(s.data));
     assert(ok(cwist_sstring_append_sstring_escaped(&s, NULL)));
-    assert(cwist_sstring_append_sstring_escaped(NULL, &src).error.err_i8 == ERR_SSTRING_NULL_STRING);
+    assert(cwist_sstring_append_sstring_escaped(NULL, &src).error.err_i8 ==
+           ERR_SSTRING_NULL_STRING);
     assert(cwist_sstring_init_escaped(NULL).error.err_i8 == ERR_SSTRING_NULL_STRING);
 
     /* adopt_len takes ownership of a heap buffer and NUL-terminates it. */
@@ -150,7 +164,7 @@ static void collect(const char *k, const char *v, void *p) {
 
 static void exercise_query_map(cwist_query_map *m) {
     cwist_query_map_parse(m, "a=1&b=two%20words&c=&a=ignored&noeq&d=%26");
-    assert(strcmp(cwist_query_map_get(m, "a"), "1") == 0); /* first value wins */
+    assert(strcmp(cwist_query_map_get(m, "a"), "ignored") == 0); /* last value wins */
     assert(strcmp(cwist_query_map_get(m, "b"), "two words") == 0);
     assert(strcmp(cwist_query_map_get(m, "c"), "") == 0);
     assert(strcmp(cwist_query_map_get(m, "d"), "&") == 0);
@@ -190,8 +204,10 @@ static void exercise_query_map(cwist_query_map *m) {
     for (int i = 0; i < 300; i++) {
         snprintf(k, sizeof(k), "k%d", i);
         const char *v = cwist_query_map_get(m, k);
-        if (i % 7 == 0) assert(v == NULL);
-        else assert(v && strcmp(v, k) == 0);
+        if (i % 7 == 0)
+            assert(v == NULL);
+        else
+            assert(v && strcmp(v, k) == 0);
     }
 
     cwist_query_map_clear(m);
@@ -228,9 +244,8 @@ static void test_query_map_malformed_escapes(void) {
     cwist_query_map *m = cwist_query_map_create();
     assert(m);
 
-    cwist_query_map_parse(m,
-                          "lit=%zz&trunc=%4&lonely=%&ok=%41&"
-                          "mixed=a%4zb&lower=%ab&upper=%AB&plus=a+b&trail=x%");
+    cwist_query_map_parse(m, "lit=%zz&trunc=%4&lonely=%&ok=%41&"
+                             "mixed=a%4zb&lower=%ab&upper=%AB&plus=a+b&trail=x%");
     assert(strcmp(cwist_query_map_get(m, "lit"), "%zz") == 0);
     assert(strcmp(cwist_query_map_get(m, "trunc"), "%4") == 0);
     assert(strcmp(cwist_query_map_get(m, "lonely"), "%") == 0);
@@ -258,7 +273,8 @@ static void test_query_map_arena_large_query(void) {
     size_t off = 0;
     const int n = 2000;
     for (int i = 0; i < n; i++)
-        off += (size_t)snprintf(q + off, sizeof(q) - off, "%sparam%04d=value%04d", i ? "&" : "", i, i);
+        off +=
+            (size_t)snprintf(q + off, sizeof(q) - off, "%sparam%04d=value%04d", i ? "&" : "", i, i);
     cwist_arena_t *arena = cwist_arena_create(0);
     cwist_query_map *m = cwist_query_map_create_in_arena(arena);
     cwist_query_map_parse(m, q);
@@ -390,7 +406,8 @@ static void test_css_generators(void) {
     cwist_sstring *vars = cwist_css_generate_variables(&cfg);
     assert(vars && vars->data);
     assert(strncmp(vars->data, ":root {\n", 8) == 0);
-    assert(strstr(vars->data, "--color-primary: #3B82F6;") || strstr(vars->data, "--color-primary: #3b82f6;"));
+    assert(strstr(vars->data, "--color-primary: #3B82F6;") ||
+           strstr(vars->data, "--color-primary: #3b82f6;"));
     assert(strstr(vars->data, "--bg-body: #FFFFFF;"));
     assert(strstr(vars->data, "--radius-md: 8.0px;"));
     assert(strstr(vars->data, "--radius-lg: 12.0px;"));
@@ -412,6 +429,50 @@ static void test_css_generators(void) {
     utils = cwist_css_generate_utility_classes(NULL); /* cfg is not used */
     assert(utils && strstr(utils->data, ".btn {"));
     cwist_sstring_destroy(utils);
+}
+
+static void test_binary_sstring_and_nonfinite_colors(void) {
+    const char raw[] = {'a', '\0', 'b'};
+    cwist_sstring *src = cwist_sstring_create();
+    cwist_sstring *dst = cwist_sstring_create();
+    assert(src && dst);
+    assert(ok(cwist_sstring_assign_len(src, raw, sizeof(raw))));
+    assert(ok(cwist_sstring_assign(dst, "x")));
+    assert(ok(cwist_sstring_append_sstring(dst, src)));
+    assert(dst->size == 4 && memcmp(dst->data, "xa\0b", 4) == 0);
+    assert(ok(cwist_sstring_copy_sstring(dst, src)));
+    assert(dst->size == sizeof(raw) && memcmp(dst->data, raw, sizeof(raw)) == 0);
+    cwist_sstring *sub = cwist_sstring_substr(src, 1, 2);
+    assert(sub && sub->size == 2 && memcmp(sub->data, "\0b", 2) == 0);
+    cwist_sstring_destroy(sub);
+
+    src->size = SIZE_MAX;
+    cwist_error_t err = cwist_sstring_append(src, "x");
+    assert(!ok(err));
+    cwist_error_dispose(&err);
+    err = cwist_sstring_append_escaped(src, "x");
+    assert(!ok(err));
+    cwist_error_dispose(&err);
+    cwist_sstring_destroy(src);
+    cwist_sstring_destroy(dst);
+
+    const char escaped_raw[] = {'<', '\0', '&'};
+    src = cwist_sstring_create();
+    dst = cwist_sstring_create();
+    assert(src && dst);
+    assert(ok(cwist_sstring_assign_len(src, escaped_raw, sizeof(escaped_raw))));
+    assert(ok(cwist_sstring_append_sstring_escaped(dst, src)));
+    const char expected[] = {'&', 'l', 't', ';', '\0', '&', 'a', 'm', 'p', ';'};
+    assert(dst->size == sizeof(expected) && memcmp(dst->data, expected, sizeof(expected)) == 0);
+    cwist_error_t boundary_err = cwist_sstring_assign_len(dst, dst->data, SIZE_MAX);
+    assert(!ok(boundary_err));
+    cwist_error_dispose(&boundary_err);
+    cwist_sstring_destroy(src);
+    cwist_sstring_destroy(dst);
+
+    expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){NAN, 1, 0.5f}), 0, 0, 0);
+    expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){0, NAN, 0.5f}), 0, 0, 0);
+    expect_rgb(cwist_color_hsl_to_rgb((cwist_color_hsl){0, 1, INFINITY}), 0, 0, 0);
 }
 
 /* --- allocator helpers --------------------------------------------------- */
@@ -445,6 +506,7 @@ int main(void) {
     test_query_map_growth();
     test_css_colors();
     test_css_generators();
+    test_binary_sstring_and_nonfinite_colors();
     test_alloc_helpers();
     printf("test_core_utils: ok\n");
     return 0;

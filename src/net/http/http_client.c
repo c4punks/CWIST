@@ -32,6 +32,7 @@ typedef struct {
     cwist_http_header_node *headers;
     long status_code;
     int header_count;
+    bool oom;
 } response_headers_t;
 
 /**
@@ -49,11 +50,13 @@ typedef struct {
  *         the transfer.
  */
 static size_t write_callback(void *contents, size_t size, size_t nmemb, void *userp) {
+    if (size && nmemb > SIZE_MAX / size) return 0;
     size_t total = size * nmemb;
+    if (total == 0) return 0;
     response_body_t *body = (response_body_t *)userp;
     /* Refuse bodies larger than the server-side cap to prevent an OOM DoS
      * from a malicious or misbehaving server. */
-    if (body->size + total > CWIST_HTTP_MAX_BODY_SIZE) return 0;
+    if (total > CWIST_HTTP_MAX_BODY_SIZE - body->size) return 0;
     size_t need = body->size + total;
     if (need > body->cap) {
         size_t new_cap = body->cap ? body->cap * 2 : 4096;
@@ -130,35 +133,54 @@ static size_t header_callback(char *ptr, size_t size, size_t nmemb, void *userp)
         value_len--;
     }
 
-    if (name_len > 0) {
-        cwist_scratch_t name_s CWIST_SCRATCH_DEFER = {0};
-        char *name = cwist_scratch_alloc(&name_s, name_len + 1);
-        if (!name) return total;
-        memcpy(name, ptr, name_len);
-        name[name_len] = '\0';
-
-        cwist_scratch_t val_s CWIST_SCRATCH_DEFER = {0};
-        char *val = cwist_scratch_alloc(&val_s, value_len + 1);
-        if (!val) return total;
-        memcpy(val, value, value_len);
-        val[value_len] = '\0';
-
-        cwist_http_header_node *node = cwist_alloc(sizeof(*node));
-        if (!node) return total;
-        node->key = cwist_sstring_create();
-        node->value = cwist_sstring_create();
-        if (!node->key || !node->value) {
-            cwist_sstring_destroy(node->key);
-            cwist_sstring_destroy(node->value);
-            cwist_free(node);
-            return total;
-        }
-        cwist_sstring_assign(node->key, name);
-        cwist_sstring_assign(node->value, val);
-        node->next = rh->headers;
-        rh->headers = node;
-        rh->header_count++;
+    cwist_scratch_t name_s CWIST_SCRATCH_DEFER = {0};
+    char *name = cwist_scratch_alloc(&name_s, name_len + 1);
+    if (!name) {
+        rh->oom = true;
+        return 0;
     }
+    memcpy(name, ptr, name_len);
+    name[name_len] = '\0';
+
+    cwist_scratch_t val_s CWIST_SCRATCH_DEFER = {0};
+    char *val = cwist_scratch_alloc(&val_s, value_len + 1);
+    if (!val) {
+        rh->oom = true;
+        return 0;
+    }
+    memcpy(val, value, value_len);
+    val[value_len] = '\0';
+
+    cwist_http_header_node *node = cwist_alloc(sizeof(*node));
+    if (!node) {
+        rh->oom = true;
+        return 0;
+    }
+    node->key = cwist_sstring_create();
+    node->value = cwist_sstring_create();
+    if (!node->key || !node->value) {
+        cwist_sstring_destroy(node->key);
+        cwist_sstring_destroy(node->value);
+        cwist_free(node);
+        rh->oom = true;
+        return 0;
+    }
+    cwist_error_t key_err = cwist_sstring_assign(node->key, name);
+    bool key_ok = cwist_error_is_ok(&key_err);
+    cwist_error_dispose(&key_err);
+    cwist_error_t value_err = cwist_sstring_assign(node->value, val);
+    bool value_ok = cwist_error_is_ok(&value_err);
+    cwist_error_dispose(&value_err);
+    if (!key_ok || !value_ok) {
+        cwist_sstring_destroy(node->key);
+        cwist_sstring_destroy(node->value);
+        cwist_free(node);
+        rh->oom = true;
+        return 0;
+    }
+    node->next = rh->headers;
+    rh->headers = node;
+    rh->header_count++;
 
     return total;
 }
@@ -269,7 +291,7 @@ void cwist_http_client_set_follow_redirects(cwist_http_client *client, int follo
  * @param timeout_ms timeout in milliseconds (applied to the whole transfer).
  */
 void cwist_http_client_set_timeout_ms(cwist_http_client *client, int timeout_ms) {
-    if (!client) return;
+    if (!client || timeout_ms < 0) return;
     pthread_mutex_lock(&client->lock);
     client->timeout_ms = timeout_ms;
     curl_easy_setopt(client->curl, CURLOPT_TIMEOUT_MS, (long)timeout_ms);
@@ -526,7 +548,7 @@ static cwist_error_t http_client_request_locked(cwist_http_client *client, const
         curl_slist_free_all(curl_headers);
     }
 
-    if (res != CURLE_OK) {
+    if (res != CURLE_OK || resp_hdrs.oom) {
         free(resp_body.data);
         cwist_http_header_free_all(resp_hdrs.headers);
         err.error.err_i16 = -1;
@@ -544,7 +566,17 @@ static cwist_error_t http_client_request_locked(cwist_http_client *client, const
 
     response->status_code = (cwist_http_status_t)resp_hdrs.status_code;
     if (resp_body.data && resp_body.size > 0) {
-        cwist_sstring_assign_len(response->body, resp_body.data, resp_body.size);
+        cwist_error_t body_err =
+            cwist_sstring_assign_len(response->body, resp_body.data, resp_body.size);
+        if (!cwist_error_is_ok(&body_err)) {
+            cwist_error_dispose(&body_err);
+            free(resp_body.data);
+            cwist_http_header_free_all(resp_hdrs.headers);
+            cwist_http_response_destroy(response);
+            err.error.err_i16 = -1;
+            return err;
+        }
+        cwist_error_dispose(&body_err);
     }
 
     /* Transfer collected headers */

@@ -15,6 +15,7 @@ typedef struct {
     int fd;
     int over_limit;
     int push;
+    int compressed;
 } server_ctx;
 
 static void read_all(int fd, void *buf, size_t len) {
@@ -73,11 +74,28 @@ static void *serve(void *arg) {
     do {
         read_frame(fd, &type, &stream);
     } while (type != 4);
-    send_frame(fd, 4, 0, 0, NULL, 0);
+    static const unsigned char no_streams[] = {0, 3, 0, 0, 0, 0};
+    if (ctx->over_limit == -2)
+        send_frame(fd, 4, 0, 0, no_streams, sizeof(no_streams));
+    else
+        send_frame(fd, 4, 0, ctx->over_limit == -1 ? 1 : 0, NULL, 0);
     send_frame(fd, 4, 1, 0, NULL, 0);
-    do {
+    if (ctx->over_limit == -1) {
+        close(fd);
+        close(ctx->fd);
+        free(ctx);
+        return NULL;
+    }
+    for (;;) {
         read_frame(fd, &type, &stream);
-    } while (type != 0);
+        if (type == 0) break;
+        if (type == 7) {
+            close(fd);
+            close(ctx->fd);
+            free(ctx);
+            return NULL;
+        }
+    }
 
     static const unsigned char status_ok[] = {0x88};
     if (ctx->push == 1) {
@@ -86,8 +104,21 @@ static void *serve(void *arg) {
     } else if (ctx->push == 2) {
         static const unsigned char push_promise[] = {0, 0, 0, 4};
         send_frame(fd, 5, 4, stream, push_promise, sizeof(push_promise));
+    } else if (ctx->push == 3) {
+        send_frame(fd, 4, 0, stream, NULL, 0);
+    } else if (ctx->push == 4) {
+        static const unsigned char ping[8] = {0};
+        send_frame(fd, 6, 0, stream, ping, sizeof(ping));
+    } else if (ctx->push == 5) {
+        static const unsigned char ping[1] = {0};
+        send_frame(fd, 6, 0, 0, ping, sizeof(ping));
+    } else if (ctx->push == 6) {
+        static const unsigned char goaway[8] = {0};
+        send_frame(fd, 7, 0, stream, goaway, sizeof(goaway));
+    } else if (ctx->push == 7) {
+        send_frame(fd, 3, 0, stream, NULL, 0);
     }
-    if (ctx->over_limit) {
+    if (ctx->over_limit > 0) {
         send_frame(fd, 1, 0, stream, status_ok, sizeof(status_ok));
         unsigned char zeros[4096] = {0};
         for (int i = 0; i < 16; i++) send_frame(fd, 9, 0, stream, zeros, sizeof(zeros));
@@ -95,7 +126,8 @@ static void *serve(void *arg) {
     } else {
         send_frame(fd, 1, 0, stream, NULL, 0);
         send_frame(fd, 9, 4, stream, status_ok, sizeof(status_ok));
-        const unsigned char data[] = {0, 0, 0, 0, 1, 'x'};
+        unsigned char data[] = {0, 0, 0, 0, 1, 'x'};
+        if (ctx->compressed) data[0] = 1;
         send_frame(fd, 0, 1, stream, data, sizeof(data));
     }
     struct timespec delay = {0, 100000000L};
@@ -106,7 +138,7 @@ static void *serve(void *arg) {
     return NULL;
 }
 
-static uint16_t start_server(int over_limit, int push, pthread_t *tid) {
+static uint16_t start_server(int over_limit, int push, int compressed, pthread_t *tid) {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     assert(fd >= 0);
     int one = 1;
@@ -123,22 +155,27 @@ static uint16_t start_server(int over_limit, int push, pthread_t *tid) {
     ctx->fd = fd;
     ctx->over_limit = over_limit;
     ctx->push = push;
+    ctx->compressed = compressed;
     assert(pthread_create(tid, NULL, serve, ctx) == 0);
     return ntohs(addr.sin_port);
 }
 
-static void run_case(int over_limit, int push) {
+static void run_case(int over_limit, int push, int compressed) {
     pthread_t tid;
-    uint16_t port = start_server(over_limit, push, &tid);
+    uint16_t port = start_server(over_limit, push, compressed, &tid);
     cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
     assert(client != NULL);
     cwist_grpc_call *call = cwist_grpc_call_start(client, "/test.Test/Call", NULL, 0, 2000);
     assert(call != NULL);
     cwist_grpc_message msg;
     int rc = cwist_grpc_call_recv(call, &msg);
-    if (over_limit || push) {
+    if (over_limit || push || compressed) {
         assert(rc != 1);
         if (push) assert(cwist_grpc_client_dead(client));
+        if (compressed) {
+            const char *status_message = NULL;
+            assert(cwist_grpc_call_finish(call, &status_message) == CWIST_GRPC_INTERNAL);
+        }
     } else {
         assert(rc == 1 && msg.len == 1 && msg.data[0] == 'x');
     }
@@ -147,11 +184,40 @@ static void run_case(int over_limit, int push) {
     pthread_join(tid, NULL);
 }
 
+static void run_initial_settings_case(void) {
+    pthread_t tid;
+    uint16_t port = start_server(-1, 0, 0, &tid);
+    cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
+    assert(client == NULL);
+    if (client) cwist_grpc_client_close(client);
+    pthread_join(tid, NULL);
+}
+
+static void run_max_streams_zero_case(void) {
+    pthread_t tid;
+    uint16_t port = start_server(-2, 0, 0, &tid);
+    cwist_grpc_client *client = cwist_grpc_client_connect("127.0.0.1", port, NULL);
+    assert(client != NULL);
+    cwist_grpc_call *call = cwist_grpc_call_start(client, "/test.Test/Call", NULL, 0, 2000);
+    assert(call == NULL);
+    if (call) cwist_grpc_call_destroy(call);
+    cwist_grpc_client_close(client);
+    pthread_join(tid, NULL);
+}
+
 int main(void) {
-    run_case(0, 0);
-    run_case(1, 0);
-    run_case(0, 1);
-    run_case(0, 2);
+    run_max_streams_zero_case();
+    run_initial_settings_case();
+    run_case(0, 0, 0);
+    run_case(1, 0, 0);
+    run_case(0, 1, 0);
+    run_case(0, 2, 0);
+    run_case(0, 3, 0);
+    run_case(0, 4, 0);
+    run_case(0, 5, 0);
+    run_case(0, 6, 0);
+    run_case(0, 7, 0);
+    run_case(0, 0, 1);
     puts("test_grpc_client_headers: all passed");
     return 0;
 }

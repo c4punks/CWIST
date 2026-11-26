@@ -54,6 +54,7 @@ cwist_error_t cwist_db_open(cwist_db **db, const char *path) {
         return err;
     }
 
+    *db = NULL;
     // if malloc fails, return -1
     *db = (cwist_db *)cwist_alloc(sizeof(cwist_db));
     if (!*db) {
@@ -97,6 +98,7 @@ cwist_error_t cwist_db_open_memory(cwist_db **db, const void *buf, size_t len, i
         return err;
     }
 
+    *db = NULL;
     *db = (cwist_db *)cwist_alloc(sizeof(cwist_db));
     if (!*db) {
         err.error.err_i16 = -1;
@@ -227,6 +229,7 @@ cwist_error_t cwist_db_exec(cwist_db *db, const char *sql) {
 // Callback for converting rows to JSON
 typedef struct {
     cJSON *rows;
+    bool oom;
 } query_context;
 
 /**
@@ -240,19 +243,26 @@ typedef struct {
 static int query_callback(void *data, int argc, char **argv, char **azColName) {
     query_context *ctx = (query_context *)data;
     cJSON *row = cJSON_CreateObject();
+    if (!row) {
+        ctx->oom = true;
+        return 1;
+    }
 
     for (int i = 0; i < argc; i++) {
-        // SQLite returns everything as char* by default in exec callback
-        // For simplicity, we treat everything as string or try to guess types if needed.
-        // But for a generic wrapper, string is safest unless we parse schema.
-        if (argv[i]) {
-            cJSON_AddStringToObject(row, azColName[i], argv[i]);
-        } else {
-            cJSON_AddNullToObject(row, azColName[i]);
+        cJSON *cell = argv[i] ? cJSON_AddStringToObject(row, azColName[i], argv[i])
+                              : cJSON_AddNullToObject(row, azColName[i]);
+        if (!cell) {
+            cJSON_Delete(row);
+            ctx->oom = true;
+            return 1;
         }
     }
 
-    cJSON_AddItemToArray(ctx->rows, row);
+    if (!cJSON_AddItemToArray(ctx->rows, row)) {
+        cJSON_Delete(row);
+        ctx->oom = true;
+        return 1;
+    }
     return 0;
 }
 
@@ -277,14 +287,24 @@ cwist_error_t cwist_db_query(cwist_db *db, const char *sql, cJSON **result) {
         return err;
     }
 
-    query_context ctx;
-    ctx.rows = cJSON_CreateArray();
+    query_context ctx = {.rows = cJSON_CreateArray(), .oom = false};
+    if (!ctx.rows) {
+        cwist_error_t err = make_error(CWIST_ERR_INT16);
+        err.error.err_i16 = CWIST_ERROR_NOMEM;
+        return err;
+    }
 
     char *zErrMsg = 0;
     int rc = sqlite3_exec(db->conn, sql, query_callback, &ctx, &zErrMsg);
 
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK || ctx.oom) {
         cJSON_Delete(ctx.rows);
+        if (ctx.oom) {
+            sqlite3_free(zErrMsg);
+            cwist_error_t err = make_error(CWIST_ERR_INT16);
+            err.error.err_i16 = CWIST_ERROR_NOMEM;
+            return err;
+        }
         cwist_error_t err = make_sqlite_error(rc, zErrMsg);
         sqlite3_free(zErrMsg);
         return err;
@@ -342,9 +362,15 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
             sqlite3_free(vals_buf);
             return NULL;
         }
-        size_t cols_cap = (size_t)(count * 64 + 16);
-        size_t cols_used = strlen(cols_buf);
-        if (cols_used < cols_cap - 1) strncat(cols_buf, col_frag, cols_cap - 1 - cols_used);
+        char *new_cols = sqlite3_mprintf("%s%s", cols_buf, col_frag);
+        if (!new_cols) {
+            sqlite3_free(col_frag);
+            sqlite3_free(cols_buf);
+            sqlite3_free(vals_buf);
+            return NULL;
+        }
+        sqlite3_free(cols_buf);
+        cols_buf = new_cols;
         sqlite3_free(col_frag);
 
         /* Value */
@@ -366,7 +392,7 @@ static char *build_insert_sql(const char *table, const cJSON *obj) {
             char *serialised = cJSON_PrintUnformatted(child);
             if (serialised) {
                 val_frag = sqlite3_mprintf(first ? "%Q" : ",%Q", serialised);
-                free(serialised);
+                cJSON_free(serialised);
             }
         }
 
@@ -502,7 +528,11 @@ cwist_error_t cwist_db_query_strict(cwist_db *db, const char *sql, cJSON **resul
         cwist_zod_result_t zod = cwist_zod_validate(row, schema);
         if (zod.valid) {
             cJSON *clone = cJSON_Duplicate(row, 1);
-            if (clone) cJSON_AddItemToArray(conforming, clone);
+            if (!clone) goto oom;
+            if (!cJSON_AddItemToArray(conforming, clone)) {
+                cJSON_Delete(clone);
+                goto oom;
+            }
         }
     }
 
@@ -511,5 +541,12 @@ cwist_error_t cwist_db_query_strict(cwist_db *db, const char *sql, cJSON **resul
 
     err = make_error(CWIST_ERR_INT16);
     err.error.err_i16 = 0;
+    return err;
+
+oom:
+    cJSON_Delete(all);
+    cJSON_Delete(conforming);
+    err = make_error(CWIST_ERR_INT16);
+    err.error.err_i16 = -1;
     return err;
 }

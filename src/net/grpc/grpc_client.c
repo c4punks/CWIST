@@ -101,6 +101,7 @@ struct cwist_grpc_client {
     cwist_grpc_call *active;
     uint32_t next_stream_id;
     uint32_t peer_max_frame;
+    uint32_t peer_max_streams;
     uint32_t peer_initial_window;
     int64_t conn_send_window;
     grpc_client_hpack_entry *hpack_head;
@@ -129,6 +130,11 @@ static uint64_t grpc_client_now_ms(void) {
  * @retval 0 The fd is ready.
  * @retval -1 Error, hangup, or deadline reached.
  */
+static uint64_t grpc_client_deadline_after(uint64_t timeout_ms) {
+    uint64_t now = grpc_client_now_ms();
+    return timeout_ms > UINT64_MAX - now ? UINT64_MAX : now + timeout_ms;
+}
+
 static int grpc_client_wait(cwist_grpc_client *c, short events, uint64_t deadline_ms) {
     for (;;) {
         int timeout = -1;
@@ -144,7 +150,7 @@ static int grpc_client_wait(cwist_grpc_client *c, short events, uint64_t deadlin
             if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) return -1;
             return 0;
         }
-        if (rc == 0) return -1; /* timeout */
+        if (rc == 0) continue;
         if (errno == EINTR) continue;
         return -1;
     }
@@ -609,6 +615,9 @@ static int grpc_client_apply_settings(cwist_grpc_client *c, const uint8_t *paylo
             case 0x2: /* ENABLE_PUSH: must be 0 for clients */
                 if (value != 0) return -1;
                 break;
+            case 0x3: /* MAX_CONCURRENT_STREAMS */
+                c->peer_max_streams = value;
+                break;
             case 0x4: /* INITIAL_WINDOW_SIZE */
                 if (value > 0x7fffffffu) return -1;
                 if (c->active) c->active->send_window += (int64_t)value - c->peer_initial_window;
@@ -646,13 +655,14 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
     pthread_mutex_init(&c->mu, NULL);
     c->next_stream_id = 1;
     c->peer_max_frame = 16384;
+    c->peer_max_streams = UINT32_MAX;
     c->peer_initial_window = GRPC_CLIENT_DEFAULT_WINDOW;
     c->conn_send_window = GRPC_CLIENT_DEFAULT_WINDOW;
     c->hpack_cap = GRPC_CLIENT_HEADER_TABLE;
 
     uint64_t connect_ms =
         options && options->connect_timeout_ms ? options->connect_timeout_ms : 10000;
-    uint64_t deadline = grpc_client_now_ms() + connect_ms;
+    uint64_t deadline = grpc_client_deadline_after(connect_ms);
 
     if (options && options->authority) {
         c->authority = cwist_alloc(strlen(options->authority) + 1);
@@ -691,6 +701,13 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
         if (grpc_client_read_frame(c, &f, deadline) != 0) goto fail;
         int rc = 0;
         if (f.type == H2_FRAME_SETTINGS && !(f.flags & H2_FLAG_ACK)) {
+            if (f.stream_id != 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = 0x01;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway), deadline);
+                cwist_free(f.payload);
+                goto fail;
+            }
             server_settings = 1;
             rc = grpc_client_apply_settings(c, f.payload, f.len, deadline);
         } else if (f.type == H2_FRAME_SETTINGS) {
@@ -700,8 +717,16 @@ cwist_grpc_client *cwist_grpc_client_connect(const char *host, uint16_t port,
                 goto fail;
             }
             our_ack = 1;
-        } else if (f.type == H2_FRAME_PING && !(f.flags & H2_FLAG_ACK) && f.len == 8) {
-            rc = grpc_client_write_frame(c, H2_FRAME_PING, H2_FLAG_ACK, 0, f.payload, 8, deadline);
+        } else if (f.type == H2_FRAME_PING) {
+            if (f.stream_id != 0 || f.len != 8) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = f.stream_id != 0 ? 0x01 : 0x06;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway), deadline);
+                cwist_free(f.payload);
+                goto fail;
+            }
+            if (!(f.flags & H2_FLAG_ACK))
+                rc = grpc_client_write_frame(c, H2_FRAME_PING, H2_FLAG_ACK, 0, f.payload, 8, deadline);
         } else if (f.type == H2_FRAME_GOAWAY) {
             cwist_free(f.payload);
             goto fail;
@@ -749,6 +774,7 @@ void cwist_grpc_client_close(cwist_grpc_client *c) {
  */
 static int grpc_client_queue_msg(void *ctx, const cwist_grpc_message *message) {
     cwist_grpc_call *call = ctx;
+    if (message->compressed) return -1;
     grpc_client_msg *node = cwist_alloc(sizeof(*node));
     if (!node) return -1;
     node->data = cwist_alloc(message->len ? message->len : 1);
@@ -911,13 +937,27 @@ static int grpc_client_pump(cwist_grpc_call *call) {
     int rc = 0;
     switch (f.type) {
         case H2_FRAME_SETTINGS:
-            if (!(f.flags & H2_FLAG_ACK))
+            if (f.stream_id != 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = 0x01; /* PROTOCOL_ERROR */
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+            } else if (!(f.flags & H2_FLAG_ACK))
                 rc = grpc_client_apply_settings(c, f.payload, f.len, call->deadline_ms);
             else if (f.len != 0)
                 rc = -1; /* RFC 7540 section 6.5: ack payload must be empty */
             break;
         case H2_FRAME_PING:
-            if (!(f.flags & H2_FLAG_ACK) && f.len == 8)
+            if (f.stream_id != 0 || f.len != 8) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = f.stream_id != 0 ? 0x01 : 0x06;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+            } else if (!(f.flags & H2_FLAG_ACK))
                 rc = grpc_client_write_frame(c, H2_FRAME_PING, H2_FLAG_ACK, 0, f.payload, 8,
                                              call->deadline_ms);
             break;
@@ -960,12 +1000,20 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             break;
         }
         case H2_FRAME_GOAWAY: {
+            if (f.stream_id != 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = 0x01;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+                break;
+            }
             c->goaway = 1;
             uint32_t last = 0;
             if (f.len >= 4) {
-                last = (((uint32_t)f.payload[0] & 0x7f) << 24) |
-                       ((uint32_t)f.payload[1] << 16) | ((uint32_t)f.payload[2] << 8) |
-                       f.payload[3];
+                last = (((uint32_t)f.payload[0] & 0x7f) << 24) | ((uint32_t)f.payload[1] << 16) |
+                       ((uint32_t)f.payload[2] << 8) | f.payload[3];
             }
             if (!call->trailers && (f.len < 4 || last < call->stream_id)) {
                 /* gRFC A6 case 3: streams above the GOAWAY last-stream-id
@@ -981,6 +1029,15 @@ static int grpc_client_pump(cwist_grpc_call *call) {
             break;
         }
         case H2_FRAME_RST_STREAM:
+            if (f.len != 4 || f.stream_id == 0) {
+                uint8_t goaway[8] = {0};
+                goaway[7] = f.len != 4 ? 0x06 : 0x01;
+                grpc_client_write_frame(c, H2_FRAME_GOAWAY, 0, 0, goaway, sizeof(goaway),
+                                        call->deadline_ms);
+                c->dead = 1;
+                rc = -1;
+                break;
+            }
             if (f.stream_id == call->stream_id) {
                 call->stream_ended = 1;
                 if (!call->trailers) {
@@ -1217,10 +1274,17 @@ cwist_grpc_call *cwist_grpc_call_start(cwist_grpc_client *c, const char *method,
 cwist_grpc_call *cwist_grpc_call_start_ex(cwist_grpc_client *c, const char *method,
                                           const void *request, size_t request_len,
                                           uint64_t timeout_ms, uint32_t previous_attempts) {
-    if (!c || !method || (request_len && !request) || c->dead || c->goaway) return NULL;
+    if (!c || !method || (request_len && !request) || c->dead || c->goaway ||
+        c->peer_max_streams == 0)
+        return NULL;
 
     pthread_mutex_lock(&c->mu);
     if (c->active) {
+        pthread_mutex_unlock(&c->mu);
+        return NULL;
+    }
+    if (c->next_stream_id == 0 || c->next_stream_id > 0x7ffffffdU) {
+        c->goaway = 1;
         pthread_mutex_unlock(&c->mu);
         return NULL;
     }
@@ -1234,7 +1298,7 @@ cwist_grpc_call *cwist_grpc_call_start_ex(cwist_grpc_client *c, const char *meth
     call->client = c;
     call->stream_id = c->next_stream_id;
     c->next_stream_id += 2;
-    call->deadline_ms = timeout_ms ? grpc_client_now_ms() + timeout_ms : 0;
+    call->deadline_ms = timeout_ms ? grpc_client_deadline_after(timeout_ms) : 0;
     call->send_window = c->peer_initial_window;
     call->status = CWIST_GRPC_OK;
     cwist_grpc_decoder_init(&call->decoder, 0);

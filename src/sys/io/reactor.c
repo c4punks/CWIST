@@ -634,8 +634,7 @@ static bool rx_epoll_arm(cwist_reactor_t *reactor, int fd, void *buf, unsigned l
     if (!slot) return false;
     /* Take the slot before writing any field; a previous owner has released
      * it (or never will touch it again: its socket is closed). */
-    cwist_reactor_t *prev =
-        atomic_exchange_explicit(&slot->owner, reactor, memory_order_acq_rel);
+    cwist_reactor_t *prev = atomic_exchange_explicit(&slot->owner, reactor, memory_order_acq_rel);
     if (prev != reactor) slot->queued = false; /* Any queue entry is the old owner's. */
     bool registered = prev == reactor &&
                       atomic_load_explicit(&slot->state, memory_order_relaxed) == EPFD_RX &&
@@ -880,9 +879,12 @@ void cwist_reactor_timer_init(cwist_reactor_timer_t *timer, void (*cb)(void *ctx
 
 bool cwist_reactor_timer_arm(cwist_reactor_t *r, cwist_reactor_timer_t *timer, uint64_t delay_us) {
     if (!r || !timer || !timer->cb) return false;
-    if (timer->heap_slot) timer_heap_remove(r, timer);
     if (r->timer_n == r->timer_cap) {
+        if (r->timer_cap > UINT32_MAX / 2) return false;
         uint32_t cap = r->timer_cap ? r->timer_cap * 2 : 64;
+#if SIZE_MAX <= UINT32_MAX
+        if (cap > SIZE_MAX / sizeof(cwist_reactor_timer_t *)) return false;
+#endif
         cwist_reactor_timer_t **heap = cwist_alloc(cap * sizeof(*heap));
         if (!heap) return false;
         if (r->timer_n) memcpy(heap, r->timer_heap, r->timer_n * sizeof(*heap));
@@ -890,7 +892,10 @@ bool cwist_reactor_timer_arm(cwist_reactor_t *r, cwist_reactor_timer_t *timer, u
         r->timer_heap = heap;
         r->timer_cap = cap;
     }
-    timer->deadline_ns = reactor_now_ns() + delay_us * 1000ull;
+    if (timer->heap_slot) timer_heap_remove(r, timer);
+    uint64_t delay_ns = delay_us > UINT64_MAX / 1000ull ? UINT64_MAX : delay_us * 1000ull;
+    uint64_t now = reactor_now_ns();
+    timer->deadline_ns = delay_ns > UINT64_MAX - now ? UINT64_MAX : now + delay_ns;
     r->timer_n++;
     timer_heap_place(r, r->timer_n - 1, timer);
     timer_heap_up(r, r->timer_n - 1);

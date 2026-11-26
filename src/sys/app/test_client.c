@@ -8,6 +8,7 @@
 #include <strings.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <ctype.h>
 #include <stdbool.h>
 #include <time.h>
@@ -63,7 +64,7 @@ static cwist_test_client_cookie *find_cookie_at(cwist_test_client_cookie *head, 
 /** @brief RFC 6265 section 5.1.4 path-match; a cookie without a path (set by
  *         cwist_test_client_set_cookie() with NULL) matches every path. */
 static bool cookie_path_matches(const char *cookie_path, const char *req_path) {
-    if (!cookie_path) return true;
+    if (!cookie_path || !*cookie_path) return true;
     if (!req_path || !*req_path) req_path = "/";
     size_t n = strlen(cookie_path);
     if (strncmp(req_path, cookie_path, n) != 0) return false;
@@ -82,6 +83,8 @@ static char *cookie_default_path(const char *req_path) {
     out[n] = '\0';
     return out;
 }
+
+static bool multipart_size_add(size_t *total, size_t amount);
 
 /** @brief Build a Cookie header from the jar and ad-hoc pairs and add it to a request.
  * Does nothing if @p client or @p req is NULL, or if there are no valid cookies to send.
@@ -108,13 +111,22 @@ static void cookie_jar_apply(cwist_test_client *client, cwist_http_request *req,
 
     size_t buf_len = 0;
     for (cwist_test_client_cookie *c = client->cookies; c; c = c->next) {
-        if (JAR_SENDS(c)) buf_len += strlen(c->name) + 1 + strlen(c->value) + 2;
+        if (!JAR_SENDS(c)) continue;
+        if (!multipart_size_add(&buf_len, strlen(c->name)) ||
+            !multipart_size_add(&buf_len, 1) || !multipart_size_add(&buf_len, strlen(c->value)) ||
+            !multipart_size_add(&buf_len, 2))
+            return;
     }
     for (size_t i = 0; i < adhoc_count; i++) {
-        if (adhoc && adhoc[i].key && adhoc[i].value)
-            buf_len += strlen(adhoc[i].key) + 1 + strlen(adhoc[i].value) + 2;
+        if (!adhoc || !adhoc[i].key || !adhoc[i].value) continue;
+        if (!multipart_size_add(&buf_len, strlen(adhoc[i].key)) ||
+            !multipart_size_add(&buf_len, 1) ||
+            !multipart_size_add(&buf_len, strlen(adhoc[i].value)) ||
+            !multipart_size_add(&buf_len, 2))
+            return;
     }
 
+    if (buf_len == SIZE_MAX) return;
     char *cookie_header CWIST_DEFER_FREE = (char *)cwist_alloc(buf_len + 1);
     if (!cookie_header) return;
     cookie_header[0] = '\0';
@@ -450,6 +462,12 @@ cwist_http_response *cwist_test_client_patch(cwist_test_client *client, const ch
     return do_request(client, CWIST_HTTP_PATCH, path, &opts);
 }
 
+static bool multipart_size_add(size_t *total, size_t amount) {
+    if (amount > SIZE_MAX - *total) return false;
+    *total += amount;
+    return true;
+}
+
 /** @brief Send a POST request with a single-file multipart/form-data body.
  * Builds the multipart body with a fixed boundary, including Content-Disposition and
  * Content-Type headers for the file part. The body buffer is freed before returning.
@@ -471,8 +489,26 @@ cwist_http_response *cwist_test_client_post_multipart(cwist_test_client *client,
     const char *boundary = "CWISTTestClientBoundary7MA4YWxkTrZu0gW";
     size_t boundary_len = strlen(boundary);
 
-    size_t body_len = 2 + boundary_len + 2 + 38 + strlen(field_name) + 25 + strlen(file_name) + 16 +
-                      strlen(content_type) + 4 + data_len + 2 + boundary_len + 2 + 2;
+    size_t body_len = 0;
+    const size_t amounts[] = {2,
+                              boundary_len,
+                              2,
+                              38,
+                              strlen(field_name),
+                              25,
+                              strlen(file_name),
+                              16,
+                              strlen(content_type),
+                              4,
+                              data_len,
+                              2,
+                              boundary_len,
+                              2,
+                              2};
+    for (size_t i = 0; i < sizeof(amounts) / sizeof(amounts[0]); i++) {
+        if (!multipart_size_add(&body_len, amounts[i])) return NULL;
+    }
+    if (body_len == SIZE_MAX) return NULL;
     char *body = (char *)cwist_alloc(body_len + 1);
     if (!body) return NULL;
 

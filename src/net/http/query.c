@@ -62,7 +62,8 @@ cwist_query_map *cwist_query_map_create_in_arena(void *arena) {
     cwist_query_map *map = (cwist_query_map *)query_alloc(arena, sizeof(cwist_query_map));
     if (!map) return NULL;
     map->size = CWIST_QUERY_MAP_DEFAULT_SIZE;
-    map->buckets = (cwist_query_bucket **)query_alloc(arena, map->size * sizeof(cwist_query_bucket *));
+    map->buckets =
+        (cwist_query_bucket **)query_alloc(arena, map->size * sizeof(cwist_query_bucket *));
     if (!map->buckets) {
         query_release(arena, map);
         return NULL;
@@ -171,7 +172,8 @@ void cwist_query_map_set(cwist_query_map *map, const char *key, const char *valu
         query_map_grow(map);
         index = hash % map->size;
     }
-    cwist_query_bucket *node = (cwist_query_bucket *)query_alloc(map->arena, sizeof(cwist_query_bucket));
+    cwist_query_bucket *node =
+        (cwist_query_bucket *)query_alloc(map->arena, sizeof(cwist_query_bucket));
     if (!node) return;
     node->key = query_strdup(map->arena, key);
     node->value = query_strdup(map->arena, value);
@@ -263,9 +265,8 @@ void cwist_query_map_foreach(cwist_query_map *map, cwist_query_map_iter_func cb,
 /* Hex nibble values for URL percent-decoding. Only consulted after
  * isxdigit validation, so non-hex entries are never read. */
 static const uint8_t url_decode_hex[256] = {
-    ['0'] = 0,  1,          2,          3,          4,          5,          6,          7,
-    ['8'] = 8,  9,          ['A'] = 10, 11,         12,         13,         14,         15,
-    ['a'] = 10, 11,         12,         13,         14,         15,
+    ['0'] = 0, 1,  2,  3,  4,  5,          6,  7,  ['8'] = 8, 9,  ['A'] = 10,
+    11,        12, 13, 14, 15, ['a'] = 10, 11, 12, 13,        14, 15,
 };
 
 /**
@@ -344,8 +345,18 @@ void cwist_query_map_parse(cwist_query_map *map, const char *raw_query) {
         char *key_dec = url_decode(map->arena, key_raw);
         char *value_dec = url_decode(map->arena, value_raw);
 
-        if (key_dec && cwist_query_map_get(map, key_dec) == NULL) {
-            cwist_query_map_set(map, key_dec, value_dec ? value_dec : "");
+        if (!key_dec || !value_dec) {
+            query_release(map->arena, key_dec);
+            query_release(map->arena, value_dec);
+            break;
+        }
+
+        cwist_query_map_set(map, key_dec, value_dec);
+        const char *stored = cwist_query_map_get(map, key_dec);
+        if (!stored || strcmp(stored, value_dec) != 0) {
+            query_release(map->arena, key_dec);
+            query_release(map->arena, value_dec);
+            break;
         }
 
         query_release(map->arena, key_dec);

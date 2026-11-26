@@ -429,7 +429,7 @@ const char *cwist_app_asset_url(cwist_app *app, const char *name) {
  * @return true on a match, false otherwise.
  */
 bool cwist_assets_match(cwist_app *app, const cwist_http_request *req, cwist_asset_match *out) {
-    if (!app || !req || !req->path || !req->path->data) return false;
+    if (!app || !req || !req->path || !req->path->data || !out) return false;
     if (req->method != CWIST_HTTP_GET && req->method != CWIST_HTTP_HEAD) return false;
     cwist_asset_registry *reg = registry_get(app, false);
     if (!reg) return false;

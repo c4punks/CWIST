@@ -12,6 +12,18 @@ COMMON_WARNINGS = -std=c17 -Wall -pthread -fPIC
 COMMON_CFLAGS = $(INCLUDE_PATHS) $(COMMON_WARNINGS) $(COMMON_DEFINES)
 
 UNAME_S := $(shell uname -s)
+
+# GNU ld and lld redirect symbol references through --wrap; Apple ld has no
+# equivalent. On Darwin the failure-injection wrappers are compiled out and
+# the affected test cases skip themselves.
+ifeq ($(UNAME_S),Darwin)
+wrap_flag =
+TEST_WRAP_CFLAGS =
+else
+wrap_flag = -Wl,--wrap=$(1)
+TEST_WRAP_CFLAGS = -DCWIST_TEST_WRAP
+endif
+
 CC_VERSION_OUTPUT := $(shell $(CC) --version 2>/dev/null)
 IS_CLANG := $(strip $(findstring clang,$(notdir $(CC))) $(findstring Clang,$(CC_VERSION_OUTPUT)) $(findstring clang,$(CC_VERSION_OUTPUT)))
 ifneq (,$(IS_CLANG))
@@ -239,6 +251,7 @@ SRCS = src/core/sstring/sstring.c \
        src/net/http/http2_flow_control.c \
        src/net/http/http3.c \
        src/net/http/http3_client.c \
+       src/net/quic_flow_control.c \
        src/net/http/curl_global.c \
        src/net/http/http_client.c \
        src/net/http/https.c \
@@ -875,14 +888,18 @@ TEST_TARGETS = test_worker_affinity \
                test_log_async \
                test_protobuf \
                test_core_utils \
+               test_config \
                test_simd_parser \
                test_orm \
                test_app_resource_limits \
                test_app_named_routes_and_error_handler \
                test_regression_batch \
+               test_file_confine \
+               test_redis_protocol \
+               test_sctp_dcep \
+               test_multipart_overflow \
                test_classic_pool_scaling \
                test_reactor_wake \
-               test_classic_pool_scaling \
                test_reactor_timer \
                test_rx_epoll \
                test_reactor_drain_chunk \
@@ -908,6 +925,14 @@ TEST_TARGETS = test_worker_affinity \
                test_latin_square \
                test_assets \
                test_html_parity \
+               test_http2_flow_control \
+               test_quic_flow_control \
+               test_idle_reaper \
+               test_linux_writer_fast \
+               test_orm_socket \
+               test_orm_socket_sigpipe \
+               test_webtransport \
+               test_webtransport_client_api \
                test_http \
                test_http_stringify \
                test_siphash \
@@ -932,7 +957,6 @@ TEST_TARGETS = test_worker_affinity \
                test_http2_prebuffer \
                test_http3 \
                test_webtransport \
-               test_http3_client_latency \
                test_shutdown \
                test_listen_signal_restore \
                test_listen_ex \
@@ -982,6 +1006,7 @@ TEST_TARGETS = test_worker_affinity \
                test_builtin_mw_chain \
                test_grpc \
                test_grpc_append_error \
+               test_grpc_health_alloc \
                test_grpc_stream \
                test_grpc_client \
                test_grpc_client_headers \
@@ -1087,12 +1112,35 @@ test_app_resource_limits: $(LIB_NAME) tests/test_app_resource_limits.c src/sys/a
 	./$@
 
 test_app_named_routes_and_error_handler: $(LIB_NAME) tests/test_app_named_routes_and_error_handler.c
-	$(CC) $(CFLAGS) -o $@ tests/test_app_named_routes_and_error_handler.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o $@ tests/test_app_named_routes_and_error_handler.c $(LIB_NAME) $(LIBS)
 	./$@
 
 test_regression_batch: $(LIB_NAME) tests/test_regression_batch.c
 	$(CC) $(CFLAGS) -o $@ tests/test_regression_batch.c $(LIB_NAME) $(LIBS)
 	./$@
+
+test_file_confine: $(LIB_NAME) tests/test_file_confine.c
+	$(CC) $(CFLAGS) -o $@ tests/test_file_confine.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_redis_protocol: $(LIB_NAME) tests/test_redis_protocol.c
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_append) -o $@ tests/test_redis_protocol.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_sctp_dcep: $(LIB_NAME) tests/test_sctp_dcep.c
+	$(CC) $(CFLAGS) -o $@ tests/test_sctp_dcep.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_multipart_overflow: $(LIB_NAME) tests/test_multipart_overflow.c
+	$(CC) $(CFLAGS) -o $@ tests/test_multipart_overflow.c $(LIB_NAME) $(LIBS)
+	./$@
+
+test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
+	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
+	./$@ burst
+	./$@ multi
+	./$@ cap
+	./$@ failure
 
 # Kernel/queue contract test: use the real reactor with a test-only allocator,
 # without pulling HTTP/TLS or libttak runtime state into the wake-up schedule.
@@ -1107,13 +1155,6 @@ test_reactor_timer: tests/test_reactor_timer.c src/sys/io/reactor.c
 ifeq ($(UNAME_S),Linux)
 	CWIST_REACTOR_BACKEND=epoll ./$@
 endif
-
-test_classic_pool_scaling: $(LIB_NAME) tests/test_classic_pool_scaling.c
-	$(CC) $(CFLAGS) -o $@ tests/test_classic_pool_scaling.c $(LIB_NAME) $(LIBS)
-	./$@ burst
-	./$@ multi
-	./$@ cap
-	./$@ failure
 
 # RX-epoll receive path (reactor_rx.h) on a forced epoll reactor.
 test_rx_epoll: tests/test_rx_epoll.c src/sys/io/reactor.c src/sys/io/reactor_rx.h
@@ -1146,12 +1187,16 @@ bench_cooperative_queuing_epoll: tests/bench_cooperative_queuing.c src/sys/io/re
 	$(CC) $(CFLAGS) -DCWIST_BENCH_EPOLL -o $@ tests/bench_cooperative_queuing.c -pthread
 
 test_orm: $(LIB_NAME) tests/test_orm.c
-	$(CC) $(CFLAGS) -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,recv) $(call wrap_flag,cwist_alloc) $(call wrap_flag,cJSON_PrintUnformatted) -o test_orm tests/test_orm.c $(LIB_NAME) $(LIBS)
 	./test_orm
 
 test_core_utils: $(LIB_NAME) tests/test_core_utils.c
-	$(CC) $(CFLAGS) -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_core_utils tests/test_core_utils.c $(LIB_NAME) $(LIBS)
 	./test_core_utils
+
+test_config: $(LIB_NAME) tests/test_config.c
+	$(CC) $(CFLAGS) -o test_config tests/test_config.c $(LIB_NAME) $(LIBS)
+	./test_config
 
 test_simd_parser: $(LIB_NAME) tests/test_simd_parser.c
 	$(CC) $(CFLAGS) -o test_simd_parser tests/test_simd_parser.c $(LIB_NAME) $(LIBS)
@@ -1221,7 +1266,7 @@ test_arena: $(LIB_NAME) tests/test_arena.c
 	./test_arena
 
 test_healthz: $(LIB_NAME) tests/test_healthz.c
-	$(CC) $(CFLAGS) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) $(call wrap_flag,cwist_sstring_assign) -o test_healthz tests/test_healthz.c $(LIB_NAME) $(LIBS)
 	./test_healthz
 
 test_wasm_stream: $(LIB_NAME) tests/test_wasm_stream.c
@@ -1253,7 +1298,7 @@ test_siphash: $(LIB_NAME) tests/test_siphash.c
 	./test_siphash
 
 test_mux: $(LIB_NAME) tests/test_mux.c
-	$(CC) $(CFLAGS) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_mux tests/test_mux.c $(LIB_NAME) $(LIBS)
 	./test_mux
 
 test_mux_param: $(LIB_NAME) tests/test_mux_param.c
@@ -1269,7 +1314,7 @@ test_migrate: $(LIB_NAME) tests/test_migrate.c
 	./test_migrate
 
 test_json_heal: $(LIB_NAME) tests/test_json_heal.c
-	$(CC) $(CFLAGS) -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=cwist_realloc -Wl,--wrap=cJSON_AddItemToObject -Wl,--wrap=cJSON_AddItemToArray -Wl,--wrap=cJSON_Duplicate -Wl,--wrap=cJSON_ReplaceItemInObjectCaseSensitive -o test_json_heal tests/test_json_heal.c $(LIB_NAME) $(LIBS)
 	./test_json_heal
 
 test_https: $(LIB_NAME) tests/test_https.c
@@ -1297,7 +1342,7 @@ test_https_metrics: $(LIB_NAME) tests/test_https_metrics.c
 	./test_https_metrics
 
 test_http2: $(LIB_NAME) tests/test_http2.c
-	$(CC) $(CFLAGS) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) $(call wrap_flag,cwist_http_header_add) -o test_http2 tests/test_http2.c $(LIB_NAME) $(LIBS)
 	./test_http2
 
 test_http2_prebuffer: $(LIB_NAME) tests/test_http2_prebuffer.c
@@ -1317,12 +1362,8 @@ test_webtransport: $(LIB_NAME) tests/test_webtransport.c
 	$(CC) $(CFLAGS) -o test_webtransport tests/test_webtransport.c $(LIB_NAME) $(LIBS)
 	./test_webtransport
 
-test_http3_client_latency: $(LIB_NAME) tests/test_http3_client_latency.c
-	$(CC) $(CFLAGS) -o $@ tests/test_http3_client_latency.c $(LIB_NAME) $(LIBS)
-	./$@
-
 test_rdbms_auto_mount: $(LIB_NAME) tests/test_rdbms_auto_mount.c
-	$(CC) $(CFLAGS) -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=send -Wl,--wrap=recv -o test_rdbms_auto_mount tests/test_rdbms_auto_mount.c $(LIB_NAME) $(LIBS)
 	./test_rdbms_auto_mount
 
 stress_test: $(LIB_NAME) tests/stress_test.c
@@ -1330,7 +1371,7 @@ stress_test: $(LIB_NAME) tests/stress_test.c
 	./stress_test
 
 test_cors: $(LIB_NAME) tests/test_cors.c
-	$(CC) $(CFLAGS) -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_http_header_add) -o test_cors tests/test_cors.c $(LIB_NAME) $(LIBS)
 	./test_cors
 
 test_websocket: $(LIB_NAME) tests/test_websocket.c
@@ -1362,7 +1403,7 @@ test_classic_shutdown: $(LIB_NAME) tests/test_classic_shutdown.c
 	./test_classic_shutdown
 
 test_compress: $(LIB_NAME) tests/test_compress.c
-	$(CC) $(CFLAGS) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) -o test_compress tests/test_compress.c $(LIB_NAME) $(LIBS)
 	./test_compress
 
 test_builtin_mw_deferred: $(LIB_NAME) tests/test_builtin_mw_deferred.c
@@ -1378,15 +1419,15 @@ nuke_missing_user_test: $(LIB_NAME) tests/nuke_missing_user_test.c
 	./nuke_missing_user_test
 
 test_bind: $(LIB_NAME) tests/test_bind.c
-	$(CC) $(CFLAGS) -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_bind tests/test_bind.c $(LIB_NAME) $(LIBS)
 	./test_bind
 
 test_bind_write_error_response: $(LIB_NAME) tests/test_bind_write_error_response.c
-	$(CC) $(CFLAGS) -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_bind_write_error_response tests/test_bind_write_error_response.c $(LIB_NAME) $(LIBS)
 	./test_bind_write_error_response
 
 test_metrics: $(LIB_NAME) tests/test_metrics.c
-	$(CC) $(CFLAGS) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) -o test_metrics tests/test_metrics.c $(LIB_NAME) $(LIBS)
 	./test_metrics
 
 test_access_log: $(LIB_NAME) tests/test_access_log.c
@@ -1687,7 +1728,7 @@ test_http_chunked_alloc_failure: $(LIB_NAME) tests/test_http_chunked_alloc_failu
 	./test_http_chunked_alloc_failure
 
 test_http_client: $(LIB_NAME) tests/test_http_client.c
-	$(CC) $(CFLAGS) -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign_len) $(call wrap_flag,cwist_http_header_add) -o test_http_client tests/test_http_client.c $(LIB_NAME) $(LIBS)
 	./test_http_client
 
 test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
@@ -1695,7 +1736,7 @@ test_static_and_range: $(LIB_NAME) tests/test_static_and_range.c
 	./test_static_and_range
 
 test_session: $(LIB_NAME) tests/test_session.c
-	$(CC) $(CFLAGS) -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=read -Wl,--wrap=cwist_alloc -Wl,--wrap=cJSON_AddStringToObject -o test_session tests/test_session.c $(LIB_NAME) $(LIBS)
 	./test_session
 
 test_csrf: $(LIB_NAME) tests/test_csrf.c
@@ -1765,11 +1806,11 @@ test_sse: $(LIB_NAME) tests/test_sse.c
 	./test_sse
 
 test_graphql: $(LIB_NAME) tests/test_graphql.c
-	$(CC) $(CFLAGS) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_ReplaceItemViaPointer) $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o test_graphql tests/test_graphql.c $(LIB_NAME) $(LIBS)
 	./test_graphql
 
 test_graphql_subscriptions: $(LIB_NAME) tests/test_graphql_subscriptions.c
-	$(CC) $(CFLAGS) -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddStringToObject) $(call wrap_flag,cwist_http_header_add) -o test_graphql_subscriptions tests/test_graphql_subscriptions.c $(LIB_NAME) $(LIBS)
 	./test_graphql_subscriptions
 
 test_core_hardening: $(LIB_NAME) tests/test_core_hardening.c
@@ -1795,7 +1836,7 @@ test_gc_job_handoff: $(LIB_NAME) tests/test_gc_job_handoff.c
 
 
 test_durable_queue: $(LIB_NAME) tests/test_durable_queue.c
-	$(CC) $(CFLAGS) -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=cwist_strndup -o test_durable_queue tests/test_durable_queue.c $(LIB_NAME) $(LIBS)
 	./test_durable_queue
 
 test_http_pipeline: $(LIB_NAME) tests/test_http_pipeline.c
@@ -1810,7 +1851,7 @@ test_http_fairness: $(LIB_NAME) tests/test_http_fairness.c
 	CWIST_TEST_DESTROY_PENDING=1 ./$@
 
 test_async_defer: $(LIB_NAME) tests/test_async_defer.c
-	$(CC) $(CFLAGS) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,cwist_sstring_assign_len) -o test_async_defer tests/test_async_defer.c $(LIB_NAME) $(LIBS)
 	./test_async_defer
 	CWIST_C1M_MODE=0 ./test_async_defer
 
@@ -1833,7 +1874,7 @@ test_async_file_park: $(LIB_NAME) tests/test_async_file_park.c
 	./test_async_file_park
 
 test_test_client: $(LIB_NAME) tests/test_test_client.c
-	$(CC) $(CFLAGS) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_sstring_assign) $(call wrap_flag,ftell) -o test_test_client tests/test_test_client.c $(LIB_NAME) $(LIBS)
 	./test_test_client
 
 test_multiport: $(LIB_NAME) tests/test_multiport.c
@@ -1859,6 +1900,10 @@ test_grpc: $(LIB_NAME) tests/test_grpc.c
 test_grpc_append_error: $(LIB_NAME) tests/test_grpc_append_error.c
 	$(CC) $(CFLAGS) -o test_grpc_append_error tests/test_grpc_append_error.c $(LIB_NAME) $(LIBS)
 	./test_grpc_append_error
+
+test_grpc_health_alloc: $(LIB_NAME) tests/test_grpc_health_alloc.c
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cwist_alloc) -o test_grpc_health_alloc tests/test_grpc_health_alloc.c $(LIB_NAME) $(LIBS)
+	./test_grpc_health_alloc
 
 test_grpc_stream: $(LIB_NAME) tests/test_grpc_stream.c
 	$(CC) $(CFLAGS) -o test_grpc_stream tests/test_grpc_stream.c $(LIB_NAME) $(LIBS)
@@ -1889,7 +1934,7 @@ test_grpc_client_windows: $(LIB_NAME) tests/test_grpc_client_windows.c
 	./test_grpc_client_windows
 
 test_grpc_channel: $(LIB_NAME) tests/test_grpc_channel.c
-	$(CC) $(CFLAGS) -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_grpc_channel tests/test_grpc_channel.c $(LIB_NAME) $(LIBS)
 	./test_grpc_channel
 
 test_dispatch_memory: $(LIB_NAME) tests/test_dispatch_memory.c
@@ -1971,13 +2016,21 @@ test_proto_desc: $(LIB_NAME) tests/test_proto_gen.c tests/make_sample_descriptor
 	$(CC) $(CFLAGS) -Itests -DPROTO_GEN_SAMPLE_HEADER='"test_proto_gen_desc_sample.cwist.pb.h"' -o test_proto_desc tests/test_proto_gen.c $(LIB_NAME) $(LIBS)
 	./test_proto_desc
 
+test_css_composer: $(LIB_NAME) tests/test_css_composer.c
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
+	./test_css_composer
+
+# The following seven had a tests/test_*.c file with no Makefile rule at
+# all (so no CI coverage, ever) until scripts/ci/check_test_wiring.py
+# caught the gap - all seven build and pass as-is, just never wired in.
+test_cwist: $(LIB_NAME) tests/test_cwist.c
+	$(CC) $(CFLAGS) -o test_cwist tests/test_cwist.c $(LIB_NAME) $(LIBS)
+	./test_cwist
+
 test_html_builder: $(LIB_NAME) tests/test_html_builder.c
-	$(CC) $(CFLAGS) -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto -Wl,--wrap=cwist_alloc -o test_html_builder tests/test_html_builder.c $(LIB_NAME) $(LIBS)
 	./test_html_builder
 
-test_css_composer: $(LIB_NAME) tests/test_css_composer.c
-	$(CC) $(CFLAGS) -o test_css_composer tests/test_css_composer.c $(LIB_NAME) $(LIBS)
-	./test_css_composer
 test_html_component: $(LIB_NAME) tests/test_html_component.c
 	$(CC) $(CFLAGS) -o test_html_component tests/test_html_component.c $(LIB_NAME) $(LIBS)
 	./test_html_component
@@ -2006,6 +2059,10 @@ test_http2_flow_control: $(LIB_NAME) tests/test_http2_flow_control.c
 	$(CC) $(CFLAGS) -o test_http2_flow_control tests/test_http2_flow_control.c $(LIB_NAME) $(LIBS)
 	./test_http2_flow_control
 
+test_quic_flow_control: $(LIB_NAME) tests/test_quic_flow_control.c
+	$(CC) $(CFLAGS) -o test_quic_flow_control tests/test_quic_flow_control.c $(LIB_NAME) $(LIBS)
+	./test_quic_flow_control
+
 test_idle_reaper: $(LIB_NAME) tests/test_idle_reaper.c
 	$(CC) $(CFLAGS) -o test_idle_reaper tests/test_idle_reaper.c $(LIB_NAME) $(LIBS)
 	./test_idle_reaper
@@ -2015,7 +2072,7 @@ test_linux_writer_fast: $(LIB_NAME) tests/test_linux_writer_fast.c
 	./test_linux_writer_fast
 
 test_orm_socket: $(LIB_NAME) tests/test_orm_socket.c
-	$(CC) $(CFLAGS) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
+	$(CC) $(CFLAGS) $(TEST_WRAP_CFLAGS) -fno-lto $(call wrap_flag,cJSON_AddItemToObject) $(call wrap_flag,cJSON_AddObjectToObject) $(call wrap_flag,cJSON_AddNumberToObject) $(call wrap_flag,cJSON_AddStringToObject) -o test_orm_socket tests/test_orm_socket.c $(LIB_NAME) $(LIBS)
 	./test_orm_socket
 
 

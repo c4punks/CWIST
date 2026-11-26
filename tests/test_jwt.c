@@ -12,6 +12,7 @@
 #include <time.h>
 #include <cwist/core/crypto/sha256.h>
 #include <stdlib.h>
+#include <cjson/cJSON.h>
 
 static void test_sign_and_verify(void) {
     printf("Testing JWT sign and verify...\n");
@@ -357,6 +358,32 @@ static void test_crit_and_exact_expiry(void) {
     free(token);
 }
 
+static void test_embedded_nul_claims(void) {
+    printf("Testing embedded NUL rejection in JWT claims...\n");
+    assert(cwist_jwt_sign("{\"sub\":\"alice\\u0000suffix\"}", "secret", 0) == NULL);
+    assert(cwist_jwt_sign("{\"sub\":\"alice\",\"jti\":\"token-id\\u0000suffix\"}", "secret", 0) == NULL);
+
+    char *token = sign_test_token("{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+                                  "{\"sub\":\"alice\\u0000suffix\"}", "secret");
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    free(token);
+
+    token = sign_test_token("{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+                            "{\"sub\":\"alice\",\"jti\":\"id-123\\u0000suffix\"}", "secret");
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    free(token);
+
+    token = cwist_jwt_sign("{\"sub\":\"alice\\\\u0000suffix\",\"jti\":\"id\\\\u0000suffix\"}", "secret", 0);
+    assert(token != NULL);
+    cwist_jwt_claims *claims = cwist_jwt_verify(token, "secret");
+    assert(claims != NULL);
+    assert(strcmp(cwist_jwt_claims_get(claims, "sub"), "alice\\u0000suffix") == 0);
+    assert(strcmp(cwist_jwt_claims_get(claims, "jti"), "id\\u0000suffix") == 0);
+    cwist_jwt_claims_destroy(claims);
+    cwist_free(token);
+    printf("  Passed embedded NUL claim rejection.\n");
+}
+
 int main(void) {
     test_input_shape_and_time_bounds();
     test_malformed_time_claim_types();
@@ -371,6 +398,7 @@ int main(void) {
     test_malformed_b64url_remainder();
     test_corrupt_chunk_feed();
     test_crit_and_exact_expiry();
+    test_embedded_nul_claims();
     printf("All JWT tests passed!\n");
     return 0;
 }

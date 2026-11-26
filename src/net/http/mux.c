@@ -179,7 +179,13 @@ void cwist_mux_handle(cwist_mux_router *router, cwist_http_method_t method, cons
     router->routes = route;
 
     size_t path_len = strlen(path);
-    route->is_parametric = (strchr(path, ':') != NULL);
+    route->is_parametric = false;
+    for (const char *p = path; *p; p++) {
+        if (*p == ':' && (p == path || p[-1] == '/')) {
+            route->is_parametric = true;
+            break;
+        }
+    }
     route->is_wildcard = (path_len > 0 && path[path_len - 1] == '*');
 
     if (route->is_wildcard) {
@@ -566,8 +572,16 @@ static bool mux_method_not_allowed(cwist_mux_router *router, const char *path,
         allow[len] = '\0';
     }
     if (!len) return false;
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Allow", allow);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        cwist_http_response_set_body_ptr(res, "500 Internal Server Error",
+                                         sizeof("500 Internal Server Error") - 1);
+        return true;
+    }
+    cwist_error_dispose(&err);
     res->status_code = CWIST_HTTP_METHOD_NOT_ALLOWED;
-    cwist_http_header_add(&res->headers, "Allow", allow);
     cwist_http_response_set_body_ptr(res, "405 Method Not Allowed",
                                      sizeof("405 Method Not Allowed") - 1);
     return true;

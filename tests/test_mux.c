@@ -6,6 +6,18 @@
 #include <assert.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
+static int fail_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (fail_header && strcmp(key, "Allow") == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
+#endif
+
 void test_handler(cwist_http_request *req, cwist_http_response *res) {
     (void)req;
     res->status_code = CWIST_HTTP_OK;
@@ -91,6 +103,14 @@ static void test_route_order_and_trailing_slash(void) {
 }
 
 /* #983: a group joins prefix and path with exactly one '/'. */
+static void test_literal_colon_route(void) {
+    cwist_mux_router *router = cwist_mux_router_create();
+    cwist_mux_handle(router, CWIST_HTTP_GET, "/time:zone", h_users);
+    assert(strcmp(serve(router, CWIST_HTTP_GET, "/time:zone", NULL), "users") == 0);
+    assert(cwist_mux_find_route(router, CWIST_HTTP_GET, "/time:zone") != NULL);
+    cwist_mux_router_destroy(router);
+}
+
 static void test_group_join(void) {
     static const char *const prefixes[] = {"/api", "/api/", "api", "/api//"};
     static const char *const paths[] = {"/users", "users", "//users"};
@@ -173,6 +193,15 @@ int main() {
     const char *allow = cwist_http_header_get(res3->headers, "Allow");
     assert(allow && strcmp(allow, "GET, HEAD") == 0);
 
+#ifdef CWIST_TEST_WRAP
+    cwist_http_response *failed = cwist_http_response_create();
+    fail_header = 1;
+    assert(cwist_mux_serve(router, req3, failed));
+    fail_header = 0;
+    assert(failed->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_response_destroy(failed);
+#endif
+
     cwist_mux_router_destroy(router);
     cwist_http_request_destroy(req1);
     cwist_http_response_destroy(res1);
@@ -202,6 +231,7 @@ int main() {
     printf("PASSED\n");
 
     test_route_order_and_trailing_slash();
+    test_literal_colon_route();
     test_group_join();
     return 0;
 }

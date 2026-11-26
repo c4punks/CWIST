@@ -5,6 +5,7 @@
 
 #include <cwist/core/html/css_composer.h>
 #include <cwist/core/mem/alloc.h>
+#include "../utils/number_internal.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +76,9 @@ static float hue2rgb(float p, float q, float t) {
  */
 cwist_color_rgb cwist_color_hsl_to_rgb(cwist_color_hsl hsl) {
     cwist_color_rgb rgb = {0, 0, 0};
+    if (!cwist_number_double_is_finite(hsl.h) || !cwist_number_double_is_finite(hsl.s) ||
+        !cwist_number_double_is_finite(hsl.l))
+        return rgb;
     /* Wrap the hue into [0, 360): hue2rgb() only folds one turn. */
     float h = fmodf(hsl.h, 360.0f) / 360.0f;
     if (h < 0.0f) h += 1.0f;
@@ -186,6 +190,8 @@ static void get_shifted_hex(cwist_color_rgb base, float light_shift, char out[8]
     cwist_color_rgb_to_hex(shifted, out);
 }
 
+static bool append_ok(cwist_sstring *s, const char *text);
+
 /**
  * @brief Generate the CSS custom-property block (:root variables) for a config.
  * @param cfg Theme configuration; must not be NULL.
@@ -193,8 +199,11 @@ static void get_shifted_hex(cwist_color_rgb base, float light_shift, char out[8]
  *         NULL or allocation fails. Caller owns the returned string.
  */
 cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
-    if (!cfg) return NULL;
+    if (!cfg || !cwist_number_double_is_finite(cfg->roundness_px) ||
+        !cwist_number_double_is_finite(cfg->spacing_base_px))
+        return NULL;
     cwist_sstring *css = cwist_sstring_create();
+    if (!css) return NULL;
 
     char p_hex[8], p_hover[8], p_active[8];
     char s_hex[8], s_hover[8], s_active[8];
@@ -235,7 +244,10 @@ cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
              cfg->spacing_base_px, cfg->spacing_base_px * 2.0f, cfg->spacing_base_px * 4.0f,
              cfg->spacing_base_px * 8.0f);
 
-    cwist_sstring_append(css, buf);
+    if (!append_ok(css, buf)) {
+        cwist_sstring_destroy(css);
+        return NULL;
+    }
     return css;
 }
 
@@ -248,6 +260,7 @@ cwist_sstring *cwist_css_generate_variables(const cwist_css_config *cfg) {
 cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
     (void)cfg; // Currently relying on generated variables
     cwist_sstring *css = cwist_sstring_create();
+    if (!css) return NULL;
 
     const char *utils = "/* Typography */\n"
                         ".text-primary { color: var(--color-primary); }\n"
@@ -281,7 +294,10 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
                         "  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);\n"
                         "}\n";
 
-    cwist_sstring_append(css, utils);
+    if (!append_ok(css, utils)) {
+        cwist_sstring_destroy(css);
+        return NULL;
+    }
     return css;
 }
 
@@ -294,16 +310,16 @@ cwist_sstring *cwist_css_generate_utility_classes(const cwist_css_config *cfg) {
 cwist_sstring *cwist_css_generate_stylesheet(const cwist_css_config *cfg) {
     if (!cfg) return NULL;
     cwist_sstring *final_css = cwist_sstring_create();
-
     cwist_sstring *vars = cwist_css_generate_variables(cfg);
     cwist_sstring *utils = cwist_css_generate_utility_classes(cfg);
-
-    if (vars) cwist_sstring_append(final_css, vars->data);
-    if (utils) cwist_sstring_append(final_css, utils->data);
-
-    if (vars) cwist_sstring_destroy(vars);
-    if (utils) cwist_sstring_destroy(utils);
-
+    bool ok = final_css && vars && utils && append_ok(final_css, vars->data) &&
+              append_ok(final_css, utils->data);
+    cwist_sstring_destroy(vars);
+    cwist_sstring_destroy(utils);
+    if (!ok) {
+        cwist_sstring_destroy(final_css);
+        return NULL;
+    }
     return final_css;
 }
 
@@ -641,41 +657,41 @@ cwist_sstring *cwist_css_minify(const char *css) {
             verbatim_end = o;
             i = stop;
             continue;
-    }
-    if (css_starts_url(css + i) && (o == 0 || !css_is_word(out[o - 1]))) {
-        size_t j = i + 4;
-        while (j < n && css_is_space(css[j])) j++;
-        if (j < n && css[j] != '"' && css[j] != '\'') {
-                /* Unquoted url(): copy the whole argument as written. */
-            const char *close = strchr(css + j, ')');
-            size_t stop = close ? (size_t)(close - css) + 1 : n;
-            memcpy(out + o, css + i, stop - i);
-            o += stop - i;
-            verbatim_end = o;
-            i = stop;
-            continue;
         }
+        if (css_starts_url(css + i) && (o == 0 || !css_is_word(out[o - 1]))) {
+            size_t j = i + 4;
+            while (j < n && css_is_space(css[j])) j++;
+            if (j < n && css[j] != '"' && css[j] != '\'') {
+                /* Unquoted url(): copy the whole argument as written. */
+                const char *close = strchr(css + j, ')');
+                size_t stop = close ? (size_t)(close - css) + 1 : n;
+                memcpy(out + o, css + i, stop - i);
+                o += stop - i;
+                verbatim_end = o;
+                i = stop;
+                continue;
+            }
+        }
+        if (c == '}' && o > 0 && o != verbatim_end && out[o - 1] == ';') o--;
+
+        out[o++] = c;
+        i++;
     }
-    if (c == '}' && o > 0 && o != verbatim_end && out[o - 1] == ';') o--;
+    out[o] = '\0';
 
-    out[o++] = c;
-    i++;
-}
-out[o] = '\0';
-
-cwist_sstring *result = cwist_sstring_create();
-bool ok = result != NULL;
-if (ok) {
-    cwist_error_t err = cwist_sstring_assign_len(result, out, o);
-    ok = cwist_error_is_ok(&err);
-    cwist_error_dispose(&err);
-}
-cwist_free(out);
-if (!ok) {
-    if (result) cwist_sstring_destroy(result);
-    return NULL;
-}
-return result;
+    cwist_sstring *result = cwist_sstring_create();
+    bool ok = result != NULL;
+    if (ok) {
+        cwist_error_t err = cwist_sstring_assign_len(result, out, o);
+        ok = cwist_error_is_ok(&err);
+        cwist_error_dispose(&err);
+    }
+    cwist_free(out);
+    if (!ok) {
+        if (result) cwist_sstring_destroy(result);
+        return NULL;
+    }
+    return result;
 }
 
 /**

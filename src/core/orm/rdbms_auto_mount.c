@@ -30,6 +30,22 @@ static void rdbms_no_sigpipe(int sock) {
 #endif
 }
 
+static ssize_t rdbms_send_retry(int sock, const void *buf, size_t len, int flags) {
+    ssize_t n;
+    do {
+        n = send(sock, buf, len, flags);
+    } while (n < 0 && errno == EINTR);
+    return n;
+}
+
+static ssize_t rdbms_recv_retry(int sock, void *buf, size_t len, int flags) {
+    ssize_t n;
+    do {
+        n = recv(sock, buf, len, flags);
+    } while (n < 0 && errno == EINTR);
+    return n;
+}
+
 /**
  * @brief Send a minimal PostgreSQL StartupMessage and check for 'R' response.
  *
@@ -54,10 +70,10 @@ static bool probe_postgresql(int sock) {
     /* trailing null already present from memset */
 
     size_t total = 8 + payload;
-    if (send(sock, startup, total, MSG_NOSIGNAL) != (ssize_t)total) return false;
+    if (rdbms_send_retry(sock, startup, total, MSG_NOSIGNAL) != (ssize_t)total) return false;
 
     char resp = 0;
-    ssize_t n = recv(sock, &resp, 1, 0);
+    ssize_t n = rdbms_recv_retry(sock, &resp, 1, 0);
     return (n == 1 && resp == 'R');
 }
 
@@ -95,6 +111,7 @@ static cwist_rdbms_provider_t classify_mysql(const char *buf, size_t len) {
  *         fails. The socket is always closed before returning.
  */
 cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
+    if (port < 1 || port > 65535) return CWIST_RDBMS_NONE;
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         CWIST_LOG_ERROR("RDBMS probe: socket creation failed: %s", strerror(errno));
@@ -121,7 +138,7 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
     }
 
     char buf[512];
-    ssize_t n = recv(sock, buf, sizeof(buf), 0);
+    ssize_t n = rdbms_recv_retry(sock, buf, sizeof(buf), 0);
     if (n > 0) {
         cwist_rdbms_provider_t p = classify_mysql(buf, (size_t)n);
         if (p != CWIST_RDBMS_NONE) {
@@ -169,7 +186,9 @@ cwist_rdbms_provider_t cwist_rdbms_probe_port(int port) {
  * @return true if a runtime is mounted, false on NULL app or allocation failure.
  */
 bool cwist_rdbms_mount_runtime(cwist_app *app, cwist_rdbms_provider_t provider, int port) {
-    if (!app) return false;
+    if (!app || provider <= CWIST_RDBMS_NONE || provider > CWIST_RDBMS_MYSQL || port < 1 ||
+        port > 65535)
+        return false;
 
     if (app->rdbms) {
         CWIST_LOG_INFO("RDBMS runtime already mounted");

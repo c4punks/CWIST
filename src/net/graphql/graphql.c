@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "../../core/utils/number_internal.h"
+#include "../../core/utils/json_internal.h"
 
 typedef enum { GQL_OP_QUERY, GQL_OP_MUTATION } gql_op_type_t;
 
@@ -152,6 +153,10 @@ static char *gql_decode_string(const char *src, size_t len) {
                 unsigned long cp = 0;
                 (void)gql_hex_quad(src + i + 1, &cp);
                 i += 4;
+                if (cp == 0) {
+                    cwist_free(out);
+                    return NULL;
+                }
                 if (cp >= 0xd800 && cp <= 0xdbff) {
                     unsigned long low = 0;
                     if (i + 6 >= len || src[i + 1] != '\\' || src[i + 2] != 'u' ||
@@ -490,7 +495,20 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
             cJSON_Delete(args);
             return p;
         }
-        cJSON_AddItemToObject(args, arg_name, val);
+        if (cJSON_GetObjectItemCaseSensitive(args, arg_name)) {
+            gql_add_error(errors, "Duplicate argument name");
+            cJSON_Delete(val);
+            cwist_free(arg_name);
+            cJSON_Delete(args);
+            return p;
+        }
+        if (!cJSON_AddItemToObject(args, arg_name, val)) {
+            gql_add_error(errors, "Internal memory error inserting argument");
+            cJSON_Delete(val);
+            cwist_free(arg_name);
+            cJSON_Delete(args);
+            return p;
+        }
         cwist_free(arg_name);
     }
 
@@ -503,7 +521,7 @@ static const char *parse_arguments(const char *p, const cJSON *variables, cJSON 
     return p;
 }
 
-/** Advance past a selection set without treating braces in strings as structure. */
+/** Advance past a selection set without treating strings or comments as structure. */
 static const char *skip_selection_set(const char *p) {
     unsigned int depth = 0;
     bool in_string = false;
@@ -516,6 +534,9 @@ static const char *skip_selection_set(const char *p) {
                 escaped = true;
             else if (*p == '"')
                 in_string = false;
+        } else if (*p == '#') {
+            while (*p && *p != '\n' && *p != '\r') p++;
+            continue;
         } else if (*p == '"') {
             in_string = true;
         } else if (*p == '{') {
@@ -528,29 +549,65 @@ static const char *skip_selection_set(const char *p) {
     return p;
 }
 
-static void gql_add_or_merge(cJSON *parent, const char *key, cJSON *value) {
+/** Find the operation selection set without entering variable default objects. */
+static const char *skip_operation_prelude(const char *p) {
+    unsigned int parens = 0;
+    bool in_string = false;
+    bool escaped = false;
+    while (*p) {
+        if (in_string) {
+            if (escaped)
+                escaped = false;
+            else if (*p == '\\')
+                escaped = true;
+            else if (*p == '"')
+                in_string = false;
+        } else if (*p == '#') {
+            while (*p && *p != '\n' && *p != '\r') p++;
+            continue;
+        } else if (*p == '"') {
+            in_string = true;
+        } else if (*p == '(') {
+            parens++;
+        } else if (*p == ')' && parens > 0) {
+            parens--;
+        } else if (*p == '{' && parens == 0) {
+            return p;
+        }
+        p++;
+    }
+    return p;
+}
+
+static bool gql_add_or_merge(cJSON *parent, const char *key, cJSON *value) {
     cJSON *existing = cJSON_GetObjectItem(parent, key);
     if (!existing) {
-        cJSON_AddItemToObject(parent, key, value);
-        return;
+        if (cJSON_AddItemToObject(parent, key, value)) return true;
+        cJSON_Delete(value);
+        return false;
     }
     if (cJSON_IsObject(existing) && cJSON_IsObject(value)) {
         cJSON *child = value->child;
         while (child) {
             cJSON *next = child->next;
             cJSON_DetachItemViaPointer(value, child);
-            gql_add_or_merge(existing, child->string, child);
+            if (!gql_add_or_merge(existing, child->string, child)) {
+                cJSON_Delete(value);
+                return false;
+            }
             child = next;
         }
         cJSON_Delete(value);
-    } else {
-        if (!value->string) value->string = cwist_strdup(key);
-        if (!value->string) {
-            cJSON_Delete(value);
-            return;
-        }
-        cJSON_ReplaceItemViaPointer(parent, existing, value);
+        return true;
     }
+    if (!value->string) value->string = cwist_strdup(key);
+    if (!value->string) {
+        cJSON_Delete(value);
+        return false;
+    }
+    if (cJSON_ReplaceItemViaPointer(parent, existing, value)) return true;
+    cJSON_Delete(value);
+    return false;
 }
 
 /**
@@ -716,7 +773,8 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
             }
         }
 
-        if (val) gql_add_or_merge(parent_data, output_key, val);
+        if (val && !gql_add_or_merge(parent_data, output_key, val))
+            gql_add_error(errors, "Internal memory error merging selection");
         cwist_free(token1);
         cwist_free(field_name);
         cwist_free(output_key);
@@ -724,6 +782,82 @@ static const char *parse_selection_set(const char *p, graphql_field_t *schema_fi
 
     if (!closed) gql_add_error(errors, "Unterminated selection set");
     return p;
+}
+
+typedef struct {
+    const char *selection;
+    const char *end;
+    gql_op_type_t type;
+} gql_operation_selection;
+
+static bool gql_select_operation(const char *document, const char *name,
+                                 gql_operation_selection *selected, const char **error) {
+    size_t count = 0, matches = 0;
+    bool has_anonymous = false;
+    const char *p = skip_ws_comments(document);
+    while (*p) {
+        gql_op_type_t type = GQL_OP_QUERY;
+        const char *candidate = NULL;
+        size_t candidate_len = 0;
+        const char *selection = NULL;
+        if (*p == '{') {
+            selection = p;
+            has_anonymous = true;
+        } else {
+            if (strncmp(p, "mutation", 8) == 0 && !gql_name_char(p[8], false)) {
+                type = GQL_OP_MUTATION;
+                p += 8;
+            } else if (strncmp(p, "query", 5) == 0 && !gql_name_char(p[5], false)) {
+                p += 5;
+            } else {
+                *error = count ? "Unexpected trailing content after operation"
+                               : "Expected query or mutation operation";
+                return false;
+            }
+            p = skip_ws_comments(p);
+            if (gql_name_char(*p, true)) {
+                candidate = p;
+                do {
+                    p++;
+                } while (gql_name_char(*p, false));
+                candidate_len = (size_t)(p - candidate);
+                p = skip_ws_comments(p);
+            }
+            selection = skip_operation_prelude(p);
+        }
+        if (!selection || *selection != '{') {
+            *error = "Expected '{' to begin selection set";
+            return false;
+        }
+        const char *end = skip_selection_set(selection);
+        count++;
+        if ((!name && count == 1) ||
+            (name && candidate && strlen(name) == candidate_len &&
+             strncmp(name, candidate, candidate_len) == 0)) {
+            selected->selection = selection;
+            selected->end = end;
+            selected->type = type;
+            matches++;
+        }
+        p = skip_ws_comments(end);
+    }
+    if (count == 0) {
+        *error = "Expected query or mutation operation";
+        return false;
+    }
+    if (count > 1 && has_anonymous) {
+        *error = "Anonymous operation must be the only operation";
+        return false;
+    }
+    if (name && matches != 1) {
+        *error = "Unknown or duplicate operationName";
+        return false;
+    }
+    if (!name && count != 1) {
+        *error = "operationName is required for documents with multiple operations";
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -742,8 +876,9 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
                                     cwist_sstring **out_json) {
     if (!schema || !request_json || !out_json) return gql_error(-1);
     *out_json = NULL;
+    if (cwist_json_has_nul_escape(request_json)) return gql_error(-1);
 
-    cJSON *request = cJSON_Parse(request_json);
+    cJSON *request = cJSON_ParseWithOpts(request_json, NULL, true);
     cJSON *root = cJSON_CreateObject();
     cJSON *data = cJSON_CreateObject();
     cJSON *errors = cJSON_CreateArray();
@@ -755,48 +890,55 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
         cJSON_Delete(errors);
         return gql_error(-1);
     }
-    cJSON_AddItemToObject(root, "data", data);
-    cJSON_AddItemToObject(root, "errors", errors);
+    if (!cJSON_AddItemToObject(root, "data", data)) {
+        cJSON_Delete(request);
+        cJSON_Delete(root);
+        cJSON_Delete(data);
+        cJSON_Delete(errors);
+        return gql_error(-1);
+    }
+    if (!cJSON_AddItemToObject(root, "errors", errors)) {
+        cJSON_Delete(request);
+        cJSON_Delete(root);
+        cJSON_Delete(errors);
+        return gql_error(-1);
+    }
 
     cJSON *query = cJSON_GetObjectItemCaseSensitive(request, "query");
     cJSON *variables = cJSON_GetObjectItemCaseSensitive(request, "variables");
+    cJSON *operation_name_json = cJSON_GetObjectItemCaseSensitive(request, "operationName");
 
-    if (!cJSON_IsString(query) || !query->valuestring) {
+    if (variables && !cJSON_IsObject(variables) && !cJSON_IsNull(variables)) {
+        gql_add_error(errors, "GraphQL variables must be an object");
+    } else if (operation_name_json && !cJSON_IsString(operation_name_json) &&
+               !cJSON_IsNull(operation_name_json)) {
+        gql_add_error(errors, "GraphQL operationName must be a string");
+    } else if (!cJSON_IsString(query) || !query->valuestring) {
         gql_add_error(errors, "GraphQL request must contain a string 'query'");
     } else if (strlen(query->valuestring) > CWIST_GRAPHQL_MAX_QUERY_SIZE) {
         gql_add_error(errors, "Query string exceeds maximum allowed size");
     } else {
-        const char *p = skip_ws_comments(query->valuestring);
-        gql_op_type_t op_type = GQL_OP_QUERY;
-
-        if (strncmp(p, "mutation", 8) == 0 && !gql_name_char(p[8], false)) {
-            op_type = GQL_OP_MUTATION;
-            p += 8;
-            p = skip_ws_comments(p);
-            /* Skip optional mutation name / variable defs until '{' */
-            while (*p && *p != '{') p++;
-        } else if (strncmp(p, "query", 5) == 0 && !gql_name_char(p[5], false)) {
-            op_type = GQL_OP_QUERY;
-            p += 5;
-            p = skip_ws_comments(p);
-            while (*p && *p != '{') p++;
-        }
-
-        if (*p != '{') {
-            gql_add_error(errors, "Expected '{' to begin selection set");
+        const char *operation_name =
+            cJSON_IsString(operation_name_json) ? operation_name_json->valuestring : NULL;
+        gql_operation_selection selected = {0};
+        const char *selection_error = NULL;
+        if (!gql_select_operation(query->valuestring, operation_name, &selected, &selection_error)) {
+            gql_add_error(errors, selection_error);
         } else {
             graphql_field_t *target_schema =
-                (op_type == GQL_OP_MUTATION) ? schema->mutations : schema->queries;
+                (selected.type == GQL_OP_MUTATION) ? schema->mutations : schema->queries;
             cJSON *validated = cJSON_CreateObject();
             if (!validated) {
                 gql_add_error(errors, "Internal memory error validating query");
             } else {
-                const char *end =
-                    parse_selection_set(p, target_schema, variables, validated, errors, NULL, 1, true);
+                const char *end = parse_selection_set(selected.selection, target_schema, variables,
+                                                      validated, errors, NULL, 1, true);
                 end = skip_ws_comments(end);
-                if (*end) gql_add_error(errors, "Unexpected trailing content after operation");
+                if (end != selected.end)
+                    gql_add_error(errors, "Unexpected trailing content after operation");
                 if (cJSON_GetArraySize(errors) == 0)
-                    (void)parse_selection_set(p, target_schema, variables, data, errors, NULL, 1, false);
+                    (void)parse_selection_set(selected.selection, target_schema, variables, data,
+                                              errors, NULL, 1, false);
                 cJSON_Delete(validated);
             }
         }
@@ -814,11 +956,18 @@ cwist_error_t cwist_graphql_execute(cwist_graphql_schema_t *schema, const char *
 
     *out_json = cwist_sstring_create();
     if (!*out_json) {
-        free(printed);
+        cJSON_free(printed);
         return gql_error(-1);
     }
-    cwist_sstring_assign(*out_json, printed);
-    free(printed);
+    cwist_error_t out_err = cwist_sstring_assign(*out_json, printed);
+    cJSON_free(printed);
+    if (!cwist_error_is_ok(&out_err)) {
+        cwist_error_dispose(&out_err);
+        cwist_sstring_destroy(*out_json);
+        *out_json = NULL;
+        return gql_error(-1);
+    }
+    cwist_error_dispose(&out_err);
 
     return gql_error(0);
 }
@@ -892,8 +1041,18 @@ bool cwist_graphql_parse_subscription(const char *query, const cJSON *variables,
 
     cJSON *errors = cJSON_CreateArray();
     if (!errors) return false;
-    parse_arguments(p, variables, args_out, errors);
+    const char *end = parse_arguments(p, variables, args_out, errors);
+    end = skip_ws_comments(end);
+    if (*end == '{') end = skip_selection_set(end);
+    end = skip_ws_comments(end);
+    bool valid =
+        cJSON_GetArraySize(errors) == 0 && *end == '}' && *skip_ws_comments(end + 1) == '\0';
     cJSON_Delete(errors);
+    if (!valid) {
+        cJSON_Delete(*args_out);
+        *args_out = NULL;
+        return false;
+    }
     /* *args_out stays NULL when the field carries no arguments. */
     return true;
 }
@@ -922,9 +1081,21 @@ void cwist_graphql_serve(cwist_graphql_schema_t *schema, cwist_http_request *req
         res->status_code = CWIST_HTTP_BAD_REQUEST;
         cwist_sstring_assign(res->body, "{\"errors\":[{\"message\":\"invalid GraphQL request\"}]}");
     } else {
-        res->status_code = CWIST_HTTP_OK;
-        cwist_sstring_assign_len(res->body, json->data, json->size);
+        cwist_error_t body_err = cwist_sstring_assign_len(res->body, json->data, json->size);
         cwist_sstring_destroy(json);
+        if (!cwist_error_is_ok(&body_err)) {
+            cwist_error_dispose(&body_err);
+            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            return;
+        }
+        cwist_error_dispose(&body_err);
+        res->status_code = CWIST_HTTP_OK;
     }
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&header_err);
 }

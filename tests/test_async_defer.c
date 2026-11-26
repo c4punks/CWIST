@@ -25,6 +25,22 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifdef CWIST_TEST_WRAP
+static _Atomic int fail_body;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (atomic_load(&fail_body))
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+cwist_error_t __real_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len);
+cwist_error_t __wrap_cwist_sstring_assign_len(cwist_sstring *str, const char *data, size_t len) {
+    if (atomic_load(&fail_body))
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign_len(str, data, len);
+}
+#endif
+
 #define TEST_PORT 19997
 #define TEST_HOST "127.0.0.1"
 
@@ -276,6 +292,38 @@ static bool has_code(const char *buf, const char *code) {
             failures++;                         \
         }                                       \
     } while (0)
+
+static int test_apply_allocation_failure(void) {
+    int failures = 0;
+    int sockets[2];
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) < 0) return 1;
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_async *a = req && res ? (req->client_fd = sockets[0], cwist_async_defer(req, res)) : NULL;
+    if (!a) {
+        cwist_http_request_destroy(req);
+        cwist_http_response_destroy(res);
+        close(sockets[0]);
+        close(sockets[1]);
+        return 1;
+    }
+    req->keep_alive = false;
+    cwist_async_dispatch_ack(a);
+#ifdef CWIST_TEST_WRAP
+    atomic_store(&fail_body, 1);
+    CHECK(cwist_async_respond(a, CWIST_HTTP_OK, "text/plain", "ok", 2), "complete with allocation failure");
+    atomic_store(&fail_body, 0);
+    char response[256];
+    ssize_t n = recv(sockets[1], response, sizeof(response) - 1, 0);
+    CHECK(n > 0, "read failed allocation response");
+    if (n > 0) {
+        response[n] = '\0';
+        CHECK(strstr(response, " 500 ") != NULL, "partial result becomes HTTP 500");
+    }
+#endif
+    close(sockets[1]);
+    return failures;
+}
 
 /* cwist_async_wait_dispatched(): a producer on another thread blocks until
  * the dispatch ack, while the dispatch thread itself never waits. */
@@ -678,6 +726,7 @@ int main(void) {
     }
 
     failures += test_retained_completion();
+    failures += test_apply_allocation_failure();
     failures += test_wait_dispatched();
     failures += test_dispatch_take();
     failures += test_dispatch_take_cleared();

@@ -394,7 +394,9 @@ int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12
  *         allocation fails.
  */
 static int stun_sign(uint8_t *msg, size_t cap, size_t msg_len, const char *pwd) {
-    if (!msg || !pwd || msg_len < STUN_HDR_LEN || msg_len > cap) return -1;
+    if (!msg || !pwd || msg_len < STUN_HDR_LEN || msg_len > cap ||
+        msg_len - STUN_HDR_LEN > UINT16_MAX - 32u)
+        return -1;
 
     uint8_t body[64];
     size_t blen = 0;
@@ -443,21 +445,22 @@ int cwist_ice_stun_sign_request(uint8_t *msg, size_t cap, size_t msg_len, const 
 
 /** State for parse_resp_cb(): collected MESSAGE-INTEGRITY value and mapped address. */
 typedef struct {
-    const uint8_t
-        *mi_val; /**< Pointer to the MI attribute value (into the message buffer), or NULL. */
-    struct sockaddr_in mapped; /**< Decoded XOR-MAPPED-ADDRESS, valid only if has_mapped. */
-    bool has_mapped; /**< True once an IPv4 XOR-MAPPED-ADDRESS has been decoded. */
+    const uint8_t *msg;
+    size_t authenticated_end;
+    const uint8_t *mi_val;
+    struct sockaddr_in mapped;
+    bool has_mapped;
 } parse_resp_arg;
 
-/** @brief attr_cb collecting the MI value and XOR-MAPPED-ADDRESS from a response.
- * Never stops the walk; duplicates overwrite earlier values (last one wins).
- */
+/** @brief Collect security-relevant attributes only from the authenticated prefix. */
 static bool parse_resp_cb(uint16_t type, const uint8_t *val, uint16_t val_len, void *arg) {
     parse_resp_arg *a = arg;
+    size_t off = (size_t)(val - a->msg) - 4;
+    if (off >= a->authenticated_end) return true;
     if (type == ATTR_MESSAGE_INTEGRITY) {
         a->mi_val = val;
-        (void)val_len;
-    } else if (type == ATTR_XOR_MAPPED_ADDRESS && val_len >= 8) {
+    } else if (type == ATTR_XOR_MAPPED_ADDRESS) {
+        if (a->has_mapped || val_len != 8 || val[1] != 0x01) return false;
         a->mapped.sin_family = AF_INET;
         a->mapped.sin_port = htons((uint16_t)(rd16(val + 2) ^ 0xFFFF));
         a->mapped.sin_addr.s_addr = htonl(rd32(val + 4) ^ STUN_MAGIC);
@@ -487,7 +490,9 @@ int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t 
     if (!cwist_ice_stun_is_message(buf, len) || rd16(buf) != CWIST_STUN_BINDING_RESPONSE) return 0;
     if (memcmp(buf + 8, txid, 12) != 0) return 0;
     if (!cwist_ice_stun_validate_request(buf, len, pwd)) return 0;
-    parse_resp_arg a = {0};
+    size_t mi_off = 0;
+    if (!find_mi(buf, len, &mi_off)) return 0;
+    parse_resp_arg a = {.msg = buf, .authenticated_end = mi_off + 24};
     if (!walk_attrs(buf, len, parse_resp_cb, &a)) return 0;
     if (!a.mi_val) return 0;
     if (mapped) {
@@ -500,8 +505,7 @@ int cwist_ice_stun_parse_response(const uint8_t *buf, size_t len, const uint8_t 
 /** Base64url alphabet (no padding) used to encode random ICE credentials. */
 /* ice-char = ALPHA / DIGIT / "+" / "/" (RFC 8839 section 5.4). The base64url
  * characters '-' and '_' are not ice-chars. */
-static const char ice_chars[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const char ice_chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /** @brief Extract the sender's ufrag from the USERNAME attribute of a STUN message.
  *
@@ -518,10 +522,9 @@ static const char ice_chars[] =
  * @retval -1 Not a STUN message, or no USERNAME attribute present.
  */
 int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, size_t cap) {
-    if (!out || cap == 0 || !cwist_ice_stun_is_message(buf, len)) return -1;
-    uint16_t msg_len = rd16(buf + 2);
-    if (msg_len % 4 != 0 || msg_len > len - STUN_HDR_LEN) return -1;
-    size_t end = STUN_HDR_LEN + msg_len;
+    if (!out || cap == 0) return -1;
+    size_t end = 0;
+    if (!find_mi(buf, len, &end)) return -1;
     size_t off = STUN_HDR_LEN;
     while (off + 4 <= end) {
         uint16_t type = rd16(buf + off);

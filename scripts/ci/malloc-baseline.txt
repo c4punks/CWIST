@@ -1,4 +1,3 @@
-1	src/core/db/db.c:free(serialised);
 3	src/core/mem/alloc.c:free(ptr);
 1	src/core/mem/alloc.c:return calloc(1, size ? size : 1);
 1	src/core/mem/alloc.c:return realloc(ptr, new_size ? new_size : 1);
@@ -53,13 +52,12 @@
 1	src/core/orm/orm.c:free(final);
 7	src/core/orm/orm.c:free(literal);
 1	src/core/orm/orm.c:free(orm);
-2	src/core/orm/orm.c:free(out);
+3	src/core/orm/orm.c:free(out);
 5	src/core/orm/orm.c:free(payload);
 3	src/core/orm/orm.c:free(qcol);
 7	src/core/orm/orm.c:free(qid);
 2	src/core/orm/orm.c:free(qret);
 17	src/core/orm/orm.c:free(qtable);
-1	src/core/orm/orm.c:free(raw);
 1	src/core/orm/orm.c:free(result);
 1	src/core/orm/orm.c:free(result->cells);
 1	src/core/orm/orm.c:free(result->cells[i].blob);
@@ -71,9 +69,8 @@
 1	src/core/orm/orm.c:if (!len) free(bytes);
 1	src/core/orm/orm.c:if (!node) return strdup("NULL");
 1	src/core/orm/orm.c:if (!node->valuestring) return strdup("''");
-1	src/core/orm/orm.c:if (!raw) return strdup("NULL");
 1	src/core/orm/orm.c:res = (cwist_orm_result_t *)calloc(1, sizeof(*res));
-1	src/core/orm/orm.c:res->cells = (cwist_orm_value_t *)calloc(
+1	src/core/orm/orm.c:res->cells = (cwist_orm_value_t *)calloc(res->row_count * res->column_count,
 1	src/core/orm/orm.c:res->columns = (char **)calloc(res->column_count ? res->column_count : 1, sizeof(char *));
 1	src/core/orm/orm.c:res->columns[i] = strdup(name->valuestring);
 1	src/core/orm/orm.c:return strdup("NULL");
@@ -82,20 +79,19 @@
 1	src/core/orm/orm.c:return strdup(cJSON_IsTrue(node) ? "TRUE" : "FALSE");
 1	src/core/orm/orm.c:unsigned char *out = (unsigned char *)malloc(cap ? cap : 1);
 1	src/core/orm/orm.c:v->text = strdup(payload->valuestring);
-1	src/core/orm/orm_socket.c:(cwist_orm_worker_ctx_t *)calloc(1, sizeof(*ctx));
 1	src/core/orm/orm_socket.c:char *out = (char *)malloc(out_cap);
 1	src/core/orm/orm_socket.c:ctx->db_path = strdup(db_path);
+1	src/core/orm/orm_socket.c:cwist_orm_worker_ctx_t *ctx = (cwist_orm_worker_ctx_t *)calloc(1, sizeof(*ctx));
 2	src/core/orm/orm_socket.c:free(ctx);
 1	src/core/orm/orm_socket.c:free(ctx->db_path);
-1	src/core/orm/orm_socket.c:free(errmsg);
+2	src/core/orm/orm_socket.c:free(errmsg);
 1	src/core/orm/orm_socket.c:free(out);
 1	src/core/orm/orm_socket.c:if (rc != SQLITE_OK && errmsg) *errmsg = strdup(sqlite3_errmsg(db));
-1	src/core/utils/json_heal.c:free(r->json);
 1	src/core/utils/json_heal.c:free(recovered); /* SLLM callback uses plain malloc per contract */
 1	src/core/validation/bind.c:free(printed);
 10	src/net/db_sync/db_sync.c:free(blob);
 1	src/net/db_sync/db_sync.c:unsigned char *blob = (unsigned char *)malloc(blob_len);
-2	src/net/graphql/graphql.c:free(printed);
+1	src/net/http/http3.c:char *assembled_body = realloc(st->body, assembled_len);
 1	src/net/http/http3.c:char *tmp = realloc(st->body, new_cap);
 1	src/net/http/http3.c:char(*batch_cmsgs)[512] = malloc(sizeof(*batch_cmsgs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:cwist_h3_hset_t *hset = calloc(1, sizeof(*hset));
@@ -115,13 +111,12 @@
 1	src/net/http/http3.c:free(node);
 4	src/net/http/http3.c:free(pkt_buf);
 2	src/net/http/http3.c:free(st);
-2	src/net/http/http3.c:free(st->body);
+3	src/net/http/http3.c:free(st->body);
 1	src/net/http/http3.c:free(st->seq_buf);
 1	src/net/http/http3.c:h3_conn_ctx_t *cc = (h3_conn_ctx_t *)calloc(1, sizeof(*cc));
 1	src/net/http/http3.c:h3_dgram_node_t *node = (h3_dgram_node_t *)malloc(sizeof(*node));
 1	src/net/http/http3.c:h3_stream_ctx_t *st = calloc(1, sizeof(*st));
 1	src/net/http/http3.c:node->data = malloc(len);
-1	src/net/http/http3.c:st->body = realloc(st->body, assembled_len);
 1	src/net/http/http3.c:struct iovec *batch_iovs = malloc(sizeof(*batch_iovs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:struct mmsghdr *batch_msgs = malloc(sizeof(*batch_msgs) * H3_RECV_BATCH);
 1	src/net/http/http3.c:struct sockaddr_storage *batch_peers = malloc(sizeof(*batch_peers) * H3_RECV_BATCH);
@@ -153,23 +148,19 @@
 1	src/net/http/http3_client.c:st->req_body = malloc(body_len);
 1	src/net/http/http3_client.c:st->req_path = strdup(path);
 1	src/net/http/http_client.c:char *tmp = realloc(body->data, new_cap);
-3	src/net/http/http_client.c:free(resp_body.data);
-1	src/net/http/session.c:free(raw);
+4	src/net/http/http_client.c:free(resp_body.data);
 1	src/net/http/tls_chain.c:char *url = (char *)malloc((size_t)uri_len + 1);
 1	src/net/http/tls_chain.c:free(buf.data);
 1	src/net/http/tls_chain.c:free(out->data);
 2	src/net/http/tls_chain.c:free(url);
 1	src/net/http/tls_chain.c:uint8_t *tmp = (uint8_t *)realloc(buf->data, new_cap);
-1	src/security/db_crypt/db_crypt.c:blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
 1	src/security/db_crypt/db_crypt.c:free(blob);
 4	src/security/db_crypt/db_crypt.c:free(ct);
 1	src/security/db_crypt/db_crypt.c:free(pt);
 1	src/security/db_crypt/db_crypt.c:unsigned char *blob = (unsigned char *)malloc(total + CWIST_DB_CRYPT_AUTH_TAG_LEN);
 1	src/security/db_crypt/db_crypt.c:unsigned char *ct = (unsigned char *)malloc(ct_max);
 1	src/security/db_crypt/db_crypt.c:unsigned char *pt = (unsigned char *)malloc(ct_len + 1);
-1	src/sys/app/app.c:char *buf = (char *)malloc((size_t)sz + 1);
 1	src/sys/app/app.c:cwist_multiport_http_client *payload = malloc(sizeof(*payload));
-1	src/sys/app/app.c:free(buf);
 1	src/sys/app/app.c:free(client);
 1	src/sys/app/app.c:free(h3_p);
 2	src/sys/app/app.c:free(payload);
@@ -198,6 +189,3 @@
 1	src/sys/metrics/metrics.c:char *nb = realloc(buf, new_cap);
 3	src/sys/metrics/metrics.c:free(buf);
 1	src/sys/metrics/metrics.c:free(text);
-1	src/sys/port/baremetal.c:buffer = malloc(capacity);
-1	src/sys/port/baremetal.c:char *next = realloc(buffer, grown);
-2	src/sys/port/baremetal.c:if (!*lineptr) free(buffer);

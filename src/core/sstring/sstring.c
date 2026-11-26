@@ -58,6 +58,7 @@ static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t pre
         new_cap *= 2;
     }
 
+    if (new_cap == SIZE_MAX) return NULL;
     char *result;
     if (str->borrows_buffer) {
         result = (char *)cwist_alloc(new_cap + 1);
@@ -71,6 +72,7 @@ static char *cwist_sstring_reserve(cwist_sstring *str, size_t needed, size_t pre
 
     char *orig = str->base ? str->base : str->data;
     const size_t lead = (str->base && str->data) ? (size_t)(str->data - str->base) : 0;
+    if (lead > SIZE_MAX - new_cap - 1) return NULL;
     char *grown = (char *)cwist_realloc(orig, lead + new_cap + 1);
     if (!grown) return NULL;
     str->base = grown;
@@ -91,6 +93,11 @@ cwist_error_t cwist_sstring_assign_len(cwist_sstring *str, const char *data, siz
     if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
+        return err;
+    }
+    if (len == SIZE_MAX) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
         return err;
     }
     if (data && len > 0 && sstring_aliases(str, data)) {
@@ -237,6 +244,11 @@ cwist_error_t cwist_sstring_append_len(cwist_sstring *str, const char *data, siz
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
+    if (str->size == SIZE_MAX || len > SIZE_MAX - str->size - 1) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
     if (sstring_aliases(str, data)) {
         char *copy = cwist_alloc(len + 1);
         if (!copy) {
@@ -342,24 +354,49 @@ static inline const char *sstring_as_text(const cwist_sstring *s) {
 }
 
 /**
- * @brief Compare two CWIST string objects using strcmp semantics.
- * @param left Left-hand string.
- * @param right Right-hand string.
- * @return Negative, zero, or positive depending on lexical ordering.
- */
-int cwist_sstring_compare_sstring(cwist_sstring *left, const cwist_sstring *right) {
-    return strcmp(sstring_as_text(left), sstring_as_text(right));
-}
-
-/**
  * @brief Length of the string's payload.
  * @details A growable string's length is str->size, which counts embedded NUL
  *          bytes written by assign_len()/append_len() (#963). A fixed string
  *          uses size as its capacity, so its length is the C string length.
  */
 static size_t sstring_content_len(const cwist_sstring *str) {
-    if (!str->data) return 0;
+    if (!str || !str->data) return 0;
     return str->is_fixed ? strlen(str->data) : str->size;
+}
+
+static size_t sstring_cstr_len(const cwist_sstring *str) {
+    size_t len = sstring_content_len(str);
+    size_t used = 0;
+    while (used < len && str->data[used]) used++;
+    return used;
+}
+
+static int sstring_compare_bounded(const char *left, size_t left_len, const char *right,
+                                   size_t right_len) {
+    size_t i = 0;
+    for (;;) {
+        bool left_end = i >= left_len || left[i] == '\0';
+        bool right_end = i >= right_len || right[i] == '\0';
+        if (left_end || right_end) {
+            if (left_end && right_end) return 0;
+            return left_end ? -1 : 1;
+        }
+        unsigned char l = (unsigned char)left[i];
+        unsigned char r = (unsigned char)right[i];
+        if (l != r) return (int)l - (int)r;
+        i++;
+    }
+}
+
+/**
+ * @brief Compare two CWIST string objects using strcmp semantics.
+ * @param left Left-hand string.
+ * @param right Right-hand string.
+ * @return Negative, zero, or positive depending on lexical ordering.
+ */
+int cwist_sstring_compare_sstring(cwist_sstring *left, const cwist_sstring *right) {
+    return sstring_compare_bounded(sstring_as_text(left), sstring_content_len(left),
+                                   sstring_as_text(right), sstring_content_len(right));
 }
 
 /**
@@ -385,7 +422,8 @@ cwist_error_t cwist_sstring_ltrim(cwist_sstring *str) {
                 err.error.err_i8 = ERR_SSTRING_NULL_STRING;
                 return err;
             }
-            memcpy(new_data, str->data + start, len - start + 1);
+            memcpy(new_data, str->data + start, len - start);
+            new_data[len - start] = '\0';
             str->data = new_data;
             str->borrows_buffer = false;
         } else {
@@ -613,6 +651,11 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
 
     size_t current_len = sstring_content_len(str);
     size_t append_len = strlen(data);
+    if (current_len == SIZE_MAX || append_len > SIZE_MAX - current_len - 1) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
     size_t new_size = current_len + append_len;
 
     if (str->is_fixed) {
@@ -655,22 +698,38 @@ cwist_error_t cwist_sstring_append(cwist_sstring *str, const char *data) {
  * @param data Source string to append in escaped form.
  * @return ERR_SSTRING_OKAY on success, or an error payload describing the failure.
  */
-cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data) {
+static cwist_error_t sstring_append_escaped_len(cwist_sstring *str, const char *data,
+                                                size_t input_len) {
     if (!str) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_NULL_STRING;
         return err;
     }
-    if (sstring_aliases(str, data)) return sstring_with_copy(str, data, cwist_sstring_append_escaped);
-    if (!data) {
-        // Appending nothing is success
+    if (!data || input_len == 0) {
         cwist_error_t err = make_error(CWIST_ERR_INT8);
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
+    if (sstring_aliases(str, data)) {
+        char *copy = cwist_alloc(input_len + 1);
+        if (!copy) {
+            cwist_error_t err = make_error(CWIST_ERR_INT8);
+            err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+            return err;
+        }
+        memcpy(copy, data, input_len);
+        copy[input_len] = '\0';
+        cwist_error_t err = sstring_append_escaped_len(str, copy, input_len);
+        cwist_free(copy);
+        return err;
+    }
 
     size_t current_len = sstring_content_len(str);
-    size_t input_len = strlen(data);
+    if (current_len == SIZE_MAX || input_len > (SIZE_MAX - current_len - 1) / 6) {
+        cwist_error_t err = make_error(CWIST_ERR_INT8);
+        err.error.err_i8 = ERR_SSTRING_RESIZE_TOO_LARGE;
+        return err;
+    }
     size_t new_size = current_len + (input_len * 6) + 1;
 
     if (str->is_fixed) {
@@ -733,6 +792,10 @@ cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data)
     return err;
 }
 
+cwist_error_t cwist_sstring_append_escaped(cwist_sstring *str, const char *data) {
+    return sstring_append_escaped_len(str, data, data ? strlen(data) : 0);
+}
+
 /**
  * @brief Append the contents of one CWIST string onto another.
  * @param str Destination string.
@@ -750,7 +813,7 @@ cwist_error_t cwist_sstring_append_sstring(cwist_sstring *str, const cwist_sstri
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
-    return cwist_sstring_append(str, from->data);
+    return cwist_sstring_append_len(str, from->data, sstring_content_len(from));
 }
 
 /**
@@ -770,7 +833,7 @@ cwist_error_t cwist_sstring_append_sstring_escaped(cwist_sstring *str, const cwi
         err.error.err_i8 = ERR_SSTRING_OKAY;
         return err;
     }
-    return cwist_sstring_append_escaped(str, from->data);
+    return sstring_append_escaped_len(str, from->data, sstring_content_len(from));
 }
 
 /**
@@ -787,13 +850,15 @@ cwist_error_t cwist_sstring_seek(cwist_sstring *str, char *substr, int location)
         return err;
     }
 
-    size_t len = strlen(str->data);
+    size_t len = sstring_cstr_len(str);
     if (location < 0 || (size_t)location >= len) {
         err.error.err_i8 = ERR_SSTRING_OUTOFBOUND;
         return err;
     }
 
-    strcpy(substr, str->data + location);
+    size_t suffix_len = len - (size_t)location;
+    memcpy(substr, str->data + location, suffix_len);
+    substr[suffix_len] = '\0';
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
@@ -813,7 +878,9 @@ cwist_error_t cwist_sstring_copy(cwist_sstring *origin, char *destination) {
         return err;
     }
 
-    strcpy(destination, origin->data);
+    size_t len = sstring_cstr_len(origin);
+    memcpy(destination, origin->data, len);
+    destination[len] = '\0';
 
     err.error.err_i8 = ERR_SSTRING_OKAY;
     return err;
@@ -834,7 +901,7 @@ cwist_error_t cwist_sstring_copy_sstring(cwist_sstring *origin, const cwist_sstr
     if (!from) {
         return cwist_sstring_assign(origin, NULL);
     }
-    return cwist_sstring_assign(origin, from->data);
+    return cwist_sstring_assign_len(origin, from->data, sstring_content_len(from));
 }
 
 /**
@@ -892,7 +959,9 @@ void cwist_sstring_destroy(cwist_sstring *str) {
  * @return Negative, zero, or positive depending on lexical ordering.
  */
 int cwist_sstring_compare(cwist_sstring *str, const char *compare_to) {
-    return strcmp(sstring_as_text(str), compare_to ? compare_to : "");
+    const char *right = compare_to ? compare_to : "";
+    return sstring_compare_bounded(sstring_as_text(str), sstring_content_len(str), right,
+                                   strlen(right));
 }
 
 /**
@@ -905,28 +974,20 @@ int cwist_sstring_compare(cwist_sstring *str, const char *compare_to) {
 cwist_sstring *cwist_sstring_substr(cwist_sstring *str, int start, int length) {
     if (!str || !str->data || start < 0 || length < 0) return NULL;
 
-    size_t current_len = strlen(str->data);
+    size_t current_len = sstring_content_len(str);
     if ((size_t)start >= current_len) return NULL;
 
-    // Adjust length if it goes beyond end
-    if ((size_t)length > current_len - (size_t)start) {
-        length = (int)(current_len - (size_t)start);
-    }
+    size_t out_len = (size_t)length;
+    if (out_len > current_len - (size_t)start) out_len = current_len - (size_t)start;
 
     cwist_sstring *sub = cwist_sstring_create();
     if (!sub) return NULL;
-
-    sub->data = (char *)cwist_alloc(length + 1);
-    if (!sub->data) {
+    cwist_error_t err = cwist_sstring_assign_len(sub, str->data + start, out_len);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
         cwist_sstring_destroy(sub);
         return NULL;
     }
-    sub->base = sub->data;
-    sub->capacity = length;
-    sub->size = length;
-
-    memcpy(sub->data, str->data + start, length);
-    sub->data[length] = '\0';
-
+    cwist_error_dispose(&err);
     return sub;
 }

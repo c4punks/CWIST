@@ -10,6 +10,22 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef CWIST_TEST_WRAP
+static int fail_alloc;
+static int fail_body;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc) return NULL;
+    return __real_cwist_alloc(size);
+}
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (fail_body && data && strncmp(data, "{\"status\"", 9) == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+#endif
+
 /* Stub for cwist_http_header_add to avoid linking full net/http subsystem */
 cwist_error_t cwist_http_header_add(cwist_http_header_node **head, const char *key,
                                     const char *value) {
@@ -102,9 +118,34 @@ static void test_healthz_null_buffer_and_status(void) {
     cwist_healthz_unregister("storage");
 }
 
+#ifdef CWIST_TEST_WRAP
+static void test_healthz_allocation_failure(void) {
+    cwist_http_response res;
+    memset(&res, 0, sizeof(res));
+    res.body = cwist_sstring_create();
+    fail_alloc = 1;
+    cwist_app_healthz(&res);
+    fail_alloc = 0;
+    assert(res.status_code == CWIST_HTTP_INTERNAL_ERROR);
+    assert(res.body && strcmp(res.body->data, "health render failed") == 0);
+    cwist_sstring_destroy(res.body);
+
+    memset(&res, 0, sizeof(res));
+    res.body = cwist_sstring_create();
+    fail_body = 1;
+    cwist_app_healthz(&res);
+    fail_body = 0;
+    assert(res.status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_sstring_destroy(res.body);
+}
+#endif
+
 int main(void) {
     test_healthz_basic_and_slot_reuse();
     test_healthz_null_buffer_and_status();
+#ifdef CWIST_TEST_WRAP
+    test_healthz_allocation_failure();
+#endif
     printf("All test_healthz tests passed!\n");
     return 0;
 }

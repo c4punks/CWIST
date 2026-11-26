@@ -5,6 +5,7 @@
 
 #include <cwist/core/validation/bind.h>
 #include "../utils/number_internal.h"
+#include "../utils/json_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <string.h>
 #include <stdlib.h>
@@ -22,11 +23,11 @@
  */
 static void bind_add_error(cwist_bind_result_t *r, const char *key, const char *msg) {
     if (!r) return;
+    r->ok = false;
     if (r->error_count >= CWIST_BIND_MAX_ERRORS) return;
     cwist_bind_error_t *e = &r->errors[r->error_count++];
     snprintf(e->key, sizeof(e->key), "%s", key ? key : "(unknown)");
     snprintf(e->message, sizeof(e->message), "%s", msg ? msg : "validation failed");
-    r->ok = false;
 }
 
 /**
@@ -248,7 +249,13 @@ static bool check_rule(const cwist_bind_rule_t *rule, const char *value, size_t 
  */
 static bool run_rules(const cwist_bind_field_t *f, const char *value, size_t len,
                       cwist_bind_result_t *r) {
-    if (!f->rules) return true;
+    if (!f->rules) {
+        if (f->rule_count > 0) {
+            bind_add_error(r, f->json_key, "rule list is missing");
+            return false;
+        }
+        return true;
+    }
     bool all_ok = true;
     bool terminated = false;
     size_t limit = f->rule_count > 0 && f->rule_count < CWIST_BIND_MAX_ERRORS
@@ -414,6 +421,10 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
             break;
         }
         case CWIST_BIND_SSTRING: {
+            if (f->target_size < sizeof(cwist_sstring *)) {
+                bind_add_error(r, f->json_key, "target size smaller than sstring pointer");
+                return false;
+            }
             cwist_sstring *ss = *(cwist_sstring **)dest;
             if (!ss) {
                 bind_add_error(r, f->json_key, "null sstring target");
@@ -426,6 +437,10 @@ static bool write_value(const cwist_bind_field_t *f, const char *value, void *ou
             break;
         }
         case CWIST_BIND_JSON_OBJECT: {
+            if (f->target_size < sizeof(cJSON *)) {
+                bind_add_error(r, f->json_key, "target size smaller than cJSON pointer");
+                return false;
+            }
             cJSON **pp = (cJSON **)dest;
             if (!pp) {
                 bind_add_error(r, f->json_key, "null cJSON target");
@@ -457,6 +472,9 @@ static int bind_form_hex(unsigned char c) {
 }
 
 static char *bind_form_decode(const char *src, size_t len) {
+    if (!src) return NULL;
+    if (len > 16 * 1024 * 1024) return NULL;
+    if (memchr(src, '\0', len)) return NULL;
     char *decoded = cwist_alloc(len + 1);
     if (!decoded) return NULL;
     size_t out = 0;
@@ -485,6 +503,40 @@ static char *bind_form_decode(const char *src, size_t len) {
     return decoded;
 }
 
+static cwist_query_map *bind_parse_form(const char *payload) {
+    cwist_query_map *map = cwist_query_map_create();
+    if (!map) return NULL;
+    const char *cursor = payload;
+    while (cursor && *cursor) {
+        const char *amp = strchr(cursor, '&');
+        const char *end = amp ? amp : cursor + strlen(cursor);
+        const char *eq = memchr(cursor, '=', (size_t)(end - cursor));
+        const char *value_start = eq ? eq + 1 : end;
+        char *key = bind_form_decode(cursor, eq ? (size_t)(eq - cursor) : (size_t)(end - cursor));
+        char *value = bind_form_decode(value_start, (size_t)(end - value_start));
+        if (!key || !value) {
+            cwist_free(key);
+            cwist_free(value);
+            cwist_query_map_destroy(map);
+            return NULL;
+        }
+        if (!cwist_query_map_get(map, key)) {
+            cwist_query_map_set(map, key, value);
+            const char *stored = cwist_query_map_get(map, key);
+            if (!stored || strcmp(stored, value) != 0) {
+                cwist_free(key);
+                cwist_free(value);
+                cwist_query_map_destroy(map);
+                return NULL;
+            }
+        }
+        cwist_free(key);
+        cwist_free(value);
+        cursor = amp ? amp + 1 : NULL;
+    }
+    return map;
+}
+
 /**
  * @brief Core binding logic shared between JSON and Form parsers.
  */
@@ -499,20 +551,49 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
         return false;
     }
 
+    if (!schema->fields && schema->field_count > 0) {
+        bind_add_error(result, "(schema)", "invalid schema: null field array");
+        return false;
+    }
+
     cJSON *root = NULL;
+    cwist_query_map *form = NULL;
     if (is_json) {
+        if (cwist_json_has_nul_escape(payload)) {
+            bind_add_error(result, "(root)", "embedded NUL is not allowed");
+            return false;
+        }
         root = cJSON_ParseWithOpts(payload, NULL, true);
         if (!root || !cJSON_IsObject(root)) {
             cJSON_Delete(root);
             bind_add_error(result, "(root)", "expected a JSON object");
             return false;
         }
+    } else {
+        form = bind_parse_form(payload);
+        if (!form) {
+            bind_add_error(result, "(root)", "malformed form encoding");
+            return false;
+        }
     }
 
     for (size_t i = 0; i < schema->field_count; ++i) {
         const cwist_bind_field_t *f = &schema->fields[i];
+        if (!f->json_key || f->json_key[0] == '\0') {
+            bind_add_error(result, "(schema)", "schema field key is missing");
+            continue;
+        }
+        if (schema->struct_size > 0) {
+            if (f->target_offset >= schema->struct_size || f->target_size > schema->struct_size ||
+                f->target_offset + f->target_size > schema->struct_size) {
+                bind_add_error(result, f->json_key,
+                               "field target offset/size exceeds struct bounds");
+                continue;
+            }
+        }
         const char *raw_value = NULL;
-        char *allocated_form = NULL;
+        char *allocated_json = NULL;
+        char numbuf[64];
 
         if (is_json && root) {
             const cJSON *item = cJSON_GetObjectItemCaseSensitive(root, f->json_key);
@@ -521,8 +602,14 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                     raw_value = item->valuestring;
                 } else if (cJSON_IsNumber(item)) {
                     /* Keep number as string for uniform validation then convert */
-                    static __thread char numbuf[64];
                     double intpart;
+                    if ((f->target_type == CWIST_BIND_INT || f->target_type == CWIST_BIND_UINT) &&
+                        modf(item->valuedouble, &intpart) == 0.0 &&
+                        (item->valuedouble > 9007199254740991.0 ||
+                         item->valuedouble < -9007199254740991.0)) {
+                        bind_add_error(result, f->json_key, "integer is not exactly representable");
+                        continue;
+                    }
                     if (modf(item->valuedouble, &intpart) == 0.0 &&
                         item->valuedouble >= -9223372036854775808.0 &&
                         item->valuedouble < 9223372036854775808.0) {
@@ -554,31 +641,7 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
                 }
             }
         } else {
-            const char *cursor = payload;
-            while (cursor && *cursor) {
-                const char *amp = strchr(cursor, '&');
-                const char *end = amp ? amp : cursor + strlen(cursor);
-                const char *eq = memchr(cursor, '=', (size_t)(end - cursor));
-                if (eq) {
-                    char *key = bind_form_decode(cursor, (size_t)(eq - cursor));
-                    char *value = bind_form_decode(eq + 1, (size_t)(end - eq - 1));
-                    if (!key || !value) {
-                        cwist_free(key);
-                        cwist_free(value);
-                        bind_add_error(result, f->json_key, "malformed form encoding");
-                        break;
-                    }
-                    if (strcmp(key, f->json_key) == 0) {
-                        raw_value = value;
-                        allocated_form = value;
-                        cwist_free(key);
-                        break;
-                    }
-                    cwist_free(key);
-                    cwist_free(value);
-                }
-                cursor = amp ? amp + 1 : NULL;
-            }
+            raw_value = cwist_query_map_get(form, f->json_key);
         }
 
         size_t val_len = raw_value ? strlen(raw_value) : 0;
@@ -593,13 +656,11 @@ static bool cwist_bind_generic(const cwist_bind_schema_t *schema, const char *pa
             }
         }
 
-        /* Clean up temporary printed JSON if we allocated one above */
-        if (!is_json) { /* already handled */
-        }
-        cwist_free(allocated_form);
+        cJSON_free(allocated_json);
     }
 
     if (root) cJSON_Delete(root);
+    if (form) cwist_query_map_destroy(form);
     result->ok = (result->error_count == 0);
     return result->ok;
 }
@@ -661,12 +722,21 @@ bool cwist_app_req_bind_form(cwist_http_request *req, const cwist_bind_schema_t 
  * @param res Response to fill in; ignored when NULL.
  * @param result Bind result containing the errors; ignored when NULL.
  */
+static void bind_write_internal_error(cwist_http_response *res) {
+    res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+    if (res->status_text) cwist_sstring_assign(res->status_text, "Internal Server Error");
+}
+
 void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_result_t *result) {
     if (!res || !result) return;
     res->status_code = CWIST_HTTP_BAD_REQUEST;
-    cwist_sstring_assign(res->status_text, "Bad Request");
+    if (res->status_text) cwist_sstring_assign(res->status_text, "Bad Request");
 
     cwist_json_builder *jb = cwist_json_builder_create();
+    if (!jb) {
+        bind_write_internal_error(res);
+        return;
+    }
     cwist_json_begin_object(jb);
     cwist_json_add_bool(jb, "success", false);
     cwist_json_begin_array(jb, "errors");
@@ -680,9 +750,26 @@ void cwist_bind_write_error_response(cwist_http_response *res, const cwist_bind_
     cwist_json_end_object(jb);
 
     const char *json = cwist_json_get_raw(jb);
-    cwist_sstring_assign(res->body, (char *)json);
-    cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!res->body || !json) {
+        cwist_json_builder_destroy(jb);
+        bind_write_internal_error(res);
+        return;
+    }
+    cwist_error_t body_err = cwist_sstring_assign(res->body, (char *)json);
     cwist_json_builder_destroy(jb);
+    if (!cwist_error_is_ok(&body_err)) {
+        cwist_error_dispose(&body_err);
+        bind_write_internal_error(res);
+        return;
+    }
+    cwist_error_dispose(&body_err);
+    cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", "application/json");
+    if (!cwist_error_is_ok(&header_err)) {
+        cwist_error_dispose(&header_err);
+        bind_write_internal_error(res);
+        return;
+    }
+    cwist_error_dispose(&header_err);
 }
 
 /**

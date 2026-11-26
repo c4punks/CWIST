@@ -109,6 +109,7 @@ static void bdr_blob_retire(bdr_blob_t *blob) {
  * @return New blob on success, NULL on allocation failure.
  */
 static bdr_blob_t *bdr_blob_learn(const void *data, size_t len) {
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return NULL;
     bdr_blob_t *blob = cwist_alloc(sizeof(bdr_blob_t) + len);
     if (!blob) return NULL;
     blob->mem = blob;
@@ -761,6 +762,7 @@ void cwist_bdr_put(cwist_bdr_t *bdr, const char *method, const char *path, const
                    size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
     if (strcmp(method, "GET") != 0) return;
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return;
 
     uint64_t req_h = bdr_hash(method, path);
     uint64_t res_h = bdr_hash_data(data, len);
@@ -819,6 +821,7 @@ void cwist_bdr_put_fixed(cwist_bdr_t *bdr, const char *method, const char *path,
                          size_t len) {
     if (!bdr || !method || !path || !data || len == 0) return;
     if (strcmp(method, "GET") != 0) return;
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return;
 
     uint64_t req_h = bdr_hash(method, path);
 
@@ -860,6 +863,7 @@ void cwist_bdr_put_revalidatable(cwist_bdr_t *bdr, const char *method, const cha
                                  void *arg) {
     if (!bdr || !method || !path || !data || len == 0 || !fn) return;
     if (strcmp(method, "GET") != 0) return;
+    if (len > SIZE_MAX - sizeof(bdr_blob_t)) return;
 
     uint64_t req_h = bdr_hash(method, path);
 

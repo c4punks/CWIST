@@ -22,6 +22,16 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef CWIST_TEST_WRAP
+static int fail_body;
+cwist_error_t __real_cwist_sstring_assign(cwist_sstring *str, const char *data);
+cwist_error_t __wrap_cwist_sstring_assign(cwist_sstring *str, const char *data) {
+    if (fail_body && data && strncmp(data, "{\"success\"", 10) == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_sstring_assign(str, data);
+}
+#endif
+
 /* Build a result with n synthetic errors. */
 static cwist_bind_result_t make_result(int n) {
     cwist_bind_result_t r;
@@ -96,6 +106,18 @@ static void test_zero_errors(void) {
     printf("  OK\n");
 }
 
+#ifdef CWIST_TEST_WRAP
+static void test_body_allocation_failure(void) {
+    cwist_http_response *res = cwist_http_response_create();
+    cwist_bind_result_t result = make_result(1);
+    fail_body = 1;
+    cwist_bind_write_error_response(res, &result);
+    fail_body = 0;
+    assert(res->status_code == CWIST_HTTP_INTERNAL_ERROR);
+    cwist_http_response_destroy(res);
+}
+#endif
+
 /* NULL res: must not crash. */
 static void test_null_response(void) {
     printf("test_bind_write_error_response null res...\n");
@@ -108,6 +130,9 @@ int main(void) {
     test_single_error();
     test_multiple_errors();
     test_zero_errors();
+#ifdef CWIST_TEST_WRAP
+    test_body_allocation_failure();
+#endif
     test_null_response();
     printf("All test_bind_write_error_response tests passed.\n");
     return 0;

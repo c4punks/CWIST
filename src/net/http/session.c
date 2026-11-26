@@ -26,6 +26,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 
 /* Largest name=value a browser keeps (RFC 6265 section 6.1 minimum, and the
  * limit Chrome and Firefox enforce). */
@@ -201,9 +202,19 @@ static char *generate_secret(size_t len) {
             cwist_free(secret);
             return NULL;
         }
-        ssize_t n = read(fd, buf, len);
+        size_t got = 0;
+        while (got < len) {
+            ssize_t n = read(fd, buf + got, len - got);
+            if (n > 0) {
+                got += (size_t)n;
+            } else if (n < 0 && errno == EINTR) {
+                continue;
+            } else {
+                break;
+            }
+        }
         close(fd);
-        if (n == (ssize_t)len) {
+        if (got == len) {
             static const char hex[] = "0123456789abcdef";
             for (size_t i = 0; i < len; i++) {
                 secret[i * 2] = hex[buf[i] >> 4];
@@ -314,6 +325,7 @@ void cwist_app_set_session_max_age(cwist_app *app, int seconds) {
 
 typedef struct {
     cJSON *json;
+    bool ok;
 } json_ctx_t;
 
 /**
@@ -325,7 +337,7 @@ typedef struct {
  */
 static void add_to_json(const char *key, const char *value, void *ctx) {
     json_ctx_t *jctx = ctx;
-    cJSON_AddStringToObject(jctx->json, key, value ? value : "");
+    if (!cJSON_AddStringToObject(jctx->json, key, value ? value : "")) jctx->ok = false;
 }
 
 /* --- Session load/save -------------------------------------------------- */
@@ -486,6 +498,10 @@ cwist_session_t *cwist_session_start(cwist_app *app, cwist_http_request *req,
     session->app = app;
     session->req = req;
     session->data = cwist_query_map_create();
+    if (!session->data) {
+        cwist_free(session);
+        return NULL;
+    }
     session->revocation = NULL;
     session->modified = false;
     session->invalidated = false;
@@ -572,7 +588,10 @@ int cwist_session_set(cwist_session_t *session, const char *key, const char *val
     if (!session || !key || strcmp(key, "__cwist_exp") == 0 || strcmp(key, "__cwist_jti") == 0)
         return -1;
     if (!session->data) return -1;
-    cwist_query_map_set(session->data, key, value ? value : "");
+    const char *expected = value ? value : "";
+    cwist_query_map_set(session->data, key, expected);
+    const char *stored = cwist_query_map_get(session->data, key);
+    if (!stored || strcmp(stored, expected) != 0) return -1;
     session->modified = true;
     return 0;
 }
@@ -662,7 +681,7 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
     if (!session->session_id) session->session_id = generate_secret(16);
     if (!session->session_id) return -1;
 
-    json_ctx_t ctx;
+    json_ctx_t ctx = {.ok = true};
     ctx.json = cJSON_CreateObject();
     if (!ctx.json) return -1;
     time_t expires_at = time(NULL) + session->app->session_max_age;
@@ -672,12 +691,16 @@ int cwist_session_commit(cwist_session_t *session, cwist_http_response *res) {
         return -1;
     }
     cwist_query_map_foreach(session->data, add_to_json, &ctx);
+    if (!ctx.ok) {
+        cJSON_Delete(ctx.json);
+        return -1;
+    }
     char *raw = cJSON_PrintUnformatted(ctx.json);
     cJSON_Delete(ctx.json);
     if (!raw) return -1;
 
     char *payload_b64 = base64_encode((const uint8_t *)raw, strlen(raw));
-    free(raw);
+    cJSON_free(raw);
     if (!payload_b64) return -1;
     if (strlen(payload_b64) > 8192) {
         cwist_free(payload_b64);

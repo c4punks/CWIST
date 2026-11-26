@@ -1719,7 +1719,7 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
     if (!str || len == 0) return CWIST_HTTP_UNKNOWN;
 
     /* Ultra-fast path: SWAR 4-byte magic lookup for GET, POST, PUT, DELETE, HEAD */
-    if (len >= 3) {
+    if (len >= 4) {
         uint32_t m = 0;
         memcpy(&m, str, sizeof(uint32_t));
         switch (m) {
@@ -2542,7 +2542,7 @@ void cwist_http_response_set_body_ptr(cwist_http_response *res, const void *ptr,
  */
 void cwist_http_response_set_body_ptr_managed(cwist_http_response *res, const void *ptr, size_t len,
                                               cwist_http_body_cleanup_fn cleanup, void *ctx) {
-    if (!res) return;
+    if (!res || (!ptr && len > 0)) return;
     cwist_http_response_release_file_stream(res);
     cwist_http_response_release_ptr_body(res);
     res->is_ptr_body = true;
@@ -4826,8 +4826,10 @@ int cwist_http_response_serialize(cwist_http_response *res, char **out, size_t *
             body = res->body->data;
             body_len = res->body->size;
         }
+        if (body_len > 0 && !body) return -1;
     }
 
+    if (body_len > SIZE_MAX - header_len - 1) return -1;
     char *buf = (char *)cwist_alloc(header_len + body_len + 1);
     if (!buf) return -1;
     memcpy(buf, header_buf, header_len);

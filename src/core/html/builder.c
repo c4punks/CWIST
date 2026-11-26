@@ -16,8 +16,8 @@
 static bool html_tag_name_is_valid(const char *tag) {
     if (!tag || !*tag) return true;
     for (const unsigned char *p = (const unsigned char *)tag; *p; p++) {
-        if ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'Z') ||
-            (*p >= 'a' && *p <= 'z') || *p == '-')
+        if ((*p >= '0' && *p <= '9') || (*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+            *p == '-')
             continue;
         return false;
     }
@@ -43,13 +43,23 @@ cwist_html_element_t *cwist_html_element_create(const char *tag) {
     if (!html_tag_name_is_valid(tag)) return NULL;
     cwist_html_element_t *el = (cwist_html_element_t *)cwist_alloc(sizeof(cwist_html_element_t));
     if (!el) return NULL;
+    memset(el, 0, sizeof(*el));
 
     el->tag = cwist_sstring_create();
-    cwist_sstring_assign(el->tag, tag ? tag : "");
     el->attributes = cJSON_CreateObject();
-    el->children = NULL;
-    el->child_count = 0;
-    el->inner_text = NULL;
+    if (!el->tag || !el->attributes) {
+        cwist_sstring_destroy(el->tag);
+        cJSON_Delete(el->attributes);
+        cwist_free(el);
+        return NULL;
+    }
+    cwist_error_t err = cwist_sstring_assign(el->tag, tag ? tag : "");
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    if (!ok) {
+        cwist_html_element_destroy(el);
+        return NULL;
+    }
 
     return el;
 }
@@ -111,13 +121,23 @@ void cwist_html_element_add_class(cwist_html_element_t *el, const char *class_na
 
     cJSON *cls = cJSON_GetObjectItem(el->attributes, "class");
     if (cls && cls->valuestring && *cls->valuestring) {
-        // Append to existing class
         cwist_sstring *s = cwist_sstring_create();
-        cwist_sstring_assign(s, cls->valuestring);
-        cwist_sstring_append(s, " ");
-        cwist_sstring_append(s, class_name);
-        cJSON_ReplaceItemInObject(el->attributes, "class",
-                                  cJSON_CreateString(s->data ? s->data : ""));
+        if (!s) return;
+        cwist_error_t assign_err = cwist_sstring_assign(s, cls->valuestring);
+        bool ok = cwist_error_is_ok(&assign_err);
+        cwist_error_dispose(&assign_err);
+        cwist_error_t space_err = cwist_sstring_append(s, " ");
+        ok = ok && cwist_error_is_ok(&space_err);
+        cwist_error_dispose(&space_err);
+        cwist_error_t append_err = cwist_sstring_append(s, class_name);
+        ok = ok && cwist_error_is_ok(&append_err);
+        cwist_error_dispose(&append_err);
+        cJSON *updated = cJSON_CreateString(s->data ? s->data : "");
+        if (!ok || !updated || !cJSON_ReplaceItemInObject(el->attributes, "class", updated)) {
+            cJSON_Delete(updated);
+            cwist_sstring_destroy(s);
+            return;
+        }
         cwist_sstring_destroy(s);
     } else {
         cwist_html_element_add_attr(el, "class", class_name);
@@ -193,18 +213,25 @@ static bool is_raw_text_element(const char *tag) {
  * name (any case) becomes "<\/", which is the same text in JavaScript strings
  * and CSS but no longer an end tag to the HTML parser.
  */
-static void append_raw_text(cwist_sstring *out, const char *text, const char *tag) {
+static bool html_append_ok(cwist_error_t err);
+
+static bool append_raw_text(cwist_sstring *out, const char *text, const char *tag) {
     size_t tag_len = strlen(tag);
     const char *start = text;
     for (const char *p = text; *p; p++) {
         if (p[0] == '<' && p[1] == '/' && strncasecmp(p + 2, tag, tag_len) == 0) {
-            cwist_sstring_append_len(out, start, (size_t)(p - start));
-            cwist_sstring_append(out, "<\\/");
+            unsigned char next = (unsigned char)p[2 + tag_len];
+            bool end_tag = next == '>' || next == '/' || next == ' ' || next == '\t' ||
+                           next == '\n' || next == '\r' || next == '\f';
+            if (!end_tag) continue;
+            if (!html_append_ok(cwist_sstring_append_len(out, start, (size_t)(p - start))) ||
+                !html_append_ok(cwist_sstring_append(out, "<\\/")))
+                return false;
             start = p + 2;
             p++;
         }
     }
-    cwist_sstring_append(out, start);
+    return html_append_ok(cwist_sstring_append(out, start));
 }
 
 /**
@@ -212,68 +239,81 @@ static void append_raw_text(cwist_sstring *out, const char *text, const char *ta
  * @param el Current element being rendered.
  * @param out Destination buffer that receives generated markup.
  */
-static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
-    if (!el || !out) return;
+static bool html_append_ok(cwist_error_t err) {
+    bool ok = cwist_error_is_ok(&err);
+    cwist_error_dispose(&err);
+    return ok;
+}
+
+static bool render_element(cwist_html_element_t *el, cwist_sstring *out) {
+    if (!el || !out) return false;
 
     if (el->tag && el->tag->data && *el->tag->data && html_tag_name_is_valid(el->tag->data)) {
-        cwist_sstring_append(out, "<");
-        cwist_sstring_append(out, el->tag->data);
+        if (!html_append_ok(cwist_sstring_append(out, "<")) ||
+            !html_append_ok(cwist_sstring_append(out, el->tag->data)))
+            return false;
         cJSON *attr = NULL;
         cJSON_ArrayForEach(attr, el->attributes) {
             if (!attr || !html_attr_name_is_valid(attr->string)) continue;
             if (cJSON_IsString(attr) && attr->valuestring) {
-                cwist_sstring_append(out, " ");
-                cwist_sstring_append(out, attr->string);
-                cwist_sstring_append(out, "=\"");
-                cwist_sstring_append_escaped(out, attr->valuestring);
-                cwist_sstring_append(out, "\"");
+                if (!html_append_ok(cwist_sstring_append(out, " ")) ||
+                    !html_append_ok(cwist_sstring_append(out, attr->string)) ||
+                    !html_append_ok(cwist_sstring_append(out, "=\"")) ||
+                    !html_append_ok(cwist_sstring_append_escaped(out, attr->valuestring)) ||
+                    !html_append_ok(cwist_sstring_append(out, "\"")))
+                    return false;
             } else if (cJSON_IsTrue(attr)) {
-                cwist_sstring_append(out, " ");
-                cwist_sstring_append(out, attr->string);
+                if (!html_append_ok(cwist_sstring_append(out, " ")) ||
+                    !html_append_ok(cwist_sstring_append(out, attr->string)))
+                    return false;
             } else if (cJSON_IsNumber(attr)) {
                 char num_buf[64];
                 cwist_number_format_double(num_buf, sizeof(num_buf), attr->valuedouble);
-                cwist_sstring_append(out, " ");
-                cwist_sstring_append(out, attr->string);
-                cwist_sstring_append(out, "=\"");
-                cwist_sstring_append(out, num_buf);
-                cwist_sstring_append(out, "\"");
+                if (!html_append_ok(cwist_sstring_append(out, " ")) ||
+                    !html_append_ok(cwist_sstring_append(out, attr->string)) ||
+                    !html_append_ok(cwist_sstring_append(out, "=\"")) ||
+                    !html_append_ok(cwist_sstring_append(out, num_buf)) ||
+                    !html_append_ok(cwist_sstring_append(out, "\"")))
+                    return false;
             }
         }
-        cwist_sstring_append(out, ">");
+        if (!html_append_ok(cwist_sstring_append(out, ">"))) return false;
 
         /* A void element cannot have content; an end tag like </br> would be
          * parsed by browsers as a second element. */
-        if (is_void_element(el->tag->data)) return;
+        if (is_void_element(el->tag->data)) return true;
 
         if (el->inner_text && el->inner_text->data) {
-            if (is_raw_text_element(el->tag->data))
-                append_raw_text(out, el->inner_text->data, el->tag->data);
-            else
-                cwist_sstring_append_escaped(out, el->inner_text->data);
+            if (is_raw_text_element(el->tag->data)) {
+                if (!append_raw_text(out, el->inner_text->data, el->tag->data)) return false;
+            } else if (!html_append_ok(cwist_sstring_append_escaped(out, el->inner_text->data))) {
+                return false;
+            }
         }
 
         if (el->children) {
             for (int i = 0; i < el->child_count; i++) {
-                render_element(el->children[i], out);
+                if (!render_element(el->children[i], out)) return false;
             }
         }
 
-        cwist_sstring_append(out, "</");
-        cwist_sstring_append(out, el->tag->data);
-        cwist_sstring_append(out, ">");
+        if (!html_append_ok(cwist_sstring_append(out, "</")) ||
+            !html_append_ok(cwist_sstring_append(out, el->tag->data)) ||
+            !html_append_ok(cwist_sstring_append(out, ">")))
+            return false;
     } else {
         /* A tagless element is a fragment: its text, then its children
          * (#964). */
-        if (el->inner_text && el->inner_text->data) {
-            cwist_sstring_append_escaped(out, el->inner_text->data);
-        }
+        if (el->inner_text && el->inner_text->data &&
+            !html_append_ok(cwist_sstring_append_escaped(out, el->inner_text->data)))
+            return false;
         if (el->children) {
             for (int i = 0; i < el->child_count; i++) {
-                render_element(el->children[i], out);
+                if (!render_element(el->children[i], out)) return false;
             }
         }
     }
+    return true;
 }
 
 /**
@@ -284,7 +324,10 @@ static void render_element(cwist_html_element_t *el, cwist_sstring *out) {
 cwist_sstring *cwist_html_render(cwist_html_element_t *el) {
     if (!el) return NULL;
     cwist_sstring *out = cwist_sstring_create();
-    cwist_sstring_assign(out, "");
-    render_element(el, out);
+    if (!out) return NULL;
+    if (!html_append_ok(cwist_sstring_assign(out, "")) || !render_element(el, out)) {
+        cwist_sstring_destroy(out);
+        return NULL;
+    }
     return out;
 }

@@ -337,6 +337,11 @@ int main(void) {
     assert(decoded.len == request_pb.len);
     assert(memcmp(decoded.data, request_pb.data, request_pb.len) == 0);
     assert(cwist_grpc_decode_message(frame, frame_len - 1, &decoded) != 0);
+    frame[0] = 2;
+    assert(cwist_grpc_decode_message(frame, frame_len, &decoded) != 0);
+    size_t next_offset = 0;
+    assert(cwist_grpc_decode_next_message(frame, frame_len, &next_offset, &decoded) != 0);
+    frame[0] = 0;
 
     cwist_grpc_decoder decoder;
     cwist_grpc_decoder_init(&decoder, 1024);

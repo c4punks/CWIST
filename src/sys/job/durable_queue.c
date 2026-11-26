@@ -30,6 +30,9 @@
 #include <cwist/net/redis/cwist_redis.h>
 #include <nats.h>
 #include <stdio.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -43,15 +46,17 @@
 /* Atomically schedules a nacked job: XACK, then either park it in the
  * delay zset or dead-letter it. Returns 1 (delayed), 2 (dead-lettered),
  * 0 (entry no longer pending). */
-static const char *JQ_NACK_SCRIPT = "local ok = redis.call('XACK', KEYS[1], KEYS[2], ARGV[1])\n"
-                                    "if ok == 0 then return 0 end\n"
-                                    "redis.call('HDEL', KEYS[5], ARGV[1])\n"
-                                    "if tonumber(ARGV[2]) > tonumber(ARGV[3]) then\n"
-                                    "  redis.call('RPUSH', KEYS[3], ARGV[4])\n"
-                                    "  return 2\n"
-                                    "end\n"
-                                    "redis.call('ZADD', KEYS[4], ARGV[5], ARGV[1] .. '|' .. ARGV[4])\n"
-                                    "return 1\n";
+static const char *JQ_NACK_SCRIPT =
+    "local ok = redis.call('XACK', KEYS[1], KEYS[2], ARGV[1])\n"
+    "if ok == 0 then return 0 end\n"
+    "redis.call('HDEL', KEYS[5], ARGV[1])\n"
+    "if tonumber(ARGV[2]) > tonumber(ARGV[3]) or "
+    "(ARGV[2] == '4294967295' and ARGV[3] == '4294967295') then\n"
+    "  redis.call('RPUSH', KEYS[3], ARGV[4])\n"
+    "  return 2\n"
+    "end\n"
+    "redis.call('ZADD', KEYS[4], ARGV[5], ARGV[1] .. '|' .. ARGV[4])\n"
+    "return 1\n";
 
 /* Moves due delayed blobs back onto the stream. The attempts hash is
  * pre-seeded with attempts-1 because the fresh-claim path HINCRBYs. */
@@ -134,19 +139,26 @@ static cwist_error_t jq_err(int16_t code) {
     return e;
 }
 
-/** @brief Current CLOCK_MONOTONIC time in milliseconds; monotonic and unaffected by wall-clock changes. */
+/** @brief Current CLOCK_MONOTONIC time in milliseconds; monotonic and unaffected by wall-clock
+ * changes. */
 static uint64_t jq_now_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
 }
 
-static unsigned int jq_consumer_seq = 0;
+static uint64_t jq_deadline_after(uint64_t timeout_ms) {
+    uint64_t now = jq_now_ms();
+    return timeout_ms > UINT64_MAX - now ? UINT64_MAX : now + timeout_ms;
+}
+
+static _Atomic unsigned int jq_consumer_seq = 0;
 
 /** @brief Build an owned default consumer name "w<pid>-<seq>"; unique per process run. */
 static char *jq_default_consumer(void) {
     char buf[64];
-    snprintf(buf, sizeof(buf), "w%d-%u", (int)getpid(), ++jq_consumer_seq);
+    unsigned int seq = atomic_fetch_add_explicit(&jq_consumer_seq, 1, memory_order_relaxed) + 1;
+    snprintf(buf, sizeof(buf), "w%d-%u", (int)getpid(), seq);
     return cwist_strdup(buf);
 }
 
@@ -158,6 +170,9 @@ static bool jq_opts_init(cwist_job_queue_t *q, const cwist_job_queue_opts_t *opt
         opts->consumer && *opts->consumer ? cwist_strdup(opts->consumer) : jq_default_consumer();
     q->visibility_timeout_ms =
         opts->visibility_timeout_ms ? opts->visibility_timeout_ms : CWIST_JQ_DEFAULT_VISIBILITY_MS;
+#ifdef CWIST_NATS
+    if (q->visibility_timeout_ms > (uint64_t)INT64_MAX / 1000000u) return false;
+#endif
     q->max_retries = opts->max_retries ? opts->max_retries : CWIST_JQ_DEFAULT_MAX_RETRIES;
     q->retry_delay_ms = opts->retry_delay_ms;
     if (!q->name || !q->consumer) return false;
@@ -226,7 +241,7 @@ static char *jq_key(const char *name, const char *suffix) {
 static cwist_error_t jq_redis_cmd(cwist_redis_t *conn, size_t argc, const void *const *argv,
                                   const size_t *argv_lens, cwist_redis_reply_t **reply) {
     cwist_error_t err = cwist_redis_command_argv_reply(conn, argc, argv, argv_lens, reply);
-    if (!cwist_error_is_ok(&err) || !*reply) {
+    if (!cwist_error_is_ok(&err) || !*reply || (*reply)->type == '-') {
         cwist_redis_reply_free(*reply);
         *reply = NULL;
         return jq_err(CWIST_FAILURE);
@@ -240,18 +255,27 @@ static cwist_error_t jq_redis_int(cwist_redis_t *conn, size_t argc, const void *
     cwist_redis_reply_t *reply = NULL;
     cwist_error_t err = jq_redis_cmd(conn, argc, argv, argv_lens, &reply);
     if (!cwist_error_is_ok(&err)) return err;
-    if (reply->type == ':' || reply->type == '$')
-        *out = reply->integer ? reply->integer : strtoll(reply->str ? reply->str : "0", NULL, 10);
-    else
-        *out = 0;
+    bool ok = true;
+    if (reply->type == ':') {
+        *out = reply->integer;
+    } else if (reply->type == '$' && reply->str) {
+        char *end = NULL;
+        errno = 0;
+        *out = strtoll(reply->str, &end, 10);
+        ok = end != reply->str && end && *end == '\0' && errno != ERANGE;
+    } else {
+        ok = false;
+    }
     cwist_redis_reply_free(reply);
-    return jq_err(0);
+    return jq_err(ok ? 0 : CWIST_FAILURE);
 }
 
 /** Pack [type_len:4BE][attempts:4BE][type][payload] into an owned blob. */
 static char *jq_blob(const char *type, uint32_t attempts, const void *payload, size_t payload_len,
                      size_t *out_len) {
-    uint32_t type_len = type ? (uint32_t)strlen(type) : 0;
+    size_t type_size = type ? strlen(type) : 0;
+    if (type_size > UINT32_MAX || payload_len > SIZE_MAX - 8 - type_size) return NULL;
+    uint32_t type_len = (uint32_t)type_size;
     size_t len = 8 + type_len + payload_len;
     char *blob = cwist_alloc(len ? len : 1);
     if (!blob) return NULL;
@@ -321,7 +345,8 @@ static cwist_job_t *jq_job_from_entry(cwist_job_queue_t *q, const cwist_redis_re
         job->payload = cwist_alloc(job->payload_len);
         if (job->payload) memcpy(job->payload, payload->str, job->payload_len);
     }
-    if (!job->id || (job->payload_len && !job->payload)) {
+    if (!job->id || (type && type->str && type->len && !job->type) ||
+        (job->payload_len && !job->payload)) {
         cwist_job_free(job);
         return NULL;
     }
@@ -337,7 +362,8 @@ static cwist_error_t jq_redis_delivery_count(cwist_job_queue_t *q, const char *i
     size_t lens[] = {7, strlen(rs->attempts), id_len, 1};
     long long n = 0;
     cwist_error_t err = jq_redis_int(rs->conn, 4, argv, lens, &n);
-    if (cwist_error_is_ok(&err)) *out_attempts = n > 0 ? (uint32_t)n : 1;
+    if (n <= 0 || n > (long long)UINT32_MAX) return jq_err(CWIST_FAILURE);
+    if (cwist_error_is_ok(&err)) *out_attempts = (uint32_t)n;
     return err;
 }
 
@@ -489,7 +515,7 @@ static void jq_redis_reap_delay(cwist_job_queue_t *q) {
  *         entries, then blocks for new entries.
  */
 static cwist_error_t jq_redis_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
-    uint64_t deadline = jq_now_ms() + timeout_ms;
+    uint64_t deadline = jq_deadline_after(timeout_ms);
     bool polled = false;
     for (;;) {
         jq_redis_reap_delay(q);
@@ -520,10 +546,10 @@ static cwist_error_t jq_redis_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     cwist_redis_reply_t *reply = NULL;
     cwist_error_t err = jq_redis_cmd(rs->conn, 4, argv, lens, &reply);
     cwist_redis_reply_free(reply);
+    if (!cwist_error_is_ok(&err)) return err;
     const void *dargv[] = {"HDEL", rs->attempts, job->id};
     size_t dlens[] = {4, strlen(rs->attempts), strlen(job->id)};
-    jq_redis_run(rs->conn, 3, dargv, dlens);
-    return err;
+    return jq_redis_run(rs->conn, 3, dargv, dlens) ? jq_err(0) : jq_err(CWIST_FAILURE);
 }
 
 /**
@@ -534,8 +560,8 @@ static cwist_error_t jq_redis_ack(cwist_job_queue_t *q, cwist_job_t *job) {
  */
 static cwist_error_t jq_redis_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     jq_redis_t *rs = &q->u.redis;
-    uint32_t next = job->attempts + 1;
-    uint64_t due = jq_now_ms() + q->retry_delay_ms;
+    uint32_t next = job->attempts == UINT32_MAX ? UINT32_MAX : job->attempts + 1;
+    uint64_t due = jq_deadline_after(q->retry_delay_ms);
     char next_buf[16], max_buf[16], due_buf[32];
     int next_len = snprintf(next_buf, sizeof(next_buf), "%u", next);
     int max_len = snprintf(max_buf, sizeof(max_buf), "%u", q->max_retries);
@@ -767,7 +793,19 @@ cwist_job_queue_t *cwist_job_queue_create_nats(cwist_nats_t *nats,
         cwist_free(consumer);
         goto fail;
     } else {
+        bool compatible = ci && ci->Config && ci->Config->Durable &&
+                          strcmp(ci->Config->Durable, consumer) == 0 &&
+                          ci->Config->FilterSubject &&
+                          strcmp(ci->Config->FilterSubject, ns->subject) == 0 &&
+                          ci->Config->AckPolicy == cc.AckPolicy && ci->Config->AckWait == cc.AckWait &&
+                          ci->Config->MaxDeliver == cc.MaxDeliver &&
+                          ci->Config->DeliverPolicy == cc.DeliverPolicy;
         jsConsumerInfo_Destroy(ci);
+        if (!compatible) {
+            cwist_free(base);
+            cwist_free(consumer);
+            goto fail;
+        }
     }
     if (js_PullSubscribe(&ns->sub, ns->js, ns->subject, consumer, NULL, NULL, &jerr) != NATS_OK ||
         natsConnection_Flush(nc) != NATS_OK) {
@@ -841,12 +879,13 @@ static bool jq_nats_dead_letter(jq_nats_t *ns, natsMsg *msg) {
  */
 static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cwist_job_t **job) {
     jq_nats_t *ns = &q->u.nats;
-    uint64_t deadline = jq_now_ms() + timeout_ms;
+    uint64_t deadline = jq_deadline_after(timeout_ms);
     for (;;) {
         uint64_t now = jq_now_ms();
-        int64_t slice = (int64_t)(now >= deadline ? 1 : deadline - now);
-        if (slice > (int64_t)CWIST_JQ_MAX_POLL_SLICE_MS)
-            slice = (int64_t)CWIST_JQ_MAX_POLL_SLICE_MS;
+        uint64_t remaining = now >= deadline ? 1 : deadline - now;
+        int64_t slice =
+            (int64_t)(remaining > CWIST_JQ_MAX_POLL_SLICE_MS ? CWIST_JQ_MAX_POLL_SLICE_MS
+                                                             : remaining);
         natsMsgList list;
         memset(&list, 0, sizeof(list));
         natsStatus s = natsSubscription_Fetch(&list, ns->sub, 1, slice, NULL);
@@ -866,6 +905,12 @@ static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cw
                 continue;
             }
             uint64_t delivered = meta->NumDelivered;
+            if (delivered > UINT32_MAX) {
+                natsMsg_Destroy(msg);
+                jsMsgMetaData_Destroy(meta);
+                natsMsgList_Destroy(&list);
+                return jq_err(CWIST_FAILURE);
+            }
             if (delivered > (uint64_t)q->max_retries) {
                 /* Max deliveries exhausted: park and terminate. */
                 jq_nats_dead_letter(ns, msg);
@@ -897,7 +942,7 @@ static cwist_error_t jq_nats_claim(cwist_job_queue_t *q, uint64_t timeout_ms, cw
                 j->type = cwist_strdup(type);
             j->attempts = (uint32_t)delivered;
             jsMsgMetaData_Destroy(meta);
-            if (!j->id || (j->payload_len && !j->payload)) {
+            if (!j->id || (type && *type && !j->type) || (j->payload_len && !j->payload)) {
                 cwist_job_free(j);
                 natsMsgList_Destroy(&list);
                 return jq_err(CWIST_ERROR_NOMEM);
@@ -920,7 +965,8 @@ static cwist_error_t jq_nats_ack(cwist_job_queue_t *q, cwist_job_t *job) {
     return s == NATS_OK ? jq_err(0) : jq_err(CWIST_FAILURE);
 }
 
-/** @brief NATS backend: nak the message (with retry delay if configured) and destroy it; job->backend is NULLed. */
+/** @brief NATS backend: nak the message (with retry delay if configured) and destroy it;
+ * job->backend is NULLed. */
 static cwist_error_t jq_nats_nack(cwist_job_queue_t *q, cwist_job_t *job) {
     natsStatus s;
     if (q->retry_delay_ms)
@@ -946,7 +992,8 @@ static cwist_error_t jq_nats_dead_count(cwist_job_queue_t *q, uint64_t *out_coun
 
 /* --- Dispatch ----------------------------------------------------------- */
 
-/** @brief Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are not touched. */
+/** @brief Destroy a queue and all backend resources it owns; NULL is a no-op. In-flight jobs are
+ * not touched. */
 void cwist_job_queue_destroy(cwist_job_queue_t *q) {
     if (!q) return;
     if (q->backend == 0) {
@@ -974,7 +1021,13 @@ void cwist_job_queue_destroy(cwist_job_queue_t *q) {
 cwist_error_t cwist_job_queue_enqueue(cwist_job_queue_t *q, const void *payload, size_t payload_len,
                                       const char *type) {
     if (!q || (!payload && payload_len)) return jq_err(CWIST_ERROR_INVALID_PARAM);
+    size_t type_len = type ? strlen(type) : 0;
+    if (type_len > UINT32_MAX || payload_len > SIZE_MAX - 8 - type_len)
+        return jq_err(CWIST_ERROR_INVALID_PARAM);
     if (!payload) payload = "";
+#ifdef CWIST_NATS
+    if (q->backend != 0 && payload_len > INT_MAX) return jq_err(CWIST_ERROR_INVALID_PARAM);
+#endif
     return q->backend == 0 ? jq_redis_enqueue(q, payload, payload_len, type)
                            : jq_nats_enqueue(q, payload, payload_len, type);
 }

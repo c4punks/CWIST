@@ -174,11 +174,19 @@ static void test_send_windows_and_pacing(void) {
     cwist_http2_stream_flow_control_init(&stream, 1, 0, 0);
 
     connection.send_window = CWIST_HTTP2_MAX_WINDOW - 4U;
+    assert(!cwist_http2_flow_control_add_send_window_checked(&connection, 10U));
+    assert(connection.send_window == CWIST_HTTP2_MAX_WINDOW - 4U);
     cwist_http2_flow_control_add_send_window(&connection, 10U);
-    assert(connection.send_window == CWIST_HTTP2_MAX_WINDOW);
+    assert(connection.send_window == 0);
     stream.send_window = CWIST_HTTP2_MAX_WINDOW - 4U;
+    assert(!cwist_http2_stream_flow_control_add_send_window_checked(&stream, 10U));
+    assert(stream.send_window == CWIST_HTTP2_MAX_WINDOW - 4U);
     cwist_http2_stream_flow_control_add_send_window(&stream, 10U);
-    assert(stream.send_window == CWIST_HTTP2_MAX_WINDOW);
+    assert(stream.send_window == 0);
+    assert(!cwist_http2_flow_control_add_send_window_checked(NULL, 1U));
+    assert(!cwist_http2_stream_flow_control_add_send_window_checked(NULL, 1U));
+    cwist_http2_flow_control_add_send_window(NULL, 1U);
+    cwist_http2_stream_flow_control_add_send_window(NULL, 1U);
 
     connection.send_window = 1000;
     stream.send_window = 700;

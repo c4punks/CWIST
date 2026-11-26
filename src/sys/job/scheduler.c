@@ -103,14 +103,16 @@ static void cond_deadline_after(uint64_t wait_ms, struct timespec *ts) {
  *
  * @param[out] cond Condition variable to initialize.
  */
-static void cond_init_monotonic(pthread_cond_t *cond) {
+static bool cond_init_monotonic(pthread_cond_t *cond) {
     pthread_condattr_t attr;
-    pthread_condattr_init(&attr);
+    if (pthread_condattr_init(&attr) != 0) return false;
+    bool ok = true;
 #if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
-    pthread_condattr_setclock(&attr, SCHED_COND_CLOCK);
+    ok = pthread_condattr_setclock(&attr, SCHED_COND_CLOCK) == 0;
 #endif
-    pthread_cond_init(cond, &attr);
+    if (ok) ok = pthread_cond_init(cond, &attr) == 0;
     pthread_condattr_destroy(&attr);
+    return ok;
 }
 
 /* --- Min-heap of delayed jobs ------------------------------------------- */
@@ -128,7 +130,12 @@ static void cond_init_monotonic(pthread_cond_t *cond) {
  */
 static int heap_grow(cwist_scheduler_t *s) {
     if (s->heap_count < s->heap_capacity) return 0;
-    size_t new_cap = s->heap_capacity ? s->heap_capacity * 2 : CWIST_SCHEDULER_HEAP_INIT;
+    size_t new_cap = s->heap_capacity ? s->heap_capacity : CWIST_SCHEDULER_HEAP_INIT;
+    if (s->heap_capacity) {
+        if (s->heap_capacity > SIZE_MAX / 2) return -1;
+        new_cap = s->heap_capacity * 2;
+    }
+    if (new_cap > SIZE_MAX / sizeof(scheduled_job_t)) return -1;
     scheduled_job_t *new_heap = cwist_realloc(s->heap, new_cap * sizeof(scheduled_job_t));
     if (!new_heap) return -1;
     /* s->heap is owned by the scheduler for its whole lifetime, not by
@@ -221,7 +228,8 @@ static void *scheduler_worker_thread(void *arg) {
  *
  * Waits on @p s->delayed_cond for delayed jobs. When the earliest deadline
  * arrives, the job is submitted to the io queue for execution by a worker;
- * otherwise it sleeps until the deadline with a timed wait. Exits when
+ * transient submission failures leave it on the heap for a short retry.
+ * Otherwise it sleeps until the deadline with a timed wait. Exits when
  * @p s->running becomes false.
  */
 static void *scheduler_timer_thread(void *arg) {
@@ -236,10 +244,14 @@ static void *scheduler_timer_thread(void *arg) {
 
         uint64_t current_ms = now_ms();
         if (s->heap[0].deadline_ms <= current_ms) {
-            scheduled_job_t job = heap_pop(s);
-            pthread_mutex_unlock(&s->delayed_mtx);
-            cwist_io_queue_submit(s->queue, job.func, job.arg);
-            pthread_mutex_lock(&s->delayed_mtx);
+            scheduled_job_t job = s->heap[0];
+            if (cwist_io_queue_submit(s->queue, job.func, job.arg)) {
+                (void)heap_pop(s);
+                continue;
+            }
+            struct timespec retry;
+            cond_deadline_after(1, &retry);
+            pthread_cond_timedwait(&s->delayed_cond, &s->delayed_mtx, &retry);
             continue;
         }
 
@@ -308,8 +320,19 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
     }
     s->worker_count = worker_count;
 
-    pthread_mutex_init(&s->delayed_mtx, NULL);
-    cond_init_monotonic(&s->delayed_cond);
+    if (pthread_mutex_init(&s->delayed_mtx, NULL) != 0) {
+        cwist_free(s->workers);
+        cwist_io_queue_destroy(s->queue);
+        cwist_free(s);
+        return NULL;
+    }
+    if (!cond_init_monotonic(&s->delayed_cond)) {
+        pthread_mutex_destroy(&s->delayed_mtx);
+        cwist_free(s->workers);
+        cwist_io_queue_destroy(s->queue);
+        cwist_free(s);
+        return NULL;
+    }
     s->running = true;
 
     for (size_t i = 0; i < worker_count; i++) {
@@ -349,8 +372,8 @@ cwist_scheduler_t *cwist_scheduler_create(size_t worker_count, size_t queue_capa
 void cwist_scheduler_destroy(cwist_scheduler_t *s) {
     if (!s) return;
 
-    s->running = false;
     pthread_mutex_lock(&s->delayed_mtx);
+    s->running = false;
     pthread_cond_broadcast(&s->delayed_cond);
     pthread_mutex_unlock(&s->delayed_mtx);
 
@@ -380,8 +403,11 @@ void cwist_scheduler_destroy(cwist_scheduler_t *s) {
  *         the queue submission failed.
  */
 bool cwist_scheduler_submit(cwist_scheduler_t *s, cwist_job_func func, void *arg) {
-    if (!s || !func || !s->running) return false;
-    return cwist_io_queue_submit(s->queue, func, arg);
+    if (!s || !func) return false;
+    pthread_mutex_lock(&s->delayed_mtx);
+    bool ok = s->running && cwist_io_queue_submit(s->queue, func, arg);
+    pthread_mutex_unlock(&s->delayed_mtx);
+    return ok;
 }
 
 /**
@@ -401,19 +427,25 @@ bool cwist_scheduler_submit(cwist_scheduler_t *s, cwist_job_func func, void *arg
  */
 bool cwist_scheduler_schedule(cwist_scheduler_t *s, cwist_job_func func, void *arg,
                               uint64_t delay_ms) {
-    if (!s || !func || !s->running) return false;
-    if (delay_ms == 0) {
-        return cwist_io_queue_submit(s->queue, func, arg);
-    }
-
+    if (!s || !func) return false;
     uint64_t current_ms = now_ms();
     if (delay_ms > UINT64_MAX - current_ms) return false;
-    scheduled_job_t job;
-    job.deadline_ms = current_ms + delay_ms;
-    job.func = func;
-    job.arg = arg;
+    scheduled_job_t job = {
+        .deadline_ms = current_ms + delay_ms,
+        .func = func,
+        .arg = arg,
+    };
 
     pthread_mutex_lock(&s->delayed_mtx);
+    if (!s->running) {
+        pthread_mutex_unlock(&s->delayed_mtx);
+        return false;
+    }
+    if (delay_ms == 0) {
+        bool ok = cwist_io_queue_submit(s->queue, func, arg);
+        pthread_mutex_unlock(&s->delayed_mtx);
+        return ok;
+    }
     size_t before = s->heap_count;
     heap_push(s, job);
     if (s->heap_count != before + 1) {

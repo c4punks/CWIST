@@ -41,11 +41,6 @@ cwist_gc_auto_rotated
 cwist_gc_raw
 cwist_gc_rotate
 cwist_gc_shutdown
-cwist_graphql_add_mutation
-cwist_graphql_add_query
-cwist_graphql_execute
-cwist_graphql_parse_subscription
-cwist_graphql_serve
 cwist_grpc_call_await_headers
 cwist_grpc_call_cancel
 cwist_grpc_call_committed
@@ -158,7 +153,6 @@ cwist_redis_pool_publish
 cwist_redis_publish
 cwist_redis_reply_free
 cwist_redis_select
-cwist_redis_subscribe
 cwist_reg_ptr
 cwist_reg_ptr_sized
 cwist_sched_p2c_select_worker

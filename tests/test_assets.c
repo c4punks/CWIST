@@ -2,6 +2,7 @@
 #include <cwist/sys/app/app.h>
 #include <cwist/sys/app/assets.h>
 #include <cwist/sys/app/test_client.h>
+#include "../src/sys/app/assets_internal.h"
 #include <cwist/core/crypto/sha256.h>
 #include <cwist/core/html/component.h>
 #include <cwist/core/html/css_composer.h>
@@ -71,6 +72,12 @@ static void test_serving(void) {
     snprintf(etag, sizeof(etag), "\"%s\"", h);
     const char *url = cwist_app_asset_url(app, "css/app.css");
     assert(url != NULL && strcmp(url, expected_url) == 0);
+    cwist_http_request *null_out_req = cwist_http_request_create();
+    assert(null_out_req != NULL);
+    null_out_req->method = CWIST_HTTP_GET;
+    assert(cwist_sstring_assign(null_out_req->path, url).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(!cwist_assets_match(app, null_out_req, NULL));
+    cwist_http_request_destroy(null_out_req);
 
     cwist_test_client *client = cwist_test_client_create(app);
     cwist_http_response *res = get(client, url, NULL);

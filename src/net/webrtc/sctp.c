@@ -195,24 +195,28 @@ static int dcep_send(struct cwist_webrtc_conn *conn, uint16_t channel, uint8_t t
 static void dispatch_message(struct cwist_webrtc_conn *conn, uint16_t sid, uint32_t ppid,
                              const uint8_t *msg, size_t datalen) {
     if (ppid == PPID_DCEP && datalen >= 1) {
-        if (msg[0] == DCEP_OPEN && datalen >= 12) {
+        if (msg[0] == DCEP_OPEN) {
+            if (datalen < 12) return;
             uint16_t label_len = (uint16_t)((uint16_t)msg[8] << 8 | msg[9]);
-            char label[201];
-            size_t n = label_len;
-            if (n > sizeof(label) - 1) n = sizeof(label) - 1;
-            if (12 + n > datalen) n = datalen - 12;
-            memcpy(label, msg + 12, n);
-            label[n] = '\0';
-            ch_set(conn, sid, 0);
-            dcep_send(conn, sid, DCEP_ACK, NULL);
-            cwist_webrtc_conn_on_channel_open(conn, sid, label);
+            uint16_t protocol_len = (uint16_t)((uint16_t)msg[10] << 8 | msg[11]);
+            if ((size_t)label_len + protocol_len != datalen - 12) return;
+            char *label = cwist_alloc((size_t)label_len + 1);
+            if (!label) return;
+            memcpy(label, msg + 12, label_len);
+            label[label_len] = '\0';
+            if (!ch_get(conn, sid, 0) && ch_set(conn, sid, 0) == 0) {
+                dcep_send(conn, sid, DCEP_ACK, NULL);
+                cwist_webrtc_conn_on_channel_open(conn, sid, label);
+            }
+            cwist_free(label);
         }
         /* ACK (0x02): the channel we opened is confirmed; nothing to do. */
     } else if (ppid == PPID_BINARY) {
         cwist_webrtc_conn_on_message(conn, sid, msg, datalen, 0);
     } else if (ppid == PPID_STRING) {
         cwist_webrtc_conn_on_message(conn, sid, msg, datalen, 1);
-    } else if (ppid == PPID_BINARY_EMPTY || ppid == PPID_STRING_EMPTY) {
+    } else if ((ppid == PPID_BINARY_EMPTY || ppid == PPID_STRING_EMPTY) && datalen == 1 &&
+               msg[0] == 0) {
         /* SCTP cannot carry a zero-length message: the 0x00 is padding. */
         cwist_webrtc_conn_on_message(conn, sid, msg, 0, ppid == PPID_STRING_EMPTY);
     }

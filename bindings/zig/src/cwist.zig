@@ -292,7 +292,7 @@ pub const OwnedResponse = struct {
 /// A deferred HTTP response handle obtained inside a route handler.
 /// Can be sent to background threads or event loops to be completed asynchronously.
 pub const AsyncResponse = struct {
-    raw: *c.cwist_async,
+    raw: ?*c.cwist_async,
 
     /// Defers the response for the current request.
     /// Returns null if already deferred, during in-memory dispatch, or if allocation fails.
@@ -304,49 +304,63 @@ pub const AsyncResponse = struct {
         return .{ .raw = handle.? };
     }
 
+    fn take(self: *AsyncResponse) ?*c.cwist_async {
+        const raw = self.raw orelse return null;
+        self.raw = null;
+        return raw;
+    }
+
     /// Sets a timeout in milliseconds. If still pending upon expiry, answers with 504.
     pub fn setTimeout(self: AsyncResponse, ms: u64) void {
-        c.cwist_async_set_timeout(self.raw, ms);
+        if (self.raw) |raw| c.cwist_async_set_timeout(raw, ms);
     }
 
     /// Completes the exchange with a status code, content-type and body.
-    /// Returns true if this was the first completion call to win.
-    pub fn respond(self: AsyncResponse, status_code: u16, content_type: [:0]const u8, body_bytes: []const u8) bool {
+    /// Consumes the handle and returns true if this was the first completion call to win.
+    pub fn respond(self: *AsyncResponse, status_code: u16, content_type: [:0]const u8, body_bytes: []const u8) bool {
+        const raw = self.take() orelse return false;
         const ok = c.cwist_async_respond(
-            self.raw,
+            raw,
             status_code,
             content_type.ptr,
             body_bytes.ptr,
             body_bytes.len,
         );
-        c.cwist_async_release(self.raw);
+        c.cwist_async_release(raw);
         return ok;
     }
 
     /// Completes the exchange with a caller-constructed `OwnedResponse`.
-    /// On success CWIST takes ownership of the response.
-    pub fn respondWith(self: AsyncResponse, res: *OwnedResponse) bool {
-        const ok = c.cwist_async_respond_with(self.raw, res.raw);
+    /// Consumes the handle. On success CWIST takes ownership of the response.
+    pub fn respondWith(self: *AsyncResponse, res: *OwnedResponse) bool {
+        const raw = self.take() orelse {
+            res.deinit();
+            return false;
+        };
+        const ok = c.cwist_async_respond_with(raw, res.raw);
         if (!ok) {
             res.deinit();
         }
         res.* = undefined;
-        c.cwist_async_release(self.raw);
+        c.cwist_async_release(raw);
         return ok;
     }
 
     /// Completes the exchange with an error status and closes the connection.
-    pub fn abort(self: AsyncResponse, status_code: u16) bool {
-        const ok = c.cwist_async_abort(self.raw, status_code);
-        c.cwist_async_release(self.raw);
+    /// Consumes the handle.
+    pub fn abort(self: *AsyncResponse, status_code: u16) bool {
+        const raw = self.take() orelse return false;
+        const ok = c.cwist_async_abort(raw, status_code);
+        c.cwist_async_release(raw);
         return ok;
     }
 
     /// Drops the handle without explicit completion, responding with 500.
+    /// Does nothing after the handle has been completed.
     pub fn deinit(self: *AsyncResponse) void {
-        _ = c.cwist_async_abort(self.raw, c.CWIST_HTTP_INTERNAL_ERROR);
-        c.cwist_async_release(self.raw);
-        self.* = undefined;
+        const raw = self.take() orelse return;
+        _ = c.cwist_async_abort(raw, c.CWIST_HTTP_INTERNAL_ERROR);
+        c.cwist_async_release(raw);
     }
 };
 
@@ -769,4 +783,35 @@ test "AsyncResponse defer behavior in dispatch" {
     defer testing.allocator.free(out);
     try testing.expect(std.mem.startsWith(u8, out, "HTTP/1.1 200"));
     try testing.expectEqualStrings("in-memory dispatch refused defer", bodyOf(out));
+}
+
+fn newTestAsync() ?AsyncResponse {
+    const req = c.cwist_http_request_create();
+    if (req == null) return null;
+    const res = c.cwist_http_response_create();
+    if (res == null) {
+        c.cwist_http_request_destroy(req);
+        return null;
+    }
+    req.*.client_fd = -1;
+    req.*.keep_alive = false;
+    const raw = c.cwist_async_defer(req, res);
+    if (raw == null) {
+        c.cwist_http_request_destroy(req);
+        c.cwist_http_response_destroy(res);
+        return null;
+    }
+    _ = c.cwist_async_retain(raw);
+    c.cwist_async_dispatch_ack(raw);
+    return .{ .raw = raw.? };
+}
+
+test "AsyncResponse completion consumes the handle" {
+    const maybe_async = newTestAsync();
+    try testing.expect(maybe_async != null);
+    var async = maybe_async.?;
+    try testing.expect(async.respond(200, "text/plain", "ok"));
+    try testing.expect(!async.respond(200, "text/plain", "again"));
+    try testing.expect(!async.abort(500));
+    async.deinit();
 }

@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include <cwist/core/utils/json_heal.h>
 #include "number_internal.h"
+#include "json_internal.h"
 #include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <errno.h>
@@ -157,12 +158,12 @@ static void remove_trailing_commas(strbuf_t *b) {
  * @param log Optional recovery log (NULL-safe).
  * @param log_sz Size of @p log in bytes.
  */
-static void balance_brackets(strbuf_t *b, char *log, size_t log_sz) {
+static bool balance_brackets(strbuf_t *b, char *log, size_t log_sz) {
     cwist_scratch_t stack_s CWIST_SCRATCH_DEFER = {0};
     char *stack = (char *)cwist_scratch_alloc(&stack_s, b->len + 1);
     if (!stack) {
         log_append(log, log_sz, "[L1] bracket-balance skipped (alloc failure); ");
-        return;
+        return false;
     }
     int top = 0;
     bool in_string = false;
@@ -203,7 +204,10 @@ static void balance_brackets(strbuf_t *b, char *log, size_t log_sz) {
         log_append(log, log_sz, msg);
     }
 
-    while (top > 0) strbuf_push(b, stack[--top]);
+    while (top > 0) {
+        if (!strbuf_push(b, stack[--top])) return false;
+    }
+    return true;
 }
 
 /**
@@ -244,19 +248,19 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
         char c = *p;
         if (esc) {
             esc = false;
-            strbuf_push(&b, c);
+            if (!strbuf_push(&b, c)) goto oom;
             p++;
             continue;
         }
         if (c == '\\' && in_str) {
             esc = true;
-            strbuf_push(&b, c);
+            if (!strbuf_push(&b, c)) goto oom;
             p++;
             continue;
         }
         if (c == '"') {
             in_str = !in_str;
-            strbuf_push(&b, c);
+            if (!strbuf_push(&b, c)) goto oom;
             p++;
             continue;
         }
@@ -265,13 +269,13 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
             stripped = true;
             continue;
         }
-        strbuf_push(&b, c);
+        if (!strbuf_push(&b, c)) goto oom;
         p++;
     }
     if (stripped) log_append(log, log_sz, "[L1] removed line comment(s); ");
 
     /* 3. Balance brackets */
-    balance_brackets(&b, log, log_sz);
+    if (!balance_brackets(&b, log, log_sz)) goto oom;
 
     /* 4. Fix trailing commas (including before newly balanced closers) */
     size_t old_len = b.len;
@@ -280,12 +284,13 @@ static char *l1_heal(const char *input, char *log, size_t log_sz) {
 
     /* 5. Try to parse */
     cJSON *test = cJSON_ParseWithOpts(b.data, NULL, true);
-    if (!test) {
-        strbuf_free(&b);
-        return NULL;
-    }
+    if (!test) goto oom;
     cJSON_Delete(test);
     return b.data; /* caller owns (cwist_alloc backing) */
+
+oom:
+    strbuf_free(&b);
+    return NULL;
 }
 
 /* ==========================================================================
@@ -340,13 +345,28 @@ static cJSON *find_fuzzy(cJSON *obj, const char *name, const char **found_key) {
  * @param log_sz Size of @p log in bytes.
  * @return Number of changes (renames + coercions) applied; negative on invalid arguments.
  */
+static bool json_replace_item(cJSON *obj, const char *name, cJSON *item) {
+    if (cJSON_ReplaceItemInObjectCaseSensitive(obj, name, item)) return true;
+    cJSON_Delete(item);
+    return false;
+}
+
+static bool json_number_is_int(double value) {
+    double intpart;
+    return cwist_number_double_is_finite(value) && modf(value, &intpart) == 0.0 &&
+           value >= -9007199254740991.0 && value <= 9007199254740991.0;
+}
+
 int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log, size_t log_sz) {
-    if (!obj || !schema || !cJSON_IsObject(obj)) return -1;
+    if (!obj || !schema || !cJSON_IsObject(obj) || schema->field_count < 0 ||
+        (schema->field_count > 0 && !schema->fields))
+        return -1;
 
     int changes = 0;
 
     for (int fi = 0; fi < schema->field_count; fi++) {
         const cwist_schema_field_t *fd = &schema->fields[fi];
+        if (!fd->name || !fd->name[0]) return -1;
 
         /* ---- Locate the field in the JSON object ---- */
         cJSON *item = NULL;
@@ -394,12 +414,19 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
                  * the matched item's own key, which the delete frees (#980). */
                 char msg[128];
                 snprintf(msg, sizeof(msg), "[L2] '%s'→'%s'; ", found_as, fd->name);
-                cJSON_DetachItemViaPointer(obj, item);
-                cJSON_Delete(item);
-                cJSON_AddItemToObject(obj, fd->name, clone);
-                item = clone;
-                log_append(log, log_sz, msg);
-                changes++;
+                if (cJSON_AddItemToObject(obj, fd->name, clone)) {
+                    cJSON *original = cJSON_DetachItemViaPointer(obj, item);
+                    if (original) {
+                        cJSON_Delete(original);
+                        item = clone;
+                        log_append(log, log_sz, msg);
+                        changes++;
+                    } else {
+                        cJSON_DeleteItemFromObjectCaseSensitive(obj, fd->name);
+                    }
+                } else {
+                    cJSON_Delete(clone);
+                }
             }
         }
 
@@ -408,7 +435,11 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
         switch (fd->type) {
             case CWIST_FIELD_STRING: type_ok = cJSON_IsString(item); break;
             case CWIST_FIELD_INT:
-            case CWIST_FIELD_FLOAT: type_ok = cJSON_IsNumber(item); break;
+                type_ok = cJSON_IsNumber(item) && json_number_is_int(item->valuedouble);
+                break;
+            case CWIST_FIELD_FLOAT:
+                type_ok = cJSON_IsNumber(item) && cwist_number_double_is_finite(item->valuedouble);
+                break;
             case CWIST_FIELD_BOOL: type_ok = cJSON_IsBool(item); break;
             case CWIST_FIELD_OBJECT: type_ok = cJSON_IsObject(item); break;
             case CWIST_FIELD_ARRAY: type_ok = cJSON_IsArray(item); break;
@@ -425,10 +456,11 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
             char *end = NULL;
             errno = 0;
             double v = strtod(item->valuestring, &end);
-            if (end && *end == '\0' && errno != ERANGE && cwist_number_double_is_finite(v)) {
+            if (end && end != item->valuestring && *end == '\0' && errno != ERANGE &&
+                cwist_number_double_is_finite(v) &&
+                (fd->type == CWIST_FIELD_FLOAT || json_number_is_int(v))) {
                 cJSON *num = cJSON_CreateNumber(v);
-                if (num) {
-                    cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, num);
+                if (num && json_replace_item(obj, fd->name, num)) {
                     snprintf(msg, sizeof(msg), "[L2] '%s': str→num; ", fd->name);
                     log_append(log, log_sz, msg);
                     changes++;
@@ -440,8 +472,7 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
             char numstr[64];
             cwist_number_format_double(numstr, sizeof(numstr), item->valuedouble);
             cJSON *str = cJSON_CreateString(numstr);
-            if (str) {
-                cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, str);
+            if (str && json_replace_item(obj, fd->name, str)) {
                 snprintf(msg, sizeof(msg), "[L2] '%s': num→str; ", fd->name);
                 log_append(log, log_sz, msg);
                 changes++;
@@ -457,7 +488,7 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
             if (bval >= 0) {
                 cJSON *bj = bval ? cJSON_CreateTrue() : cJSON_CreateFalse();
                 if (bj) {
-                    cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, bj);
+                    if (!json_replace_item(obj, fd->name, bj)) continue;
                     snprintf(msg, sizeof(msg), "[L2] '%s': str→bool; ", fd->name);
                     log_append(log, log_sz, msg);
                     changes++;
@@ -465,10 +496,10 @@ int cwist_json_schema_align(cJSON *obj, const cwist_schema_t *schema, char *log,
             }
         }
         /* Number 0/1 → Bool */
-        else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsNumber(item)) {
-            cJSON *bj = (item->valuedouble != 0.0) ? cJSON_CreateTrue() : cJSON_CreateFalse();
-            if (bj) {
-                cJSON_ReplaceItemInObjectCaseSensitive(obj, fd->name, bj);
+        else if (fd->type == CWIST_FIELD_BOOL && cJSON_IsNumber(item) &&
+                 (item->valuedouble == 0.0 || item->valuedouble == 1.0)) {
+            cJSON *bj = item->valuedouble == 1.0 ? cJSON_CreateTrue() : cJSON_CreateFalse();
+            if (bj && json_replace_item(obj, fd->name, bj)) {
                 snprintf(msg, sizeof(msg), "[L2] '%s': num→bool; ", fd->name);
                 log_append(log, log_sz, msg);
                 changes++;
@@ -499,7 +530,7 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     cwist_heal_result_t result;
     memset(&result, 0, sizeof(result));
 
-    if (!input) return result;
+    if (!input || cwist_json_has_nul_escape(input)) return result;
 
     double threshold = (cfg && cfg->threshold > 0.0) ? cfg->threshold : 0.8;
 
@@ -548,7 +579,9 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
     if (cfg && cfg->sllm_fn) {
         char *recovered = cfg->sllm_fn(input, cfg->schema, cfg->sllm_userdata);
         if (recovered) {
-            parsed = cJSON_ParseWithOpts(recovered, NULL, true);
+            parsed = cwist_json_has_nul_escape(recovered)
+                         ? NULL
+                         : cJSON_ParseWithOpts(recovered, NULL, true);
             free(recovered); /* SLLM callback uses plain malloc per contract */
             if (parsed) {
                 result.level = 3;
@@ -572,9 +605,9 @@ cwist_heal_result_t cwist_json_heal(const char *input, const cwist_heal_config_t
  */
 void cwist_heal_result_free(cwist_heal_result_t *r) {
     if (!r) return;
-    /* result.json comes from cJSON_PrintUnformatted → plain malloc */
+    /* result.json comes from cJSON_PrintUnformatted and uses cJSON hooks. */
     if (r->json) {
-        free(r->json);
+        cJSON_free(r->json);
         r->json = NULL;
     }
 }

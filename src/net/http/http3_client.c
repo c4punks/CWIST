@@ -473,10 +473,11 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
         if (hset) {
             h3c_hset_t *hs = hset;
             st->res = cwist_http_response_create();
+            bool malformed = !st->res;
             /* RFC 9114 section 4.3.2: exactly one :status, three digits,
              * before any regular field; otherwise the response is malformed
              * (section 4.1.2) and the request fails. */
-            bool status_seen = false, regular_seen = false, malformed = false;
+            bool status_seen = false, regular_seen = false;
             size_t i;
             for (i = 0; i < hs->count && st->res; ++i) {
                 const char *raw_name = lsxpack_header_get_name(&hs->headers[i]);
@@ -493,6 +494,7 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 if (!name || !value) {
                     free(name);
                     free(value);
+                    malformed = true;
                     break;
                 }
                 memcpy(name, raw_name, name_len);
@@ -513,7 +515,9 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                     malformed = true; /* no other response pseudo-header exists */
                 } else {
                     regular_seen = true;
-                    cwist_http_header_add(&st->res->headers, name, value);
+                    cwist_error_t header_err = cwist_http_header_add(&st->res->headers, name, value);
+                    if (!cwist_error_is_ok(&header_err)) malformed = true;
+                    cwist_error_dispose(&header_err);
                 }
                 free(value);
                 free(name);
@@ -593,7 +597,14 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
 
     if (nread == 0) {
         if (st->resp_body_len > 0 && st->res && st->res->body) {
-            cwist_sstring_assign_len(st->res->body, st->resp_body, st->resp_body_len);
+            cwist_error_t body_err =
+                cwist_sstring_assign_len(st->res->body, st->resp_body, st->resp_body_len);
+            if (!cwist_error_is_ok(&body_err)) {
+                cwist_error_dispose(&body_err);
+                lsquic_stream_close(stream);
+                return;
+            }
+            cwist_error_dispose(&body_err);
         }
         st->response_complete = 1;
         st->response_ready = 1;

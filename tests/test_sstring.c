@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 void test_trim() {
     printf("Testing trim...\n");
@@ -56,6 +57,12 @@ void test_trim() {
     assert(s->borrows_buffer == false); /* safely detached */
     assert(strcmp(borrowed_copy, orig) == 0); /* original borrowed source remains intact */
 
+    const char exact_borrowed[4] = {' ', 'a', 'b', 'c'};
+    assert(cwist_sstring_borrow(s, exact_borrowed, sizeof(exact_borrowed)).error.err_i8 ==
+           ERR_SSTRING_OKAY);
+    assert(cwist_sstring_ltrim(s).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(s->size == 3 && memcmp(s->data, "abc", 3) == 0 && s->data[3] == '\0');
+
     cwist_sstring_destroy(s);
     printf("Passed trim.\n");
 }
@@ -100,6 +107,15 @@ void test_seek() {
     cwist_sstring_seek(s, buffer, 2);
     assert(strcmp(buffer, "cdef") == 0);
 
+    const char exact[3] = {'a', 'b', 'c'};
+    assert(cwist_sstring_borrow(s, exact, sizeof(exact)).error.err_i8 == ERR_SSTRING_OKAY);
+    char copy[4];
+    assert(cwist_sstring_copy(s, copy).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(memcmp(copy, "abc", 4) == 0);
+    char suffix[3];
+    assert(cwist_sstring_seek(s, suffix, 1).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(memcmp(suffix, "bc", 3) == 0);
+
     cwist_sstring_destroy(s);
     printf("Passed seek.\n");
 }
@@ -124,6 +140,22 @@ void test_compare() {
     assert(cwist_sstring_compare(empty_assigned, NULL) == 0);
     cwist_sstring_destroy(empty_new);
     cwist_sstring_destroy(empty_assigned);
+
+    const char exact[3] = {'a', 'b', 'c'};
+    cwist_sstring *right = cwist_sstring_create();
+    assert(right != NULL);
+    cwist_sstring_assign(right, "abc");
+    assert(cwist_sstring_borrow(s, exact, sizeof(exact)).error.err_i8 == ERR_SSTRING_OKAY);
+    assert(cwist_sstring_compare(s, "abc") == 0);
+    assert(cwist_sstring_compare_sstring(s, right) == 0);
+
+    const char with_nul[3] = {'a', '\0', 'b'};
+    assert(cwist_sstring_assign_len(s, with_nul, sizeof(with_nul)).error.err_i8 == ERR_SSTRING_OKAY);
+    cwist_sstring_assign(right, "a");
+    assert(cwist_sstring_compare(s, "a") == 0);
+    assert(cwist_sstring_compare(s, "ab") < 0);
+    assert(cwist_sstring_compare_sstring(s, right) == 0);
+    cwist_sstring_destroy(right);
 
     cwist_sstring_destroy(s);
     printf("Passed compare.\n");
@@ -312,7 +344,24 @@ void test_adopt_region() {
     printf("Passed adopt_region.\n");
 }
 
+static void test_length_overflow(void) {
+    cwist_sstring *s = cwist_sstring_create();
+    assert(s != NULL);
+    char byte = 'x';
+    s->size = SIZE_MAX - 1;
+    cwist_error_t err = cwist_sstring_append_len(s, &byte, 1);
+    assert(err.error.err_i8 == ERR_SSTRING_RESIZE_TOO_LARGE);
+    s->size = SIZE_MAX;
+    err = cwist_sstring_append_len(s, &byte, 1);
+    assert(err.error.err_i8 == ERR_SSTRING_RESIZE_TOO_LARGE);
+    s->size = 0;
+    err = cwist_sstring_append_len(s, &byte, SIZE_MAX);
+    assert(err.error.err_i8 == ERR_SSTRING_RESIZE_TOO_LARGE);
+    cwist_sstring_destroy(s);
+}
+
 int main() {
+    test_length_overflow();
     test_trim();
     test_resize();
     test_seek();

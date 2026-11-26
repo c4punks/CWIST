@@ -4,6 +4,25 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef CWIST_TEST_WRAP
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc) return NULL;
+    return __real_cwist_alloc(size);
+}
+
+static void test_render_allocation_failure(void) {
+    cwist_html_element_t *el = cwist_html_element_create("div");
+    assert(el != NULL);
+    cwist_html_element_set_text(el, "text");
+    fail_alloc = 2;
+    assert(cwist_html_render(el) == NULL);
+    fail_alloc = 0;
+    cwist_html_element_destroy(el);
+}
+#endif
+
 void test_basic_element(void) {
     cwist_html_element_t *div = cwist_html_element_create("div");
     assert(div != NULL);
@@ -133,7 +152,22 @@ static void test_invalid_names(void) {
     printf("Passed test_invalid_names\n");
 }
 
+static void test_raw_text_end_tag_delimiters(void) {
+    cwist_html_element_t *script = cwist_html_element_create("script");
+    assert(script != NULL);
+    cwist_html_element_set_text(script, "</scripture> </script> </scriptx>");
+    cwist_sstring *rendered = cwist_html_render(script);
+    assert(rendered != NULL);
+    assert(strcmp(rendered->data, "<script></scripture> <\\/script> </scriptx></script>") == 0);
+    cwist_sstring_destroy(rendered);
+    cwist_html_element_destroy(script);
+}
+
 int main(void) {
+#ifdef CWIST_TEST_WRAP
+    test_render_allocation_failure();
+#endif
+    test_raw_text_end_tag_delimiters();
     test_basic_element();
     test_attribute_escaping();
     test_boolean_and_numeric_attributes();

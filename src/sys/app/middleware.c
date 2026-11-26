@@ -635,24 +635,52 @@ cwist_middleware_func cwist_mw_rate_limit_ip(int requests_per_minute) {
  */
 void cwist_mw_cors_handler(cwist_http_request *req, cwist_http_response *res,
                            cwist_handler_func next) {
+    if (!req || !res) return;
+
     // Add standard CORS headers
-    cwist_http_header_add(&res->headers, "Access-Control-Allow-Origin", "*");
+    cwist_error_t err = cwist_http_header_add(&res->headers, "Access-Control-Allow-Origin", "*");
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+        return;
+    }
+    cwist_error_dispose(&err);
 
     // Handle Preflight (OPTIONS)
     if (req->method == CWIST_HTTP_OPTIONS && cwist_http_header_get(req->headers, "Origin") &&
         cwist_http_header_get(req->headers, "Access-Control-Request-Method")) {
-        cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods",
-                              "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
-        cwist_http_header_add(&res->headers, "Access-Control-Allow-Headers",
-                              "Content-Type, Authorization, X-Request-Id, X-CSRF-Token");
-        cwist_http_header_add(&res->headers, "Access-Control-Max-Age", "86400"); // 24 hours
+        err = cwist_http_header_add(&res->headers, "Access-Control-Allow-Methods",
+                                    "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
+        if (!cwist_error_is_ok(&err)) {
+            cwist_error_dispose(&err);
+            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            return;
+        }
+        cwist_error_dispose(&err);
+
+        err = cwist_http_header_add(&res->headers, "Access-Control-Allow-Headers",
+                                    "Content-Type, Authorization, X-Request-Id, X-CSRF-Token");
+        if (!cwist_error_is_ok(&err)) {
+            cwist_error_dispose(&err);
+            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            return;
+        }
+        cwist_error_dispose(&err);
+
+        err = cwist_http_header_add(&res->headers, "Access-Control-Max-Age", "86400"); // 24 hours
+        if (!cwist_error_is_ok(&err)) {
+            cwist_error_dispose(&err);
+            res->status_code = CWIST_HTTP_INTERNAL_ERROR;
+            return;
+        }
+        cwist_error_dispose(&err);
 
         res->status_code = CWIST_HTTP_NO_CONTENT; // 204 No Content
         // Short-circuit: do not call next()
         return;
     }
 
-    next(req, res);
+    if (next) next(req, res);
 }
 
 /**

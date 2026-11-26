@@ -340,13 +340,21 @@ bool cwist_async_respond(cwist_async *a, cwist_http_status_t status, const char 
     pthread_mutex_lock(&a->mu);
     cwist_http_response *res = a->res;
     res->status_code = status;
-    cwist_sstring_assign(res->status_text, (char *)cwist_async_reason(status));
+    bool ok = true;
+    cwist_error_t status_err = cwist_sstring_assign(res->status_text, (char *)cwist_async_reason(status));
+    ok = ok && cwist_error_is_ok(&status_err);
+    cwist_error_dispose(&status_err);
     if (body && len > 0) {
-        cwist_sstring_assign_len(res->body, (const char *)body, len);
+        cwist_error_t body_err = cwist_sstring_assign_len(res->body, (const char *)body, len);
+        ok = ok && cwist_error_is_ok(&body_err);
+        cwist_error_dispose(&body_err);
     }
     if (content_type) {
-        cwist_http_header_add(&res->headers, "Content-Type", content_type);
+        cwist_error_t header_err = cwist_http_header_add(&res->headers, "Content-Type", content_type);
+        ok = ok && cwist_error_is_ok(&header_err);
+        cwist_error_dispose(&header_err);
     }
+    if (!ok) res->status_code = CWIST_HTTP_INTERNAL_ERROR;
     bool deliver = cwist_async_publish_locked(a);
     pthread_mutex_unlock(&a->mu);
     if (deliver) cwist_async_deliver(a);

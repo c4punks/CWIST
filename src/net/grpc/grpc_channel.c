@@ -29,6 +29,7 @@
 #include <cwist/core/mem/alloc.h>
 #include <cjson/cJSON.h>
 #include <arpa/inet.h>
+#include <limits.h>
 #include <netdb.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -478,7 +479,11 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, c
         if (mc->has_timeout && (eff_timeout == 0 || mc->timeout_ms < eff_timeout))
             eff_timeout = mc->timeout_ms;
     }
-    uint64_t deadline = eff_timeout ? channel_now_ms() + eff_timeout : 0;
+    uint64_t deadline = 0;
+    if (eff_timeout) {
+        uint64_t now = channel_now_ms();
+        deadline = eff_timeout > UINT64_MAX - now ? UINT64_MAX : now + eff_timeout;
+    }
     int buffer_ok = request_len <= ch->buffer_limit;
     uint32_t max_attempts = 1;
     uint32_t mask = 0;
@@ -519,7 +524,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, c
                 if (backoff > (double)policy->max_backoff_ms)
                     backoff = (double)policy->max_backoff_ms;
                 if (deadline) {
-                    uint64_t left = deadline - channel_now_ms();
+                    now = channel_now_ms();
+                    uint64_t left = now < deadline ? deadline - now : 0;
                     if (delay > left) delay = left;
                 }
                 channel_sleep_ms(delay);
@@ -606,7 +612,8 @@ cwist_grpc_channel_call *cwist_grpc_channel_call_start(cwist_grpc_channel *ch, c
         cwist_grpc_call_destroy(call);
         channel_release(ch, sub);
         if (deadline) {
-            uint64_t left = deadline - channel_now_ms();
+            now = channel_now_ms();
+            uint64_t left = now < deadline ? deadline - now : 0;
             if (delay > left) delay = left;
         }
         channel_sleep_ms(delay);
@@ -688,12 +695,12 @@ uint32_t cwist_grpc_channel_call_attempts(const cwist_grpc_channel_call *cc) {
 
 /** @brief Convenience blocking unary RPC: start, read one response, finish.
  *
- * On CWIST_GRPC_OK the first response message is copied into @p response
- * (caller-owned; freed with cwist_free) with its length in @p response_len;
- * extra messages are discarded.  On any other status the response is freed
- * and NULL/0 is returned.  Output pointers may be NULL to discard the
- * corresponding value.  @p status_message, when non-NULL on entry, receives
- * an allocated copy of the server status message.
+ * On CWIST_GRPC_OK the response message is copied into @p response
+ * (caller-owned; freed with cwist_free) with its length in @p response_len.
+ * Missing or additional response messages produce CWIST_GRPC_INTERNAL. On any
+ * other status the response is freed and NULL/0 is returned. Output pointers
+ * may be NULL to discard the corresponding value. @p status_message, when
+ * non-NULL on entry, receives an allocated copy of the server status message.
  *
  * @return the final gRPC status (CWIST_GRPC_INTERNAL if the call could not start)
  */
@@ -710,15 +717,30 @@ cwist_grpc_status_t cwist_grpc_channel_unary(cwist_grpc_channel *ch, const char 
 
     uint8_t *copy = NULL;
     size_t copy_len = 0;
-    cwist_grpc_message msg;
+    size_t first_len = 0;
+    bool got_message = false;
+    bool multiple_messages = false;
+    cwist_grpc_message msg = {0};
     if (cwist_grpc_channel_call_recv(cc, &msg) == 1) {
+        got_message = true;
+        first_len = msg.len;
         copy = cwist_alloc(msg.len ? msg.len : 1);
         if (copy && msg.len) memcpy(copy, msg.data, msg.len);
         copy_len = copy ? msg.len : 0;
-        while (cwist_grpc_channel_call_recv(cc, &msg) == 1); /* unary: ignore trailing messages */
+        while (cwist_grpc_channel_call_recv(cc, &msg) == 1) multiple_messages = true;
     }
     const char *sm = NULL;
     cwist_grpc_status_t status = cwist_grpc_channel_call_finish(cc, &sm);
+    if (status == CWIST_GRPC_OK && !got_message) {
+        status = CWIST_GRPC_INTERNAL;
+        sm = "missing unary response message";
+    } else if (status == CWIST_GRPC_OK && multiple_messages) {
+        status = CWIST_GRPC_INTERNAL;
+        sm = "multiple unary response messages";
+    } else if (status == CWIST_GRPC_OK && first_len > 0 && !copy) {
+        status = CWIST_GRPC_INTERNAL;
+        sm = "out of memory";
+    }
     if (status_message && sm) *status_message = channel_strdup(sm);
     cwist_grpc_channel_call_destroy(cc);
 
@@ -1119,6 +1141,7 @@ static int grpc_json_retry_policy(const cJSON *obj, cwist_grpc_retry_policy *out
     const cJSON *mult = cJSON_GetObjectItemCaseSensitive(obj, "backoffMultiplier");
     const cJSON *codes = cJSON_GetObjectItemCaseSensitive(obj, "retryableStatusCodes");
     if (!cJSON_IsNumber(max_attempts) || max_attempts->valuedouble < 2 ||
+        max_attempts->valuedouble > 1000 ||
         max_attempts->valuedouble != (double)(int)max_attempts->valuedouble)
         return -1;
     uint64_t initial_ms, max_ms;
@@ -1168,7 +1191,7 @@ static void grpc_json_free_mc_list(grpc_method_config *list) {
  */
 int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const char *json) {
     if (!ch || !json) return -1;
-    cJSON *root = cJSON_Parse(json);
+    cJSON *root = cJSON_ParseWithOpts(json, NULL, true);
     if (!cJSON_IsObject(root)) {
         cJSON_Delete(root);
         return -1;
@@ -1219,7 +1242,8 @@ int cwist_grpc_channel_apply_service_config_json(cwist_grpc_channel *ch, const c
         const cJSON *max_tokens = cJSON_GetObjectItemCaseSensitive(rt, "maxTokens");
         const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(rt, "tokenRatio");
         if (!cJSON_IsNumber(max_tokens) || max_tokens->valuedouble <= 0 ||
-            max_tokens->valuedouble > 1000 || !cJSON_IsNumber(ratio) || ratio->valuedouble <= 0)
+            max_tokens->valuedouble > 1000 || !cJSON_IsNumber(ratio) || ratio->valuedouble <= 0 ||
+            ratio->valuedouble > (double)INT_MAX / 1000.0)
             goto invalid;
         throttle.max_tokens = max_tokens->valuedouble;
         /* A6: decimal places beyond 3 are ignored */

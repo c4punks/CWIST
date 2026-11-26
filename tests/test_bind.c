@@ -10,6 +10,18 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef CWIST_TEST_WRAP
+static int fail_alloc;
+void *__real_cwist_alloc(size_t size);
+void *__wrap_cwist_alloc(size_t size) {
+    if (fail_alloc > 0) {
+        fail_alloc--;
+        return NULL;
+    }
+    return __real_cwist_alloc(size);
+}
+#endif
+
 typedef struct {
     char email[128];
     int age;
@@ -75,14 +87,13 @@ void test_bind_missing_required(void) {
 void test_bind_invalid_email(void) {
     printf("test_bind_invalid_email...\n");
     static const char *invalid[] = {
-        "not-an-email", "a b@c.d", "x@@y.z", "a@b..c", "a@-b.c", ".a@b.c",
-        "a..b@c.d", "a@b.c\\r\\nBcc: victim@example.com",
+        "not-an-email", "a b@c.d", "x@@y.z",   "a@b..c",
+        "a@-b.c",       ".a@b.c",  "a..b@c.d", "a@b.c\\r\\nBcc: victim@example.com",
     };
     for (size_t i = 0; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
         char json[512];
         snprintf(json, sizeof(json),
-                 "{\"email\":\"%s\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}",
-                 invalid[i]);
+                 "{\"email\":\"%s\",\"age\":30,\"name\":\"Alice\",\"score\":95.5}", invalid[i]);
         cwist_http_request *req = cwist_http_request_create();
         cwist_sstring_assign(req->body, json);
         user_t out = {0};
@@ -332,6 +343,70 @@ static void test_bind_rejects_invalid_numbers_and_shapes(void) {
     cwist_http_request_destroy(req);
 }
 
+static void test_bind_schema_and_bare_form_keys(void) {
+    typedef struct {
+        char flag[8];
+    } flag_t;
+    const cwist_bind_field_t null_rules_fields[] = {
+        {.json_key = "flag",
+         .target_type = CWIST_BIND_STRING,
+         .target_offset = offsetof(flag_t, flag),
+         .target_size = sizeof(((flag_t *)0)->flag),
+         .rules = NULL,
+         .rule_count = 1},
+    };
+    const cwist_bind_schema_t null_rules_schema = {null_rules_fields, 1, sizeof(flag_t)};
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "{\"flag\":\"x\"}");
+    flag_t out = {0};
+    cwist_bind_result_t result;
+    assert(!cwist_app_req_bind_json(req, &null_rules_schema, &out, &result));
+    cwist_http_request_destroy(req);
+
+    const cwist_bind_field_t fields[] = {
+        {.json_key = "flag",
+         .target_type = CWIST_BIND_STRING,
+         .target_offset = offsetof(flag_t, flag),
+         .target_size = sizeof(((flag_t *)0)->flag)},
+    };
+    const cwist_bind_schema_t schema = {fields, 1, sizeof(flag_t)};
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "flag&unused=1");
+    assert(cwist_app_req_bind_form(req, &schema, &out, &result));
+    assert(strcmp(out.flag, "") == 0);
+    cwist_http_request_destroy(req);
+}
+
+static void test_bind_form_insertion_oom(void) {
+    typedef struct {
+        char value[16];
+    } form_t;
+    const cwist_bind_field_t fields[] = {
+        {.json_key = "value",
+         .target_type = CWIST_BIND_STRING,
+         .target_offset = offsetof(form_t, value),
+         .target_size = sizeof(((form_t *)0)->value)},
+    };
+    const cwist_bind_schema_t schema = {fields, 1, sizeof(form_t)};
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "value=ok");
+    form_t out = {0};
+    cwist_bind_result_t result;
+#ifdef CWIST_TEST_WRAP
+    fail_alloc = 4;
+    assert(!cwist_app_req_bind_form(req, &schema, &out, &result));
+    fail_alloc = 0;
+#endif
+    cwist_http_request_destroy(req);
+
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "value=first&value=second");
+    memset(&out, 0, sizeof(out));
+    assert(cwist_app_req_bind_form(req, &schema, &out, &result));
+    assert(strcmp(out.value, "first") == 0);
+    cwist_http_request_destroy(req);
+}
+
 static void test_bind_form_decoding_limits(void) {
     typedef struct {
         char value[8192];
@@ -365,7 +440,72 @@ static void test_bind_form_decoding_limits(void) {
     }
 }
 
+static void test_bind_defensive_bounds(void) {
+    printf("test_bind_defensive_bounds...\n");
+    typedef struct {
+        int x;
+    } small_t;
+
+    /* 1. NULL key field */
+    cwist_bind_field_t bad_fields[] = {
+        {.json_key = NULL,
+         .target_type = CWIST_BIND_INT,
+         .target_offset = 0,
+         .target_size = sizeof(int)},
+    };
+    cwist_bind_schema_t bad_schema = {bad_fields, 1, sizeof(small_t)};
+    small_t out = {0};
+    cwist_bind_result_t result;
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, "{\"x\":1}");
+
+    bool ok = cwist_app_req_bind_json(req, &bad_schema, &out, &result);
+    assert(!ok);
+    assert(!result.ok);
+
+    /* 2. OOB offset */
+    cwist_bind_field_t oob_fields[] = {
+        {.json_key = "x",
+         .target_type = CWIST_BIND_INT,
+         .target_offset = 100,
+         .target_size = sizeof(int)},
+    };
+    cwist_bind_schema_t oob_schema = {oob_fields, 1, sizeof(small_t)};
+    ok = cwist_app_req_bind_json(req, &oob_schema, &out, &result);
+    assert(!ok);
+    assert(!result.ok);
+
+    cwist_http_request_destroy(req);
+    printf("  OK\n");
+}
+
+static void test_bind_nul_and_precision(void) {
+    const char *nul_json =
+        "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Al\\u0000ice\",\"score\":95.5}";
+    cwist_http_request *req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, (char *)nul_json);
+    user_t out = {0};
+    cwist_bind_result_t result;
+    assert(!cwist_app_req_bind_json(req, &user_schema, &out, &result));
+    cwist_http_request_destroy(req);
+
+    const char *literal_json =
+        "{\"email\":\"alice@example.com\",\"age\":30,\"name\":\"Al\\\\u0000\",\"score\":95.5}";
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, (char *)literal_json);
+    assert(cwist_app_req_bind_json(req, &user_schema, &out, &result));
+    cwist_http_request_destroy(req);
+
+    const char *rounded_json =
+        "{\"email\":\"alice@example.com\",\"age\":9007199254740992,\"name\":\"Alice\",\"score\":95.5}";
+    req = cwist_http_request_create();
+    cwist_sstring_assign(req->body, (char *)rounded_json);
+    assert(!cwist_app_req_bind_json(req, &user_schema, &out, &result));
+    cwist_http_request_destroy(req);
+}
+
 int main(void) {
+    test_bind_nul_and_precision();
     test_bind_rejects_invalid_numbers_and_shapes();
     test_bind_success();
     test_bind_missing_required();
@@ -373,10 +513,13 @@ int main(void) {
     test_bind_age_out_of_range();
     test_bind_auto_400_response();
     test_bind_form_data();
+    test_bind_schema_and_bare_form_keys();
+    test_bind_form_insertion_oom();
     test_bind_form_decoding_limits();
     test_bind_regex();
     test_bind_utf8_length();
     test_bind_null_guards_and_numeric_validation();
+    test_bind_defensive_bounds();
     printf("All bind tests passed.\n");
     return 0;
 }

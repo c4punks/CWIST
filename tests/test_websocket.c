@@ -36,8 +36,20 @@ void test_sha1() {
     printf("SHA1 Test Passed.\n");
 }
 
+void test_base64_boundaries() {
+    size_t out_len = 0;
+    assert(base64_encode(NULL, 0, NULL) == NULL);
+    assert(base64_encode(NULL, 1, &out_len) == NULL);
+    assert(base64_encode(NULL, SIZE_MAX, &out_len) == NULL);
+    uint8_t empty = 0;
+    char *encoded = base64_encode(&empty, 0, &out_len);
+    assert(encoded && out_len == 0 && encoded[0] == '\0');
+    cwist_free(encoded);
+}
+
 void test_handshake_key_generation() {
     test_sha1();
+    test_base64_boundaries();
     printf("Testing Handshake Key Generation...\n");
 
     int sv[2];

@@ -13,6 +13,41 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#ifdef CWIST_TEST_WRAP
+static int fail_replace;
+static int fail_add;
+static int fail_realloc;
+cJSON_bool __real_cJSON_ReplaceItemInObjectCaseSensitive(cJSON *object, const char *string,
+                                                       cJSON *newitem);
+cJSON_bool __wrap_cJSON_ReplaceItemInObjectCaseSensitive(cJSON *object, const char *string,
+                                                        cJSON *newitem) {
+    if (fail_replace) return 0;
+    return __real_cJSON_ReplaceItemInObjectCaseSensitive(object, string, newitem);
+}
+cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
+    if (fail_add) return 0;
+    return __real_cJSON_AddItemToObject(object, string, item);
+}
+void *__real_cwist_realloc(void *ptr, size_t new_size);
+void *__wrap_cwist_realloc(void *ptr, size_t new_size) {
+    if (fail_realloc) return NULL;
+    return __real_cwist_realloc(ptr, new_size);
+}
+static int fail_duplicate;
+static int fail_array;
+cJSON *__real_cJSON_Duplicate(const cJSON *item, cJSON_bool recurse);
+cJSON *__wrap_cJSON_Duplicate(const cJSON *item, cJSON_bool recurse) {
+    if (fail_duplicate) return NULL;
+    return __real_cJSON_Duplicate(item, recurse);
+}
+cJSON_bool __real_cJSON_AddItemToArray(cJSON *array, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToArray(cJSON *array, cJSON *item) {
+    if (fail_array) return 0;
+    return __real_cJSON_AddItemToArray(array, item);
+}
+#endif
+
 /* --------------------------------------------------------------------------
  * Shared schema used by most tests
  * ------------------------------------------------------------------------ */
@@ -437,6 +472,117 @@ static void test_db_insert_healed_rejects_invalid(void) {
     printf("  Passed.\n");
 }
 
+static void test_db_insert_healed_escapes_identifiers(void) {
+    printf("DB: insert_healed escapes quoted identifiers...\n");
+
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+    err = cwist_db_exec(db, "CREATE TABLE users (x TEXT); CREATE TABLE audit (msg TEXT);");
+    assert(cwist_error_is_ok(&err));
+
+    const char *malicious =
+        "{\"x\\\") VALUES ('pwned'); INSERT INTO audit VALUES ('injected'); --\":\"ignored\"}";
+    err = cwist_db_insert_healed(db, "users", malicious, NULL, NULL);
+    assert(!cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+    err = cwist_db_insert_healed(db, "users\"); INSERT INTO audit VALUES ('table-injected'); --",
+                                 "{\"x\":\"safe\"}", NULL, NULL);
+    assert(!cwist_error_is_ok(&err));
+    cwist_error_dispose(&err);
+
+    cJSON *rows = NULL;
+    err = cwist_db_query(db, "SELECT count(*) AS n FROM audit;", &rows);
+    assert(cwist_error_is_ok(&err));
+    assert(strcmp(cJSON_GetObjectItem(cJSON_GetArrayItem(rows, 0), "n")->valuestring, "0") == 0);
+    cJSON_Delete(rows);
+
+    err = cwist_db_exec(db, "CREATE TABLE quoted (\"odd\"\"name\" TEXT);");
+    assert(cwist_error_is_ok(&err));
+    err = cwist_db_insert_healed(db, "quoted", "{\"odd\\\"name\":\"ok\"}", NULL, NULL);
+    assert(cwist_error_is_ok(&err));
+
+    cwist_db_close(db);
+    printf("  Passed.\n");
+}
+
+static void test_db_insert_healed_preserves_long_values(void) {
+    printf("DB: insert_healed preserves long values...\n");
+
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+    err = cwist_db_exec(db, "CREATE TABLE long_values (value TEXT, nested TEXT);");
+    assert(cwist_error_is_ok(&err));
+
+    char *large = malloc(5001);
+    char *nested_text = malloc(1001);
+    assert(large && nested_text);
+    memset(large, 'x', 5000);
+    memset(nested_text, 'n', 1000);
+    large[5000] = nested_text[1000] = '\0';
+    cJSON *input = cJSON_CreateObject();
+    cJSON_AddStringToObject(input, "value", large);
+    cJSON *nested = cJSON_AddObjectToObject(input, "nested");
+    cJSON_AddStringToObject(nested, "text", nested_text);
+    char *json = cJSON_PrintUnformatted(input);
+    assert(json != NULL);
+    err = cwist_db_insert_healed(db, "long_values", json, NULL, NULL);
+    assert(cwist_error_is_ok(&err));
+
+    cJSON *rows = NULL;
+    err = cwist_db_query(db, "SELECT value, nested FROM long_values;", &rows);
+    assert(cwist_error_is_ok(&err));
+    cJSON *row = cJSON_GetArrayItem(rows, 0);
+    const char *stored = cJSON_GetObjectItem(row, "value")->valuestring;
+    const char *stored_nested = cJSON_GetObjectItem(row, "nested")->valuestring;
+    assert(strlen(stored) == 5000 && memcmp(stored, large, 5000) == 0);
+    assert(strstr(stored_nested, nested_text) != NULL);
+
+    cJSON_Delete(rows);
+    cJSON_Delete(input);
+    free(json);
+    free(large);
+    free(nested_text);
+    cwist_db_close(db);
+    printf("  Passed.\n");
+}
+
+static void test_db_insert_healed_preserves_long_identifiers(void) {
+    printf("DB: insert_healed preserves long identifiers...\n");
+
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+
+    char column[129];
+    memset(column, 'c', sizeof(column) - 1);
+    column[sizeof(column) - 1] = '\0';
+    char create_sql[256];
+    char json[256];
+    char query_sql[256];
+    assert(snprintf(create_sql, sizeof(create_sql),
+                    "CREATE TABLE long_identifiers (\"%s\" TEXT);", column) > 0);
+    assert(snprintf(json, sizeof(json), "{\"%s\":\"ok\"}", column) > 0);
+    assert(snprintf(query_sql, sizeof(query_sql), "SELECT \"%s\" AS value FROM long_identifiers;",
+                    column) > 0);
+
+    err = cwist_db_exec(db, create_sql);
+    assert(cwist_error_is_ok(&err));
+    err = cwist_db_insert_healed(db, "long_identifiers", json, NULL, NULL);
+    assert(cwist_error_is_ok(&err));
+
+    cJSON *rows = NULL;
+    err = cwist_db_query(db, query_sql, &rows);
+    assert(cwist_error_is_ok(&err));
+    cJSON *row = cJSON_GetArrayItem(rows, 0);
+    assert(strcmp(cJSON_GetObjectItem(row, "value")->valuestring, "ok") == 0);
+
+    cJSON_Delete(rows);
+    cwist_db_close(db);
+    printf("  Passed.\n");
+}
+
 static void test_db_query_strict(void) {
     printf("DB: query_strict filters non-conforming rows...\n");
 
@@ -478,6 +624,32 @@ static void test_db_query_strict(void) {
     cwist_db_close(db);
     printf("  Passed.\n");
 }
+
+#ifdef CWIST_TEST_WRAP
+static void test_db_query_strict_allocation_failures(void) {
+    static const cwist_schema_field_t fields[] = {
+        {"n", {NULL}, CWIST_FIELD_STRING, true},
+    };
+    static const cwist_schema_t schema = {fields, 1};
+    cwist_db *db = NULL;
+    cwist_error_t err = cwist_db_open(&db, ":memory:");
+    assert(cwist_error_is_ok(&err));
+    cJSON *rows = (cJSON *)1;
+    fail_duplicate = 1;
+    err = cwist_db_query_strict(db, "SELECT 'x' AS n", &rows, &schema);
+    fail_duplicate = 0;
+    assert(!cwist_error_is_ok(&err) && rows == NULL);
+    cwist_error_dispose(&err);
+
+    rows = (cJSON *)1;
+    fail_array = 1;
+    err = cwist_db_query_strict(db, "SELECT 'x' AS n", &rows, &schema);
+    fail_array = 0;
+    assert(!cwist_error_is_ok(&err) && rows == NULL);
+    cwist_error_dispose(&err);
+    cwist_db_close(db);
+}
+#endif
 
 static void test_strict_json_and_schema_boundaries(void) {
     printf("Strict JSON and schema boundaries...\n");
@@ -530,6 +702,116 @@ static void test_strict_json_and_schema_boundaries(void) {
     printf("  Passed.\n");
 }
 
+static void test_schema_alignment_boundaries(void) {
+    cJSON *obj = cJSON_Parse("{\"n\":\"\",\"b\":2}");
+    assert(obj != NULL);
+    static const cwist_schema_field_t fields[] = {
+        {"n", {NULL}, CWIST_FIELD_INT, true},
+        {"b", {NULL}, CWIST_FIELD_BOOL, true},
+    };
+    static const cwist_schema_t schema = {fields, 2};
+    assert(cwist_json_schema_align(obj, &schema, NULL, 0) == 0);
+    assert(strcmp(cJSON_GetObjectItem(obj, "n")->valuestring, "") == 0);
+    assert(cJSON_GetObjectItem(obj, "b")->valuedouble == 2.0);
+    cJSON_Delete(obj);
+
+    obj = cJSON_Parse("{\"n\":\"1.5\"}");
+    assert(obj != NULL);
+    static const cwist_schema_field_t int_fields[] = {
+        {"n", {NULL}, CWIST_FIELD_INT, true},
+    };
+    static const cwist_schema_t int_schema = {int_fields, 1};
+    assert(cwist_json_schema_align(obj, &int_schema, NULL, 0) == 0);
+    assert(strcmp(cJSON_GetObjectItem(obj, "n")->valuestring, "1.5") == 0);
+    cJSON_Delete(obj);
+
+    cwist_schema_t missing = {.fields = NULL, .field_count = 1};
+    obj = cJSON_CreateObject();
+    assert(cwist_json_schema_align(obj, &missing, NULL, 0) == -1);
+    cwist_schema_field_t unnamed[] = {{.name = NULL, .type = CWIST_FIELD_INT}};
+    cwist_schema_t bad_name = {.fields = unnamed, .field_count = 1};
+    assert(cwist_json_schema_align(obj, &bad_name, NULL, 0) == -1);
+    cwist_schema_t negative = {.fields = unnamed, .field_count = -1};
+    assert(cwist_json_schema_align(obj, &negative, NULL, 0) == -1);
+    cJSON_Delete(obj);
+}
+
+#ifdef CWIST_TEST_WRAP
+static void test_schema_allocation_failures(void) {
+    static const cwist_schema_field_t fields[] = {
+        {"n", {"alias", NULL}, CWIST_FIELD_INT, true},
+    };
+    static const cwist_schema_t schema = {fields, 1};
+    cJSON *obj = cJSON_Parse("{\"alias\":42}");
+    fail_add = 1;
+    assert(cwist_json_schema_align(obj, &schema, NULL, 0) == 0);
+    fail_add = 0;
+    assert(cJSON_GetObjectItem(obj, "alias") != NULL);
+    assert(cJSON_GetObjectItem(obj, "n") == NULL);
+    cJSON_Delete(obj);
+
+    obj = cJSON_Parse("{\"n\":\"42\"}");
+    fail_replace = 1;
+    assert(cwist_json_schema_align(obj, &schema, NULL, 0) == 0);
+    fail_replace = 0;
+    assert(cJSON_IsString(cJSON_GetObjectItem(obj, "n")));
+    cJSON_Delete(obj);
+
+    char input[201];
+    memset(input, '{', sizeof(input) - 1);
+    input[sizeof(input) - 1] = '\0';
+    fail_realloc = 1;
+    cwist_heal_result_t healed = cwist_json_heal(input, NULL);
+    fail_realloc = 0;
+    assert(healed.json == NULL);
+    cwist_heal_result_free(&healed);
+}
+#endif
+
+static void test_zod_rejects_invalid_schema(void) {
+    cwist_schema_t missing = {.fields = NULL, .field_count = 1};
+    assert(!cwist_zod_parse("{\"n\":1}", &missing, NULL).valid);
+    cwist_schema_field_t unnamed[] = {{.name = NULL, .type = CWIST_FIELD_INT, .required = true}};
+    cwist_schema_t bad_name = {.fields = unnamed, .field_count = 1};
+    assert(!cwist_zod_parse("{\"n\":1}", &bad_name, NULL).valid);
+    cwist_schema_t negative = {.fields = unnamed, .field_count = -1};
+    assert(!cwist_zod_parse("{\"n\":1}", &negative, NULL).valid);
+}
+
+static void test_zod_and_heal_nul_precision(void) {
+    static const cwist_schema_field_t fields[] = {
+        {"n", {NULL}, CWIST_FIELD_INT, true},
+    };
+    static const cwist_schema_t schema = {fields, 1};
+    assert(!cwist_zod_parse("{\"n\":9007199254740992}", &schema, NULL).valid);
+    assert(!cwist_zod_parse("{\"n\":9223372036854775807}", &schema, NULL).valid);
+    cwist_heal_config_t cfg = {.schema = &schema};
+    cwist_heal_result_t healed = cwist_json_heal("{\"n\":\"123\\u0000junk\"}", &cfg);
+    assert(!healed.healed);
+    cwist_heal_result_free(&healed);
+
+    static const cwist_schema_field_t str_fields[] = {
+        {"name", {NULL}, CWIST_FIELD_STRING, true},
+    };
+    static const cwist_schema_t str_schema = {str_fields, 1};
+    cJSON *out = NULL;
+    cwist_zod_result_t r_neg =
+        cwist_zod_parse("{\"name\":\"prefix\\u0000suffix\"}", &str_schema, &out);
+    assert(!r_neg.valid);
+    assert(r_neg.error_count > 0);
+    assert(out == NULL);
+
+    assert(!cwist_zod_parse("{\"name\\u0000key\":\"value\"}", &str_schema, NULL).valid);
+
+    out = NULL;
+    cwist_zod_result_t r_pos =
+        cwist_zod_parse("{\"name\":\"prefix\\\\u0000suffix\"}", &str_schema, &out);
+    assert(r_pos.valid);
+    assert(r_pos.error_count == 0);
+    assert(out != NULL);
+    cJSON_Delete(out);
+}
+
 /* ==========================================================================
  * main
  * ======================================================================== */
@@ -561,11 +843,23 @@ int main(void) {
     test_zod_missing_required();
     test_zod_wrong_type();
     test_zod_invalid_json_syntax();
+    test_schema_alignment_boundaries();
+#ifdef CWIST_TEST_WRAP
+    test_schema_allocation_failures();
+#endif
+    test_zod_rejects_invalid_schema();
+    test_zod_and_heal_nul_precision();
 
     printf("\n=== DB Integration ===\n");
     test_db_insert_healed();
     test_db_insert_healed_rejects_invalid();
+    test_db_insert_healed_escapes_identifiers();
+    test_db_insert_healed_preserves_long_values();
+    test_db_insert_healed_preserves_long_identifiers();
     test_db_query_strict();
+#ifdef CWIST_TEST_WRAP
+    test_db_query_strict_allocation_failures();
+#endif
     test_strict_json_and_schema_boundaries();
 
     printf("\nAll json_heal / zod / DB tests passed!\n");

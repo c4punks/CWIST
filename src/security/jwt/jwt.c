@@ -4,6 +4,7 @@
 #include <cwist/core/seq/seq.h>
 
 #include "../../core/utils/number_internal.h"
+#include "../../core/utils/json_internal.h"
 #include <cjson/cJSON.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
@@ -199,6 +200,7 @@ static bool jwt_time_from_number(double value, time_t *out) {
  */
 char *cwist_jwt_sign(const char *payload_json, const char *secret, long exp_seconds) {
     if (!payload_json || !secret) return NULL;
+    if (cwist_json_has_nul_escape(payload_json)) return NULL;
 
     /* --- Build header JSON ------------------------------------------------ */
     static const char *HEADER_JSON = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
@@ -321,6 +323,12 @@ static cwist_jwt_claims *jwt_verify_hs256(const char *token, const char *secret,
         cwist_free(tok_copy);
         return NULL;
     }
+    if (strlen((const char *)hdr_json) != hdr_json_len ||
+        cwist_json_has_nul_escape((const char *)hdr_json)) {
+        cwist_free(hdr_json);
+        cwist_free(tok_copy);
+        return NULL;
+    }
     cJSON *hdr = cJSON_ParseWithLengthOpts((const char *)hdr_json, hdr_json_len + 1, NULL, true);
     cwist_free(hdr_json);
     if (!hdr) {
@@ -388,6 +396,12 @@ static cwist_jwt_claims *jwt_verify_hs256(const char *token, const char *secret,
     cwist_free(tok_copy);
 
     if (!pay_json) return NULL;
+
+    if (strlen((const char *)pay_json) != pay_json_len ||
+        cwist_json_has_nul_escape((const char *)pay_json)) {
+        cwist_free(pay_json);
+        return NULL;
+    }
 
     cJSON *json = cJSON_ParseWithLengthOpts((const char *)pay_json, pay_json_len + 1, NULL, true);
     cwist_free(pay_json);

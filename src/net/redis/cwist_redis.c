@@ -171,10 +171,11 @@ static int redis_recv_line(cwist_redis_t *r, char *line, size_t line_len) {
                 memmove(r->recv_buf, r->recv_buf + 1, r->recv_len - 1);
                 r->recv_len--;
                 if (c == '\n') {
-                    if (i > 0 && line[i - 1] == '\r') i--;
-                    line[i] = '\0';
+                    if (i == 0 || line[i - 1] != '\r') return -1;
+                    line[--i] = '\0';
                     return 0;
                 }
+                if (i > 0 && line[i - 1] == '\r') return -1;
                 line[i++] = c;
             }
             if (i >= line_len - 1) return -1;
@@ -223,16 +224,52 @@ void cwist_redis_reply_free(cwist_redis_reply_t *reply);
 
 /** Append one RESP2 bulk string ("$<len>\r\n<payload>\r\n") to a frame being
  * built. A NULL @p s is encoded as an empty string.
- * @return Always 0 (appends to the sstring unconditionally). */
+ * @return 0 on success, -1 on allocation failure. */
 static int write_bulk_string(cwist_sstring *out, const char *s) {
     char prefix[32];
     size_t len = s ? strlen(s) : 0;
     snprintf(prefix, sizeof(prefix), "$%zu\r\n", len);
-    cwist_sstring_append(out, prefix);
-    if (len) cwist_sstring_append(out, s);
-    cwist_sstring_append(out, "\r\n");
+    cwist_error_t err = cwist_sstring_append(out, prefix);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        return -1;
+    }
+    cwist_error_dispose(&err);
+    if (len) {
+        err = cwist_sstring_append(out, s);
+        if (!cwist_error_is_ok(&err)) {
+            cwist_error_dispose(&err);
+            return -1;
+        }
+        cwist_error_dispose(&err);
+    }
+    err = cwist_sstring_append(out, "\r\n");
+    if (!cwist_error_is_ok(&err)) {
+        cwist_error_dispose(&err);
+        return -1;
+    }
+    cwist_error_dispose(&err);
     return 0;
 }
+
+#define WRITE_BULK_OR_FAIL(out, value)                 \
+    do {                                               \
+        if (write_bulk_string(out, value) != 0) {      \
+            cwist_sstring_destroy(out);                \
+            return redis_fail(-ENOMEM);                \
+        }                                              \
+    } while (0)
+
+#define APPEND_OR_FAIL(out, value)                              \
+    do {                                                        \
+        cwist_error_t append_err = cwist_sstring_append(out, value); \
+        if (!cwist_error_is_ok(&append_err)) {                  \
+            cwist_error_dispose(&append_err);                   \
+            cwist_sstring_destroy(out);                         \
+            return redis_fail(-ENOMEM);                         \
+        }                                                       \
+        cwist_error_dispose(&append_err);                       \
+    } while (0)
 
 /** Flatten a reply tree into the legacy out_value/out_len contract. */
 static void flatten_reply(const cwist_redis_reply_t *tree, char **out_value, size_t *out_len) {
@@ -254,6 +291,30 @@ static void flatten_reply(const cwist_redis_reply_t *tree, char **out_value, siz
     } else if (out_len && tree->str) {
         *out_len = tree->len;
     }
+}
+
+/** Strict RESP integer: optional '-', then 1+ decimal digits, no overflow. */
+static bool redis_parse_ll(const char *s, size_t n, long long *out) {
+    size_t i = 0;
+    bool neg = n > 0 && s[0] == '-';
+    if (neg) i = 1;
+    if (i >= n) return false;
+    unsigned long long limit =
+        neg ? (unsigned long long)LLONG_MAX + 1u : (unsigned long long)LLONG_MAX;
+    unsigned long long v = 0;
+    for (; i < n; i++) {
+        if (s[i] < '0' || s[i] > '9') return false;
+        unsigned d = (unsigned)(s[i] - '0');
+        if (v > (limit - d) / 10u) return false;
+        v = v * 10u + d;
+    }
+    if (!neg)
+        *out = (long long)v;
+    else if (v == (unsigned long long)LLONG_MAX + 1u)
+        *out = LLONG_MIN;
+    else
+        *out = -(long long)v;
+    return true;
 }
 
 /** Recursive RESP2 reply parser: builds a cwist_redis_reply_t tree. On any
@@ -279,9 +340,8 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
                        : (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
 
         case ':': { /* integer */
-            char *end = NULL;
-            long long v = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0') goto fail;
+            long long v = 0;
+            if (!redis_parse_ll(line + 1, strlen(line + 1), &v)) goto fail;
             node->str = cwist_strdup(line + 1);
             if (!node->str) goto fail;
             node->len = strlen(line + 1);
@@ -290,9 +350,8 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
         }
 
         case '$': { /* bulk string */
-            char *end = NULL;
-            long long blen = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0') goto fail;
+            long long blen = 0;
+            if (!redis_parse_ll(line + 1, strlen(line + 1), &blen)) goto fail;
             if (blen == -1) {
                 node->integer = -1;
                 return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = 0};
@@ -322,9 +381,8 @@ static cwist_error_t redis_read_resp(cwist_redis_t *r, int depth, cwist_redis_re
 
         case '*': { /* array */
             if (depth >= CWIST_REDIS_MAX_REPLY_DEPTH) goto fail;
-            char *end = NULL;
-            long long count = strtoll(line + 1, &end, 10);
-            if (end == line + 1 || *end != '\0' || count < -1 ||
+            long long count = 0;
+            if (!redis_parse_ll(line + 1, strlen(line + 1), &count) || count < -1 ||
                 count > CWIST_REDIS_MAX_REPLY_ELEMENTS)
                 goto fail;
             node->integer = count;
@@ -680,9 +738,9 @@ cwist_error_t cwist_redis_get(cwist_redis_t *r, const char *key, char **out_valu
     if (!r || !key || !out_value) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*2\r\n");
-    write_bulk_string(cmd, "GET");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*2\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "GET");
+    WRITE_BULK_OR_FAIL(cmd, key);
     cwist_error_t err = cwist_redis_command(r, cmd->data, out_value);
     cwist_sstring_destroy(cmd);
     return err;
@@ -697,10 +755,10 @@ cwist_error_t cwist_redis_set(cwist_redis_t *r, const char *key, const char *val
     if (!r || !key || !value) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*3\r\n");
-    write_bulk_string(cmd, "SET");
-    write_bulk_string(cmd, key);
-    write_bulk_string(cmd, value);
+    APPEND_OR_FAIL(cmd, "*3\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "SET");
+    WRITE_BULK_OR_FAIL(cmd, key);
+    WRITE_BULK_OR_FAIL(cmd, value);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -718,13 +776,13 @@ cwist_error_t cwist_redis_setex(cwist_redis_t *r, const char *key, const char *v
     if (!r || !key || !value || seconds <= 0) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*4\r\n");
-    write_bulk_string(cmd, "SETEX");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*4\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "SETEX");
+    WRITE_BULK_OR_FAIL(cmd, key);
     char sec[32];
     snprintf(sec, sizeof(sec), "%d", seconds);
-    write_bulk_string(cmd, sec);
-    write_bulk_string(cmd, value);
+    WRITE_BULK_OR_FAIL(cmd, sec);
+    WRITE_BULK_OR_FAIL(cmd, value);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -740,9 +798,9 @@ cwist_error_t cwist_redis_del(cwist_redis_t *r, const char *key) {
     if (!r || !key) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*2\r\n");
-    write_bulk_string(cmd, "DEL");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*2\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "DEL");
+    WRITE_BULK_OR_FAIL(cmd, key);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -759,12 +817,12 @@ cwist_error_t cwist_redis_expire(cwist_redis_t *r, const char *key, int seconds)
     if (!r || !key || seconds <= 0) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*3\r\n");
-    write_bulk_string(cmd, "EXPIRE");
-    write_bulk_string(cmd, key);
+    APPEND_OR_FAIL(cmd, "*3\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "EXPIRE");
+    WRITE_BULK_OR_FAIL(cmd, key);
     char sec[32];
     snprintf(sec, sizeof(sec), "%d", seconds);
-    write_bulk_string(cmd, sec);
+    WRITE_BULK_OR_FAIL(cmd, sec);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -781,10 +839,10 @@ cwist_error_t cwist_redis_publish(cwist_redis_t *r, const char *channel, const c
     if (!r || !channel || !message) return redis_fail(-EINVAL);
     cwist_sstring *cmd = cwist_sstring_create();
     if (!cmd) return redis_fail(-ENOMEM);
-    cwist_sstring_append(cmd, "*3\r\n");
-    write_bulk_string(cmd, "PUBLISH");
-    write_bulk_string(cmd, channel);
-    write_bulk_string(cmd, message);
+    APPEND_OR_FAIL(cmd, "*3\r\n");
+    WRITE_BULK_OR_FAIL(cmd, "PUBLISH");
+    WRITE_BULK_OR_FAIL(cmd, channel);
+    WRITE_BULK_OR_FAIL(cmd, message);
     char *out = NULL;
     cwist_error_t err = cwist_redis_command(r, cmd->data, &out);
     cwist_free(out);
@@ -812,10 +870,10 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwi
     while (channels[count]) count++;
     char prefix[32];
     snprintf(prefix, sizeof(prefix), "*%zu\r\n", count + 1);
-    cwist_sstring_append(cmd, prefix);
-    write_bulk_string(cmd, "SUBSCRIBE");
+    APPEND_OR_FAIL(cmd, prefix);
+    WRITE_BULK_OR_FAIL(cmd, "SUBSCRIBE");
     for (size_t i = 0; i < count; i++) {
-        write_bulk_string(cmd, channels[i]);
+        WRITE_BULK_OR_FAIL(cmd, channels[i]);
     }
     cwist_error_t err = send_command(r, cmd->data);
     cwist_sstring_destroy(cmd);
@@ -834,30 +892,38 @@ cwist_error_t cwist_redis_subscribe(cwist_redis_t *r, const char **channels, cwi
         char line[CWIST_REDIS_LINE_MAX];
         if (redis_recv_line(r, line, sizeof(line)) != 0) break;
         if (line[0] != '*') continue;
-        char *arr_end = NULL;
-        long long arr_count = strtoll(line + 1, &arr_end, 10);
-        if (arr_end == line + 1 || *arr_end != '\0') continue;
-        if (arr_count < 3) continue;
+        long long arr_count = 0;
+        if (!redis_parse_ll(line + 1, strlen(line + 1), &arr_count) || arr_count < 3 ||
+            arr_count > CWIST_REDIS_MAX_REPLY_ELEMENTS)
+            continue;
 
         char *type = NULL;
-        if (read_reply(r, &type, NULL, NULL).error.err_i16 != 0) break;
-
         char *channel = NULL;
-        if (read_reply(r, &channel, NULL, NULL).error.err_i16 != 0) {
-            cwist_free(type);
-            break;
-        }
-
         char *message = NULL;
-        if (read_reply(r, &message, NULL, NULL).error.err_i16 != 0) {
+        bool read_failed = false;
+        for (long long i = 0; i < arr_count; i++) {
+            char *item = NULL;
+            if (read_reply(r, &item, NULL, NULL).error.err_i16 != 0) {
+                read_failed = true;
+                break;
+            }
+            if (i == 0)
+                type = item;
+            else if (i == 1)
+                channel = item;
+            else if (i == 2)
+                message = item;
+            else
+                cwist_free(item);
+        }
+        if (read_failed) {
             cwist_free(type);
             cwist_free(channel);
+            cwist_free(message);
             break;
         }
 
-        if (type && strcmp(type, "message") == 0) {
-            cb(channel, message, ctx);
-        }
+        if (type && channel && message && strcmp(type, "message") == 0) cb(channel, message, ctx);
         cwist_free(type);
         cwist_free(channel);
         cwist_free(message);

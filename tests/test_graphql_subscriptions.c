@@ -19,6 +19,34 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#ifdef CWIST_TEST_WRAP
+static _Atomic int fail_header;
+cwist_error_t __real_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value);
+cwist_error_t __wrap_cwist_http_header_add(cwist_http_header_node **head, const char *key,
+                                           const char *value) {
+    if (atomic_load(&fail_header) && strcmp(key, "Sec-WebSocket-Protocol") == 0 &&
+        strcmp(value, "graphql-transport-ws") == 0)
+        return (cwist_error_t){.errtype = CWIST_ERR_INT16, .error.err_i16 = -1};
+    return __real_cwist_http_header_add(head, key, value);
+}
+#endif
+
+#ifdef CWIST_TEST_WRAP
+static _Atomic int fail_add;
+cJSON_bool __real_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item);
+cJSON_bool __wrap_cJSON_AddItemToObject(cJSON *object, const char *string, cJSON *item) {
+    if (atomic_load(&fail_add)) return 0;
+    return __real_cJSON_AddItemToObject(object, string, item);
+}
+static _Atomic int fail_string;
+cJSON *__real_cJSON_AddStringToObject(cJSON *object, const char *string, const char *value);
+cJSON *__wrap_cJSON_AddStringToObject(cJSON *object, const char *string, const char *value) {
+    if (atomic_load(&fail_string)) return NULL;
+    return __real_cJSON_AddStringToObject(object, string, value);
+}
+#endif
+
 #include <cwist/net/websocket/websocket.h>
 #include <cwist/sys/io/reactor.h>
 
@@ -170,6 +198,18 @@ static void expect_eof(int fd) {
     assert(read(fd, &b, 1) == 0);
 }
 
+static void expect_eof_after_drain(int fd) {
+    for (int i = 0; i < 20; i++) {
+        struct pollfd pfd = {.fd = fd, .events = POLLIN};
+        assert(poll(&pfd, 1, TIMEOUT_MS) == 1);
+        uint8_t buf[256];
+        ssize_t n = read(fd, buf, sizeof(buf));
+        assert(n >= 0);
+        if (n == 0) return;
+    }
+    assert(false);
+}
+
 static void *reactor_thread(void *arg) {
     cwist_reactor_run((cwist_reactor_t *)arg);
     return NULL;
@@ -209,9 +249,34 @@ static void publish_and_expect_next(int fd, const char *topic, const char *op_id
     cJSON_Delete(msg);
 }
 
+static void test_subscription_argument_validation(void) {
+    char field[32];
+    cJSON *args = (cJSON *)1;
+    assert(!cwist_graphql_parse_subscription("subscription { counter(bad: ?) }", NULL, field,
+                                             sizeof(field), &args));
+    assert(args == NULL);
+    args = (cJSON *)1;
+    assert(!cwist_graphql_parse_subscription("subscription { counter(limit: 1) garbage }", NULL,
+                                             field, sizeof(field), &args));
+    assert(args == NULL);
+    assert(cwist_graphql_parse_subscription("subscription { counter(limit: 1) }", NULL, field,
+                                            sizeof(field), &args));
+    assert(strcmp(field, "counter") == 0);
+    cJSON *limit = cJSON_GetObjectItemCaseSensitive(args, "limit");
+    assert(cJSON_IsNumber(limit) && limit->valueint == 1);
+    cJSON_Delete(args);
+
+    args = (cJSON *)1;
+    assert(!cwist_graphql_parse_subscription(
+        "subscription { counter(topic: \"prefix\\u0000suffix\") }", NULL, field, sizeof(field),
+        &args));
+    assert(args == NULL);
+}
+
 int main(void) {
     alarm(60);
     signal(SIGPIPE, SIG_IGN);
+    test_subscription_argument_validation();
 
     g_schema = cwist_graphql_schema_create();
     assert(g_schema);
@@ -230,7 +295,11 @@ int main(void) {
     int fd_second_init = attach_conn(reactor); /* duplicate connection_init */
     int fd_binary = attach_conn(reactor);      /* binary GraphQL message */
     int fd_shape = attach_conn(reactor);       /* non-object JSON message */
+    int fd_trailing = attach_conn(reactor);    /* valid prefix with trailing garbage */
     int fd_bad_subscribe = attach_conn(reactor);
+    int fd_nul_query = attach_conn(reactor);
+    int fd_nul_var = attach_conn(reactor);
+    int fd_escaped_bs = attach_conn(reactor);
     int fd_dup = attach_conn(reactor);         /* duplicate operation id */
     int fd = attach_conn(reactor);             /* main flow */
 
@@ -267,6 +336,10 @@ int main(void) {
     expect_close_code(fd_shape, CLOSE_BAD_REQUEST);
     expect_eof(fd_shape);
     close(fd_shape);
+    write_text(fd_trailing, "{\"type\":\"connection_init\"} trailing");
+    expect_close_code(fd_trailing, CLOSE_BAD_REQUEST);
+    expect_eof(fd_trailing);
+    close(fd_trailing);
     write_masked(fd_binary, 0x82, (const uint8_t *)"x", 1);
     expect_close_code(fd_binary, CLOSE_BAD_REQUEST);
     expect_eof(fd_binary);
@@ -285,6 +358,15 @@ int main(void) {
     close(fd_second_init);
     printf("4. duplicate connection_init -> close 4429: ok\n");
 
+#ifdef CWIST_TEST_WRAP
+    int fd_oom = attach_conn(reactor);
+    atomic_store(&fail_string, 1);
+    write_text(fd_oom, "{\"type\":\"connection_init\"}");
+    expect_eof_after_drain(fd_oom);
+    atomic_store(&fail_string, 0);
+    close(fd_oom);
+#endif
+
     write_text(fd_bad_subscribe, "{\"type\":\"connection_init\"}");
     cJSON_Delete(read_json_message(fd_bad_subscribe));
     write_text(fd_bad_subscribe, "{\"id\":\"bad\",\"type\":\"subscribe\",\"payload\":{}}");
@@ -292,6 +374,39 @@ int main(void) {
     expect_eof(fd_bad_subscribe);
     close(fd_bad_subscribe);
     puts("invalid subscribe shape -> close 4400: ok");
+
+    write_text(fd_nul_query, "{\"type\":\"connection_init\"}");
+    cJSON_Delete(read_json_message(fd_nul_query));
+    write_text(fd_nul_query,
+               "{\"id\":\"nul_q\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter\\u0000suffix }\"}}");
+    expect_close_code(fd_nul_query, CLOSE_BAD_REQUEST);
+    expect_eof(fd_nul_query);
+    close(fd_nul_query);
+    puts("subscribe with embedded NUL in query -> close 4400: ok");
+
+    write_text(fd_nul_var, "{\"type\":\"connection_init\"}");
+    cJSON_Delete(read_json_message(fd_nul_var));
+    write_text(fd_nul_var,
+               "{\"id\":\"nul_v\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter }\",\"variables\":{\"topic\":\"t\\u0000suffix\"}}}");
+    expect_close_code(fd_nul_var, CLOSE_BAD_REQUEST);
+    expect_eof(fd_nul_var);
+    close(fd_nul_var);
+    puts("subscribe with embedded NUL in variables -> close 4400: ok");
+
+    write_text(fd_escaped_bs, "{\"type\":\"connection_init\"}");
+    cJSON_Delete(read_json_message(fd_escaped_bs));
+    write_text(fd_escaped_bs,
+               "{\"id\":\"esc\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
+               "counter(topic: \\\"t\\\\\\\\u0000suffix\\\") }\"}}");
+    expect_silence(fd_escaped_bs, 100);
+    write_text(fd_escaped_bs, "{\"id\":\"esc\",\"type\":\"complete\"}");
+    write_masked(fd_escaped_bs, 0x88, (const uint8_t *)"\x03\xE8", 2);
+    expect_close_code(fd_escaped_bs, 1000);
+    expect_eof(fd_escaped_bs);
+    close(fd_escaped_bs);
+    puts("subscribe with escaped backslash -> ok");
 
     /* 5. Duplicate subscriber id closes with 4409. */
     write_text(fd_dup, "{\"type\":\"connection_init\"}");
@@ -344,6 +459,12 @@ int main(void) {
     write_text(fd, "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription { "
                    "counter(topic: \\\"t1\\\") }\"}}");
     expect_silence(fd, 200); /* no ack for subscribe */
+#ifdef CWIST_TEST_WRAP
+    atomic_store(&fail_add, 1);
+    assert(cwist_graphql_publish("t1", NULL) == 0);
+    expect_silence(fd, 200);
+    atomic_store(&fail_add, 0);
+#endif
     publish_and_expect_next(fd, "t1", "1", 1);
     printf("7. subscribe + publish -> next: ok\n");
 

@@ -587,6 +587,7 @@ static uint8_t *ws_async_serialize_frame(cwist_ws_opcode_t opcode, const uint8_t
         head_len += 8;
     }
 
+    if (len > SIZE_MAX - head_len) return NULL;
     uint8_t *buf = (uint8_t *)cwist_alloc(head_len + len);
     if (!buf) return NULL;
     memcpy(buf, head, head_len);

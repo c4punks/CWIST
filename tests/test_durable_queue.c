@@ -13,10 +13,12 @@
  * scenarios. Unset or 0 keeps the local optional behavior above.
  */
 #define _POSIX_C_SOURCE 200809L
+#include <cwist/core/mem/alloc.h>
 #include <cwist/net/nats/cwist_nats.h>
 #include <cwist/net/redis/cwist_redis.h>
 #include <cwist/sys/job/durable_queue.h>
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -35,6 +37,15 @@ static void sleep_ms(uint64_t ms) {
     nanosleep(&ts, NULL);
 }
 
+#ifdef CWIST_TEST_WRAP
+static int fail_type_alloc;
+char *__real_cwist_strndup(const char *src, size_t n);
+char *__wrap_cwist_strndup(const char *src, size_t n) {
+    if (fail_type_alloc && n == 5) return NULL;
+    return __real_cwist_strndup(src, n);
+}
+#endif
+
 static unsigned int name_seq = 0;
 
 static void make_name(char *buf, size_t len, const char *tag) {
@@ -43,6 +54,8 @@ static void make_name(char *buf, size_t len, const char *tag) {
 
 /* enqueue -> claim -> ack; payload (binary) and type round-trip; ack removes. */
 static int t_enqueue_claim_ack(cwist_job_queue_t *q) {
+    cwist_error_t invalid = cwist_job_queue_enqueue(q, "x", SIZE_MAX, NULL);
+    CHECK(invalid.error.err_i16 == CWIST_ERROR_INVALID_PARAM, "oversized payload was accepted");
     const char binary[] = {'h', '\0', 'l', '\0', 'o'};
     cwist_error_t err = cwist_job_queue_enqueue(q, binary, sizeof(binary), "email");
     CHECK(err.error.err_i16 == 0, "enqueue failed");
@@ -187,6 +200,16 @@ static int run_suite(cwist_job_queue_t *(*create)(void *ctx, const char *name,
     make_name(name, sizeof(name), tag);
     q = create(ctx, name, &(cwist_job_queue_opts_t){.name = name});
     if (!q) return -2;
+    if (strcmp(tag, "nats") == 0) {
+        cwist_error_t invalid = cwist_job_queue_enqueue(q, "x", (size_t)INT_MAX + 1, NULL);
+        CHECK(invalid.error.err_i16 == CWIST_ERROR_INVALID_PARAM,
+              "NATS payload length above INT_MAX was accepted");
+        make_name(name, sizeof(name), tag);
+        cwist_job_queue_t *invalid_q =
+            create(ctx, name,
+                   &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = UINT64_MAX});
+        CHECK(invalid_q == NULL, "NATS visibility timeout above the nanosecond range was accepted");
+    }
     if (t_enqueue_claim_ack(q) != 0) return -1;
     cwist_job_queue_destroy(q);
 
@@ -215,6 +238,206 @@ static int run_suite(cwist_job_queue_t *(*create)(void *ctx, const char *name,
     if (t_dead_letter(q, 2) != 0) return -1;
     cwist_job_queue_destroy(q);
 
+    return 0;
+}
+
+static long long redis_pending_count(cwist_redis_t *conn, const char *name) {
+    char stream[128];
+    snprintf(stream, sizeof(stream), "cwist:jq:%s:s", name);
+    const void *argv[] = {"XPENDING", stream, "cwist-jq"};
+    size_t lens[] = {8, strlen(stream), 8};
+    cwist_redis_reply_t *reply = NULL;
+    cwist_error_t err = cwist_redis_command_argv_reply(conn, 3, argv, lens, &reply);
+    long long count = -1;
+    if (cwist_error_is_ok(&err) && reply && reply->type == '*' && reply->elements > 0 &&
+        reply->element[0] && reply->element[0]->type == ':')
+        count = reply->element[0]->integer;
+    cwist_redis_reply_free(reply);
+    return count;
+}
+
+static int t_redis_dead_letter_publish_failure(cwist_redis_t *conn) {
+    char name[96];
+    make_name(name, sizeof(name), "redis-dl-error");
+    cwist_job_queue_t *q = cwist_job_queue_create_redis(
+        conn,
+        &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = 100, .max_retries = 1});
+    CHECK(q != NULL, "queue for dead-letter failure test was not created");
+
+    char dead_key[128];
+    snprintf(dead_key, sizeof(dead_key), "cwist:jq:%s:dead", name);
+    cwist_error_t err = cwist_redis_set(conn, dead_key, "not-a-list");
+    CHECK(err.error.err_i16 == 0, "failed to prepare invalid dead-letter key");
+    err = cwist_job_queue_enqueue(q, "recoverable", 11, "poison");
+    CHECK(err.error.err_i16 == 0, "enqueue for dead-letter failure test failed");
+    cwist_job_t *job = NULL;
+    err = cwist_job_queue_claim(q, 5000, &job);
+    CHECK(err.error.err_i16 == 0 && job, "initial claim for dead-letter failure test failed");
+    cwist_job_destroy(job);
+    sleep_ms(200);
+
+    err = cwist_job_queue_claim(q, 300, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "failed dead-letter write unexpectedly returned a job");
+    long long pending = redis_pending_count(conn, name);
+    fprintf(stderr, "[durable_queue] pending after failed dead-letter write: %lld\n", pending);
+    CHECK(pending == 1, "failed dead-letter write acknowledged the original job");
+
+    err = cwist_redis_del(conn, dead_key);
+    CHECK(err.error.err_i16 == 0, "failed to restore dead-letter key");
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "restored dead-letter write did not retire the job");
+    CHECK(redis_pending_count(conn, name) == 0,
+          "successful dead-letter write left the original pending");
+    uint64_t dead = 0;
+    err = cwist_job_queue_dead_count(q, &dead);
+    CHECK(err.error.err_i16 == 0 && dead == 1, "successful dead-letter write was not stored");
+    cwist_job_queue_destroy(q);
+    return 0;
+}
+
+static int redis_restore_attempts(cwist_redis_t *conn, const char *name) {
+    char stream[128], attempts_key[128];
+    snprintf(stream, sizeof(stream), "cwist:jq:%s:s", name);
+    snprintf(attempts_key, sizeof(attempts_key), "cwist:jq:%s:a", name);
+    const void *pending_argv[] = {"XPENDING", stream, "cwist-jq"};
+    size_t pending_lens[] = {8, strlen(stream), 8};
+    cwist_redis_reply_t *reply = NULL;
+    cwist_error_t err = cwist_redis_command_argv_reply(conn, 3, pending_argv, pending_lens, &reply);
+    if (!cwist_error_is_ok(&err) || !reply || reply->type != '*' || reply->elements < 2 ||
+        !reply->element[1] || !reply->element[1]->str) {
+        cwist_redis_reply_free(reply);
+        return -1;
+    }
+    err = cwist_redis_del(conn, attempts_key);
+    if (!cwist_error_is_ok(&err)) {
+        cwist_redis_reply_free(reply);
+        return -1;
+    }
+    const void *argv[] = {"HSET", attempts_key, reply->element[1]->str, "1"};
+    size_t lens[] = {4, strlen(attempts_key), reply->element[1]->len, 1};
+    char *out = NULL;
+    err = cwist_redis_command_argv(conn, 4, argv, lens, &out, NULL);
+    cwist_free(out);
+    cwist_redis_reply_free(reply);
+    return cwist_error_is_ok(&err) ? 0 : -1;
+}
+
+static int t_redis_delivery_count_failure(cwist_redis_t *conn) {
+    char name[96];
+    make_name(name, sizeof(name), "redis-attempt-error");
+    cwist_job_queue_t *q = cwist_job_queue_create_redis(
+        conn,
+        &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = 100, .max_retries = 1});
+    CHECK(q != NULL, "queue for delivery-count failure test was not created");
+
+    char attempts_key[128];
+    snprintf(attempts_key, sizeof(attempts_key), "cwist:jq:%s:a", name);
+    cwist_error_t err = cwist_job_queue_enqueue(q, "pending", 7, "attempts");
+    CHECK(err.error.err_i16 == 0, "enqueue for delivery-count failure test failed");
+    cwist_job_t *job = NULL;
+    err = cwist_job_queue_claim(q, 5000, &job);
+    CHECK(err.error.err_i16 == 0 && job, "initial claim for delivery-count failure test failed");
+    cwist_job_destroy(job);
+
+    err = cwist_redis_set(conn, attempts_key, "not-a-hash");
+    CHECK(err.error.err_i16 == 0, "failed to prepare invalid attempts key");
+    sleep_ms(200);
+    err = cwist_job_queue_claim(q, 300, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "delivery-count failure incorrectly returned a job");
+    CHECK(redis_pending_count(conn, name) == 1,
+          "delivery-count failure removed the original pending job");
+
+    CHECK(redis_restore_attempts(conn, name) == 0, "failed to restore attempts key");
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "restored delivery counter did not retire the job");
+    long long recovered_pending = redis_pending_count(conn, name);
+    uint64_t recovered_dead = 0;
+    cwist_error_t dead_err = cwist_job_queue_dead_count(q, &recovered_dead);
+    fprintf(stderr, "[durable_queue] after recovery: pending=%lld dead=%llu dead_err=%d\n",
+            recovered_pending, (unsigned long long)recovered_dead, dead_err.error.err_i16);
+    CHECK(recovered_pending == 0, "successful retry processing left the original pending");
+    uint64_t dead = 0;
+    err = cwist_job_queue_dead_count(q, &dead);
+    CHECK(err.error.err_i16 == 0 && dead == 1, "job was not dead-lettered after recovery");
+    cwist_job_queue_destroy(q);
+    return 0;
+}
+
+static int t_redis_type_allocation_failure(cwist_redis_t *conn) {
+    char name[96];
+    make_name(name, sizeof(name), "redis-type-oom");
+    cwist_job_queue_t *q = cwist_job_queue_create_redis(
+        conn, &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = 100});
+    CHECK(q != NULL, "queue for type allocation failure test was not created");
+    cwist_error_t err = cwist_job_queue_enqueue(q, "payload", 7, "typed");
+    CHECK(err.error.err_i16 == 0, "enqueue for type allocation failure test failed");
+    cwist_job_t *job = NULL;
+#ifdef CWIST_TEST_WRAP
+    fail_type_alloc = 1;
+    err = cwist_job_queue_claim(q, 200, &job);
+    fail_type_alloc = 0;
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "type allocation failure returned an untyped job");
+#endif
+    sleep_ms(200);
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == 0 && job && cwist_job_type(job) &&
+              strcmp(cwist_job_type(job), "typed") == 0,
+          "type did not survive recovery after allocation failure");
+    if (job) err = cwist_job_queue_ack(q, job);
+    CHECK(err.error.err_i16 == 0, "ack after type allocation recovery failed");
+    cwist_job_queue_destroy(q);
+    return 0;
+}
+
+static int t_redis_delivery_count_overflow(cwist_redis_t *conn) {
+    char name[96];
+    make_name(name, sizeof(name), "redis-attempt-overflow");
+    cwist_job_queue_t *q = cwist_job_queue_create_redis(
+        conn,
+        &(cwist_job_queue_opts_t){.name = name, .visibility_timeout_ms = 100, .max_retries = 1});
+    CHECK(q != NULL, "queue for delivery-count overflow test was not created");
+    cwist_error_t err = cwist_job_queue_enqueue(q, "pending", 7, "attempts");
+    CHECK(err.error.err_i16 == 0, "enqueue for delivery-count overflow test failed");
+    cwist_job_t *job = NULL;
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == 0 && job, "initial claim for delivery-count overflow test failed");
+    cwist_job_destroy(job);
+
+    char stream[128], attempts_key[128];
+    snprintf(stream, sizeof(stream), "cwist:jq:%s:s", name);
+    snprintf(attempts_key, sizeof(attempts_key), "cwist:jq:%s:a", name);
+    const void *pending_argv[] = {"XPENDING", stream, "cwist-jq"};
+    size_t pending_lens[] = {8, strlen(stream), 8};
+    cwist_redis_reply_t *reply = NULL;
+    err = cwist_redis_command_argv_reply(conn, 3, pending_argv, pending_lens, &reply);
+    CHECK(cwist_error_is_ok(&err) && reply && reply->element[1] && reply->element[1]->str,
+          "failed to find pending id for delivery-count overflow test");
+    const void *argv[] = {"HSET", attempts_key, reply->element[1]->str, "4294967296"};
+    size_t lens[] = {4, strlen(attempts_key), reply->element[1]->len, 10};
+    char *out = NULL;
+    err = cwist_redis_command_argv(conn, 4, argv, lens, &out, NULL);
+    cwist_free(out);
+    cwist_redis_reply_free(reply);
+    CHECK(cwist_error_is_ok(&err), "failed to set overflowing delivery count");
+    sleep_ms(200);
+    err = cwist_job_queue_claim(q, 300, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "overflowing delivery count returned a job");
+    CHECK(redis_pending_count(conn, name) == 1,
+          "overflowing delivery count removed the original pending job");
+    CHECK(redis_restore_attempts(conn, name) == 0, "failed to restore attempts after overflow");
+    err = cwist_job_queue_claim(q, 1000, &job);
+    CHECK(err.error.err_i16 == CWIST_ERROR_TIMEOUT && !job,
+          "restored delivery count did not retire the job");
+    uint64_t dead = 0;
+    err = cwist_job_queue_dead_count(q, &dead);
+    CHECK(err.error.err_i16 == 0 && dead == 1, "job was not dead-lettered after overflow recovery");
+    cwist_job_queue_destroy(q);
     return 0;
 }
 
@@ -251,6 +474,11 @@ int main(void) {
     int redis_ran = 0;
     int nats_ran = 0;
 
+    cwist_nats_t *invalid_nats = (cwist_nats_t *)1;
+    cwist_error_t invalid_err = cwist_nats_connect(&invalid_nats, "://");
+    CHECK(invalid_err.error.err_i16 != 0 && invalid_nats == NULL,
+          "failed NATS connect must leave the output handle NULL");
+
     /* Redis backend. */
     const char *host = getenv("CWIST_REDIS_HOST") ? getenv("CWIST_REDIS_HOST") : "127.0.0.1";
     int port = getenv("CWIST_REDIS_PORT") ? atoi(getenv("CWIST_REDIS_PORT")) : 6379;
@@ -281,6 +509,22 @@ int main(void) {
         } else {
             printf("[durable_queue] Redis backend tests passed.\n");
             redis_ran = 1;
+            if (t_redis_dead_letter_publish_failure(conn) != 0) {
+                fprintf(stderr, "[durable_queue] Redis dead-letter failure test failed.\n");
+                rc = 1;
+            }
+            if (t_redis_delivery_count_failure(conn) != 0) {
+                fprintf(stderr, "[durable_queue] Redis delivery-count failure test failed.\n");
+                rc = 1;
+            }
+            if (t_redis_type_allocation_failure(conn) != 0) {
+                fprintf(stderr, "[durable_queue] Redis type allocation failure test failed.\n");
+                rc = 1;
+            }
+            if (t_redis_delivery_count_overflow(conn) != 0) {
+                fprintf(stderr, "[durable_queue] Redis delivery-count overflow test failed.\n");
+                rc = 1;
+            }
         }
         cwist_redis_close(conn);
     }
