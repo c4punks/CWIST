@@ -100,6 +100,12 @@ class Gate(unittest.TestCase):
         self.assertEqual(check_api_baseline.removed_guaranteed(self.OLD, new),
                          ["layouts: struct cwist_s [0] int a"])
 
+    def test_documented_abi_neutral_rename_passes(self):
+        old = self.OLD.replace("struct cwist_s [0] int a",
+                               "struct __prim_cwist_error_t [0] int8_t err_i8")
+        new = old.replace("__prim_cwist_error_t", "prim__cwist_error_t")
+        self.assertEqual(check_api_baseline.removed_guaranteed(old, new), [])
+
 
 if __name__ == "__main__":
     unittest.main()
