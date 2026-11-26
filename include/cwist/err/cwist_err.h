@@ -41,7 +41,7 @@ typedef enum cwist_errtype_t {
     CWIST_ERR_DOUBLE,
 } cwist_errtype_t;
 
-typedef struct __prim_cwist_error_t {
+typedef struct prim__cwist_error_t {
   /* These types are widely used when handling internal errcodes.
      * User-oriented errors are beautified as JSON.
      */
@@ -67,11 +67,11 @@ typedef struct __prim_cwist_error_t {
     struct cwist_sstring *err_string;
     cJSON *err_json;
 
-} __prim_cwist_error_t;
+} prim__cwist_error_t;
 
 typedef struct cwist_error_t {
     cwist_errtype_t errtype;
-    __prim_cwist_error_t error;
+    prim__cwist_error_t error;
 } cwist_error_t;
 
 /**

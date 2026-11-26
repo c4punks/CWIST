@@ -46,10 +46,10 @@ typedef enum cwist_errtype_t {
 } cwist_errtype_t;
 
 /**
- * @struct __prim_cwist_error_t
+ * @struct prim__cwist_error_t
  * @brief Internal union-like structure to store the actual error value.
  */
-typedef struct __prim_cwist_error_t {
+typedef struct prim__cwist_error_t {
     /* Signed representations */
     int8_t err_i8;   /**< 8-bit signed error value */
     int16_t err_i16;  /**< 16-bit signed error value */
@@ -70,7 +70,7 @@ typedef struct __prim_cwist_error_t {
 
     struct cwist_sstring *err_string; /**< Pointer to sstring error object */
     cJSON *err_json;                  /**< Pointer to cJSON error object */
-} __prim_cwist_error_t;
+} prim__cwist_error_t;
 
 /**
  * @struct cwist_error_t
@@ -78,7 +78,7 @@ typedef struct __prim_cwist_error_t {
  */
 typedef struct cwist_error_t {
     cwist_errtype_t errtype;      /**< Discriminator for the error value type */
-    __prim_cwist_error_t error;   /**< The actual error data value */
+    prim__cwist_error_t error;   /**< The actual error data value */
 } cwist_error_t;
 
 /**
