@@ -662,6 +662,7 @@ static bool proxy_prepare_response(proxy_upstream_res *u, proxy_job *job, cwist_
     }
     cwist_http_header_free_all(u->headers);
     u->headers = NULL;
+    cwist_http_header_add(&res->headers, "Via", "1.1 cwist");
     proxy_apply_alt_svc(res, job->front_port, job->front_h3);
     return true;
 }
@@ -1165,6 +1166,12 @@ static int proxy_build_job(cwist_http_request *req, proxy_job *job) {
     if (!proxy_append_header(&job->headers, "X-Forwarded-Proto", tls ? "https" : "http")) {
         return CWIST_HTTP_INTERNAL_ERROR;
     }
+    const char *via = "1.1 cwist";
+    if (req->version && req->version->data && strcmp(req->version->data, "HTTP/2") == 0)
+        via = "2 cwist";
+    else if (req->version && req->version->data && strcmp(req->version->data, "HTTP/3") == 0)
+        via = "3 cwist";
+    if (!proxy_append_header(&job->headers, "Via", via)) return CWIST_HTTP_INTERNAL_ERROR;
 
     if (req->body && req->body->data && req->body->size > 0) {
         job->body = req->body->data;
@@ -1453,7 +1460,7 @@ static size_t proxy_ws_build_request(cwist_http_request *req, const char *target
         len += (size_t)w;
     }
 
-    w = snprintf(out + len, cap - len, "Connection: Upgrade\r\n");
+    w = snprintf(out + len, cap - len, "Connection: Upgrade\r\nVia: 1.1 cwist\r\n");
     if (w < 0 || (size_t)w >= cap - len) return 0;
     len += (size_t)w;
     if (xff && xff[0]) {
@@ -1612,7 +1619,46 @@ static void proxy_connect_passthrough(cwist_http_request *req, cwist_http_respon
     proxy_tunnel_start(req, res, curl, up_fd);
 }
 
+static bool proxy_handle_options_max_forwards(cwist_http_request *req, cwist_http_response *res) {
+    if (req->method != CWIST_HTTP_OPTIONS) return false;
+    cwist_http_header_node *field = NULL;
+    for (cwist_http_header_node *h = req->headers; h; h = h->next) {
+        if (!h->key || !h->key->data || strcasecmp(h->key->data, "max-forwards") != 0) continue;
+        if (field) {
+            proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+            return true;
+        }
+        field = h;
+    }
+    if (!field) return false;
+
+    const char *value = field->value && field->value->data ? field->value->data : "";
+    size_t parsed = 0;
+    for (size_t i = 0; value[i]; i++) {
+        unsigned char c = (unsigned char)value[i];
+        if (c < '0' || c > '9' || parsed > (SIZE_MAX - 9) / 10) {
+            proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+            return true;
+        }
+        parsed = parsed * 10 + (size_t)(c - '0');
+    }
+    if (!value[0]) {
+        proxy_set_text(res, CWIST_HTTP_BAD_REQUEST, "400 Bad Request");
+        return true;
+    }
+    if (parsed == 0) {
+        proxy_set_text(res, CWIST_HTTP_OK, "");
+        cwist_http_header_add(&res->headers, "Allow", "GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS");
+        return true;
+    }
+    char decremented[32];
+    snprintf(decremented, sizeof(decremented), "%zu", parsed - 1);
+    cwist_sstring_assign(field->value, decremented);
+    return false;
+}
+
 static void proxy_handler(cwist_http_request *req, cwist_http_response *res) {
+    if (proxy_handle_options_max_forwards(req, res)) return;
     if (req->method == CWIST_HTTP_CONNECT) {
         if (proxy_front_is_plain_h1(req)) {
             proxy_connect_passthrough(req, res);

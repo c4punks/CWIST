@@ -5,6 +5,18 @@
 #include <stdio.h>
 
 int main(void) {
+    assert(h3c_regular_name_valid("content-type", 12));
+    assert(!h3c_regular_name_valid("Content-Type", 12));
+    assert(!h3c_regular_name_valid(":status", 7));
+    assert(!h3c_regular_name_valid("bad name", 8));
+    assert(h3c_field_value_valid("value\twith-tab", 14));
+    assert(!h3c_field_value_valid("bad\001value", 9));
+    size_t parsed_length = 0;
+    assert(h3c_parse_content_length("0", 1, &parsed_length) == 0 && parsed_length == 0);
+    assert(h3c_parse_content_length("1024", 4, &parsed_length) == 0 && parsed_length == 1024);
+    assert(h3c_parse_content_length("-1", 2, &parsed_length) == -1);
+    assert(h3c_parse_content_length("18446744073709551616", 20, &parsed_length) == -1);
+
     assert(h3c_timeout_to_poll_us(-1) == 1000);
     assert(h3c_timeout_to_poll_us(0) == 1000);
     assert(h3c_timeout_to_poll_us(1) == 1000);
@@ -110,7 +122,11 @@ int main(void) {
 
     err_null = cwist_http3_client_enable_datagram_channel_checked(NULL, 1);
     assert(!cwist_error_is_ok(&err_null));
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     assert(err_null.error.err_i16 == EINVAL);
+#else
+    assert(err_null.error.err_i16 == ENOSYS);
+#endif
 
     /* 2. Active-connection rejection */
     cwist_http3_client mock_client;
@@ -123,7 +139,11 @@ int main(void) {
 
     err_busy = cwist_http3_client_enable_datagram_channel_checked(&mock_client, 1);
     assert(!cwist_error_is_ok(&err_busy));
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     assert(err_busy.error.err_i16 == EBUSY);
+#else
+    assert(err_busy.error.err_i16 == ENOSYS);
+#endif
 
     /* 3. Injected engine-creation failure */
     memset(&mock_client, 0, sizeof(mock_client));

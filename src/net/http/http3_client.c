@@ -75,6 +75,8 @@ typedef struct h3c_stream_ctx {
     char *resp_body;
     size_t resp_body_len;
     size_t resp_body_cap;
+    bool has_content_length;
+    size_t content_length;
     int headers_done;
     int response_ready;
     int response_complete;
@@ -525,12 +527,48 @@ static const struct lsquic_webtransport_if h3c_wt_if = {
 };
 #endif
 
+static bool h3c_regular_name_valid(const char *name, size_t len) {
+    if (!name || len == 0) return false;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)name[i];
+        if (c <= 0x20 || c >= 0x7f || (c >= 'A' && c <= 'Z') || c == ':') return false;
+    }
+    return true;
+}
+
+static bool h3c_field_value_valid(const char *value, size_t len) {
+    if (!value) return false;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)value[i];
+        if ((c < 0x20 && c != '\t') || c == 0x7f) return false;
+    }
+    return true;
+}
+
+static bool h3c_connection_field(const char *name) {
+    return strcmp(name, "connection") == 0 || strcmp(name, "keep-alive") == 0 ||
+           strcmp(name, "proxy-connection") == 0 || strcmp(name, "transfer-encoding") == 0 ||
+           strcmp(name, "upgrade") == 0;
+}
+
+static int h3c_parse_content_length(const char *value, size_t len, size_t *out) {
+    if (!value || len == 0) return -1;
+    size_t parsed = 0;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)value[i];
+        if (c < '0' || c > '9' || parsed > (SIZE_MAX - 9) / 10) return -1;
+        parsed = parsed * 10 + (size_t)(c - '0');
+    }
+    *out = parsed;
+    return 0;
+}
+
 /**
  * @brief lsquic stream read callback: decode response headers and body.
  *
- * On first invocation, converts the received header set into a
- * cwist_http_response_t (status code and header list) and releases the
- * header set. When WebTransport is enabled and this is an extended-connect
+ * Informational header sets are consumed until a final response arrives. The
+ * final header set becomes a cwist_http_response_t and is released. When
+ * WebTransport is enabled and this is an extended-connect
  * stream, a 2xx status is promoted to a WebTransport session via
  * lsquic_wt_accept(); anything else marks the request rejected. Reads the
  * body incrementally into a growing buffer; on end-of-stream the body is
@@ -564,8 +602,10 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 size_t name_len = hs->headers[i].name_len;
                 size_t value_len = hs->headers[i].val_len;
                 if (!raw_name || !raw_value || name_len == 0 || name_len > 1024 ||
-                    value_len > H3C_DECODE_BUF_SIZE - 1)
-                    continue;
+                    value_len > H3C_DECODE_BUF_SIZE - 1) {
+                    malformed = true;
+                    break;
+                }
                 /* lsxpack exposes counted slices, not C strings: copy before
                  * using strcmp/atoi, which read past the slice end. */
                 char *name = malloc(name_len + 1);
@@ -594,9 +634,27 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                     malformed = true; /* no other response pseudo-header exists */
                 } else {
                     regular_seen = true;
-                    cwist_error_t header_err = cwist_http_header_add(&st->res->headers, name, value);
-                    if (!cwist_error_is_ok(&header_err)) malformed = true;
-                    cwist_error_dispose(&header_err);
+                    if (!h3c_regular_name_valid(name, name_len) ||
+                        !h3c_field_value_valid(value, value_len) || h3c_connection_field(name) ||
+                        (strcmp(name, "te") == 0 &&
+                         (value_len != 8 || memcmp(value, "trailers", 8) != 0))) {
+                        malformed = true;
+                    } else if (strcmp(name, "content-length") == 0) {
+                        size_t content_length;
+                        if (h3c_parse_content_length(value, value_len, &content_length) != 0 ||
+                            (st->has_content_length && st->content_length != content_length)) {
+                            malformed = true;
+                        } else {
+                            st->has_content_length = true;
+                            st->content_length = content_length;
+                        }
+                    }
+                    if (!malformed) {
+                        cwist_error_t header_err =
+                            cwist_http_header_add(&st->res->headers, name, value);
+                        if (!cwist_error_is_ok(&header_err)) malformed = true;
+                        cwist_error_dispose(&header_err);
+                    }
                 }
                 free(value);
                 free(name);
@@ -607,6 +665,14 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
                 h3c_hsi_discard(hset);
                 st->headers_done = 1;
                 lsquic_stream_close(stream);
+                return;
+            }
+            if (st->res->status_code >= 100 && st->res->status_code < 200) {
+                cwist_http_response_destroy(st->res);
+                st->res = NULL;
+                st->has_content_length = false;
+                st->content_length = 0;
+                h3c_hsi_discard(hset);
                 return;
             }
             /* Ownership moved to us with lsquic_stream_get_hset(): lsquic
@@ -701,7 +767,19 @@ static void h3c_on_read(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
     }
 
     if (nread == 0) {
-        if (st->resp_body_len > 0 && st->res && st->res->body) {
+        int status = st->res ? st->res->status_code : 0;
+        bool no_content_status = status == 204 || status == 205 || status == 304;
+        if (!st->res || (no_content_status && st->resp_body_len > 0)) {
+            lsquic_stream_close(stream);
+            return;
+        }
+        bool length_exception = st->req_method == CWIST_HTTP_HEAD || status == 204 || status == 304;
+        if (st->has_content_length && !length_exception && st->content_length != st->resp_body_len) {
+            lsquic_stream_close(stream);
+            return;
+        }
+        if (st->req_method == CWIST_HTTP_HEAD) st->resp_body_len = 0;
+        if (st->resp_body_len > 0 && st->res->body) {
             cwist_error_t body_err =
                 cwist_sstring_assign_len(st->res->body, st->resp_body, st->resp_body_len);
             if (!cwist_error_is_ok(&body_err)) {
@@ -773,6 +851,39 @@ static void h3c_on_write(lsquic_stream_t *stream, lsquic_stream_ctx_t *st_h) {
             (nlen == 7 && strncasecmp(name, ":scheme", nlen) == 0)) {
             node = node->next;
             continue;
+        }
+        if (!h3c_field_value_valid(value, vlen)) {
+            lsquic_stream_close(stream);
+            return;
+        }
+        if (name[0] == ':') {
+            if (strcmp(name, ":protocol") != 0 || st->req_method != CWIST_HTTP_CONNECT) {
+                lsquic_stream_close(stream);
+                return;
+            }
+        } else {
+            if (!h3c_regular_name_valid(name, nlen) || h3c_connection_field(name) ||
+                (strcmp(name, "te") == 0 &&
+                 (vlen != 8 || memcmp(value, "trailers", 8) != 0))) {
+                lsquic_stream_close(stream);
+                return;
+            }
+            if (strcasecmp(name, "host") == 0 && strcmp(value, authority) != 0) {
+                lsquic_stream_close(stream);
+                return;
+            }
+            if (strcasecmp(name, "content-length") == 0) {
+                size_t content_length;
+                if (h3c_parse_content_length(value, vlen, &content_length) != 0 ||
+                    content_length != st->req_body_len) {
+                    lsquic_stream_close(stream);
+                    return;
+                }
+            }
+            if (strcasecmp(name, "host") == 0) {
+                node = node->next;
+                continue;
+            }
         }
         h3_hdr_out_add(&hdrs, name, nlen, value, vlen);
         node = node->next;
@@ -1501,6 +1612,9 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
 
         /* All request fields are in place: arm the write side and send the
          * request now, not at the next advisory tick. */
+        pthread_mutex_lock(&client->mtx);
+        st->request_waiting = 1;
+        pthread_mutex_unlock(&client->mtx);
         lsquic_stream_wantwrite(st->stream, 1);
         lsquic_engine_process_conns(client->engine);
 
@@ -1515,7 +1629,6 @@ cwist_error_t cwist_http3_client_request(cwist_http3_client *client, const char 
         }
 
         pthread_mutex_lock(&client->mtx);
-        st->request_waiting = 1;
         while (!st->response_ready) {
             pthread_mutex_unlock(&client->mtx);
             h3c_process_io(client, 100);

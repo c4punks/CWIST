@@ -526,6 +526,36 @@ static bool jwt_time_from_number(double value, time_t *out) {
     return true;
 }
 
+static int jwt_name_compare(const void *a, const void *b) {
+    const char *const *left = a;
+    const char *const *right = b;
+    return strcmp(*left, *right);
+}
+
+static bool jwt_json_names_unique(const cJSON *object) {
+    size_t count = 0;
+    for (const cJSON *item = object ? object->child : NULL; item; item = item->next) {
+        if (!item->string) return false;
+        count++;
+    }
+    if (count < 2) return true;
+    if (count > SIZE_MAX / sizeof(char *)) return false;
+    const char **names = cwist_alloc(count * sizeof(*names));
+    if (!names) return false;
+    size_t index = 0;
+    for (const cJSON *item = object->child; item; item = item->next) names[index++] = item->string;
+    qsort(names, count, sizeof(*names), jwt_name_compare);
+    bool unique = true;
+    for (size_t i = 1; i < count; i++) {
+        if (strcmp(names[i - 1], names[i]) == 0) {
+            unique = false;
+            break;
+        }
+    }
+    cwist_free(names);
+    return unique;
+}
+
 /* --------------------------------------------------------------------------
  * Public API
  * -------------------------------------------------------------------------- */
@@ -560,7 +590,7 @@ static char *jwt_sign_common(jwt_alg_t alg, const char *payload_json, const char
 
     /* --- Optionally inject exp/iat into payload --------------------------- */
     cJSON *payload = cJSON_ParseWithOpts(payload_json, NULL, true);
-    if (!payload || !cJSON_IsObject(payload)) {
+    if (!payload || !cJSON_IsObject(payload) || !jwt_json_names_unique(payload)) {
         cJSON_Delete(payload);
         cJSON_free(header_json);
         return NULL;
@@ -713,7 +743,8 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
     }
     cJSON *hdr = cJSON_ParseWithLengthOpts((const char *)hdr_json, hdr_json_len + 1, NULL, true);
     cwist_free(hdr_json);
-    if (!hdr) {
+    if (!hdr || !cJSON_IsObject(hdr) || !jwt_json_names_unique(hdr)) {
+        cJSON_Delete(hdr);
         cwist_free(tok_copy);
         return NULL;
     }
@@ -763,7 +794,7 @@ static cwist_jwt_claims *jwt_verify_common(jwt_alg_t alg, const char *token, con
     cJSON *json = cJSON_ParseWithLengthOpts((const char *)pay_json, pay_json_len + 1, NULL, true);
     cwist_free(pay_json);
 
-    if (!json || !cJSON_IsObject(json)) {
+    if (!json || !cJSON_IsObject(json) || !jwt_json_names_unique(json)) {
         cJSON_Delete(json);
         return NULL;
     }

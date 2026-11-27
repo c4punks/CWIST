@@ -31,6 +31,7 @@
 #include "async_internal.h"
 #include "cond_clock.h"
 #include "h2_wire.h"
+#include "path_decode.h"
 #include <cwist/core/mem/alloc.h>
 #include <cwist/core/mem/gc.h>
 #include <cwist/core/log.h>
@@ -240,6 +241,7 @@ typedef struct cwist_h2_stream {
     cwist_http_response *response;
     h2_async_node *async_response;
     bool has_content_length;
+    bool expectation_failed;
     size_t received_content;
     size_t response_sent;
     uint32_t response_chunk_index;
@@ -1752,6 +1754,7 @@ typedef struct h2_header_state {
     bool seen_authority;
     bool seen_regular;
     bool seen_host;
+    bool invalid_path;
     bool is_connect;
     bool is_request;
     uint32_t header_count;
@@ -1774,7 +1777,8 @@ static bool h2_field_value_is_valid(const char *value, size_t len) {
         (value[0] == ' ' || value[0] == '\t' || value[len - 1] == ' ' || value[len - 1] == '\t'))
         return false;
     for (size_t i = 0; i < len; i++) {
-        if (value[i] == '\0' || value[i] == '\r' || value[i] == '\n') return false;
+        unsigned char c = (unsigned char)value[i];
+        if ((c < 0x20 && c != '\t') || c == 0x7f) return false;
     }
     return true;
 }
@@ -1840,6 +1844,7 @@ static int h2_apply_header(h2_stream *s, const char *name, size_t name_len, cons
             st->is_connect = value_len == 7 && memcmp(value, "CONNECT", 7) == 0;
             req->method = cwist_http_string_to_method(value);
         } else if (strcmp(name, ":path") == 0) {
+            if (!cwist_http_origin_target_is_valid(value, value_len)) st->invalid_path = true;
             h2_parse_path(req, value);
         } else if (strcmp(name, ":authority") == 0) {
             cwist_http_header_add(&req->headers, "host", value);
@@ -1854,8 +1859,19 @@ static int h2_apply_header(h2_stream *s, const char *name, size_t name_len, cons
         strcmp(name, "upgrade") == 0)
         return -1;
     if (strcmp(name, "te") == 0 && (value_len != 8 || memcmp(value, "trailers", 8) != 0)) return -1;
+    if (st->is_request && strcmp(name, "expect") == 0 &&
+        (value_len != 12 || strncasecmp(value, "100-continue", 12) != 0)) {
+        s->expectation_failed = true;
+        return 0;
+    }
     if (strcmp(name, "host") == 0) {
         if (st->seen_host) return -1;
+        if (st->seen_authority) {
+            const char *authority = cwist_http_header_get(req->headers, "host");
+            if (!authority || strlen(authority) != value_len ||
+                memcmp(authority, value, value_len) != 0)
+                return -1;
+        }
         st->seen_host = true;
     }
     if (st->is_request && strcmp(name, "content-length") == 0) {
@@ -1978,11 +1994,16 @@ static int h2_decode_header_block(h2_conn *hc, h2_stream *s, const unsigned char
     if (is_request) {
         bool control_valid;
         if (st.is_connect) {
-            control_valid = st.seen_method && st.seen_authority && !st.seen_scheme && !st.seen_path;
+            const char *authority = cwist_http_header_get(s->req->headers, "host");
+            control_valid = st.seen_method && st.seen_authority && authority && authority[0] &&
+                            !st.seen_scheme && !st.seen_path;
         } else {
-            control_valid = st.seen_method && st.seen_scheme && st.seen_path;
+            control_valid = st.seen_method && st.seen_scheme && st.seen_path &&
+                            (st.seen_authority || st.seen_host);
         }
-        if (!control_valid ||
+        bool bad_asterisk = st.seen_path && s->req->path->size == 1 &&
+                            s->req->path->data[0] == '*' && s->req->method != CWIST_HTTP_OPTIONS;
+        if (!control_valid || st.invalid_path || bad_asterisk ||
             (st.seen_path && s->req->path->size == 0 && s->req->method != CWIST_HTTP_OPTIONS))
             return H2_DECODE_STREAM_ERROR;
     }
@@ -2055,14 +2076,15 @@ static int h2_static_table_find_name(const char *name) {
 /**
  * @brief Whether a status code forbids a response body (RFC 9113 section
  * 8.1.1).
- * 1xx/204/304 responses carry no content; content-length is forbidden on
+ * 1xx/204/205/304 responses carry no content; content-length is forbidden on
  * 1xx/204 (and meaningless on 304 here).
  * @param status_code HTTP status code.
  * @retval true No body is permitted.
  * @retval false A body may be sent.
  */
 static bool h2_status_forbids_body(int status_code) {
-    return (status_code >= 100 && status_code < 200) || status_code == 204 || status_code == 304;
+    return (status_code >= 100 && status_code < 200) || status_code == 204 || status_code == 205 ||
+           status_code == 304;
 }
 
 /**
@@ -2924,6 +2946,22 @@ static int h2_send_response_hc(h2_conn *hc, uint32_t stream_id, cwist_http_respo
     return h2_out_flush(hc);
 }
 
+static int h2_reject_expectation(h2_conn *hc, h2_stream *s) {
+    cwist_http_response *res = cwist_http_response_create();
+    if (!res) return -1;
+    res->status_code = CWIST_HTTP_EXPECTATION_FAILED;
+    cwist_http_response_set_body_ptr(res, "417 Expectation Failed",
+                                     sizeof("417 Expectation Failed") - 1);
+    int rc = h2_send_response_hc(hc, s->stream_id, res, false);
+    if (rc == 1) {
+        s->response = res;
+        return 1;
+    }
+    cwist_http_response_destroy(res);
+    h2_stream_remove(hc, s->stream_id);
+    return rc < 0 ? -1 : 1;
+}
+
 /* --- CONTINUATION & Header Assembly --- */
 
 /* Create a stream for an incoming request header block, enforcing
@@ -3081,7 +3119,11 @@ static int h2_begin_headers(h2_conn *hc, uint32_t stream_id, const unsigned char
         }
         if (payload && block_len > 0) {
             int rc = h2_decode_stream_headers(hc, s, payload + block_offset, block_len, is_new);
-            if (rc != 0 || is_new) return rc;
+            if (rc != 0) return rc;
+            if (is_new) {
+                if (s->expectation_failed) return h2_reject_expectation(hc, s);
+                return 0;
+            }
             return h2_check_followup_headers(hc, s, end_stream);
         }
         /* An empty request header block still owes :method and :path. */
@@ -3203,7 +3245,10 @@ static int h2_handle_continuation(h2_conn *hc, uint32_t stream_id, const unsigne
         }
         if (s && hc->cont_buf && hc->cont_len > 0) {
             rc = h2_decode_stream_headers(hc, s, hc->cont_buf, hc->cont_len, is_new);
-            if (rc == 0 && !is_new) rc = h2_check_followup_headers(hc, s, hc->cont_end_stream);
+            if (rc == 0 && is_new && s->expectation_failed)
+                rc = h2_reject_expectation(hc, s);
+            else if (rc == 0 && !is_new)
+                rc = h2_check_followup_headers(hc, s, hc->cont_end_stream);
         } else if (s && !is_new) {
             rc = h2_check_followup_headers(hc, s, hc->cont_end_stream);
         } else if (s && is_new) {
@@ -3302,6 +3347,11 @@ static int h2_handle_settings(h2_conn *hc, const unsigned char *payload, size_t 
  * @retval -2 Connection error FLOW_CONTROL_ERROR (connection window
  *         overflow).
  */
+static bool h2_stream_is_idle(const h2_conn *hc, uint32_t stream_id) {
+    if (stream_id & 1u) return stream_id > hc->last_processed_stream_id;
+    return stream_id >= atomic_load(&hc->next_server_stream_id);
+}
+
 static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id, const unsigned char *payload,
                                    size_t len) {
     if (len != 4) return -1;
@@ -3317,7 +3367,7 @@ static int h2_handle_window_update(h2_conn *hc, uint32_t stream_id, const unsign
         if (!s) {
             /* Idle client stream: connection error (section 5.1). A closed
              * stream may still see WINDOW_UPDATE in flight; ignore it. */
-            if ((stream_id & 1u) && stream_id > hc->last_processed_stream_id) return -1;
+            if (h2_stream_is_idle(hc, stream_id)) return -1;
             return 0;
         }
         if (increment <= 0) return H2_ERR_PROTOCOL_ERROR;
@@ -3927,12 +3977,6 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     /* Refused/malformed header block: RST_STREAM already sent. */
                     break;
                 }
-                if (flags & CWIST_HTTP2_FLAG_END_STREAM) {
-                    /* END_STREAM on CONTINUATION is a protocol violation */
-                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
-                    connected = false;
-                    break;
-                }
                 if ((flags & CWIST_HTTP2_FLAG_END_HEADERS) && hc->cont_end_stream) {
                     h2_stream *s = h2_stream_find(hc, stream_id);
                     if (s) s->remote_closed = true;
@@ -3995,7 +4039,7 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
                     data_len = len - 1 - payload[0];
                 }
                 h2_stream *s = h2_stream_find(hc, stream_id);
-                if (!s && (stream_id & 1u) && stream_id > hc->last_processed_stream_id) {
+                if (!s && h2_stream_is_idle(hc, stream_id)) {
                     /* RFC 9113 section 5.1: DATA on an idle stream. */
                     h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
@@ -4174,12 +4218,17 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             }
 
             case CWIST_HTTP2_FRAME_RST_STREAM: {
-                if (stream_id == 0 || len != 4) {
+                if (stream_id == 0) {
                     h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
                     connected = false;
                     break;
                 }
-                if (stream_id > hc->last_processed_stream_id) {
+                if (len != 4) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
+                    connected = false;
+                    break;
+                }
+                if (h2_stream_is_idle(hc, stream_id)) {
                     /* RFC 7540 section 5.1: RST_STREAM frames MUST NOT be sent for a
                      * stream in the "idle" state. Connection error of type
                      * PROTOCOL_ERROR. */
@@ -4243,6 +4292,11 @@ cwist_error_t cwist_http2_serve_connection_ex(cwist_https_connection *conn, void
             case CWIST_HTTP2_FRAME_GOAWAY: {
                 if (stream_id != 0) {
                     h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_PROTOCOL_ERROR);
+                    connected = false;
+                    break;
+                }
+                if (len < 8) {
+                    h2_send_goaway(hc, hc->last_processed_stream_id, H2_ERR_FRAME_SIZE_ERROR);
                     connected = false;
                     break;
                 }
