@@ -12,7 +12,7 @@
 <area shape="poly" id="edge28_Node000017_Node000002" title=" " alt="" coords="714,188,773,167,847,147,917,131,918,137,848,152,774,172,716,193"/>
 <area shape="rect" id="Node000003" href="$d5/ddc/structcwist__sstring.html" title=" " alt="" coords="27,378,134,403"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="98,365,128,332,167,294,216,257,270,228,312,214,355,204,444,194,527,193,598,197,598,202,527,198,444,199,356,210,313,220,272,233,219,261,171,298,131,336,102,369"/>
-<area shape="rect" id="Node000005" href="$d8/dca/struct____prim__cwist__error__t.html" title="Internal union&#45;like structure to store the actual error value." alt="" coords="282,489,439,514"/>
+<area shape="rect" id="Node000005" href="$d6/d55/structprim____cwist__error__t.html" title="Internal union&#45;like structure to store the actual error value." alt="" coords="285,489,436,514"/>
 <area shape="poly" id="edge5_Node000005_Node000003" title=" " alt="" coords="120,407,189,441,272,475,307,486,306,491,270,480,187,446,118,412"/>
 <area shape="rect" id="Node000008" href="$d3/d72/structcwist__http__header__node.html" title="Linked list for headers to handle multiple headers easily." alt="" coords="271,282,451,307"/>
 <area shape="poly" id="edge10_Node000008_Node000003" title=" " alt="" coords="131,371,321,305,323,310,133,376"/>

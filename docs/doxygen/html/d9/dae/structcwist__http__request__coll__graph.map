@@ -10,13 +10,13 @@
 <area shape="poly" id="edge27_Node000016_Node000001" title=" " alt="" coords="755,496,904,496,904,501,755,501"/>
 <area shape="rect" id="Node000002" href="$d5/ddc/structcwist__sstring.html" title=" " alt="" coords="27,274,134,299"/>
 <area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="104,308,133,340,173,377,220,413,272,442,314,457,351,465,416,469,483,466,523,468,568,473,617,483,616,489,568,479,522,473,483,472,416,474,350,470,312,462,270,446,217,418,169,381,129,344,100,312"/>
-<area shape="rect" id="Node000004" href="$d8/dca/struct____prim__cwist__error__t.html" title="Internal union&#45;like structure to store the actual error value." alt="" coords="282,133,439,158"/>
-<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="99,261,133,225,179,191,229,169,281,155,283,160,231,174,181,196,137,229,103,265"/>
+<area shape="rect" id="Node000004" href="$d6/d55/structprim____cwist__error__t.html" title="Internal union&#45;like structure to store the actual error value." alt="" coords="285,133,436,158"/>
+<area shape="poly" id="edge4_Node000004_Node000002" title=" " alt="" coords="99,261,133,225,179,191,231,168,284,154,286,159,233,173,181,196,137,229,103,265"/>
 <area shape="rect" id="Node000007" href="$d3/d72/structcwist__http__header__node.html" title="Linked list for headers to handle multiple headers easily." alt="" coords="271,349,451,374"/>
 <area shape="poly" id="edge9_Node000007_Node000002" title=" " alt="" coords="144,300,313,346,312,351,142,306"/>
 <area shape="rect" id="Node000003" href="$d4/d50/structcwist__error__t.html" title="Integrated error structure used throughout the system." alt="" coords="615,182,721,207"/>
 <area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="601,205,450,224,271,251,135,278,134,272,270,245,449,219,601,199"/>
-<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="454,157,615,184,614,189,453,163"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="450,157,615,184,614,189,449,162"/>
 <area shape="rect" id="Node000005" href="$dd/d72/structcwist__query__map.html" title=" " alt="" coords="293,509,429,534"/>
 <area shape="poly" id="edge5_Node000001_Node000005" title=" " alt="" coords="443,522,504,522,568,517,617,509,618,514,568,523,504,527,443,527"/>
 <area shape="rect" id="Node000006" href="$d1/d8f/structcwist__query__bucket.html" title=" " alt="" coords="5,509,156,534"/>
