@@ -20,6 +20,7 @@ typedef struct {
     /* Set once a value was delivered for the current header, even an empty
      * one; header_value_len alone cannot express "seen but empty". */
     bool have_value;
+    bool have_disposition;
 
     char *name;
     char *filename;
@@ -58,6 +59,16 @@ static int mp_on_header_value(multipart_parser *p, const char *at, size_t len) {
 
 static bool mp_token_char(unsigned char c) {
     return c > 32 && c < 127 && c != '\\' && c != '"' && !strchr("()<>@,;:/[]?={}", c);
+}
+
+static bool mp_boundary_is_valid(const char *boundary, size_t len) {
+    if (!boundary || len == 0 || len > 70 || boundary[len - 1] == ' ') return false;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)boundary[i];
+        if (isalnum(c) || c == ' ' || strchr("'()+_,-./:=?", c)) continue;
+        return false;
+    }
+    return true;
 }
 
 /** Advance to the ';' that ends the current parameter, stepping over
@@ -148,9 +159,20 @@ static int mp_parse_headers(mp_parse_ctx *ctx) {
     ctx->header_value[ctx->header_value_len] = '\0';
 
     if (strcasecmp(ctx->header_field, "Content-Disposition") == 0) {
+        if (ctx->have_disposition) return 1;
+        const char *disposition = ctx->header_value;
+        while (*disposition == ' ' || *disposition == '\t') disposition++;
+        const char *end = disposition + strlen(disposition);
+        const char *semicolon = memchr(disposition, ';', (size_t)(end - disposition));
+        const char *type_end = semicolon ? semicolon : end;
+        while (type_end > disposition && (type_end[-1] == ' ' || type_end[-1] == '\t')) type_end--;
+        if ((size_t)(type_end - disposition) != 9 ||
+            strncasecmp(disposition, "form-data", 9) != 0)
+            return 1;
         if (mp_disposition_param(ctx->header_value, "name", &ctx->name) < 0 ||
             mp_disposition_param(ctx->header_value, "filename", &ctx->filename) < 0)
             return 1;
+        ctx->have_disposition = true;
     } else if (strcasecmp(ctx->header_field, "Content-Type") == 0) {
         size_t vlen = strlen(ctx->header_value);
         if (vlen >= sizeof(ctx->content_type)) return 1;
@@ -185,6 +207,7 @@ static int mp_on_part_data_begin(multipart_parser *p) {
     ctx->header_field_len = 0;
     ctx->header_value_len = 0;
     ctx->have_value = false;
+    ctx->have_disposition = false;
     cwist_free(ctx->name);
     cwist_free(ctx->filename);
     ctx->name = NULL;
@@ -245,6 +268,7 @@ static int mp_on_part_data(multipart_parser *p, const char *at, size_t len) {
  */
 static int mp_on_part_data_end(multipart_parser *p) {
     mp_parse_ctx *ctx = (mp_parse_ctx *)multipart_parser_get_data(p);
+    if (!ctx->have_disposition || !ctx->name) return 1;
     cwist_multipart_field *field =
         (cwist_multipart_field *)cwist_alloc(sizeof(cwist_multipart_field));
     if (!field) return 1;
@@ -434,6 +458,10 @@ char *cwist_multipart_extract_boundary(const char *content_type) {
                     boundary[out++] = start[i];
                 }
                 boundary[out] = '\0';
+                if (!mp_boundary_is_valid(boundary, out)) {
+                    cwist_free(boundary);
+                    return NULL;
+                }
                 return boundary;
             }
         }

@@ -1832,10 +1832,12 @@ cwist_http_method_t cwist_http_string_to_method_len(const char *str, size_t len)
         memcpy(&m, str, sizeof(uint32_t));
         switch (m) {
             case MAGIC_GET: return CWIST_HTTP_GET;
-            case MAGIC_POST: return CWIST_HTTP_POST;
+            case MAGIC_POST:
+                if (len == 4) return CWIST_HTTP_POST;
+                break;
             case MAGIC_PUT: return CWIST_HTTP_PUT;
             case MAGIC_DELE:
-                if (len >= 6 && memcmp(str, "DELETE", 6) == 0) return CWIST_HTTP_DELETE;
+                if (len == 6) return CWIST_HTTP_DELETE;
                 break;
             case MAGIC_HEAD:
                 if (len == 4) return CWIST_HTTP_HEAD;
@@ -4656,16 +4658,88 @@ cwist_sstring *cwist_http_stringify_response(cwist_http_response *res) {
     return s;
 }
 
+static bool http_is_token_char(unsigned char c) {
+    return c != 0 && (isalnum(c) || strchr("!#$%&'*+-.^_`|~", c) != NULL);
+}
+
+static bool http_ipv4_is_valid(const char *s, size_t len) {
+    size_t pos = 0;
+    for (unsigned part = 0; part < 4; part++) {
+        if (pos >= len || (part > 0 && s[pos++] != '.')) return false;
+        size_t start = pos;
+        unsigned value = 0;
+        while (pos < len && s[pos] != '.') {
+            unsigned char c = (unsigned char)s[pos];
+            if (!isdigit(c) || pos - start == 3) return false;
+            value = value * 10 + (unsigned)(c - '0');
+            pos++;
+        }
+        if (pos == start || value > 255 || (pos - start > 1 && s[start] == '0')) return false;
+    }
+    return pos == len;
+}
+
+static bool http_ip_literal_is_valid(const char *s, size_t len) {
+    if (!s || len == 0) return false;
+    if (s[0] == 'v' || s[0] == 'V') {
+        size_t pos = 1;
+        while (pos < len && isxdigit((unsigned char)s[pos])) pos++;
+        if (pos == 1 || pos >= len || s[pos++] != '.' || pos == len) return false;
+        for (; pos < len; pos++) {
+            unsigned char c = (unsigned char)s[pos];
+            if (!isalnum(c) && c != '-' && c != '.' && c != '_' && c != '~' && c != ':' &&
+                !strchr("!$&'()*+,;=", c))
+                return false;
+        }
+        return true;
+    }
+
+    size_t pos = 0, groups = 0;
+    bool compressed = false;
+    if (len >= 2 && s[0] == ':' && s[1] == ':') {
+        compressed = true;
+        pos = 2;
+        if (pos == len) return true;
+    } else if (s[0] == ':') {
+        return false;
+    }
+    while (pos < len) {
+        if (groups >= 8) return false;
+        size_t start = pos;
+        while (pos < len && s[pos] != ':') pos++;
+        size_t segment_len = pos - start;
+        if (segment_len == 0) return false;
+        if (memchr(s + start, '.', segment_len)) {
+            if (pos != len || groups > 6 || !http_ipv4_is_valid(s + start, segment_len))
+                return false;
+            groups += 2;
+            break;
+        }
+        if (segment_len > 4) return false;
+        for (size_t i = start; i < pos; i++) {
+            if (!isxdigit((unsigned char)s[i])) return false;
+        }
+        groups++;
+        if (pos == len) break;
+        if (pos + 1 < len && s[pos + 1] == ':') {
+            if (compressed) return false;
+            compressed = true;
+            pos += 2;
+            if (pos == len) break;
+        } else {
+            pos++;
+            if (pos == len) return false;
+        }
+    }
+    return compressed ? groups < 8 : groups == 8;
+}
+
 static bool http_host_is_valid(const char *host, size_t len) {
     if (!host || len == 0) return false;
     size_t pos = 0;
     if (host[0] == '[') {
         const char *close = memchr(host, ']', len);
-        if (!close || close == host + 1) return false;
-        for (size_t i = 1; i < (size_t)(close - host); i++) {
-            unsigned char c = (unsigned char)host[i];
-            if (!isxdigit(c) && c != ':' && c != '.' && c != '%') return false;
-        }
+        if (!close || !http_ip_literal_is_valid(host + 1, (size_t)(close - host - 1))) return false;
         pos = (size_t)(close - host) + 1;
     } else {
         while (pos < len && host[pos] != ':') {
@@ -4727,6 +4801,7 @@ static int http_validate_transfer_encoding(cwist_http_header_node *headers) {
     bool seen = false;
     bool final_is_chunked = false;
     bool bad_coding = false;
+    size_t chunked_count = 0;
     for (cwist_http_header_node *n = headers; n; n = n->next) {
         if (!n->key || !n->key->data || strcasecmp(n->key->data, "Transfer-Encoding") != 0)
             continue;
@@ -4743,7 +4818,10 @@ static int http_validate_transfer_encoding(cwist_http_header_node *headers) {
             any_token = true;
             /* A token with parameters (e.g. "chunked;x=1") is not chunked. */
             last_chunked = ((size_t)(end - tok) == 7 && strncasecmp(tok, "chunked", 7) == 0);
-            if (!last_chunked) bad_coding = true;
+            if (last_chunked)
+                chunked_count++;
+            else
+                bad_coding = true;
             if (!*p) break;
             p++;
             const char *next = p;
@@ -4756,7 +4834,7 @@ static int http_validate_transfer_encoding(cwist_http_header_node *headers) {
         }
     }
     if (!seen) return 0;
-    if (!final_is_chunked) return 1;
+    if (!final_is_chunked || chunked_count > 1) return 1;
     if (bad_coding) return 2;
     return 0;
 }
@@ -4813,12 +4891,20 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
             return NULL;
         }
 
-        req->method = cwist_http_string_to_method_len(line_start, sp1 - line_start);
+        size_t method_len = (size_t)(sp1 - line_start);
+        for (size_t i = 0; i < method_len; i++) {
+            if (!http_is_token_char((unsigned char)line_start[i])) goto malformed_request;
+        }
+        req->method = cwist_http_string_to_method_len(line_start, method_len);
 
         const char *path_start = sp1 + 1;
         const char *path_end = sp2;
         size_t target_len = (size_t)(path_end - path_start);
         if (target_len == 0 || memchr(path_start, '#', target_len)) goto malformed_request;
+        for (size_t i = 0; i < target_len; i++) {
+            unsigned char c = (unsigned char)path_start[i];
+            if (c < 0x20 || c == 0x7f) goto malformed_request;
+        }
         if (path_start[0] != '/' && !(target_len == 1 && path_start[0] == '*' &&
                                       req->method == CWIST_HTTP_OPTIONS) &&
             req->method != CWIST_HTTP_CONNECT) {
@@ -4846,9 +4932,20 @@ cwist_http_parse_request_with_header_end(const char *raw_request, size_t raw_len
             path_start = authority_end;
         }
 
-        if (req->method == CWIST_HTTP_CONNECT &&
-            !http_host_is_valid(path_start, (size_t)(path_end - path_start)))
-            goto malformed_request;
+        if (req->method == CWIST_HTTP_CONNECT) {
+            size_t authority_len = (size_t)(path_end - path_start);
+            bool has_port = false;
+            if (http_host_is_valid(path_start, authority_len)) {
+                if (path_start[0] == '[') {
+                    const char *close = memchr(path_start, ']', authority_len);
+                    has_port = close && (size_t)(close - path_start) + 2 < authority_len &&
+                               close[1] == ':';
+                } else {
+                    has_port = memchr(path_start, ':', authority_len) != NULL;
+                }
+            }
+            if (!has_port) goto malformed_request;
+        }
         const char *query_sep =
             (const char *)memchr(path_start, '?', (size_t)(path_end - path_start));
         bool absolute_root = absolute_authority && path_start == path_end;
@@ -5279,10 +5376,6 @@ int cwist_http_response_stream_end(cwist_http_response *res) {
  * @brief Read and reassemble a chunked transfer-encoded body.
  * @return 0 on success, -1 on error.
  */
-static bool http_is_token_char(unsigned char c) {
-    return c != 0 && (isalnum(c) || strchr("!#$%&'*+-.^_`|~", c) != NULL);
-}
-
 static int http_parse_chunk_size(const char *line, size_t len, size_t *out_size) {
     size_t value = 0, pos = 0;
     while (pos < len && line[pos] != ';' && line[pos] != ' ' && line[pos] != '\t') {
@@ -5341,6 +5434,24 @@ static int http_parse_chunk_size(const char *line, size_t len, size_t *out_size)
     return 0;
 }
 
+static bool http_trailer_line_is_valid(const char *line, size_t len) {
+    if (!line || len == 0 || line[0] == ' ' || line[0] == '\t') return false;
+    const char *colon = memchr(line, ':', len);
+    if (!colon || colon == line) return false;
+    for (const char *p = line; p < colon; p++) {
+        if (!http_is_token_char((unsigned char)*p)) return false;
+    }
+    const char *value = colon + 1;
+    const char *end = line + len;
+    while (value < end && (*value == ' ' || *value == '\t')) value++;
+    while (end > value && (end[-1] == ' ' || end[-1] == '\t')) end--;
+    for (const char *p = value; p < end; p++) {
+        unsigned char c = (unsigned char)*p;
+        if ((c < 0x20 && c != '\t') || c == 0x7f) return false;
+    }
+    return true;
+}
+
 /**
  * @brief Append a decoded chunk to the body being assembled.
  *
@@ -5395,9 +5506,15 @@ static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_
         offset += line_len;
 
         if (chunk_size == 0) {
-            /* Consume optional trailers until empty line */
-            while (offset + 1 < *avail && !(buf[offset] == '\r' && buf[offset + 1] == '\n')) {
-                char *trailer_crlf = memmem(buf + offset, *avail - offset, "\r\n", 2);
+            for (;;) {
+                char *trailer_crlf = NULL;
+                if (*avail - offset >= 2) {
+                    if (buf[offset] == '\r' && buf[offset + 1] == '\n') {
+                        offset += 2;
+                        break;
+                    }
+                    trailer_crlf = memmem(buf + offset, *avail - offset, "\r\n", 2);
+                }
                 if (!trailer_crlf) {
                     if (*avail >= buf_cap - 1) return -1;
                     ssize_t bytes = recv(client_fd, buf + *avail, buf_cap - 1 - *avail, 0);
@@ -5414,14 +5531,11 @@ static int http_read_chunked_body(int client_fd, char *buf, size_t *avail, size_
                     if (bytes == 0) return -1;
                     *avail += (size_t)bytes;
                     buf[*avail] = '\0';
-                    trailer_crlf = memmem(buf + offset, *avail - offset, "\r\n", 2);
+                    continue;
                 }
-                if (trailer_crlf) {
-                    offset = (size_t)(trailer_crlf - buf) + 2;
-                }
-            }
-            if (offset + 1 < *avail && buf[offset] == '\r' && buf[offset + 1] == '\n') {
-                offset += 2;
+                size_t trailer_len = (size_t)(trailer_crlf - (buf + offset));
+                if (!http_trailer_line_is_valid(buf + offset, trailer_len)) return -1;
+                offset = (size_t)(trailer_crlf - buf) + 2;
             }
             break;
         }
@@ -5800,6 +5914,8 @@ static int http_chunked_scan(const char *buf, size_t avail, size_t *consumed,
                 }
                 char *tcrlf = memmem(buf + pos, avail - pos, "\r\n", 2);
                 if (!tcrlf) return 0;
+                size_t trailer_len = (size_t)(tcrlf - (buf + pos));
+                if (!http_trailer_line_is_valid(buf + pos, trailer_len)) return -1;
                 pos = (size_t)(tcrlf - buf) + 2;
             }
         }

@@ -4,6 +4,27 @@
 #include <cwist/core/mem/alloc.h>
 #include <stddef.h>
 
+static inline int cwist_http_origin_target_is_valid(const char *path, size_t len) {
+    if (!path || len == 0) return 0;
+    if (path[0] != '/' && !(len == 1 && path[0] == '*')) return 0;
+    for (size_t i = 0; i < len; i++) {
+        unsigned char c = (unsigned char)path[i];
+        if (c <= 0x20 || c == 0x7f || c == '#') return 0;
+        if (c == '%') {
+            if (i + 2 >= len) return 0;
+            unsigned char hi = (unsigned char)path[i + 1];
+            unsigned char lo = (unsigned char)path[i + 2];
+            int hi_hex = (hi >= '0' && hi <= '9') || (hi >= 'a' && hi <= 'f') ||
+                         (hi >= 'A' && hi <= 'F');
+            int lo_hex = (lo >= '0' && lo <= '9') || (lo >= 'a' && lo <= 'f') ||
+                         (lo >= 'A' && lo <= 'F');
+            if (!hi_hex || !lo_hex) return 0;
+            i += 2;
+        }
+    }
+    return 1;
+}
+
 static inline int cwist_http_path_segment_decode(const char *src, size_t len, char **decoded) {
     if (decoded) *decoded = NULL;
     char *out = decoded ? (char *)cwist_alloc(len + 1) : NULL;

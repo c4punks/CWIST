@@ -5,12 +5,30 @@
 #include <stdio.h>
 
 int main(void) {
+    assert(h3c_regular_name_valid("content-type", 12));
+    assert(!h3c_regular_name_valid("Content-Type", 12));
+    assert(!h3c_regular_name_valid(":status", 7));
+    assert(!h3c_regular_name_valid("bad name", 8));
+    assert(h3c_field_value_valid("value\twith-tab", 14));
+    assert(!h3c_field_value_valid("bad\001value", 9));
+    size_t parsed_length = 0;
+    assert(h3c_parse_content_length("0", 1, &parsed_length) == 0 && parsed_length == 0);
+    assert(h3c_parse_content_length("1024", 4, &parsed_length) == 0 && parsed_length == 1024);
+    assert(h3c_parse_content_length("-1", 2, &parsed_length) == -1);
+    assert(h3c_parse_content_length("18446744073709551616", 20, &parsed_length) == -1);
+
     assert(h3c_timeout_to_poll_us(-1) == 1000);
     assert(h3c_timeout_to_poll_us(0) == 1000);
     assert(h3c_timeout_to_poll_us(1) == 1000);
     assert(h3c_timeout_to_poll_us(999) == 999000);
     assert(h3c_timeout_to_poll_us(1000) == 1000000);
     assert(h3c_timeout_to_poll_us(INT_MAX) == 1000000);
+    assert(h3c_retry_backoff_ms(1000, 1) == 1000);
+    assert(h3c_retry_backoff_ms(1000, 2) == 2000);
+    assert(h3c_retry_backoff_ms(1000, 5) == 16000);
+    assert(h3c_retry_backoff_ms(1000, 6) == 30000);
+    assert(h3c_retry_backoff_ms(1, 31) == 30000);
+    assert(h3c_retry_backoff_ms(INT_MAX, 1) == 30000);
 
     cwist_http3_client client;
     memset(&client, 0, sizeof(client));
@@ -102,10 +120,12 @@ int main(void) {
     assert(!cwist_error_is_ok(&err_null));
     assert(err_null.error.err_i16 == EINVAL);
 
-#ifdef CWIST_WEBTRANSPORT_CLIENT
     err_null = cwist_http3_client_enable_datagram_channel_checked(NULL, 1);
     assert(!cwist_error_is_ok(&err_null));
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     assert(err_null.error.err_i16 == EINVAL);
+#else
+    assert(err_null.error.err_i16 == ENOSYS);
 #endif
 
     /* 2. Active-connection rejection */
@@ -117,10 +137,12 @@ int main(void) {
     assert(!cwist_error_is_ok(&err_busy));
     assert(err_busy.error.err_i16 == EBUSY);
 
-#ifdef CWIST_WEBTRANSPORT_CLIENT
     err_busy = cwist_http3_client_enable_datagram_channel_checked(&mock_client, 1);
     assert(!cwist_error_is_ok(&err_busy));
+#ifdef CWIST_WEBTRANSPORT_CLIENT
     assert(err_busy.error.err_i16 == EBUSY);
+#else
+    assert(err_busy.error.err_i16 == ENOSYS);
 #endif
 
     /* 3. Injected engine-creation failure */

@@ -219,10 +219,16 @@ static void test_disposition_parameter_forms(void) {
                                         "\r\n"
                                         "x\r\n"
                                         "--" B "--\r\n";
-    r = cwist_multipart_parse(filename_only, sizeof(filename_only) - 1, B);
-    assert(r != NULL && r->fields->name == NULL);
-    assert(r->fields->filename && strcmp(r->fields->filename, "only.txt") == 0);
-    cwist_multipart_result_destroy(r);
+    assert(cwist_multipart_parse(filename_only, sizeof(filename_only) - 1, B) == NULL);
+
+    static const char missing_disposition[] = "--" B "\r\nContent-Type: text/plain\r\n\r\n"
+                                            "x\r\n--" B "--\r\n";
+    assert(cwist_multipart_parse(missing_disposition, sizeof(missing_disposition) - 1, B) == NULL);
+
+    static const char wrong_disposition[] = "--" B "\r\n"
+                                          "Content-Disposition: attachment; name=x\r\n\r\n"
+                                          "x\r\n--" B "--\r\n";
+    assert(cwist_multipart_parse(wrong_disposition, sizeof(wrong_disposition) - 1, B) == NULL);
 
     static const char invalid[] = "--" B "\r\n"
                                   "Content-Disposition: form-data; name=bad\"token\r\n"
@@ -255,15 +261,28 @@ static void test_extract_boundary(void) {
     assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"" B "\" garbage") ==
            NULL);
 
-    b = cwist_multipart_extract_boundary("multipart/form-data; boundary=\"a\\\\b\"");
-    assert(b && strcmp(b, "a\\b") == 0);
-    static const char escaped_body[] = "--a\\b\r\n"
+    b = cwist_multipart_extract_boundary("multipart/form-data; boundary=\"a?b\"");
+    assert(b && strcmp(b, "a?b") == 0);
+    static const char escaped_body[] = "--a?b\r\n"
                                        "Content-Disposition: form-data; name=\"x\"\r\n\r\n"
-                                       "value\r\n--a\\b--\r\n";
+                                       "value\r\n--a?b--\r\n";
     cwist_multipart_result *r = cwist_multipart_parse(escaped_body, sizeof(escaped_body) - 1, b);
     assert(r && find_field(r, "x") != NULL);
     cwist_multipart_result_destroy(r);
     free(b);
+
+    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"a\\\\b\"") == NULL);
+    assert(cwist_multipart_extract_boundary("multipart/form-data; boundary=\"a b \"") == NULL);
+    char long_boundary[128] = "multipart/form-data; boundary=";
+    size_t prefix_len = strlen(long_boundary);
+    memset(long_boundary + prefix_len, 'a', 71);
+    long_boundary[prefix_len + 70] = '\0';
+    b = cwist_multipart_extract_boundary(long_boundary);
+    assert(b && strlen(b) == 70);
+    free(b);
+    long_boundary[prefix_len + 70] = 'a';
+    long_boundary[prefix_len + 71] = '\0';
+    assert(cwist_multipart_extract_boundary(long_boundary) == NULL);
     printf("  Passed.\n");
 }
 

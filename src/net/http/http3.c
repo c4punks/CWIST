@@ -29,6 +29,7 @@
 #include "http3_global.h"
 #include "async_internal.h"
 #include "tls_info.h"
+#include "path_decode.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -172,6 +173,8 @@ typedef struct h3_stream_ctx {
     int seen_regular_header; /* a non-pseudo header already arrived */
     int is_connect;          /* :method CONNECT */
     int saw_empty_path;      /* :path arrived with a zero-length value */
+    int invalid_path;
+    int expectation_failed;
     int malformed;           /* RFC 9114 Section 4.3.1 violation */
     bool has_content_length; /* content-length was present and valid */
 #ifdef CWIST_WEBTRANSPORT_SERVER
@@ -1455,7 +1458,8 @@ static bool h3_field_value_is_valid(const char *value, size_t len) {
         (value[0] == ' ' || value[0] == '\t' || value[len - 1] == ' ' || value[len - 1] == '\t'))
         return false;
     for (size_t i = 0; i < len; i++) {
-        if (value[i] == '\0' || value[i] == '\r' || value[i] == '\n') return false;
+        unsigned char c = (unsigned char)value[i];
+        if ((c < 0x20 && c != '\t') || c == 0x7f) return false;
     }
     return true;
 }
@@ -1480,9 +1484,15 @@ static int h3_apply_header(h3_stream_ctx_t *st, const char *name, size_t name_le
         req->method = cwist_http_string_to_method(value);
         return 0;
     }
-    if (strcmp(name, ":path") == 0) return h3_parse_path(req, value);
+    if (strcmp(name, ":path") == 0) {
+        if (!cwist_http_origin_target_is_valid(value, value_len)) st->invalid_path = 1;
+        return h3_parse_path(req, value);
+    }
     if (strcmp(name, ":authority") == 0 || strcmp(name, "host") == 0) {
-        if (!cwist_http_header_get(req->headers, "host")) {
+        const char *existing = cwist_http_header_get(req->headers, "host");
+        if (existing && (strlen(existing) != value_len || memcmp(existing, value, value_len) != 0))
+            return -1;
+        if (!existing) {
             cwist_error_t err = cwist_http_header_add(&req->headers, "host", value);
             if (!cwist_error_is_ok(&err)) {
                 cwist_error_dispose(&err);
@@ -1498,6 +1508,11 @@ static int h3_apply_header(h3_stream_ctx_t *st, const char *name, size_t name_le
         strcmp(name, "upgrade") == 0)
         return -1;
     if (strcmp(name, "te") == 0 && (value_len != 8 || memcmp(value, "trailers", 8) != 0)) return -1;
+    if (strcmp(name, "expect") == 0 &&
+        (value_len != 12 || strncasecmp(value, "100-continue", 12) != 0)) {
+        st->expectation_failed = 1;
+        return 0;
+    }
     if (strcmp(name, "content-length") == 0) {
         size_t content_length;
         if (h3_parse_content_length(value, value_len, &content_length) != 0 ||
@@ -1581,6 +1596,19 @@ static void h3_reject_malformed_request(lsquic_stream_t *stream, h3_stream_ctx_t
     if (!st->res) st->res = cwist_http_response_create();
     if (st->res)
         h3_json_error(st->res, CWIST_HTTP_BAD_REQUEST, "{\"error\":\"malformed request\"}");
+    st->response_ready = 1;
+    lsquic_stream_wantread(stream, 0);
+    lsquic_stream_shutdown(stream, 0);
+    lsquic_stream_wantwrite(stream, 1);
+}
+
+static void h3_reject_expectation(lsquic_stream_t *stream, h3_stream_ctx_t *st) {
+    st->malformed = 1;
+    st->headers_done = 1;
+    if (!st->res) st->res = cwist_http_response_create();
+    if (st->res)
+        h3_json_error(st->res, CWIST_HTTP_EXPECTATION_FAILED,
+                      "{\"error\":\"expectation failed\"}");
     st->response_ready = 1;
     lsquic_stream_wantread(stream, 0);
     lsquic_stream_shutdown(stream, 0);
@@ -1711,6 +1739,16 @@ static bool h3_process_stream_headers(lsquic_stream_t *stream, h3_stream_ctx_t *
             h3_reject_malformed_request(stream, st);
             return false;
         }
+    }
+    bool bad_asterisk = st->req && st->req->path && st->req->path->size == 1 &&
+                        st->req->path->data[0] == '*' && st->req->method != CWIST_HTTP_OPTIONS;
+    if (st->invalid_path || bad_asterisk) {
+        h3_reject_malformed_request(stream, st);
+        return false;
+    }
+    if (st->expectation_failed) {
+        h3_reject_expectation(stream, st);
+        return false;
     }
 #ifdef CWIST_WEBTRANSPORT_SERVER
     if (!st->is_connect) st->is_webtransport = 0;
@@ -2428,11 +2466,12 @@ static bool h3_content_length_is_valid(const char *cl) {
 
 /**
  * @brief Whether a status code forbids a response body (RFC 9114 Section
- *        4.1.2: 1xx/204/304); content-length on them would make the message
+ *        4.1.2: 1xx/204/205/304); content-length on them would make the message
  *        malformed at connection level.
  */
 static bool h3_status_forbids_body(int status_code) {
-    return (status_code >= 100 && status_code < 200) || status_code == 204 || status_code == 304;
+    return (status_code >= 100 && status_code < 200) || status_code == 204 || status_code == 205 ||
+           status_code == 304;
 }
 
 /**

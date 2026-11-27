@@ -456,12 +456,10 @@ int main(void) {
     res = NULL;
     err = cwist_http3_client_request(client, "/", CWIST_HTTP_GET, hdrs, NULL, 0, &res);
     cwist_http_header_free_all(hdrs);
-    assert(err.error.err_i16 == 0);
-    assert(res != NULL);
-    assert(res->status_code == CWIST_HTTP_BAD_REQUEST);
+    assert(err.error.err_i16 != 0);
+    assert(res == NULL);
     assert(g_handler_called == 0);
-    cwist_http_response_destroy(res);
-    printf("[PASS] HTTP/3 unknown pseudo-header rejected with 400.\n");
+    printf("[PASS] HTTP/3 client rejects an unknown pseudo-header before sending.\n");
 
     /* Plain CONNECT carrying :scheme/:path is malformed (RFC 9114 4.3.1):
      * the client always sends :scheme and :path, so this must be rejected. */

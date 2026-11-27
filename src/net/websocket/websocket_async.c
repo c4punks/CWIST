@@ -782,7 +782,7 @@ void cwist_websocket_async_close(cwist_websocket_async *ws) {
  * @param code RFC 6455 close status code (big-endian on the wire).
  */
 void cwist_websocket_async_close_code(cwist_websocket_async *ws, uint16_t code) {
-    if (!ws || ws->closed) return;
+    if (!ws || ws->closed || !cwist_ws_internal_close_code_valid(code)) return;
     ws->closed = true;
     uint8_t body[2] = {(uint8_t)(code >> 8), (uint8_t)(code & 0xFF)};
     if (ws_async_queue_frame(ws, CWIST_WS_FRAME_CLOSE, body, sizeof(body)) != 0) {

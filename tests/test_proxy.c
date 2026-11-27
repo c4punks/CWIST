@@ -11,6 +11,7 @@
 #include <cwist/sys/app/app.h>
 #include "../src/net/proxy/proxy_internal.h"
 #include "../src/net/http/tls_info.h"
+#include "../src/sys/app/app_route_internal.h"
 #include <cwist/net/http/http3_client.h>
 #include <curl/curl.h>
 
@@ -241,12 +242,13 @@ static void upstream_echo(cwist_http_request *req, cwist_http_response *res) {
     }
     snprintf(buf, sizeof(buf),
              "%s method=%s path=%s query=%s host=%s xff=%s xfh=%s xfp=%s secret=%s keepalive=%s "
-             "accept=%s ctype=%s body=%s",
+             "accept=%s ctype=%s via=%s mf=%s body=%s",
              tls, cwist_http_method_to_string(req->method), req->path->data,
              (req->query && req->query->data && req->query->data[0]) ? req->query->data : "-",
              hdr(req, "host"), hdr(req, "x-forwarded-for"), hdr(req, "x-forwarded-host"),
              hdr(req, "x-forwarded-proto"), hdr(req, "x-secret"), hdr(req, "keep-alive"),
-             hdr(req, "accept"), hdr(req, "content-type"),
+             hdr(req, "accept"), hdr(req, "content-type"), hdr(req, "via"),
+             hdr(req, "max-forwards"),
              (req->body && req->body->data && req->body->size) ? req->body->data : "-");
     cwist_http_header_add(&res->headers, "Content-Type", "text/plain");
     cwist_http_header_add(&res->headers, "Connection", "keep-alive, X-Up-Secret");
@@ -310,8 +312,14 @@ static void stop_group(pid_t pgid) {
     if (kill(-pgid, 0) == 0) kill(-pgid, SIGKILL);
 }
 
+static bool upstream_options_only(cwist_app *app, cwist_http_request *req) {
+    (void)app;
+    return req->method == CWIST_HTTP_OPTIONS && strcmp(req->path->data, "/v1/echo") == 0;
+}
+
 static void run_upstream(void) {
     cwist_app *app = cwist_app_create();
+    cwist_app_internal_set_fallback(upstream_options_only, upstream_echo);
     cwist_app_get(app, "/v1/echo", upstream_echo);
     cwist_app_post(app, "/v1/echo", upstream_echo);
     cwist_app_put(app, "/v1/echo", upstream_echo);
@@ -552,12 +560,27 @@ static void test_end_to_end(void) {
     CHECK(has(r, "xff=127.0.0.1 "), "X-Forwarded-For overwritten");
     CHECK(has(r, "xfh=front.test:19962"), "X-Forwarded-Host");
     CHECK(has(r, "xfp=http"), "X-Forwarded-Proto");
+    CHECK(has(r, "via=1.1 cwist"), "request Via added");
+    CHECK(has_header_ci(r, "Via"), "response Via added");
     CHECK(has(r, "secret=-"), "Connection-listed request header dropped");
     CHECK(has(r, "keepalive=-"), "hop-by-hop request header dropped");
     CHECK(has(r, "accept=-"), "no Accept invented");
     CHECK(has(r, "X-Up-Public: visible"), "end-to-end response header kept");
     CHECK(!has_header_ci(r, "X-Up-Secret"), "Connection-listed response header dropped");
     CHECK(!has_header_ci(r, "Alt-Svc"), "upstream Alt-Svc dropped, h3 off");
+    free(r);
+
+    r = exchange(PROXY_PORT, "OPTIONS /api/echo HTTP/1.1\r\nHost: front.test:19962\r\n"
+                             "Max-Forwards: 1\r\nConnection: close\r\n\r\n");
+    CHECK(status_is(r, 200) && has(r, "mf=0"), "Max-Forwards decremented before forwarding");
+    free(r);
+    r = exchange(PROXY_PORT, "OPTIONS /api/echo HTTP/1.1\r\nHost: front.test:19962\r\n"
+                             "Max-Forwards: 0\r\nConnection: close\r\n\r\n");
+    CHECK(status_is(r, 200) && has_header_ci(r, "Allow"), "Max-Forwards zero answered locally");
+    free(r);
+    r = exchange(PROXY_PORT, "OPTIONS /api/echo HTTP/1.1\r\nHost: front.test:19962\r\n"
+                             "Max-Forwards: nope\r\nConnection: close\r\n\r\n");
+    CHECK(status_is(r, 400), "malformed Max-Forwards rejected");
     free(r);
 
     r = exchange(PROXY_PORT,
