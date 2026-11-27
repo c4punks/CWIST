@@ -141,6 +141,8 @@ Public Attributes</h2></td></tr>
 <tr class="separator:a4a68db685eaa3a65a9c420ffad1755a8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab883a5312a83c4da36986e63ae8b5cf4" id="r_ab883a5312a83c4da36986e63ae8b5cf4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/db9/structcwist__sdp__info.html#ab883a5312a83c4da36986e63ae8b5cf4">has_lite</a></td></tr>
 <tr class="separator:ab883a5312a83c4da36986e63ae8b5cf4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77ab1f6bdb489559b566a2330a5c1aa5" id="r_a77ab1f6bdb489559b566a2330a5c1aa5"><td class="memItemLeft" align="right" valign="top">char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/db9/structcwist__sdp__info.html#a77ab1f6bdb489559b566a2330a5c1aa5">bundle_group</a> [256]</td></tr>
+<tr class="separator:a77ab1f6bdb489559b566a2330a5c1aa5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a40cca0211a6b1affabd25db6a9772fec" id="r_a40cca0211a6b1affabd25db6a9772fec"><td class="memItemLeft" align="right" valign="top"><a class="el" href="../../d8/df9/structcwist__sdp__section.html">cwist_sdp_section</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/db9/structcwist__sdp__info.html#a40cca0211a6b1affabd25db6a9772fec">sections</a> [<a class="el" href="../../da/d89/webrtc__internal_8h.html#a53eb16e377263c9237770218631c3603">CWIST_SDP_MAX_SECTIONS</a>]</td></tr>
 <tr class="separator:a40cca0211a6b1affabd25db6a9772fec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abe987caf3d0a5eadfcb50f74576871df" id="r_abe987caf3d0a5eadfcb50f74576871df"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/db9/structcwist__sdp__info.html#abe987caf3d0a5eadfcb50f74576871df">section_count</a></td></tr>
@@ -149,8 +151,26 @@ Public Attributes</h2></td></tr>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Fields the ICE-lite agent needs from an SDP description. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00268">268</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00273">273</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 </div><h2 class="groupheader">Member Data Documentation</h2>
+<a id="a77ab1f6bdb489559b566a2330a5c1aa5" name="a77ab1f6bdb489559b566a2330a5c1aa5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a77ab1f6bdb489559b566a2330a5c1aa5">&#9670;&#160;</a></span>bundle_group</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">char cwist_sdp_info::bundle_group[256]</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00280">280</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>, <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00281">cwist_sdp_write_answer()</a>, and <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00224">cwist_sdp_write_answer_for_offer()</a>.</p>
+
+</div>
+</div>
 <a id="a59588ca588cc02216d9cbf68c43b2eab" name="a59588ca588cc02216d9cbf68c43b2eab"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a59588ca588cc02216d9cbf68c43b2eab">&#9670;&#160;</a></span>fingerprint</h2>
 
@@ -164,9 +184,9 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Remote DTLS certificate fingerprint. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00271">271</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00276">276</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01054">cwist_webrtc_handle_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01051">cwist_webrtc_handle_offer()</a>.</p>
 
 </div>
 </div>
@@ -183,9 +203,9 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>Non-zero if a=ice-lite was present. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00274">274</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00279">279</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>.</p>
 
 </div>
 </div>
@@ -201,9 +221,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00270">270</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00275">275</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01054">cwist_webrtc_handle_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01051">cwist_webrtc_handle_offer()</a>.</p>
 
 </div>
 </div>
@@ -219,9 +239,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00269">269</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00274">274</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01054">cwist_webrtc_handle_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>, and <a class="el" href="../../d3/d90/webrtc_8c_source.html#l01051">cwist_webrtc_handle_offer()</a>.</p>
 
 </div>
 </div>
@@ -238,9 +258,9 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>a=mid value. </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00273">273</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00278">278</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>.</p>
 
 </div>
 </div>
@@ -256,9 +276,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00276">276</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00282">282</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>, <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00231">cwist_sdp_write_answer()</a>, and <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00165">cwist_sdp_write_answer_for_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>, <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00281">cwist_sdp_write_answer()</a>, and <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00224">cwist_sdp_write_answer_for_offer()</a>.</p>
 
 </div>
 </div>
@@ -274,9 +294,9 @@ Public Attributes</h2></td></tr>
       </table>
 </div><div class="memdoc">
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00275">275</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00281">281</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>, <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00231">cwist_sdp_write_answer()</a>, and <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00165">cwist_sdp_write_answer_for_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>, <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00281">cwist_sdp_write_answer()</a>, and <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00224">cwist_sdp_write_answer_for_offer()</a>.</p>
 
 </div>
 </div>
@@ -293,9 +313,9 @@ Public Attributes</h2></td></tr>
 </div><div class="memdoc">
 <p>a=setup value (e.g. "active", "passive"). </p>
 
-<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00272">272</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00277">277</a> of file <a class="el" href="../../da/d89/webrtc__internal_8h_source.html">webrtc_internal.h</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00039">cwist_sdp_parse()</a>, and <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00165">cwist_sdp_write_answer_for_offer()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00053">cwist_sdp_parse()</a>, and <a class="el" href="../../d6/d9d/sdp_8c_source.html#l00224">cwist_sdp_write_answer_for_offer()</a>.</p>
 
 </div>
 </div>

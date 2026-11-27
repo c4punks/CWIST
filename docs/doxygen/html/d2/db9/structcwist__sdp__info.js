@@ -1,5 +1,6 @@
 var structcwist__sdp__info =
 [
+    [ "bundle_group", "d2/db9/structcwist__sdp__info.html#a77ab1f6bdb489559b566a2330a5c1aa5", null ],
     [ "fingerprint", "d2/db9/structcwist__sdp__info.html#a59588ca588cc02216d9cbf68c43b2eab", null ],
     [ "has_lite", "d2/db9/structcwist__sdp__info.html#ab883a5312a83c4da36986e63ae8b5cf4", null ],
     [ "ice_pwd", "d2/db9/structcwist__sdp__info.html#a4980c9ba2abfda55bf4c2d21c5d33a2e", null ],

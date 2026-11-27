@@ -231,9 +231,9 @@ Functions</h2></td></tr>
 <tr class="memitem:aeb9a4b965f7448524d87fe13086ea534" id="r_aeb9a4b965f7448524d87fe13086ea534"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dba/ice_8c.html#aeb9a4b965f7448524d87fe13086ea534">cwist_ice_stun_build_response</a> (uint8_t *out, size_t <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a>, const uint8_t *req, size_t req_len, const struct sockaddr_in *mapped, const char *pwd)</td></tr>
 <tr class="memdesc:aeb9a4b965f7448524d87fe13086ea534"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build a STUN binding response for a received binding request.  <br /></td></tr>
 <tr class="separator:aeb9a4b965f7448524d87fe13086ea534"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3fa759d0ff54408316bdab85d250628c" id="r_a3fa759d0ff54408316bdab85d250628c"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dba/ice_8c.html#a3fa759d0ff54408316bdab85d250628c">cwist_ice_stun_build_request</a> (uint8_t *out, size_t <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a>, const uint8_t txid[12], const char *username)</td></tr>
-<tr class="memdesc:a3fa759d0ff54408316bdab85d250628c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build an unsigned ICE-controlling STUN binding request.  <br /></td></tr>
-<tr class="separator:a3fa759d0ff54408316bdab85d250628c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5142f5142ffeed66b9da9fed9fb9ca93" id="r_a5142f5142ffeed66b9da9fed9fb9ca93"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dba/ice_8c.html#a5142f5142ffeed66b9da9fed9fb9ca93">cwist_ice_stun_build_request</a> (uint8_t *out, size_t <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a>, const uint8_t txid[12], const char *username, uint64_t tie_breaker)</td></tr>
+<tr class="memdesc:a5142f5142ffeed66b9da9fed9fb9ca93"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build an unsigned ICE-controlling STUN binding request.  <br /></td></tr>
+<tr class="separator:a5142f5142ffeed66b9da9fed9fb9ca93"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2b60049bf63f5994251831ac1477fab5" id="r_a2b60049bf63f5994251831ac1477fab5"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dba/ice_8c.html#a2b60049bf63f5994251831ac1477fab5">cwist_ice_stun_sign_request</a> (uint8_t *msg, size_t <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a>, size_t msg_len, const char *pwd)</td></tr>
 <tr class="memdesc:a2b60049bf63f5994251831ac1477fab5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Public wrapper around stun_sign() for signing a built binding request.  <br /></td></tr>
 <tr class="separator:a2b60049bf63f5994251831ac1477fab5"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -243,6 +243,8 @@ Functions</h2></td></tr>
 <tr class="memitem:a76ad56cfde231bd740a1d1cf1d528996" id="r_a76ad56cfde231bd740a1d1cf1d528996"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dba/ice_8c.html#a76ad56cfde231bd740a1d1cf1d528996">cwist_ice_stun_get_remote_ufrag</a> (const uint8_t *buf, size_t len, char *out, size_t <a class="el" href="../../d3/db2/otel_8c.html#a856fa22aef923b4a345805d81580aebe">cap</a>)</td></tr>
 <tr class="memdesc:a76ad56cfde231bd740a1d1cf1d528996"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extract the sender's ufrag from the USERNAME attribute of a STUN message.  <br /></td></tr>
 <tr class="separator:a76ad56cfde231bd740a1d1cf1d528996"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a64afc53eef00a95254297096d8e4b6a1" id="r_a64afc53eef00a95254297096d8e4b6a1"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dba/ice_8c.html#a64afc53eef00a95254297096d8e4b6a1">cwist_ice_stun_validate_username</a> (const uint8_t *buf, size_t len, const char *local_ufrag, char *remote_ufrag, size_t remote_cap)</td></tr>
+<tr class="separator:a64afc53eef00a95254297096d8e4b6a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7e2af2e306e3f6bf351869e96036d4bc" id="r_a7e2af2e306e3f6bf351869e96036d4bc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../db/dba/ice_8c.html#a7e2af2e306e3f6bf351869e96036d4bc">cwist_ice_random_creds</a> (char *ufrag, size_t ufrag_cap, char *pwd, size_t pwd_cap)</td></tr>
 <tr class="memdesc:a7e2af2e306e3f6bf351869e96036d4bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generate random ICE ufrag/pwd credentials.  <br /></td></tr>
 <tr class="separator:a7e2af2e306e3f6bf351869e96036d4bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -469,7 +471,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00126">126</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00130">130</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 </div>
 </div>
@@ -526,14 +528,14 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section note"><dt>Note</dt><dd>On random generation failure, outputs with nonzero capacity are empty. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00562">562</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00597">597</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00016">OPENSSL_cleanse</a>, and <a class="el" href="../../d5/d66/rand_8h_source.html#l00017">RAND_bytes</a>.</p>
 
 </div>
 </div>
-<a id="a3fa759d0ff54408316bdab85d250628c" name="a3fa759d0ff54408316bdab85d250628c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3fa759d0ff54408316bdab85d250628c">&#9670;&#160;</a></span>cwist_ice_stun_build_request()</h2>
+<a id="a5142f5142ffeed66b9da9fed9fb9ca93" name="a5142f5142ffeed66b9da9fed9fb9ca93"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5142f5142ffeed66b9da9fed9fb9ca93">&#9670;&#160;</a></span>cwist_ice_stun_build_request()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -560,7 +562,13 @@ Functions</h2></td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>username</em>&#160;</td>
+          <td class="paramname"><em>username</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint64_t&#160;</td>
+          <td class="paramname"><em>tie_breaker</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -584,9 +592,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total request length in bytes, or -1 if <code>cap</code> is too small. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00332">332</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00336">336</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00034">ATTR_ICE_CONTROLLING</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00029">ATTR_PRIORITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00030">ATTR_USE_CANDIDATE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00202">CWIST_STUN_BINDING_REQUEST</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_MAGIC</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00034">ATTR_ICE_CONTROLLING</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00029">ATTR_PRIORITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00030">ATTR_USE_CANDIDATE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00203">CWIST_STUN_BINDING_REQUEST</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_MAGIC</a>.</p>
 
 </div>
 </div>
@@ -656,9 +664,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Total response length in bytes, or -1 if the request is truncated, <code>cap</code> is too small, or OpenSSL allocation fails. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00261">261</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00265">265</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00032">ATTR_FINGERPRINT</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00027">ATTR_MESSAGE_INTEGRITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00031">ATTR_XOR_MAPPED_ADDRESS</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00203">CWIST_STUN_BINDING_RESPONSE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_MAGIC</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00032">ATTR_FINGERPRINT</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00027">ATTR_MESSAGE_INTEGRITY</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00031">ATTR_XOR_MAPPED_ADDRESS</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00204">CWIST_STUN_BINDING_RESPONSE</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_MAGIC</a>.</p>
 
 </div>
 </div>
@@ -720,7 +728,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00525">525</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00529">529</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_USERNAME</a>, <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>.</p>
 
@@ -762,7 +770,7 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00158">158</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00162">162</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00030">ATTR_USE_CANDIDATE</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>.</p>
 
@@ -805,9 +813,9 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>true if <code>buf</code> is a STUN message with type CWIST_STUN_BINDING_REQUEST. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00114">114</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00118">118</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00105">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00202">CWIST_STUN_BINDING_REQUEST</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00109">cwist_ice_stun_is_message()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00203">CWIST_STUN_BINDING_REQUEST</a>.</p>
 
 </div>
 </div>
@@ -849,11 +857,11 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>1 if <code>buf</code> holds at least a STUN header and the magic cookie matches, 0 otherwise. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>This is a shape check only; no attribute parsing or auth is performed. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00105">105</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00109">109</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00022">STUN_MAGIC</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00114">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00489">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00232">cwist_ice_stun_validate_request()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00118">cwist_ice_stun_is_binding_request()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00493">cwist_ice_stun_parse_response()</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00236">cwist_ice_stun_validate_request()</a>.</p>
 
 </div>
 </div>
@@ -922,9 +930,9 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00489">489</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00493">493</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00105">cwist_ice_stun_is_message()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00232">cwist_ice_stun_validate_request()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00203">CWIST_STUN_BINDING_RESPONSE</a>.</p>
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00109">cwist_ice_stun_is_message()</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00236">cwist_ice_stun_validate_request()</a>, and <a class="el" href="../../da/d89/webrtc__internal_8h_source.html#l00204">CWIST_STUN_BINDING_RESPONSE</a>.</p>
 
 </div>
 </div>
@@ -979,7 +987,7 @@ Functions</h2></td></tr>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>New total length, or -1 on failure (see stun_sign()). </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00443">443</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00447">447</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
 <p class="reference">References <a class="el" href="../../d3/db2/otel_8c_source.html#l00059">cap</a>.</p>
 
@@ -1030,11 +1038,61 @@ Functions</h2></td></tr>
 <dl class="section return"><dt>Returns</dt><dd>1 if the HMAC matches, 0 if the message is malformed, the HMAC does not match, MESSAGE-INTEGRITY is missing, or OpenSSL allocation fails. </dd></dl>
 <dl class="section note"><dt>Note</dt><dd>The HMAC covers the message up to and including the MI attribute header, with the header's length field adjusted to end at the MI attribute, per RFC 5389. </dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00232">232</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00236">236</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
 
-<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00105">cwist_ice_stun_is_message()</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00023">EVP_MAX_MD_SIZE</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>.</p>
+<p class="reference">References <a class="el" href="../../da/da0/crypto_8h_source.html#l00017">CRYPTO_memcmp</a>, <a class="el" href="../../db/dba/ice_8c_source.html#l00109">cwist_ice_stun_is_message()</a>, <a class="el" href="../../d5/d67/evp_8h_source.html#l00023">EVP_MAX_MD_SIZE</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>.</p>
 
-<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00489">cwist_ice_stun_parse_response()</a>.</p>
+<p class="reference">Referenced by <a class="el" href="../../db/dba/ice_8c_source.html#l00493">cwist_ice_stun_parse_response()</a>.</p>
+
+</div>
+</div>
+<a id="a64afc53eef00a95254297096d8e4b6a1" name="a64afc53eef00a95254297096d8e4b6a1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a64afc53eef00a95254297096d8e4b6a1">&#9670;&#160;</a></span>cwist_ice_stun_validate_username()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int cwist_ice_stun_validate_username </td>
+          <td>(</td>
+          <td class="paramtype">const uint8_t *&#160;</td>
+          <td class="paramname"><em>buf</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>len</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const char *&#160;</td>
+          <td class="paramname"><em>local_ufrag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>remote_ufrag</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>remote_cap</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="../../db/dba/ice_8c_source.html#l00553">553</a> of file <a class="el" href="../../db/dba/ice_8c_source.html">ice.c</a>.</p>
+
+<p class="reference">References <a class="el" href="../../db/dba/ice_8c_source.html#l00026">ATTR_USERNAME</a>, and <a class="el" href="../../db/dba/ice_8c_source.html#l00023">STUN_HDR_LEN</a>.</p>
 
 </div>
 </div>

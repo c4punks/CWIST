@@ -1,5 +1,11 @@
 var NAVTREEINDEX23 =
 {
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md592":[57,3],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md593":[57,4],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md594":[57,5],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md595":[57,6],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md596":[57,7],
+"df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md597":[57,7,0],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md598":[57,8],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md599":[57,9],
 "df/df1/md_docs_2tutorial_2korean_2cwist__tutorial.html#autotoc_md600":[57,10],
@@ -162,8 +168,8 @@ var NAVTREEINDEX23 =
 "functions_vars_v.html":[65,2,2,21],
 "functions_vars_w.html":[65,2,2,22],
 "functions_w.html":[65,2,0,23],
-"globals.html":[66,1,0],
 "globals.html":[66,1,0,0],
+"globals.html":[66,1,0],
 "globals_a.html":[66,1,0,1],
 "globals_b.html":[66,1,0,2],
 "globals_c.html":[66,1,0,3],
@@ -243,11 +249,5 @@ var NAVTREEINDEX23 =
 "globals_type_r.html":[66,1,3,11],
 "globals_type_s.html":[66,1,3,12],
 "globals_type_t.html":[66,1,3,13],
-"globals_type_w.html":[66,1,3,14],
-"globals_u.html":[66,1,0,21],
-"globals_vars.html":[66,1,2],
-"globals_w.html":[66,1,0,22],
-"index.html":[],
-"index.html#autotoc_md10":[4,2],
-"index.html#autotoc_md11":[4,3]
+"globals_type_w.html":[66,1,3,14]
 };

@@ -17,6 +17,7 @@ var structcwist__webrtc__ctx =
     [ "host_ip", "dc/d88/structcwist__webrtc__ctx.html#ab9b730e8fcaeee22df835f8d677da419", null ],
     [ "ice_lite_server", "dc/d88/structcwist__webrtc__ctx.html#ad708f6d57853276bdf4a14278d49932c", null ],
     [ "ice_pwd", "dc/d88/structcwist__webrtc__ctx.html#ac5dbedc445a2a606fc8f9abb73a5f92a", null ],
+    [ "ice_tie_breaker", "dc/d88/structcwist__webrtc__ctx.html#a70327a24b129b0c9e92a89c07bcd4bb8", null ],
     [ "ice_ufrag", "dc/d88/structcwist__webrtc__ctx.html#a1e11b8ffb3e65785f7ee7f0cc710ba3d", null ],
     [ "last_activity_ns", "dc/d88/structcwist__webrtc__ctx.html#a1de32a7fca0a34e655ccc8943f0a9372", null ],
     [ "msg_cb", "dc/d88/structcwist__webrtc__ctx.html#a4f7a869997a18e711903536ef5ed77a0", null ],

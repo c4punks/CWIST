@@ -13,7 +13,7 @@ var ice_8c =
     [ "STUN_MAGIC", "db/dba/ice_8c.html#a8d5101d40ab628ee2b0ebd511a98dd51", null ],
     [ "attr_cb", "db/dba/ice_8c.html#a9e0c1e8d9c91c43dfc728649e388f776", null ],
     [ "cwist_ice_random_creds", "db/dba/ice_8c.html#a7e2af2e306e3f6bf351869e96036d4bc", null ],
-    [ "cwist_ice_stun_build_request", "db/dba/ice_8c.html#a3fa759d0ff54408316bdab85d250628c", null ],
+    [ "cwist_ice_stun_build_request", "db/dba/ice_8c.html#a5142f5142ffeed66b9da9fed9fb9ca93", null ],
     [ "cwist_ice_stun_build_response", "db/dba/ice_8c.html#aeb9a4b965f7448524d87fe13086ea534", null ],
     [ "cwist_ice_stun_get_remote_ufrag", "db/dba/ice_8c.html#a76ad56cfde231bd740a1d1cf1d528996", null ],
     [ "cwist_ice_stun_has_use_candidate", "db/dba/ice_8c.html#a28fdf0cfb711b86171f039c2303a5be0", null ],
@@ -21,5 +21,6 @@ var ice_8c =
     [ "cwist_ice_stun_is_message", "db/dba/ice_8c.html#a062005bb8fd002225068a8a51f812fbc", null ],
     [ "cwist_ice_stun_parse_response", "db/dba/ice_8c.html#a01fe6099e457d46c78118f60a5d96677", null ],
     [ "cwist_ice_stun_sign_request", "db/dba/ice_8c.html#a2b60049bf63f5994251831ac1477fab5", null ],
-    [ "cwist_ice_stun_validate_request", "db/dba/ice_8c.html#a36afd9ae78c7af3aec4ecdcd1dedc80c", null ]
+    [ "cwist_ice_stun_validate_request", "db/dba/ice_8c.html#a36afd9ae78c7af3aec4ecdcd1dedc80c", null ],
+    [ "cwist_ice_stun_validate_username", "db/dba/ice_8c.html#a64afc53eef00a95254297096d8e4b6a1", null ]
 ];
