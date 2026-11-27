@@ -222,6 +222,9 @@ static void h2_get(client_t *c, uint32_t stream_id, const char *path, bool gzip)
     block[n++] = (unsigned char)plen;
     memcpy(block + n, path, plen);
     n += plen;
+    block[n++] = 0x01; /* :authority, literal without indexing */
+    block[n++] = 0x01;
+    block[n++] = 'h';
     if (gzip) {
         block[n++] = 0x0f; /* accept-encoding (static index 16) */
         block[n++] = 0x01;

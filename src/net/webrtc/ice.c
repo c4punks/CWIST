@@ -95,6 +95,10 @@ static void wr32(uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)v;
 }
 
+static void wr64(uint8_t *p, uint64_t v) {
+    for (unsigned i = 0; i < 8; i++) p[i] = (uint8_t)(v >> (56 - i * 8));
+}
+
 /** @brief Check whether a datagram looks like a STUN message.
  * @param buf Datagram bytes.
  * @param len Number of bytes at @p buf.
@@ -330,7 +334,7 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
  * @return Total request length in bytes, or -1 if @p cap is too small.
  */
 int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12],
-                                 const char *username) {
+                                 const char *username, uint64_t tie_breaker) {
     size_t ulen = strlen(username);
     uint8_t body[544];
     if (ulen > UINT16_MAX) return -1;
@@ -358,7 +362,7 @@ int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12
     /* ICE-CONTROLLING (8 bytes) */
     wr16(body + blen, ATTR_ICE_CONTROLLING);
     wr16(body + blen + 2, 8);
-    memset(body + blen + 4, 0, 8);
+    wr64(body + blen + 4, tie_breaker);
     blen += 12;
     /* USE-CANDIDATE */
     wr16(body + blen, ATTR_USE_CANDIDATE);
@@ -544,6 +548,37 @@ int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, s
         off += 4 + ((alen + 3) & ~3u);
     }
     return -1;
+}
+
+int cwist_ice_stun_validate_username(const uint8_t *buf, size_t len, const char *local_ufrag,
+                                     char *remote_ufrag, size_t remote_cap) {
+    if (!local_ufrag || !*local_ufrag || !remote_ufrag || remote_cap == 0) return -1;
+    size_t end = 0;
+    if (!find_mi(buf, len, &end)) return -1;
+    size_t off = STUN_HDR_LEN;
+    bool found = false;
+    while (off + 4 <= end) {
+        uint16_t type = rd16(buf + off);
+        uint16_t alen = rd16(buf + off + 2);
+        if (off + 4 + alen > end) return -1;
+        if (type == ATTR_USERNAME) {
+            if (found) return -1;
+            found = true;
+            const uint8_t *name = buf + off + 4;
+            size_t colon = 0;
+            while (colon < alen && name[colon] != ':') colon++;
+            size_t local_len = strlen(local_ufrag);
+            if (colon == 0 || colon != local_len || colon + 1 >= alen ||
+                memcmp(name, local_ufrag, local_len) != 0)
+                return -1;
+            size_t remote_len = alen - colon - 1;
+            if (remote_len >= remote_cap) return -1;
+            memcpy(remote_ufrag, name + colon + 1, remote_len);
+            remote_ufrag[remote_len] = '\0';
+        }
+        off += 4 + ((alen + 3) & ~3u);
+    }
+    return found ? 0 : -1;
 }
 
 /** @brief Generate random ICE ufrag/pwd credentials.

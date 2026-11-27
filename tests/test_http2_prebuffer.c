@@ -43,7 +43,7 @@ static const unsigned char continuation_flight[] =
     "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
     "\x00\x00\x00\x04\x00\x00\x00\x00\x00"
     "\x00\x00\x01\x01\x01\x00\x00\x00\x01\x82"
-    "\x00\x00\x02\x09\x04\x00\x00\x00\x01\x86\x84";
+    "\x00\x00\x0d\x09\x04\x00\x00\x00\x01\x86\x84\x01\x09localhost";
 static const char *const bodies[] = {"replayed stream one\n", "replayed stream three\n"};
 
 static int64_t now_ms(void) {
@@ -282,7 +282,8 @@ done:
 static int data_frame_case(size_t data_len, unsigned streams) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings[] = {0, 0, 0, 4, 0, 0, 0, 0, 0};
-    static const unsigned char headers[] = {0, 0, 3, 1, 4, 0, 0, 0, 1, 0x82, 0x86, 0x84};
+    static const unsigned char headers[] = {0, 0, 6, 1, 4, 0, 0, 0, 1,
+                                            0x82, 0x86, 0x84, 0x01, 0x01, 'h'};
     size_t len = sizeof(preface) - 1 + sizeof(settings) + sizeof(headers) + 9 + data_len;
     unsigned char *payload = malloc(len);
     if (!payload) return -1;

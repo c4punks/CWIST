@@ -383,6 +383,15 @@ void test_cl_te_smuggling_rules() {
     expect_parse_rejection(
         "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked,,chunked\r\n\r\n",
         CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked, chunked\r\n\r\n0\r\n\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked\r\n\r\n0\r\nBadTrailer\r\n\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection(
+        "POST /x HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n X: folded\r\n\r\n",
+        CWIST_HTTP_PARSE_MALFORMED, 400);
     /* Field names must be nonempty RFC tokens. */
     expect_parse_rejection("GET / HTTP/1.1\r\nHost: h\r\nX Bad: value\r\n\r\n",
                            CWIST_HTTP_PARSE_MALFORMED, 400);
@@ -724,6 +733,18 @@ static void test_request_target_and_header_hardening(void) {
                            CWIST_HTTP_PARSE_MALFORMED, 400);
     expect_parse_rejection("GET /#fragment HTTP/1.1\r\nHost: h\r\n\r\n",
                            CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET /bad\001target HTTP/1.1\r\nHost: h\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("G@T / HTTP/1.1\r\nHost: h\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("CONNECT example.com HTTP/1.1\r\nHost: example.com\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: [::::]\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: [1:2:3:4:5:6:7]\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
+    expect_parse_rejection("GET / HTTP/1.1\r\nHost: [::1%eth0]\r\n\r\n",
+                           CWIST_HTTP_PARSE_MALFORMED, 400);
     expect_parse_rejection("POST / HTTP/1.1\r\nHost: h\r\nContent-Length: 20000000\r\n"
                            "Expect: 100-continue\r\n\r\n",
                            CWIST_HTTP_PARSE_BODY_TOO_LARGE, 413);
@@ -759,6 +780,19 @@ static void test_request_target_and_header_hardening(void) {
     cwist_http_request_destroy(req);
     req = expect_parse_success("FOO / HTTP/1.1\r\nHost: h\r\n\r\n");
     assert(req->method == CWIST_HTTP_UNKNOWN);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("POSTER / HTTP/1.1\r\nHost: h\r\n\r\n");
+    assert(req->method == CWIST_HTTP_UNKNOWN);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("DELETEX / HTTP/1.1\r\nHost: h\r\n\r\n");
+    assert(req->method == CWIST_HTTP_UNKNOWN);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("GET / HTTP/1.1\r\nHost: [::1]\r\n\r\n");
+    assert(strcmp(cwist_http_header_get(req->headers, "host"), "[::1]") == 0);
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("GET / HTTP/1.1\r\nHost: [v1.fe:zz]\r\n\r\n");
+    cwist_http_request_destroy(req);
+    req = expect_parse_success("CONNECT [::1]:443 HTTP/1.1\r\nHost: [::1]\r\n\r\n");
     cwist_http_request_destroy(req);
     req = expect_parse_success("POST / HTTP/1.1\r\nHost: h\r\nTransfer-Encoding: chunked\r\n\r\n"
                                "5;name=value;quoted=\"a\\\"b\"\r\nhello\r\n0\r\n\r\n");

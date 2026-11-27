@@ -433,7 +433,8 @@ static void conn_send_stun_request(struct cwist_webrtc_conn *conn) {
     int username_len =
         snprintf(username, sizeof(username), "%s:%s", conn->peer_ufrag, conn->ctx->ice_ufrag);
     if (username_len < 0 || (size_t)username_len >= sizeof(username)) return;
-    int len = cwist_ice_stun_build_request(msg, sizeof(msg), conn->stun_txid, username);
+    int len = cwist_ice_stun_build_request(msg, sizeof(msg), conn->stun_txid, username,
+                                           conn->ctx->ice_tie_breaker);
     if (len < 0) return;
     len = cwist_ice_stun_sign_request(msg, sizeof(msg), (size_t)len, conn->peer_pwd);
     if (len < 0) return;
@@ -614,6 +615,9 @@ static void handle_stun(cwist_webrtc_ctx *ctx, const uint8_t *buf, size_t len,
             return; /* no offer answered yet: not an ICE-lite endpoint */
         if (!cwist_ice_stun_validate_request(buf, len, ctx->ice_pwd))
             return; /* bad MESSAGE-INTEGRITY: drop (RFC 8445 would send a 400) */
+        char rfrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
+        if (cwist_ice_stun_validate_username(buf, len, ctx->ice_ufrag, rfrag, sizeof(rfrag)) != 0)
+            return;
         uint8_t resp[256];
         int rlen =
             cwist_ice_stun_build_response(resp, sizeof(resp), buf, len, remote, ctx->ice_pwd);
@@ -625,23 +629,14 @@ static void handle_stun(cwist_webrtc_ctx *ctx, const uint8_t *buf, size_t len,
         if (conn) {
             conn->last_rx_ns = ctx->now_ns; /* consent check keeps it alive */
         } else if (nominate) {
-            /* Adopt the conn parked by cwist_webrtc_handle_offer() when the
-             * USERNAME's remote ufrag matches; otherwise the request is still
-             * authenticated with our password, so start a fresh conn. */
-            char rfrag[CWIST_WEBRTC_ICE_CREDENTIAL_CAP] = "";
-            cwist_ice_stun_get_remote_ufrag(buf, len, rfrag, sizeof(rfrag));
             for (struct cwist_webrtc_conn *c = ctx->parked; c; c = c->hnext) {
-                if (rfrag[0] && strcmp(c->peer_ufrag, rfrag) == 0) {
+                if (strcmp(c->peer_ufrag, rfrag) == 0) {
                     conn = c;
                     break;
                 }
             }
-            if (conn) {
-                table_remove(ctx, conn); /* the parked list's reference moves */
-            } else {
-                conn = conn_new(ctx, NULL, true);
-                if (!conn) return;
-            }
+            if (!conn) return;
+            table_remove(ctx, conn); /* the parked list's reference moves */
             conn->remote = *remote;
             conn->last_rx_ns = ctx->now_ns;
             table_insert(ctx, conn);
@@ -872,6 +867,8 @@ static cwist_webrtc_ctx *ctx_create(cwist_reactor_t *reactor, bool owns_reactor,
     cwist_ice_random_creds(ctx->ice_ufrag, sizeof(ctx->ice_ufrag), ctx->ice_pwd,
                            sizeof(ctx->ice_pwd));
     if (ctx->ice_ufrag[0] == '\0' || ctx->ice_pwd[0] == '\0') goto fail;
+    if (RAND_bytes((unsigned char *)&ctx->ice_tie_breaker, sizeof(ctx->ice_tie_breaker)) != 1)
+        goto fail;
     detect_host_ip(ctx->host_ip, sizeof(ctx->host_ip));
     return ctx;
 
