@@ -192,7 +192,7 @@ static void *crc_init_worker(void *arg) {
     while (!atomic_load(probe->start)) sched_yield();
     uint8_t req[128];
     uint8_t txid[12] = {0};
-    int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "");
+    int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "", UINT64_C(0x0102030405060708));
     if (len < 0) {
         probe->rc = -1;
         return NULL;
@@ -229,8 +229,11 @@ static void unit_checks(void) {
         uint8_t req[512];
         uint8_t txid[12];
         memset(txid, 0xAB, sizeof(txid));
-        int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "rfrag:lfrag");
+        int len = cwist_ice_stun_build_request(req, sizeof(req), txid, "rfrag:lfrag",
+                                               UINT64_C(0x0102030405060708));
         assert(len > 0);
+        static const uint8_t expected_tie[] = {1, 2, 3, 4, 5, 6, 7, 8};
+        assert(memcmp(req + 40, expected_tie, sizeof(expected_tie)) == 0);
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 0);
         len = cwist_ice_stun_sign_request(req, sizeof(req), (size_t)len, "testpassword0123456789");
         assert(len > 0);
@@ -239,10 +242,17 @@ static void unit_checks(void) {
         assert(cwist_ice_stun_has_use_candidate(req, (size_t)len));
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "testpassword0123456789") == 1);
         assert(cwist_ice_stun_validate_request(req, (size_t)len, "wrongpassword000000000") == 0);
+        char validated[16];
+        assert(cwist_ice_stun_validate_username(req, (size_t)len, "rfrag", validated,
+                                                sizeof(validated)) == 0);
+        assert(strcmp(validated, "lfrag") == 0);
+        assert(cwist_ice_stun_validate_username(req, (size_t)len, "lfrag", validated,
+                                                sizeof(validated)) == -1);
 
         uint8_t injected[512];
         memcpy(injected, req, 44);
         memmove(injected + 32, injected + 36, 8);
+        memset(injected + 36, 0, 4);
         injected[2] = 0;
         injected[3] = 20;
         int injected_len =
@@ -356,8 +366,10 @@ static void unit_checks(void) {
         char long_username[513];
         memset(long_username, 'u', sizeof(long_username) - 1);
         long_username[sizeof(long_username) - 1] = '\0';
-        assert(cwist_ice_stun_build_request(req, sizeof(req), txid, long_username) == -1);
-        assert(cwist_ice_stun_build_request(req, sizeof(short_msg), txid, "rfrag:lfrag") == -1);
+        assert(cwist_ice_stun_build_request(req, sizeof(req), txid, long_username,
+                                            UINT64_C(0x0102030405060708)) == -1);
+        assert(cwist_ice_stun_build_request(req, sizeof(short_msg), txid, "rfrag:lfrag",
+                                            UINT64_C(0x0102030405060708)) == -1);
     }
 
     /* ICE credentials: normal output and zero-capacity calls. */
@@ -398,7 +410,10 @@ static void unit_checks(void) {
         assert(strcmp(info.setup, "active") == 0);
         assert(info.has_lite == 0);
 
-        static const char no_final_crlf[] = "a=ice-ufrag:ufrag\r\na=ice-pwd:password";
+        static const char no_final_crlf[] =
+            "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+            "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+            "a=ice-ufrag:ufrag\r\na=ice-pwd:password\r\na=setup:active\r\na=sctp-port:5000";
         char input[sizeof(no_final_crlf) - 1];
         memcpy(input, no_final_crlf, sizeof(input));
         assert(cwist_sdp_parse(input, sizeof(input), &info) == 0);
@@ -418,8 +433,11 @@ static void unit_checks(void) {
         memset(max_pwd, 'p', CWIST_WEBRTC_ICE_CREDENTIAL_MAX);
         max_ufrag[CWIST_WEBRTC_ICE_CREDENTIAL_MAX] = '\0';
         max_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_MAX] = '\0';
-        char max_sdp[640];
-        int sdp_len = snprintf(max_sdp, sizeof(max_sdp), "a=ice-ufrag:%s\r\na=ice-pwd:%s\r\n",
+        char max_sdp[1024];
+        int sdp_len = snprintf(max_sdp, sizeof(max_sdp),
+                               "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+                               "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+                               "a=ice-ufrag:%s\r\na=ice-pwd:%s\r\na=setup:active\r\na=sctp-port:5000\r\n",
                                max_ufrag, max_pwd);
         assert(sdp_len > 0 && (size_t)sdp_len < sizeof(max_sdp));
         assert(cwist_sdp_parse(max_sdp, (size_t)sdp_len, &info) == 0);
@@ -429,8 +447,11 @@ static void unit_checks(void) {
         char over_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_CAP + 1];
         memset(over_pwd, 'p', CWIST_WEBRTC_ICE_CREDENTIAL_MAX + 1);
         over_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_MAX + 1] = '\0';
-        sdp_len =
-            snprintf(max_sdp, sizeof(max_sdp), "a=ice-ufrag:ufrag\r\na=ice-pwd:%s\r\n", over_pwd);
+        sdp_len = snprintf(max_sdp, sizeof(max_sdp),
+                           "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+                           "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+                           "a=ice-ufrag:ufrag\r\na=ice-pwd:%s\r\na=setup:active\r\na=sctp-port:5000\r\n",
+                           over_pwd);
         assert(sdp_len > 0 && (size_t)sdp_len < sizeof(max_sdp));
         assert(cwist_sdp_parse(max_sdp, (size_t)sdp_len, &info) == -1);
         assert(cwist_sdp_parse(NULL, 0, &info) == -1);
@@ -458,6 +479,7 @@ static void unit_checks(void) {
                                     "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
                                     "a=mid:data\r\n"
                                     "a=setup:passive\r\n"
+                                    "a=sctp-port:5000\r\n"
                                     "m=audio 49171 RTP/AVP 0\r\n"
                                     "a=mid:late\r\n"
                                     "a=ice-ufrag:evilu\r\n"
@@ -489,6 +511,33 @@ static void unit_checks(void) {
         assert(strstr(answer, "a=setup:active\r\n") != NULL);
         assert(strstr(answer, "a=fingerprint:sha-256 CC\r\n") != NULL);
         assert(strstr(answer, "a=ice-lite\r\n") != NULL);
+    }
+
+    /* SDP structure and negotiation failures are rejected before answering. */
+    {
+        cwist_sdp_info info;
+        static const char incomplete_sdp[] = "a=ice-ufrag:u\r\na=ice-pwd:p\r\n";
+        assert(cwist_sdp_parse(incomplete_sdp, sizeof(incomplete_sdp) - 1, &info) == -1);
+        static const char missing_setup[] =
+            "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+            "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+            "a=ice-ufrag:u\r\na=ice-pwd:p\r\na=sctp-port:5000\r\n";
+        assert(cwist_sdp_parse(missing_setup, sizeof(missing_setup) - 1, &info) == -1);
+        static const char missing_port[] =
+            "v=0\r\no=- 1 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\n"
+            "m=application 9 UDP/DTLS/SCTP webrtc-datachannel\r\n"
+            "a=ice-ufrag:u\r\na=ice-pwd:p\r\na=setup:holdconn\r\n";
+        assert(cwist_sdp_parse(missing_port, sizeof(missing_port) - 1, &info) == -1);
+
+        char offer[1024], answer[1024];
+        assert(cwist_sdp_write_offer(offer, sizeof(offer), "AA", "remoteu", "remotepassword", "0") == 0);
+        assert(cwist_sdp_parse(offer, strlen(offer), &info) == 0);
+        info.bundle_group[0] = '\0';
+        info.sections[0].mid[0] = '\0';
+        assert(cwist_sdp_write_answer_for_offer(answer, sizeof(answer), "BB", "localu",
+                                                "localpassword", &info, "127.0.0.1", 5000) == 0);
+        assert(strstr(answer, "a=group:BUNDLE") == NULL);
+        assert(strstr(answer, "a=mid:") == NULL);
     }
 
     /* Partial-message reassembly never mixes stream or payload identities. */

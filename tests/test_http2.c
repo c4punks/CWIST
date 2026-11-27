@@ -237,11 +237,11 @@ static void test_http2_roundtrip(void) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_frame1[] = {0x00, 0x00, 0x03, 0x01, 0x05, 0x00,
-                                                   0x00, 0x00, 0x01, 0x82, 0x87, 0x84};
-    static const unsigned char headers_frame2[] = {0x00, 0x00, 0x08, 0x01, 0x05, 0x00,
+    static const unsigned char headers_frame1[] = {0x00, 0x00, 0x06, 0x01, 0x05, 0x00,
+                                                   0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
+    static const unsigned char headers_frame2[] = {0x00, 0x00, 0x0b, 0x01, 0x05, 0x00,
                                                    0x00, 0x00, 0x03, 0x82, 0x87, 0x04,
-                                                   0x04, '/',  't',  'w',  'o'};
+                                                   0x04, '/',  't',  'w',  'o', 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -317,12 +317,12 @@ static void test_http2_large_body_interleave(void) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_big1[] = {0x00, 0x00, 0x09, 0x01, 0x05, 0x00,
+    static const unsigned char headers_big1[] = {0x00, 0x00, 0x0c, 0x01, 0x05, 0x00,
                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x04,
-                                                 0x05, '/',  'b',  'i',  'g',  '1'};
-    static const unsigned char headers_big2[] = {0x00, 0x00, 0x09, 0x01, 0x05, 0x00,
+                                                 0x05, '/',  'b',  'i',  'g',  '1', 0x01, 0x01, 'h'};
+    static const unsigned char headers_big2[] = {0x00, 0x00, 0x0c, 0x01, 0x05, 0x00,
                                                  0x00, 0x00, 0x03, 0x82, 0x87, 0x04,
-                                                 0x05, '/',  'b',  'i',  'g',  '2'};
+                                                 0x05, '/',  'b',  'i',  'g',  '2', 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -400,8 +400,8 @@ static void test_http2_ping(void) {
                                                    0x00, 0x00, 0x00, 0x00};
     static const unsigned char ping_frame[] = {0x00, 0x00, 0x08, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00,
                                                0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE};
-    static const unsigned char headers_frame[] = {0x00, 0x00, 0x03, 0x01, 0x05, 0x00,
-                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x84};
+    static const unsigned char headers_frame[] = {0x00, 0x00, 0x06, 0x01, 0x05, 0x00,
+                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -473,11 +473,11 @@ static void test_http2_multi_stream_concurrent(void) {
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
     /* Stream 1: HEADERS with END_HEADERS but NOT END_STREAM */
-    static const unsigned char headers_s1[] = {0x00, 0x00, 0x03, 0x01, 0x04, 0x00,
-                                               0x00, 0x00, 0x01, 0x82, 0x87, 0x84};
+    static const unsigned char headers_s1[] = {0x00, 0x00, 0x06, 0x01, 0x04, 0x00,
+                                               0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     /* Stream 3: HEADERS + END_STREAM */
-    static const unsigned char headers_s3[] = {0x00, 0x00, 0x08, 0x01, 0x05, 0x00, 0x00, 0x00, 0x03,
-                                               0x82, 0x87, 0x04, 0x04, '/',  't',  'w',  'o'};
+    static const unsigned char headers_s3[] = {0x00, 0x00, 0x0b, 0x01, 0x05, 0x00, 0x00, 0x00, 0x03,
+                                               0x82, 0x87, 0x04, 0x04, '/',  't',  'w',  'o', 0x01, 0x01, 'h'};
     /* Stream 1: empty DATA with END_STREAM */
     static const unsigned char data_s1[] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01};
 
@@ -554,9 +554,9 @@ static void test_http2_continuation(void) {
     /* HEADERS with END_STREAM but without END_HEADERS: only :method GET (0x82) */
     static const unsigned char headers_partial[] = {0x00, 0x00, 0x01, 0x01, 0x01,
                                                     0x00, 0x00, 0x00, 0x01, 0x82};
-    /* CONTINUATION with END_HEADERS: :scheme https (0x87), :path / (0x84) */
-    static const unsigned char continuation_frame[] = {0x00, 0x00, 0x02, 0x09, 0x04, 0x00,
-                                                       0x00, 0x00, 0x01, 0x87, 0x84};
+    /* Undefined END_STREAM on CONTINUATION is ignored; END_HEADERS remains set. */
+    static const unsigned char continuation_frame[] = {0x00, 0x00, 0x05, 0x09, 0x05, 0x00,
+                                                       0x00, 0x00, 0x01, 0x87, 0x84, 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -618,9 +618,9 @@ static void test_http2_flow_control(void) {
     /* SETTINGS: INITIAL_WINDOW_SIZE = 100 */
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x06, 0x04, 0x00, 0x00, 0x00, 0x00,
                                                    0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x64};
-    static const unsigned char headers_big1[] = {0x00, 0x00, 0x09, 0x01, 0x05, 0x00,
+    static const unsigned char headers_big1[] = {0x00, 0x00, 0x0c, 0x01, 0x05, 0x00,
                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x04,
-                                                 0x05, '/',  'b',  'i',  'g',  '1'};
+                                                 0x05, '/',  'b',  'i',  'g',  '1', 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -643,13 +643,13 @@ static void test_http2_flow_control(void) {
             saw_settings_ack = true;
         } else if (ftype == 0x04) {
             /* Server sent non-ACK SETTINGS; acknowledge it */
-            static const unsigned char ack[] = {0x00, 0x00, 0x00, 0x04, 0x01,
+            static const unsigned char ack[] = {0x00, 0x00, 0x00, 0x07, 0x01,
                                                 0x00, 0x00, 0x00, 0x00};
             assert(ssl_write_all(client, ack, sizeof(ack)) == 0);
         }
     }
     /* ACK any remaining server SETTINGS */
-    static const unsigned char settings_ack[] = {0x00, 0x00, 0x00, 0x04, 0x01,
+    static const unsigned char settings_ack[] = {0x00, 0x00, 0x00, 0x07, 0x01,
                                                  0x00, 0x00, 0x00, 0x00};
     assert(ssl_write_all(client, settings_ack, sizeof(settings_ack)) == 0);
 
@@ -718,10 +718,10 @@ static void test_http2_stalled_stream_does_not_block_other_streams(void) {
     static const unsigned char flight[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"
                                           "\x00\x00\x06\x04\x00\x00\x00\x00\x00"
                                           "\x00\x04\x00\x00\x00\x64"
-                                          "\x00\x00\x09\x01\x05\x00\x00\x00\x01"
-                                          "\x82\x87\x04\x05/big1";
-    static const unsigned char headers_small[] = {0x00, 0x00, 0x03, 0x01, 0x05, 0x00,
-                                                  0x00, 0x00, 0x03, 0x82, 0x87, 0x84};
+                                          "\x00\x00\x0c\x01\x05\x00\x00\x00\x01"
+                                          "\x82\x87\x04\x05/big1\x41\x01h";
+    static const unsigned char headers_small[] = {0x00, 0x00, 0x06, 0x01, 0x05, 0x00,
+                                                  0x00, 0x00, 0x03, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     static const unsigned char window_update[] = {0x00, 0x00, 0x04, 0x08, 0x00, 0x00, 0x00,
                                                   0x00, 0x01, 0x00, 0x00, 0x9c, 0x40};
     assert(ssl_write_all(client, flight, sizeof(flight) - 1) == 0);
@@ -818,8 +818,8 @@ static void test_http2_response_headers(void) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_frame[] = {0x00, 0x00, 0x03, 0x01, 0x05, 0x00,
-                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x84};
+    static const unsigned char headers_frame[] = {0x00, 0x00, 0x06, 0x01, 0x05, 0x00,
+                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -1141,7 +1141,7 @@ static void test_http2_hook_error_sends_reset(void) {
     pthread_t tid;
     SSL *client = test_http2_start_client(sv, &server, &tid);
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-    static const unsigned char headers[] = {0x82, 0x87, 0x84};
+    static const unsigned char headers[] = {0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     static const unsigned char data[] = {'x'};
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
@@ -1275,12 +1275,12 @@ static void test_http2_hpack_incremental_indexing(void) {
     /* Stream 1: :method GET, :scheme https, :path /, then literal-with-
      * incremental-indexing "x-token: abc123" (inserts dynamic index 62). */
     static const unsigned char headers_s1[] = {
-        0x00, 0x00, 0x13, 0x01, 0x05, 0x00, 0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x40, 0x07,
+        0x00, 0x00, 0x16, 0x01, 0x05, 0x00, 0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h', 0x40, 0x07,
         'x',  '-',  't',  'o',  'k',  'e',  'n',  0x06, 'a',  'b',  'c',  '1',  '2',  '3'};
     /* Stream 3: same pseudo-headers plus indexed field 62 (0x80|62 = 0xBE),
      * resolving to x-token: abc123 from the dynamic table. */
-    static const unsigned char headers_s3[] = {0x00, 0x00, 0x04, 0x01, 0x05, 0x00, 0x00,
-                                               0x00, 0x03, 0x82, 0x87, 0x84, 0xBE};
+    static const unsigned char headers_s3[] = {0x00, 0x00, 0x07, 0x01, 0x05, 0x00, 0x00,
+                                               0x00, 0x03, 0x82, 0x87, 0x84, 0x01, 0x01, 'h', 0xBE};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -1407,8 +1407,8 @@ static void test_http2_max_concurrent_streams(void) {
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
     /* HEADERS, END_HEADERS but no END_STREAM: stream stays open. */
-    static const unsigned char headers_open[] = {0x00, 0x00, 0x03, 0x01, 0x04, 0x00,
-                                                 0x00, 0x00, 0x00, 0x82, 0x87, 0x84};
+    static const unsigned char headers_open[] = {0x00, 0x00, 0x06, 0x01, 0x04, 0x00,
+                                                 0x00, 0x00, 0x00, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -1467,10 +1467,10 @@ static void test_http2_refused_stream_keeps_hpack_state(void) {
     pthread_t tid;
     SSL *client = test_http2_start_client(sv, &server, &tid);
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
-    static const unsigned char initial[] = {0x82, 0x87, 0x84};
+    static const unsigned char initial[] = {0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     static const unsigned char indexed_name[] = {0x40, 0x07, 'x', '-', 't', 'o', 'k', 'e',
                                                  'n',  0x06, 'a', 'b', 'c', '1', '2', '3'};
-    static const unsigned char indexed[] = {0x82, 0x87, 0x84, 0xbe};
+    static const unsigned char indexed[] = {0x82, 0x87, 0x84, 0x01, 0x01, 'h', 0xbe};
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     test_http2_write_frame(client, 0x4, 0, 0, NULL, 0);
     test_http2_write_frame(client, 0x1, 0x4, 1, initial, sizeof(initial));
@@ -1781,12 +1781,12 @@ static void test_http2_async_defer(void) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_slow[] = {0x00, 0x00, 0x09, 0x01, 0x05, 0x00,
+    static const unsigned char headers_slow[] = {0x00, 0x00, 0x0c, 0x01, 0x05, 0x00,
                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x04,
-                                                 0x05, '/',  's',  'l',  'o',  'w'};
-    static const unsigned char headers_fast[] = {0x00, 0x00, 0x09, 0x01, 0x05, 0x00,
+                                                 0x05, '/',  's',  'l',  'o',  'w', 0x01, 0x01, 'h'};
+    static const unsigned char headers_fast[] = {0x00, 0x00, 0x0c, 0x01, 0x05, 0x00,
                                                  0x00, 0x00, 0x03, 0x82, 0x87, 0x04,
-                                                 0x05, '/',  'f',  'a',  's',  't'};
+                                                 0x05, '/',  'f',  'a',  's',  't', 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -1867,15 +1867,15 @@ static void test_http2_async_defer_rst_drops(void) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_slow[] = {0x00, 0x00, 0x09, 0x01, 0x05, 0x00,
+    static const unsigned char headers_slow[] = {0x00, 0x00, 0x0c, 0x01, 0x05, 0x00,
                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x04,
-                                                 0x05, '/',  's',  'l',  'o',  'w'};
+                                                 0x05, '/',  's',  'l',  'o',  'w', 0x01, 0x01, 'h'};
     static const unsigned char rst_stream1[] = {
         0x00, 0x00, 0x04, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x08 /* CANCEL */
     };
-    static const unsigned char headers_fast[] = {0x00, 0x00, 0x09, 0x01, 0x05, 0x00,
+    static const unsigned char headers_fast[] = {0x00, 0x00, 0x0c, 0x01, 0x05, 0x00,
                                                  0x00, 0x00, 0x03, 0x82, 0x87, 0x04,
-                                                 0x05, '/',  'f',  'a',  's',  't'};
+                                                 0x05, '/',  'f',  'a',  's',  't', 0x01, 0x01, 'h'};
 
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
@@ -1994,7 +1994,7 @@ static void test_http2_request_validation(void) {
 
     for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
         unsigned char frame[128] = {0};
-        size_t body_len = (cases[i].include_scheme ? 3 : 2) + cases[i].extra_len;
+        size_t body_len = (cases[i].include_scheme ? 3 : 2) + 3 + cases[i].extra_len;
         frame[0] = (unsigned char)(body_len >> 16);
         frame[1] = (unsigned char)(body_len >> 8);
         frame[2] = (unsigned char)body_len;
@@ -2007,6 +2007,9 @@ static void test_http2_request_validation(void) {
         frame[off++] = cases[i].body ? 0x83 : 0x82;
         if (cases[i].include_scheme) frame[off++] = 0x87;
         frame[off++] = 0x84;
+        frame[off++] = 0x01;
+        frame[off++] = 0x01;
+        frame[off++] = 'h';
         if (cases[i].extra_len) {
             memcpy(frame + off, cases[i].extra, cases[i].extra_len);
             off += cases[i].extra_len;
@@ -2082,11 +2085,11 @@ static void test_http2_closed_stream_reuse(bool after_higher_stream) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_stream1[] = {0x00, 0x00, 0x03, 0x01, 0x05, 0x00,
-                                                    0x00, 0x00, 0x01, 0x82, 0x87, 0x84};
-    static const unsigned char headers_stream3[] = {0x00, 0x00, 0x08, 0x01, 0x05, 0x00, 0x00,
-                                                    0x00, 0x03, 0x82, 0x87, 0x04, 0x04, '/',
-                                                    't',  'w',  'o'};
+    static const unsigned char headers_stream1[] = {0x00, 0x00, 0x06, 0x01, 0x05, 0x00,
+                                                    0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
+    static const unsigned char headers_stream3[] = {0x00, 0x00, 0x0b, 0x01, 0x05, 0x00,
+                                                    0x00, 0x00, 0x03, 0x82, 0x87, 0x04,
+                                                    0x04, '/',  't',  'w',  'o', 0x01, 0x01, 'h'};
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
     assert(ssl_write_all(client, headers_stream1, sizeof(headers_stream1)) == 0);
@@ -2147,11 +2150,11 @@ static void test_http2_lower_stream_trailers(void) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_stream1[] = {0x00, 0x00, 0x03, 0x01, 0x04, 0x00,
-                                                    0x00, 0x00, 0x01, 0x82, 0x87, 0x84};
-    static const unsigned char headers_stream3[] = {0x00, 0x00, 0x08, 0x01, 0x05, 0x00, 0x00,
-                                                    0x00, 0x03, 0x82, 0x87, 0x04, 0x04, '/',
-                                                    't',  'w',  'o'};
+    static const unsigned char headers_stream1[] = {0x00, 0x00, 0x06, 0x01, 0x04, 0x00,
+                                                    0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
+    static const unsigned char headers_stream3[] = {0x00, 0x00, 0x0b, 0x01, 0x05, 0x00,
+                                                    0x00, 0x00, 0x03, 0x82, 0x87, 0x04,
+                                                    0x04, '/',  't',  'w',  'o', 0x01, 0x01, 'h'};
     static const unsigned char trailers_stream1[] = {0x00, 0x00, 0x05, 0x01, 0x05, 0x00, 0x00,
                                                      0x00, 0x01, 0x00, 0x01, 'x',  0x01, 'y'};
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
@@ -2211,8 +2214,8 @@ static void test_http2_continuation_interleave(const unsigned char *frame, size_
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char partial_headers[] = {0x00, 0x00, 0x01, 0x01, 0x01, 0x00,
-                                                    0x00, 0x00, 0x01, 0x82};
+    static const unsigned char partial_headers[] = {0x00, 0x00, 0x01, 0x01, 0x01,
+                                                    0x00, 0x00, 0x00, 0x01, 0x82};
     assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
     assert(ssl_write_all(client, settings_frame, sizeof(settings_frame)) == 0);
     assert(ssl_write_all(client, partial_headers, sizeof(partial_headers)) == 0);
@@ -2287,7 +2290,7 @@ static void test_http2_padded_data(const unsigned char *data, size_t data_len, u
 
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0, 0, 0, 4, 0, 0, 0, 0, 0};
-    static const unsigned char headers_frame[] = {0, 0, 3, 1, 4, 0, 0, 0, 1, 0x82, 0x87, 0x84};
+    static const unsigned char headers_frame[] = {0, 0, 6, 1, 4, 0, 0, 0, 1, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     unsigned char data_header[] = {(unsigned char)(data_len >> 16),
                                    (unsigned char)(data_len >> 8),
                                    (unsigned char)data_len,
@@ -2455,11 +2458,12 @@ static void test_http2_pacing_does_not_block_streams(void) {
     struct timespec rtt_delay = {.tv_sec = 0, .tv_nsec = 100000000};
     nanosleep(&rtt_delay, NULL);
 
-    static const unsigned char large_settings[] = {0, 0, 6, 4, 0, 0, 0, 0, 0, 0, 4, 0x7f, 0xff, 0xff, 0xff};
+    static const unsigned char large_settings[] = {0, 0, 6, 4,    0,    0,    0,   0,
+                                                   0, 0, 4, 0x7f, 0xff, 0xff, 0xff};
     static const unsigned char large_window[] = {0, 0, 4, 8, 0, 0, 0, 0, 0, 0x7f, 0xff, 0, 0};
-    static const unsigned char headers_big[] = {0, 0, 9, 1, 5, 0, 0, 0, 1,
-                                                0x82, 0x87, 0x04, 5, '/', 'b', 'i', 'g', '1'};
-    static const unsigned char headers_small[] = {0, 0, 3, 1, 5, 0, 0, 0, 3, 0x82, 0x87, 0x84};
+    static const unsigned char headers_big[] = {0,    0,    12,   1, 5,   0,   0,   0,   1,
+                                                0x82, 0x87, 0x04, 5, '/', 'b', 'i', 'g', '1', 0x01, 0x01, 'h'};
+    static const unsigned char headers_small[] = {0, 0, 6, 1, 5, 0, 0, 0, 3, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     assert(ssl_write_all(client, ping_ack, sizeof(ping_ack)) == 0);
     assert(ssl_write_all(client, large_settings, sizeof(large_settings)) == 0);
     assert(ssl_write_all(client, large_window, sizeof(large_window)) == 0);
@@ -2525,8 +2529,8 @@ static void test_http2_data_frame_size(size_t data_len, bool oversized) {
     static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
     static const unsigned char settings_frame[] = {0x00, 0x00, 0x00, 0x04, 0x00,
                                                    0x00, 0x00, 0x00, 0x00};
-    static const unsigned char headers_frame[] = {0x00, 0x00, 0x03, 0x01, 0x04, 0x00,
-                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x84};
+    static const unsigned char headers_frame[] = {0x00, 0x00, 0x06, 0x01, 0x04, 0x00,
+                                                  0x00, 0x00, 0x01, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     unsigned char data_header[] = {(unsigned char)(data_len >> 16),
                                    (unsigned char)(data_len >> 8),
                                    (unsigned char)data_len,
@@ -2614,8 +2618,8 @@ static void test_http2_oversized_frame(uint8_t type, bool raise_peer_max) {
     /* SETTINGS_MAX_FRAME_SIZE = 1 MiB. */
     static const unsigned char settings_raised[] = {0x00, 0x00, 0x06, 0x04, 0x00, 0x00, 0x00, 0x00,
                                                     0x00, 0x00, 0x05, 0x00, 0x10, 0x00, 0x00};
-    static const unsigned char headers_stream3[] = {0x00, 0x00, 0x03, 0x01, 0x05, 0x00,
-                                                    0x00, 0x00, 0x03, 0x82, 0x87, 0x84};
+    static const unsigned char headers_stream3[] = {0x00, 0x00, 0x06, 0x01, 0x05, 0x00,
+                                                    0x00, 0x00, 0x03, 0x82, 0x87, 0x84, 0x01, 0x01, 'h'};
     const size_t frame_len = 16385;
     unsigned char *frame = calloc(1, 9 + frame_len);
     assert(frame != NULL);
@@ -2849,6 +2853,73 @@ static void test_http2_empty_headers_frame(void) {
     printf("Passed HTTP/2 empty HEADERS handling.\n");
 }
 
+static void test_http2_control_frame_validation(void) {
+    static const struct {
+        uint8_t type;
+        uint32_t stream_id;
+        uint32_t len;
+        uint32_t expected_error;
+    } cases[] = {
+        {0x03, 1, 3, 0x06}, /* short RST_STREAM: FRAME_SIZE_ERROR */
+        {0x07, 0, 4, 0x06}, /* short GOAWAY: FRAME_SIZE_ERROR */
+        {0x00, 2, 0, 0x01}, /* DATA on an idle even stream: PROTOCOL_ERROR */
+        {0x08, 2, 4, 0x01}, /* WINDOW_UPDATE on an idle even stream */
+    };
+    static const unsigned char preface[] = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
+    static const unsigned char settings[] = {0, 0, 0, 4, 0, 0, 0, 0, 0};
+    static const unsigned char payload[] = {0, 0, 0, 1};
+
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        int sv[2];
+        assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+        test_http2_server_ctx server_ctx = {.fd = sv[0], .result = make_error(CWIST_ERR_INT16)};
+        pthread_t tid;
+        assert(pthread_create(&tid, NULL, http2_server_thread, &server_ctx) == 0);
+
+        SSL_CTX *client_ctx = SSL_CTX_new(TLS_client_method());
+        assert(client_ctx != NULL);
+        SSL_CTX_set_verify(client_ctx, SSL_VERIFY_NONE, NULL);
+        SSL *client = SSL_new(client_ctx);
+        assert(client != NULL);
+        assert(SSL_set_fd(client, sv[1]) == 1);
+        assert(SSL_connect(client) == 1);
+        assert(ssl_write_all(client, preface, sizeof(preface) - 1) == 0);
+        assert(ssl_write_all(client, settings, sizeof(settings)) == 0);
+
+        unsigned char frame[13] = {0};
+        frame[0] = (unsigned char)(cases[i].len >> 16);
+        frame[1] = (unsigned char)(cases[i].len >> 8);
+        frame[2] = (unsigned char)cases[i].len;
+        frame[3] = cases[i].type;
+        frame[7] = (unsigned char)(cases[i].stream_id >> 8);
+        frame[8] = (unsigned char)cases[i].stream_id;
+        memcpy(frame + 9, payload, cases[i].len);
+        assert(ssl_write_all(client, frame, 9 + cases[i].len) == 0);
+
+        bool saw_goaway = false;
+        for (int j = 0; j < 16 && !saw_goaway; j++) {
+            unsigned char hdr[9], body[64];
+            assert(ssl_read_exact(client, hdr, sizeof(hdr)) == 0);
+            uint32_t len = ((uint32_t)hdr[0] << 16) | ((uint32_t)hdr[1] << 8) | hdr[2];
+            assert(len <= sizeof(body));
+            if (len) assert(ssl_read_exact(client, body, len) == 0);
+            if (hdr[3] == 0x07 && len >= 8) {
+                uint32_t error = ((uint32_t)body[4] << 24) | ((uint32_t)body[5] << 16) |
+                                 ((uint32_t)body[6] << 8) | body[7];
+                assert(error == cases[i].expected_error);
+                saw_goaway = true;
+            }
+        }
+        assert(saw_goaway);
+        SSL_shutdown(client);
+        SSL_free(client);
+        SSL_CTX_free(client_ctx);
+        close(sv[1]);
+        pthread_join(tid, NULL);
+    }
+    printf("Passed HTTP/2 control-frame size and idle-stream validation.\n");
+}
+
 static void test_hpack_integer_boundaries(void) {
     static const unsigned char maximum[] = {0x7f, 0x80, 0xff, 0xff, 0xff, 0x0f};
     size_t pos = 0;
@@ -2865,8 +2936,8 @@ static void test_hpack_integer_boundaries(void) {
 
 int main(void) {
     signal(SIGPIPE, SIG_IGN);
-    test_http2_request_validation();
     test_hpack_integer_boundaries();
+    test_http2_control_frame_validation();
     test_http2_settings_ack_payload();
     test_http2_goaway_nonzero_stream();
     test_http2_empty_headers_frame();
@@ -2887,6 +2958,7 @@ int main(void) {
     test_http2_async_defer();
     test_http2_async_defer_rst_drops();
     test_http2_missing_pseudo_header();
+    test_http2_request_validation();
     test_http2_malformed_headers_padding();
     test_http2_max_concurrent_streams();
     test_http2_refused_stream_keeps_hpack_state();

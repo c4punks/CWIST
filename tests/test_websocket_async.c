@@ -411,6 +411,11 @@ int main(void) {
                                                                   NULL, NULL, NULL, 0);
     assert(ws_a);
     test_oversized_outgoing_frame(ws_a);
+    static const uint16_t invalid_close_codes[] = {0, 999, 1004, 1005, 1006, 1015, 1016, 2999, 5000};
+    for (size_t i = 0; i < sizeof(invalid_close_codes) / sizeof(invalid_close_codes[0]); i++) {
+        cwist_websocket_async_close_code(ws_a, invalid_close_codes[i]);
+    }
+    assert(cwist_websocket_async_send(ws_a, CWIST_WS_FRAME_TEXT, (const uint8_t *)"x", 1) == 0);
     assert(cwist_websocket_async_attach(conn_b[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_c[0], reactor, on_message, NULL, NULL, 0));
     assert(cwist_websocket_async_attach(conn_d[0], reactor, on_message, NULL, NULL, 0));
@@ -428,6 +433,10 @@ int main(void) {
     assert(pthread_create(&rt, NULL, reactor_thread, reactor) == 0);
 
     recorded_msg_t msg;
+    uint8_t initial_opcode, initial_payload[8];
+    size_t initial_len;
+    read_server_frame(conn_a[1], &initial_opcode, initial_payload, &initial_len);
+    assert(initial_opcode == CWIST_WS_FRAME_TEXT && initial_len == 1 && initial_payload[0] == 'x');
 
     /* 1. A complete text message arrives with correct payload and opcode. */
     write_masked(conn_a[1], 0x81, (const uint8_t *)"hello", 5);

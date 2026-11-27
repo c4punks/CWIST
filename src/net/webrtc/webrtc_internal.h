@@ -157,6 +157,7 @@ struct cwist_webrtc_ctx {
     char fingerprint[128];    /**< SHA-256 fingerprint of cert, SDP form. */
     char ice_ufrag[16];       /**< Local ICE ufrag. */
     char ice_pwd[64];         /**< Local ICE password. */
+    uint64_t ice_tie_breaker; /**< Full-agent ICE role-conflict tie-breaker. */
     char host_ip[64];         /**< Best-guess local IPv4 for the SDP host candidate. */
 
     cwist_webrtc_message_cb msg_cb; /**< Message handler. */
@@ -217,6 +218,8 @@ bool cwist_ice_stun_has_use_candidate(const uint8_t *buf, size_t len);
  * @return 0 on success, -1 if USERNAME is missing or has no ':'.
  */
 int cwist_ice_stun_get_remote_ufrag(const uint8_t *buf, size_t len, char *out, size_t cap);
+int cwist_ice_stun_validate_username(const uint8_t *buf, size_t len, const char *local_ufrag,
+                                     char *remote_ufrag, size_t remote_cap);
 /**
  * @brief Check MESSAGE-INTEGRITY (HMAC-SHA1 keyed with @p pwd).
  * @return 1 if valid, 0 otherwise.
@@ -233,7 +236,7 @@ int cwist_ice_stun_build_response(uint8_t *out, size_t cap, const uint8_t *req, 
  * @return Message length, or -1 if it does not fit in @p cap.
  */
 int cwist_ice_stun_build_request(uint8_t *out, size_t cap, const uint8_t txid[12],
-                                 const char *username);
+                                 const char *username, uint64_t tie_breaker);
 /**
  * @brief Append MESSAGE-INTEGRITY and FINGERPRINT to a request.
  * @return New message length, or -1 if it does not fit in @p cap.
@@ -261,6 +264,8 @@ typedef struct {
     char ice_pwd[CWIST_WEBRTC_ICE_CREDENTIAL_CAP];
     char fingerprint[128];
     char setup[16];
+    uint16_t sctp_port;
+    int has_sctp_port;
     int is_data;
 } cwist_sdp_section;
 
@@ -272,6 +277,7 @@ typedef struct {
     char setup[16];        /**< a=setup value (e.g. "active", "passive"). */
     char mid[16];          /**< a=mid value. */
     int has_lite;          /**< Non-zero if a=ice-lite was present. */
+    char bundle_group[256];
     cwist_sdp_section sections[CWIST_SDP_MAX_SECTIONS];
     size_t section_count;
 } cwist_sdp_info;

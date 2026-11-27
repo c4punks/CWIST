@@ -358,6 +358,25 @@ static void test_crit_and_exact_expiry(void) {
     free(token);
 }
 
+static void test_duplicate_members(void) {
+    assert(cwist_jwt_sign("{\"sub\":\"first\",\"sub\":\"second\"}", "secret", 0) == NULL);
+
+    char *token = sign_test_token("{\"alg\":\"HS256\",\"alg\":\"none\",\"typ\":\"JWT\"}",
+                                  "{\"sub\":\"1\"}", "secret");
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    free(token);
+
+    token = sign_test_token("{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+                            "{\"exp\":4102444800,\"exp\":0}", "secret");
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    free(token);
+
+    token = sign_test_token("{\"alg\":\"HS256\",\"typ\":\"JWT\"}",
+                            "{\"nbf\":0,\"nbf\":4102444800}", "secret");
+    assert(cwist_jwt_verify(token, "secret") == NULL);
+    free(token);
+}
+
 static void test_embedded_nul_claims(void) {
     printf("Testing embedded NUL rejection in JWT claims...\n");
     assert(cwist_jwt_sign("{\"sub\":\"alice\\u0000suffix\"}", "secret", 0) == NULL);
@@ -398,6 +417,7 @@ int main(void) {
     test_malformed_b64url_remainder();
     test_corrupt_chunk_feed();
     test_crit_and_exact_expiry();
+    test_duplicate_members();
     test_embedded_nul_claims();
     printf("All JWT tests passed!\n");
     return 0;
